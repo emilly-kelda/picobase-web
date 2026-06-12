@@ -42,3 +42,4 @@ export async function getQueueCount(): Promise<number> {
   const db = await getDB()
   return db.count(STORE)
 }
+

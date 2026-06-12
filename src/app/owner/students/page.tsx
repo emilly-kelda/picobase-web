@@ -1,0 +1,345 @@
+import { getStudents, getStudentCount, getActivePackagesByStudent } from '@/repositories/studentRepository'
+import Link from 'next/link'
+
+const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
+
+const SKILL_LABELS: Record<string, string> = {
+  beginner:     'Beginner',
+  intermediate: 'Intermediate',
+  advanced:     'Advanced',
+}
+
+const SKILL_COLORS: Record<string, { bg: string; color: string }> = {
+  beginner:     { bg: 'var(--glacial-light)', color: 'var(--glacial-dark)' },
+  intermediate: { bg: 'var(--amber-light)',   color: 'var(--amber)'        },
+  advanced:     { bg: 'var(--signal-light)',   color: 'var(--signal-dark)'  },
+}
+
+function fmtDate(d: string | null) {
+  if (!d) return '—'
+  return new Date(d).toLocaleDateString('pt-BR', {
+    day: '2-digit', month: 'short', year: 'numeric',
+  })
+}
+
+function getInitials(name: string) {
+  return name.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase()
+}
+
+export default async function StudentsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ search?: string }>
+}) {
+  const { search } = await searchParams
+  const [students, total, packageMap] = await Promise.all([
+    getStudents(SCHOOL_ID, search),
+    getStudentCount(SCHOOL_ID),
+    getActivePackagesByStudent(SCHOOL_ID),
+  ])
+
+  return (
+    <div>
+
+      {/* Page header */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'flex-start',
+        marginBottom: '32px',
+      }}>
+        <div>
+          <h1 style={{
+            fontSize: '22px',
+            fontWeight: '500',
+            color: 'var(--slate)',
+            marginBottom: '4px',
+          }}>
+            Students
+          </h1>
+          <p style={{ fontSize: '13px', color: 'var(--mist)' }}>
+            {total} total
+          </p>
+        </div>
+
+        <a
+          href="/owner/students/new"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            background: 'var(--slate)',
+            color: '#fff',
+            padding: '9px 18px',
+            borderRadius: 'var(--radius-md)',
+            fontSize: '13px',
+            fontWeight: '500',
+            textDecoration: 'none',
+          }}
+        >
+          + Add student
+        </a>
+      </div>
+
+      {/* Search */}
+      <form method="GET" style={{ marginBottom: '20px' }}>
+        <input
+          name="search"
+          defaultValue={search ?? ''}
+          placeholder="Search by name..."
+          style={{
+            width: '320px',
+            padding: '9px 14px',
+            border: '0.5px solid var(--border-strong)',
+            borderRadius: 'var(--radius-md)',
+            fontSize: '13px',
+            color: 'var(--slate)',
+            background: '#fff',
+            outline: 'none',
+            fontFamily: 'var(--font-sans)',
+          }}
+        />
+        <button
+          type="submit"
+          style={{
+            marginLeft: '8px',
+            padding: '9px 16px',
+            background: '#fff',
+            border: '0.5px solid var(--border-strong)',
+            borderRadius: 'var(--radius-md)',
+            fontSize: '13px',
+            color: 'var(--slate)',
+            cursor: 'pointer',
+            fontFamily: 'var(--font-sans)',
+          }}
+        >
+          Search
+        </button>
+        {search && (
+          <a
+            href="/owner/students"
+            style={{
+              marginLeft: '8px',
+              fontSize: '13px',
+              color: 'var(--mist)',
+              textDecoration: 'none',
+            }}
+          >
+            Clear
+          </a>
+        )}
+      </form>
+
+      {/* Table */}
+      <div style={{
+        background: '#fff',
+        border: '0.5px solid var(--border)',
+        borderRadius: 'var(--radius-lg)',
+        overflow: 'hidden',
+      }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr>
+              {['Student', 'Nationality', 'Contact', 'Skill level', 'Package', 'Health', 'Since'].map(h => (
+                <th key={h} style={{
+                  padding: '10px 24px',
+                  textAlign: 'left',
+                  fontSize: '11px',
+                  fontWeight: '500',
+                  letterSpacing: '0.08em',
+                  textTransform: 'uppercase',
+                  color: 'var(--mist)',
+                  background: 'var(--powder)',
+                  borderBottom: '0.5px solid var(--border)',
+                  whiteSpace: 'nowrap',
+                }}>
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {students.length === 0 ? (
+              <tr>
+                <td colSpan={7} style={{
+                  padding: '48px 24px',
+                  textAlign: 'center',
+                  fontSize: '13px',
+                  color: 'var(--mist)',
+                }}>
+                  {search
+                    ? `No students found for "${search}"`
+                    : 'No students yet.'}
+                </td>
+              </tr>
+            ) : (
+              students.map((s, i) => {
+                const skill = SKILL_COLORS[s.skill_level ?? '']
+                return (
+                  <tr
+                    key={s.id}
+                    style={{
+                      borderBottom: i < students.length - 1
+                        ? '0.5px solid var(--border)'
+                        : 'none',
+                    }}
+                  >
+                    {/* Name + initials */}
+                    <td style={{ padding: '14px 24px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{
+                          width: '32px',
+                          height: '32px',
+                          borderRadius: 'var(--radius-full)',
+                          background: 'var(--glacial-light)',
+                          color: 'var(--glacial-dark)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '11px',
+                          fontWeight: '600',
+                          flexShrink: 0,
+                        }}>
+                          {getInitials(s.name)}
+                        </div>
+                        <Link href={`/owner/students/${s.id}`} style={{
+                          fontSize: '13px',
+                          fontWeight: '500',
+                          color: 'var(--slate)',
+                          textDecoration: 'none',
+                        }}>
+                          {s.name}
+                        </Link>
+                      </div>
+                    </td>
+
+                    {/* Nationality */}
+                    <td style={{
+                      padding: '14px 24px',
+                      fontSize: '13px',
+                      color: 'var(--mist)',
+                    }}>
+                      {s.nationality ?? '—'}
+                    </td>
+
+                    {/* Contact */}
+                    <td style={{ padding: '14px 24px' }}>
+                      <div style={{ fontSize: '13px', color: 'var(--slate)' }}>
+                        {s.email ?? '—'}
+                      </div>
+                      {s.whatsapp && (
+                        <div style={{ fontSize: '11px', color: 'var(--mist)', marginTop: '2px' }}>
+                          {s.whatsapp}
+                        </div>
+                      )}
+                    </td>
+
+                    {/* Skill level */}
+                    <td style={{ padding: '14px 24px' }}>
+                      {s.skill_level ? (
+                        <span style={{
+                          display: 'inline-block',
+                          padding: '3px 10px',
+                          borderRadius: 'var(--radius-full)',
+                          fontSize: '11px',
+                          fontWeight: '500',
+                          background: skill?.bg ?? 'var(--powder)',
+                          color: skill?.color ?? 'var(--mist)',
+                        }}>
+                          {SKILL_LABELS[s.skill_level]}
+                        </span>
+                      ) : (
+                        <span style={{ fontSize: '13px', color: 'var(--mist)' }}>—</span>
+                      )}
+                    </td>
+
+                    {/* Package */}
+                    <td style={{ padding: '14px 24px', minWidth: '160px' }}>
+                      {(() => {
+                        const pkg = packageMap.get(s.name)
+                        if (!pkg) return <span style={{ fontSize: '13px', color: 'var(--mist)' }}>—</span>
+                        const pct = pkg.minutes_purchased > 0
+                          ? Math.round((pkg.minutes_used / pkg.minutes_purchased) * 100)
+                          : 0
+                        const fmtMin = (m: number) => m >= 60
+                          ? `${Math.floor(m / 60)}h${m % 60 > 0 ? ` ${m % 60}min` : ''}`
+                          : `${m}min`
+                        return (
+                          <div>
+                            <div style={{
+                              fontSize: '11px', color: 'var(--mist)',
+                              marginBottom: '5px', whiteSpace: 'nowrap',
+                            }}>
+                              {pkg.package_name}
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <div style={{
+                                flex: 1, height: '4px',
+                                background: 'var(--powder)',
+                                borderRadius: 'var(--radius-full)',
+                                overflow: 'hidden',
+                                minWidth: '80px',
+                              }}>
+                                <div style={{
+                                  height: '100%',
+                                  width: `${pct}%`,
+                                  background: pct >= 80
+                                    ? 'var(--signal)'
+                                    : pct >= 50
+                                      ? '#D4A017'
+                                      : 'var(--glacial)',
+                                  borderRadius: 'var(--radius-full)',
+                                }} />
+                              </div>
+                              <span style={{
+                                fontSize: '11px', color: 'var(--mist)',
+                                whiteSpace: 'nowrap', flexShrink: 0,
+                              }}>
+                                {fmtMin(pkg.minutes_used)} / {fmtMin(pkg.minutes_purchased)}
+                              </span>
+                            </div>
+                          </div>
+                        )
+                      })()}
+                    </td>
+
+                    {/* Health */}
+                    <td style={{ padding: '14px 24px' }}>
+                      {s.health_conditions ? (
+                        <span style={{
+                          display: 'inline-block',
+                          padding: '3px 10px',
+                          borderRadius: 'var(--radius-full)',
+                          fontSize: '11px',
+                          fontWeight: '500',
+                          background: 'var(--signal-light)',
+                          color: 'var(--signal-dark)',
+                        }}>
+                          Alert
+                        </span>
+                      ) : (
+                        <span style={{ fontSize: '13px', color: 'var(--mist)' }}>—</span>
+                      )}
+                    </td>
+
+                    {/* Since */}
+                    <td style={{
+                      padding: '14px 24px',
+                      fontSize: '13px',
+                      color: 'var(--mist)',
+                      whiteSpace: 'nowrap',
+                    }}>
+                      {fmtDate(s.created_at)}
+                    </td>
+                  </tr>
+                )
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  )
+}
+

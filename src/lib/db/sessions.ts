@@ -18,3 +18,4 @@ export async function getSessionsByInstructor(instructorId: string) {
 
   return data || []
 }
+
