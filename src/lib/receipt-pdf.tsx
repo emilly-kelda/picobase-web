@@ -1,4 +1,4 @@
-import {
+﻿import {
   Document,
   Page,
   Text,
@@ -263,4 +263,5 @@ export function ReceiptPDF({
     </Document>
   )
 }
+
 

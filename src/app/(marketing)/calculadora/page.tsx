@@ -1,0 +1,319 @@
+'use client'
+
+import { useState } from 'react'
+import Link from 'next/link'
+
+export default function CalculadoraPage() {
+  const [profit,    setProfit]    = useState(0)
+  const [burn,      setBurn]      = useState(6000)
+  const [custom,    setCustom]    = useState(false)
+  const [customBurn,setCustomBurn]= useState('')
+
+  const activeBurn = custom ? (parseInt(customBurn) || 0) : burn
+  const runway     = activeBurn > 0 ? profit / activeBurn : 0
+  const barPct     = Math.min(100, (runway / 12) * 100)
+  const color      = runway >= 6 ? '#00A896' : runway >= 3 ? '#D4A017' : '#E8471A'
+
+  const verdict = runway >= 6
+    ? { label: 'Confortável', sub: 'Sua temporada cobre mais de 6 meses de baixa-temporada. Ótima posição.' }
+    : runway >= 3
+      ? { label: 'Apertado', sub: 'Você tem alguma reserva, mas uma temporada fraca pode comprometer o negócio.' }
+      : runway > 0
+        ? { label: 'Crítico', sub: 'A temporada atual não cobre nem 3 meses. Revise custos ou aumente receita.' }
+        : { label: '—', sub: 'Insira o lucro da temporada para calcular.' }
+
+  function fmt(n: number) {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency', currency: 'BRL',
+      minimumFractionDigits: 0, maximumFractionDigits: 0,
+    }).format(n)
+  }
+
+  const scenarios = [3000, 5000, 8000, 12000, 20000]
+
+  return (
+    <div style={{
+      minHeight: '100vh',
+      background: '#F0EEE9',
+      paddingTop: '80px',
+      fontFamily: 'var(--font-geist-sans, system-ui)',
+    }}>
+      <div style={{
+        maxWidth: '720px', margin: '0 auto',
+        padding: '60px 40px',
+      }}>
+
+        {/* Header */}
+        <div style={{ marginBottom: '48px' }}>
+          <div style={{
+            fontSize: '11px', fontWeight: '500',
+            letterSpacing: '0.16em', textTransform: 'uppercase',
+            color: '#8A8C98', marginBottom: '12px',
+          }}>
+            Ferramenta gratuita
+          </div>
+          <h1 style={{
+            fontSize: 'clamp(32px, 4vw, 48px)',
+            fontWeight: '700', color: '#0D0F12',
+            lineHeight: '1.1', margin: '0 0 16px',
+            letterSpacing: '-0.03em',
+          }}>
+            Simulador de Reserva Financeira<br />para a Baixa Temporada
+          </h1>
+          <p style={{
+            fontSize: '16px', color: '#6A6C78',
+            lineHeight: '1.6', margin: '0',
+          }}>
+            Descubra quantos meses de baixa temporada esta temporada consegue financiar.
+          </p>
+        </div>
+
+        {/* Result card */}
+        <div style={{
+          background: '#0D0F12',
+          borderRadius: '20px', padding: '40px',
+          marginBottom: '24px', textAlign: 'center',
+        }}>
+          <div style={{
+            fontSize: '11px', fontWeight: '500',
+            letterSpacing: '0.16em', textTransform: 'uppercase',
+            color: 'rgba(255,255,255,0.3)', marginBottom: '12px',
+          }}>
+            Reserva de Baixa Temporada
+          </div>
+          <div style={{
+            fontSize: '96px', fontWeight: '700',
+            color, lineHeight: '1',
+            fontVariantNumeric: 'tabular-nums',
+            fontFamily: 'var(--font-geist-mono, monospace)',
+            marginBottom: '8px',
+            transition: 'color 0.3s',
+          }}>
+            {runway > 0 ? runway.toFixed(1) : '—'}
+          </div>
+          <div style={{
+            fontSize: '16px', color: 'rgba(255,255,255,0.4)',
+            marginBottom: '32px',
+          }}>
+            meses cobertos
+          </div>
+
+          <div style={{
+            height: '8px', background: 'rgba(255,255,255,0.08)',
+            borderRadius: '99px', overflow: 'hidden', marginBottom: '8px',
+          }}>
+            <div style={{
+              height: '100%', width: `${barPct}%`,
+              background: color, borderRadius: '99px',
+              transition: 'width 0.4s, background 0.3s',
+            }} />
+          </div>
+          <div style={{
+            display: 'flex', justifyContent: 'space-between',
+            fontSize: '11px', color: 'rgba(255,255,255,0.2)',
+            marginBottom: '28px',
+          }}>
+            {['0', '3mo', '6mo', '9mo', '12mo'].map(m => (
+              <span key={m}>{m}</span>
+            ))}
+          </div>
+
+          <div style={{
+            display: 'inline-block',
+            padding: '8px 20px',
+            borderRadius: '99px', fontSize: '14px', fontWeight: '500',
+            background: runway >= 6 ? '#E0F8F5' : runway >= 3 ? '#FBF3E2' : runway > 0 ? '#FDF0EC' : 'rgba(255,255,255,0.08)',
+            color: runway >= 6 ? '#007868' : runway >= 3 ? '#7A4C00' : runway > 0 ? '#8B1818' : 'rgba(255,255,255,0.3)',
+            marginBottom: '12px',
+          }}>
+            {verdict.label}
+          </div>
+          <p style={{
+            fontSize: '13px', color: 'rgba(255,255,255,0.35)',
+            margin: '0', lineHeight: '1.5',
+          }}>
+            {verdict.sub}
+          </p>
+        </div>
+
+        {/* Inputs */}
+        <div style={{
+          background: '#fff', borderRadius: '16px',
+          padding: '32px', marginBottom: '24px',
+          border: '0.5px solid #E4E0D8',
+        }}>
+          <h3 style={{
+            fontSize: '14px', fontWeight: '600',
+            color: '#0D0F12', margin: '0 0 24px',
+          }}>
+            Seus números
+          </h3>
+
+          {/* Profit */}
+          <div style={{ marginBottom: '28px' }}>
+            <div style={{
+              display: 'flex', justifyContent: 'space-between',
+              marginBottom: '10px',
+            }}>
+              <label style={{
+                fontSize: '13px', fontWeight: '500', color: '#0D0F12',
+              }}>
+                Lucro da temporada
+              </label>
+              <span style={{
+                fontSize: '15px', fontWeight: '600',
+                color: '#0D0F12', fontVariantNumeric: 'tabular-nums',
+              }}>
+                {fmt(profit)}
+              </span>
+            </div>
+            <input
+              type="range" min={0} max={300000} step={1000}
+              value={profit}
+              onChange={e => setProfit(Number(e.target.value))}
+              style={{ width: '100%', accentColor: '#00A896', cursor: 'pointer' }}
+            />
+            <div style={{
+              display: 'flex', justifyContent: 'space-between',
+              fontSize: '11px', color: '#C8C6C0', marginTop: '4px',
+            }}>
+              <span>R$ 0</span><span>R$ 300k</span>
+            </div>
+            <div style={{ fontSize: '12px', color: '#8A8C98', marginTop: '8px' }}>
+              Receita total menos comissões de instrutores e custos variáveis da temporada.
+            </div>
+          </div>
+
+          {/* Burn rate */}
+          <div>
+            <div style={{
+              display: 'flex', justifyContent: 'space-between',
+              marginBottom: '10px',
+            }}>
+              <label style={{
+                fontSize: '13px', fontWeight: '500', color: '#0D0F12',
+              }}>
+                Custo fixo mensal (baixa temporada)
+              </label>
+              <span style={{
+                fontSize: '15px', fontWeight: '600',
+                color: '#0D0F12', fontVariantNumeric: 'tabular-nums',
+              }}>
+                {fmt(activeBurn)}
+              </span>
+            </div>
+
+            {!custom ? (
+              <>
+                <input
+                  type="range" min={500} max={50000} step={500}
+                  value={burn}
+                  onChange={e => setBurn(Number(e.target.value))}
+                  style={{ width: '100%', accentColor: '#00A896', cursor: 'pointer' }}
+                />
+                <div style={{
+                  display: 'flex', justifyContent: 'space-between',
+                  fontSize: '11px', color: '#C8C6C0', marginTop: '4px',
+                }}>
+                  <span>R$ 500</span><span>R$ 50k</span>
+                </div>
+              </>
+            ) : (
+              <input
+                type="number"
+                value={customBurn}
+                onChange={e => setCustomBurn(e.target.value)}
+                placeholder="Digite o valor exato..."
+                style={{
+                  width: '100%', padding: '10px 14px',
+                  border: '0.5px solid #D8D2C8',
+                  borderRadius: '8px', fontSize: '15px',
+                  color: '#0D0F12', fontFamily: 'inherit',
+                  outline: 'none', boxSizing: 'border-box' as const,
+                }}
+              />
+            )}
+
+            <button
+              onClick={() => { setCustom(!custom); setCustomBurn('') }}
+              style={{
+                background: 'transparent', border: 'none',
+                fontSize: '12px', color: '#00A896',
+                cursor: 'pointer', padding: '6px 0',
+                fontFamily: 'inherit',
+              }}
+            >
+              {custom ? '← Usar controle deslizante' : 'Digitar valor exato →'}
+            </button>
+          </div>
+        </div>
+
+        {/* Scenario table */}
+        <div style={{
+          background: '#fff', borderRadius: '16px',
+          padding: '24px 32px', marginBottom: '40px',
+          border: '0.5px solid #E4E0D8',
+        }}>
+          <div style={{
+            fontSize: '13px', fontWeight: '600',
+            color: '#0D0F12', marginBottom: '16px',
+          }}>
+            Com {fmt(profit)} de lucro, diferentes custos mensais:
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {scenarios.map((s, i) => {
+              const r = profit > 0 ? profit / s : 0
+              const c = r >= 6 ? '#00A896' : r >= 3 ? '#D4A017' : '#E8471A'
+              return (
+                <div key={s} style={{
+                  display: 'flex', justifyContent: 'space-between',
+                  alignItems: 'center', padding: '12px 0',
+                  borderBottom: i < scenarios.length - 1 ? '0.5px solid #F0EEE9' : 'none',
+                }}>
+                  <span style={{ fontSize: '14px', color: '#6A6C78' }}>
+                    {fmt(s)}/mês
+                  </span>
+                  <span style={{
+                    fontSize: '16px', fontWeight: '600',
+                    color: c, fontVariantNumeric: 'tabular-nums',
+                  }}>
+                    {profit > 0 ? `${r.toFixed(1)} meses` : '—'}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* CTA */}
+        <div style={{
+          background: '#0D0F12', borderRadius: '16px',
+          padding: '32px', textAlign: 'center',
+        }}>
+          <h3 style={{
+            fontSize: '20px', fontWeight: '600',
+            color: '#fff', margin: '0 0 12px',
+          }}>
+            Veja esse número em tempo real durante a temporada
+          </h3>
+          <p style={{
+            fontSize: '14px', color: 'rgba(255,255,255,0.4)',
+            margin: '0 0 24px', lineHeight: '1.6',
+          }}>
+            No Pico Base, cada aula confirmada atualiza sua Reserva de Baixa Temporada em tempo real.
+          </p>
+          <Link href="/demo" style={{
+            display: 'inline-flex', alignItems: 'center', gap: '8px',
+            background: '#00A896', color: '#fff',
+            padding: '14px 28px', borderRadius: '10px',
+            fontSize: '15px', fontWeight: '500',
+            textDecoration: 'none',
+          }}>
+            Agendar demonstração →
+          </Link>
+        </div>
+
+      </div>
+    </div>
+  )
+}

@@ -49,6 +49,9 @@ export default function PaymentsClient({
   const [loading, setLoading] = useState<string | null>(null)
   const [closing, setClosing] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
+  const [breakdown, setBreakdown]               = useState<any[]>([])
+  const [breakdownFor, setBreakdownFor]         = useState<string | null>(null)
+  const [loadingBreakdown, setLoadingBreakdown] = useState(false)
 
   const pending    = payments.filter(p => p.status === 'pending')
   const approved   = payments.filter(p => p.status === 'approved')
@@ -99,6 +102,17 @@ export default function PaymentsClient({
     setLoading(null)
   }
 
+  async function fetchBreakdown(instructorId: string) {
+    setBreakdownFor(instructorId)
+    setLoadingBreakdown(true)
+    const res = await fetch(
+      `/api/owner/breakdown?instructor=${instructorId}&period=${period}`
+    )
+    const data = await res.json()
+    setBreakdown(data.sessions ?? [])
+    setLoadingBreakdown(false)
+  }
+
   return (
     <div>
 
@@ -115,7 +129,7 @@ export default function PaymentsClient({
             Payments
           </h1>
           <p style={{ fontSize: '13px', color: 'var(--mist)' }}>
-            Crew payroll � close the month
+            Crew payroll &mdash; close the month
           </p>
         </div>
 
@@ -291,22 +305,33 @@ export default function PaymentsClient({
                   borderRadius: 'var(--radius-lg)',
                   padding: '20px 24px',
                 }}>
-                  <div style={{
-                    display: 'flex', justifyContent: 'space-between',
-                    alignItems: 'flex-start', marginBottom: '16px',
-                  }}>
+                  <div
+                    onClick={() => fetchBreakdown(user?.id)}
+                    style={{
+                      display: 'flex', justifyContent: 'space-between',
+                      alignItems: 'flex-start', marginBottom: '16px',
+                      cursor: 'pointer',
+                    }}
+                  >
                     <div>
                       <div style={{
                         fontSize: '15px', fontWeight: '500',
                         color: 'var(--slate)', marginBottom: '4px',
                       }}>
-                        {user?.name ?? '�'}
+                        {user?.name ?? '—'}
                       </div>
                       <div style={{ fontSize: '12px', color: 'var(--mist)' }}>
-                        {p.sessions_count} sessions � {fmtPct(p.commission_pct)} commission
+                        {p.sessions_count} sessions &middot; {fmtPct(p.commission_pct)} commission
                       </div>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <span style={{
+                        fontSize: '12px',
+                        color: 'var(--glacial)',
+                        flexShrink: 0,
+                      }}>
+                        View sessions &rarr;
+                      </span>
                       <span style={{
                         padding: '3px 10px',
                         borderRadius: 'var(--radius-full)',
@@ -324,7 +349,7 @@ export default function PaymentsClient({
                     </div>
                   </div>
 
-                  {/* Breakdown */}
+                  {/* Stats row */}
                   <div style={{
                     display: 'flex', gap: '24px',
                     padding: '12px 0',
@@ -390,7 +415,174 @@ export default function PaymentsClient({
         </>
       )}
 
+      {/* Breakdown modal */}
+      {breakdownFor && (
+        <div
+          style={{
+            position: 'fixed', inset: 0,
+            background: 'rgba(0,0,0,0.4)',
+            display: 'flex',
+            alignItems: 'flex-end',
+            zIndex: 100,
+          }}
+          onClick={e => { if (e.target === e.currentTarget) setBreakdownFor(null) }}
+        >
+          <div style={{
+            background: '#fff',
+            borderRadius: '24px 24px 0 0',
+            width: '100%',
+            maxHeight: '85vh',
+            overflowY: 'auto',
+            padding: '24px 24px 40px',
+          }}>
+            {/* Handle */}
+            <div style={{
+              width: '36px', height: '4px',
+              background: 'var(--border)',
+              borderRadius: '2px',
+              margin: '0 auto 20px',
+            }} />
+
+            {/* Header */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '20px',
+            }}>
+              <div>
+                <div style={{
+                  fontSize: '17px', fontWeight: '600',
+                  color: 'var(--slate)', marginBottom: '3px',
+                }}>
+                  Session breakdown
+                </div>
+                <div style={{ fontSize: '13px', color: 'var(--mist)' }}>
+                  {(payments.find(p => (p.users as any)?.id === breakdownFor)?.users as any)?.name ?? '—'}
+                  {' · '}
+                  {period}
+                </div>
+              </div>
+              <button
+                onClick={() => setBreakdownFor(null)}
+                style={{
+                  background: 'var(--powder)',
+                  border: 'none',
+                  borderRadius: '50%',
+                  width: '32px', height: '32px',
+                  fontSize: '18px', cursor: 'pointer',
+                  color: 'var(--mist)',
+                  display: 'flex', alignItems: 'center',
+                  justifyContent: 'center',
+                  fontFamily: 'var(--font-sans)',
+                }}
+              >
+                &times;
+              </button>
+            </div>
+
+            {loadingBreakdown ? (
+              <div style={{
+                padding: '40px', textAlign: 'center',
+                fontSize: '13px', color: 'var(--mist)',
+              }}>
+                Loading...
+              </div>
+            ) : breakdown.length === 0 ? (
+              <div style={{
+                padding: '40px', textAlign: 'center',
+                fontSize: '13px', color: 'var(--mist)',
+              }}>
+                No sessions found for this period.
+              </div>
+            ) : (
+              <>
+                {/* Sessions list */}
+                <div style={{
+                  display: 'flex', flexDirection: 'column',
+                  gap: '0',
+                  border: '0.5px solid var(--border)',
+                  borderRadius: 'var(--radius-lg)',
+                  overflow: 'hidden',
+                  marginBottom: '16px',
+                }}>
+                  {breakdown.map((s: any, i: number) => (
+                    <div key={s.id} style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: '14px 16px',
+                      borderBottom: i < breakdown.length - 1
+                        ? '0.5px solid var(--border)' : 'none',
+                      background: i % 2 === 0 ? '#fff' : 'var(--powder)',
+                    }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{
+                          fontSize: '13px', fontWeight: '500',
+                          color: 'var(--slate)', marginBottom: '2px',
+                        }}>
+                          {s.checkins?.student_name ?? '—'}
+                        </div>
+                        <div style={{ fontSize: '11px', color: 'var(--mist)' }}>
+                          {s.activities?.name ?? '—'}
+                          {' · '}
+                          {s.duration_min}min
+                          {' · '}
+                          {new Date(s.session_date + 'T12:00:00').toLocaleDateString('pt-BR', {
+                            day: '2-digit', month: 'short',
+                          })}
+                        </div>
+                      </div>
+                      <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                        <div style={{
+                          fontSize: '13px', fontWeight: '500',
+                          color: 'var(--slate)', fontVariantNumeric: 'tabular-nums',
+                        }}>
+                          {fmt(s.commission_amount)}
+                        </div>
+                        <div style={{ fontSize: '11px', color: 'var(--mist)' }}>
+                          of {fmt(s.price)}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Totals */}
+                <div style={{
+                  background: 'var(--powder)',
+                  borderRadius: 'var(--radius-lg)',
+                  padding: '14px 16px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}>
+                  <div>
+                    <div style={{ fontSize: '12px', color: 'var(--mist)', marginBottom: '2px' }}>
+                      {breakdown.length} sessions
+                    </div>
+                    <div style={{ fontSize: '12px', color: 'var(--mist)' }}>
+                      Revenue {fmt(breakdown.reduce((s: number, r: any) => s + (r.price ?? 0), 0))}
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '11px', color: 'var(--mist)', marginBottom: '2px' }}>
+                      Total commission
+                    </div>
+                    <div style={{
+                      fontSize: '20px', fontWeight: '600',
+                      color: 'var(--slate)', fontVariantNumeric: 'tabular-nums',
+                    }}>
+                      {fmt(breakdown.reduce((s: number, r: any) => s + (r.commission_amount ?? 0), 0))}
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }
-

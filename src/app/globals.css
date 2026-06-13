@@ -1,4 +1,4 @@
-@import "tailwindcss";
+﻿@import "tailwindcss";
 
 :root {
   --slate:         #1A1C22;
@@ -9,10 +9,10 @@
   --signal:        #E8471A;
   --signal-light:  #FDF0EC;
   --signal-dark:   #B83010;
-  --powder:        #F0EEE9;
-  --powder-dark:   #E4E0D8;
+  --powder:        #F5F5F5;
+  --powder-dark:   #EBEBEB;
   --mist:          #8A8C98;
-  --border:        #E4E0D8;
+  --border:        #E8E8E8;
   --border-strong: #C8C6C0;
   --amber-light:   #FFF8E8;
   --amber:         #8A5E00;
@@ -27,4 +27,4 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html { font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
-body { background: var(--powder); color: var(--slate); }
+body { background: #ffffff; color: var(--slate); }

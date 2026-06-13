@@ -1,5 +1,7 @@
 ﻿import { notFound } from 'next/navigation'
 import { getStudentById, getSessionsByStudent, getActivePackagesByStudent } from '@/repositories/studentRepository'
+import ProgressionEditor from '@/components/ProgressionEditor'
+import ProgressionHistory from '@/components/ProgressionHistory'
 
 const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
 
@@ -251,6 +253,20 @@ export default async function StudentDetailPage({
           </div>
         ))}
       </div>
+
+      {/* Progression editor */}
+      <div style={{ marginBottom: '28px' }}>
+        <ProgressionEditor
+          studentId={student.id}
+          studentName={student.name}
+          currentLevel={student.skill_level ?? 'beginner'}
+          currentSkills={[]}
+          sport="kitesurf"
+        />
+      </div>
+
+      {/* Progression history */}
+      <ProgressionHistory schoolId={SCHOOL_ID} studentId={id} />
 
       {/* Sessions table */}
       <div style={{

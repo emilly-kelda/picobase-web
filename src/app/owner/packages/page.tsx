@@ -1,9 +1,11 @@
-import { getPackages, getPackageSales, getPackageSaleTotals } from '@/repositories/packageRepository'
+ï»¿import { getPackages, getPackageSales, getPackageSaleTotals } from '@/repositories/packageRepository'
+import { getPortalLang } from '@/lib/language'
+import { getT } from '@/lib/i18n'
 
 const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
 
 function fmt(n: number | null | undefined) {
-  if (n == null) return '—'
+  if (n == null) return 'ï¿½'
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency', currency: 'BRL',
     minimumFractionDigits: 0, maximumFractionDigits: 0,
@@ -38,11 +40,13 @@ const TYPE_LABELS: Record<string, string> = {
 }
 
 export default async function PackagesPage() {
-  const [packages, sales, totals] = await Promise.all([
+  const [packages, sales, totals, lang] = await Promise.all([
     getPackages(SCHOOL_ID),
     getPackageSales(SCHOOL_ID),
     getPackageSaleTotals(SCHOOL_ID),
+    getPortalLang(),
   ])
+  const t = getT(lang)
 
   return (
     <div>
@@ -53,10 +57,10 @@ export default async function PackagesPage() {
           fontSize: '22px', fontWeight: '500',
           color: 'var(--slate)', marginBottom: '4px',
         }}>
-          Packages
+          {t.packages_title}
         </h1>
         <p style={{ fontSize: '13px', color: 'var(--mist)' }}>
-          Lesson packages and sales
+          {t.packages_sub}
         </p>
       </div>
 
@@ -67,10 +71,10 @@ export default async function PackagesPage() {
         gap: '12px', marginBottom: '32px',
       }}>
         {[
-          { label: 'Total sold',        value: String(totals.total)                },
-          { label: 'Active',            value: String(totals.active)               },
-          { label: 'Revenue',           value: fmt(totals.revenue)                 },
-          { label: 'Minutes remaining', value: fmtMinutes(totals.minutesRemaining) },
+          { label: t.total_sold,        value: String(totals.total)                },
+          { label: t.active_label,      value: String(totals.active)               },
+          { label: t.revenue_label,     value: fmt(totals.revenue)                 },
+          { label: t.minutes_remaining, value: fmtMinutes(totals.minutesRemaining) },
         ].map(card => (
           <div key={card.label} style={{
             background: '#fff',
@@ -104,7 +108,7 @@ export default async function PackagesPage() {
           fontSize: '13px', fontWeight: '500',
           color: 'var(--slate)', marginBottom: '12px',
         }}>
-          Catalogue
+          {t.catalogue_label}
         </div>
         {packages.length === 0 ? (
           <div style={{
@@ -112,7 +116,7 @@ export default async function PackagesPage() {
             borderRadius: 'var(--radius-lg)', padding: '32px',
             textAlign: 'center', fontSize: '13px', color: 'var(--mist)',
           }}>
-            No packages configured yet.
+            {t.no_packages}
           </div>
         ) : (
           <div style={{
@@ -141,7 +145,7 @@ export default async function PackagesPage() {
                       {pkg.name}
                     </div>
                     <div style={{ fontSize: '12px', color: 'var(--mist)' }}>
-                      {pkg.sport} · {TYPE_LABELS[pkg.type] ?? pkg.type}
+                      {pkg.sport} ï¿½ {TYPE_LABELS[pkg.type] ?? pkg.type}
                     </div>
                   </div>
                   <div style={{ textAlign: 'right' }}>
@@ -166,7 +170,7 @@ export default async function PackagesPage() {
                 }}>
                   {pkg.total_minutes && (
                     <div>
-                      <div style={{ fontSize: '11px', color: 'var(--mist)', marginBottom: '2px' }}>Duration</div>
+                      <div style={{ fontSize: '11px', color: 'var(--mist)', marginBottom: '2px' }}>{t.duration_label}</div>
                       <div style={{ fontSize: '13px', color: 'var(--slate)', fontWeight: '500' }}>
                         {fmtMinutes(pkg.total_minutes)}
                       </div>
@@ -174,7 +178,7 @@ export default async function PackagesPage() {
                   )}
                   {pkg.base_price !== (pkg.final_price ?? pkg.base_price) && (
                     <div>
-                      <div style={{ fontSize: '11px', color: 'var(--mist)', marginBottom: '2px' }}>Original</div>
+                      <div style={{ fontSize: '11px', color: 'var(--mist)', marginBottom: '2px' }}>{t.original_label}</div>
                       <div style={{ fontSize: '13px', color: 'var(--mist)', textDecoration: 'line-through' }}>
                         {fmt(pkg.base_price)}
                       </div>
@@ -199,12 +203,12 @@ export default async function PackagesPage() {
           borderBottom: '0.5px solid var(--border)',
           fontSize: '14px', fontWeight: '500', color: 'var(--slate)',
         }}>
-          Recent sales
+          {t.recent_sales}
         </div>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr>
-              {['Date', 'Student', 'Package', 'Instructor', 'Paid', 'Progress', 'Status'].map(h => (
+              {[t.th_date, t.th_name, t.th_package, t.th_instructor, t.th_paid, t.th_progress, t.th_status].map(h => (
                 <th key={h} style={{
                   padding: '10px 24px', textAlign: 'left',
                   fontSize: '11px', fontWeight: '500',
@@ -225,7 +229,7 @@ export default async function PackagesPage() {
                   padding: '40px 24px', textAlign: 'center',
                   fontSize: '13px', color: 'var(--mist)',
                 }}>
-                  No package sales yet.
+                  {t.no_sales}
                 </td>
               </tr>
             ) : (
@@ -253,10 +257,10 @@ export default async function PackagesPage() {
                       )}
                     </td>
                     <td style={{ padding: '13px 24px', fontSize: '13px', color: 'var(--slate)' }}>
-                      {(s.packages as any)?.name ?? '—'}
+                      {(s.packages as any)?.name ?? 'ï¿½'}
                     </td>
                     <td style={{ padding: '13px 24px', fontSize: '13px', color: 'var(--slate)' }}>
-                      {(s.users as any)?.name ?? '—'}
+                      {(s.users as any)?.name ?? 'ï¿½'}
                     </td>
                     <td style={{ padding: '13px 24px', fontSize: '13px', color: 'var(--slate)', fontVariantNumeric: 'tabular-nums' }}>
                       {fmt(s.price_paid)}
@@ -305,4 +309,5 @@ export default async function PackagesPage() {
     </div>
   )
 }
+
 

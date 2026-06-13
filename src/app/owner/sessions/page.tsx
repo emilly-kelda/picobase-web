@@ -1,5 +1,7 @@
-import { getSessions, getSessionTotals } from '@/repositories/sessionRepository'
+﻿import { getSessions, getSessionTotals } from '@/repositories/sessionRepository'
 import { getInstructors } from '@/repositories/studentRepository'
+import { getPortalLang } from '@/lib/language'
+import { getT } from '@/lib/i18n'
 
 const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
 
@@ -50,11 +52,13 @@ export default async function SessionsPage({
     instructorId: instructor,
   }
 
-  const [sessions, totals, instructors] = await Promise.all([
+  const [sessions, totals, instructors, lang] = await Promise.all([
     getSessions(SCHOOL_ID, filters),
     getSessionTotals(SCHOOL_ID, filters),
     getInstructors(SCHOOL_ID),
+    getPortalLang(),
   ])
+  const t = getT(lang)
 
   const monthOptions = Array.from({ length: 12 }, (_, i) => {
     const d = new Date()
@@ -74,10 +78,10 @@ export default async function SessionsPage({
           fontSize: '22px', fontWeight: '500',
           color: 'var(--slate)', marginBottom: '4px',
         }}>
-          Sessions
+          {t.sessions_title}
         </h1>
         <p style={{ fontSize: '13px', color: 'var(--mist)' }}>
-          Full session log
+          {t.sessions_sub}
         </p>
       </div>
 
@@ -116,7 +120,7 @@ export default async function SessionsPage({
             fontFamily: 'var(--font-sans)', outline: 'none',
           }}
         >
-          <option value="">All instructors</option>
+          <option value="">{t.all_instructors}</option>
           {instructors.map(ins => (
             <option key={ins.id} value={ins.id}>{ins.name}</option>
           ))}
@@ -130,14 +134,14 @@ export default async function SessionsPage({
           fontSize: '13px', color: 'var(--slate)',
           cursor: 'pointer', fontFamily: 'var(--font-sans)',
         }}>
-          Filter
+          {t.filter_btn}
         </button>
 
         {(month || instructor) && (
           <a href="/owner/sessions" style={{
             fontSize: '13px', color: 'var(--mist)', textDecoration: 'none',
           }}>
-            Clear
+            {t.students_clear}
           </a>
         )}
       </form>
@@ -150,9 +154,9 @@ export default async function SessionsPage({
         marginBottom: '20px',
       }}>
         {[
-          { label: 'Sessions',    value: String(totals.count)    },
-          { label: 'Revenue',     value: fmt(totals.revenue)     },
-          { label: 'Commissions', value: fmt(totals.commissions) },
+          { label: t.today_sessions,    value: String(totals.count)    },
+          { label: t.season_revenue,    value: fmt(totals.revenue)     },
+          { label: t.season_commissions,value: fmt(totals.commissions) },
         ].map(card => (
           <div key={card.label} style={{
             background: '#fff',
@@ -190,7 +194,7 @@ export default async function SessionsPage({
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr>
-              {['Date', 'Student', 'Activity', 'Instructor', 'Duration', 'Origin', 'Price', 'Comm. %', 'Commission'].map(h => (
+              {[t.th_date, t.th_student, t.th_activity, t.th_instructor, t.th_duration, t.th_origin, t.th_price, t.th_comm_pct, t.th_commission].map(h => (
                 <th key={h} style={{
                   padding: '10px 20px',
                   textAlign: 'left',
@@ -214,7 +218,7 @@ export default async function SessionsPage({
                   textAlign: 'center',
                   fontSize: '13px', color: 'var(--mist)',
                 }}>
-                  No sessions found for this period.
+                  {t.no_sessions_period}
                 </td>
               </tr>
             ) : (
@@ -244,14 +248,19 @@ export default async function SessionsPage({
                       {(s.activities as any)?.name ?? '—'}
                     </td>
                     <td style={{ padding: '13px 20px', fontSize: '13px', color: 'var(--slate)' }}>
-                      {(s.users as any)?.name ? (
-                        <a
-                          className="tbl-name-link"
-                          href={`/owner/crew/${(s.users as any).id}`}
-                        >
-                          {(s.users as any).name}
-                        </a>
-                      ) : '—'}
+                      {(() => {
+                        const user = Array.isArray((s as any).instructor) ? (s as any).instructor[0] : (s as any).instructor
+                        if (!user?.name) return <span style={{ color: 'var(--slate)' }}>—</span>
+                        if (!user?.id)   return <span style={{ color: 'var(--slate)' }}>{user.name}</span>
+                        return (
+                          <a
+                            className="tbl-name-link"
+                            href={`/owner/crew/${user.id}`}
+                          >
+                            {user.name}
+                          </a>
+                        )
+                      })()}
                     </td>
                     <td style={{ padding: '13px 20px', fontSize: '13px', color: 'var(--mist)' }}>
                       {s.duration_min}min
@@ -287,4 +296,5 @@ export default async function SessionsPage({
     </div>
   )
 }
+
 

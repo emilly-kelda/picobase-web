@@ -1,5 +1,7 @@
-import { getStudents, getStudentCount, getActivePackagesByStudent } from '@/repositories/studentRepository'
+﻿import { getStudents, getStudentCount, getActivePackagesByStudent } from '@/repositories/studentRepository'
 import Link from 'next/link'
+import { getPortalLang } from '@/lib/language'
+import { getT } from '@/lib/i18n'
 
 const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
 
@@ -32,11 +34,13 @@ export default async function StudentsPage({
   searchParams: Promise<{ search?: string }>
 }) {
   const { search } = await searchParams
-  const [students, total, packageMap] = await Promise.all([
+  const [students, total, packageMap, lang] = await Promise.all([
     getStudents(SCHOOL_ID, search),
     getStudentCount(SCHOOL_ID),
     getActivePackagesByStudent(SCHOOL_ID),
+    getPortalLang(),
   ])
+  const t = getT(lang)
 
   return (
     <div>
@@ -55,10 +59,10 @@ export default async function StudentsPage({
             color: 'var(--slate)',
             marginBottom: '4px',
           }}>
-            Students
+            {t.students_title}
           </h1>
           <p style={{ fontSize: '13px', color: 'var(--mist)' }}>
-            {total} total
+            {total} {t.students_total}
           </p>
         </div>
 
@@ -77,7 +81,7 @@ export default async function StudentsPage({
             textDecoration: 'none',
           }}
         >
-          + Add student
+          {t.students_add}
         </a>
       </div>
 
@@ -86,7 +90,7 @@ export default async function StudentsPage({
         <input
           name="search"
           defaultValue={search ?? ''}
-          placeholder="Search by name..."
+          placeholder={t.students_search}
           style={{
             width: '320px',
             padding: '9px 14px',
@@ -113,7 +117,7 @@ export default async function StudentsPage({
             fontFamily: 'var(--font-sans)',
           }}
         >
-          Search
+          {t.students_search_btn}
         </button>
         {search && (
           <a
@@ -125,7 +129,7 @@ export default async function StudentsPage({
               textDecoration: 'none',
             }}
           >
-            Clear
+            {t.students_clear}
           </a>
         )}
       </form>
@@ -140,7 +144,7 @@ export default async function StudentsPage({
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr>
-              {['Student', 'Nationality', 'Contact', 'Skill level', 'Package', 'Health', 'Since'].map(h => (
+              {[t.th_student, t.th_nationality, t.th_contact, t.th_skill, t.th_package, t.th_health, t.th_since].map(h => (
                 <th key={h} style={{
                   padding: '10px 24px',
                   textAlign: 'left',
@@ -168,8 +172,8 @@ export default async function StudentsPage({
                   color: 'var(--mist)',
                 }}>
                   {search
-                    ? `No students found for "${search}"`
-                    : 'No students yet.'}
+                    ? `${t.students_none} "${search}"`
+                    : t.students_empty}
                 </td>
               </tr>
             ) : (
@@ -342,4 +346,5 @@ export default async function StudentsPage({
     </div>
   )
 }
+
 

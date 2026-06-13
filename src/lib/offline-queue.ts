@@ -1,4 +1,4 @@
-import { openDB } from 'idb'
+﻿import { openDB } from 'idb'
 
 const DB_NAME = 'picobase-offline'
 const STORE   = 'session-queue'
@@ -42,4 +42,5 @@ export async function getQueueCount(): Promise<number> {
   const db = await getDB()
   return db.count(STORE)
 }
+
 

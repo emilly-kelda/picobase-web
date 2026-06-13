@@ -1,4 +1,4 @@
-import { createServiceClient } from '@/lib/supabase-server'
+﻿import { createServiceClient } from '@/lib/supabase-server'
 
 export async function getPackages(schoolId: string) {
   const supabase = createServiceClient()
@@ -55,4 +55,5 @@ export async function getPackageSaleTotals(schoolId: string) {
     minutesRemaining: minLeft,
   }
 }
+
 

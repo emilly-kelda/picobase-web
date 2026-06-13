@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js'
+﻿import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 
 const supabase = createClient(
@@ -60,4 +60,5 @@ export async function GET(request: Request) {
 
   return NextResponse.json({ payments: payments || [], period })
 }
+
 

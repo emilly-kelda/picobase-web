@@ -1,4 +1,4 @@
-import { getPayments } from '@/repositories/crewRepository'
+﻿import { getPayments } from '@/repositories/crewRepository'
 import PaymentsClient from './PaymentsClient'
 
 const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
@@ -27,4 +27,5 @@ export default async function PaymentsPage({
     />
   )
 }
+
 

@@ -1,4 +1,4 @@
-import { createServiceClient } from '@/lib/supabase-server'
+﻿import { createServiceClient } from '@/lib/supabase-server'
 
 export async function getStudents(schoolId: string, search?: string) {
   const supabase = createServiceClient()
@@ -105,11 +105,59 @@ export async function getActivePackagesByStudent(schoolId: string) {
   return map
 }
 
+export async function getProgressionHistory(schoolId: string, studentId: string) {
+  const supabase = createServiceClient()
+  const { data, error } = await supabase
+    .from('student_progression')
+    .select(`
+      id, level, notes, skills, created_at,
+      updated_by_user:users!student_progression_updated_by_fkey ( name )
+    `)
+    .eq('school_id', schoolId)
+    .eq('student_id', studentId)
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  return data ?? []
+}
+
+export async function updateStudentLevel(
+  schoolId: string,
+  studentId: string,
+  level: string,
+  notes: string,
+  skills: string[],
+  updatedBy?: string,
+  sessionId?: string
+) {
+  const supabase = createServiceClient()
+
+  await supabase
+    .from('students')
+    .update({ skill_level: level as any })
+    .eq('id', studentId)
+    .eq('school_id', schoolId)
+
+  const { error } = await supabase
+    .from('student_progression')
+    .insert({
+      school_id:  schoolId,
+      student_id: studentId,
+      level:      level as any,
+      notes:      notes || null,
+      skills,
+      updated_by: updatedBy || null,
+      session_id: sessionId || null,
+    })
+
+  if (error) throw error
+  return { ok: true }
+}
+
 export async function getInstructors(schoolId: string) {
   const supabase = createServiceClient()
   const { data, error } = await supabase
     .from('users')
-    .select('id, name')
+    .select('id, name, commission_pct')
     .eq('school_id', schoolId)
     .eq('role', 'instructor')
     .eq('active', true)
@@ -117,4 +165,5 @@ export async function getInstructors(schoolId: string) {
   if (error) throw error
   return data ?? []
 }
+
 

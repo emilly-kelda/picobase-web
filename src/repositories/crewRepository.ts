@@ -1,11 +1,17 @@
-import { createServiceClient } from '@/lib/supabase-server'
+﻿import { createServiceClient } from '@/lib/supabase-server'
 
 export async function getCrewMembers(schoolId: string) {
   const supabase = createServiceClient()
 
   const { data: users, error: usersError } = await supabase
     .from('users')
-    .select('id, name, email, whatsapp, commission_pct, pix_key, wise_email, active, created_at')
+    .select(`
+      id, name, email, whatsapp, commission_pct,
+      pix_key, wise_email, active, created_at,
+      nationality, languages, sports, certifications,
+      bio, experience_years, max_students_per_session,
+      first_aid_certified, contract_type
+    `)
     .eq('school_id', schoolId)
     .eq('role', 'instructor')
     .order('name')
@@ -88,4 +94,5 @@ export async function getInstructorByToken(token: string) {
   if (error) return null
   return data
 }
+
 

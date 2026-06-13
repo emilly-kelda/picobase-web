@@ -1,4 +1,4 @@
-import { createServiceClient } from '@/lib/supabase-server'
+﻿import { createServiceClient } from '@/lib/supabase-server'
 
 export async function getSchoolBySlug(slug: string) {
   const supabase = createServiceClient()
@@ -33,4 +33,5 @@ export async function getInstructorsForCheckin(schoolId: string) {
     .order('name')
   return data ?? []
 }
+
 

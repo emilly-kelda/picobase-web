@@ -1,4 +1,30 @@
-import { createServiceClient } from '@/lib/supabase-server'
+﻿import { createServiceClient } from '@/lib/supabase-server'
+
+export async function getPendingLessons(schoolId: string) {
+  const supabase = createServiceClient()
+  const today = new Date().toISOString().slice(0, 10)
+
+  const { data, error } = await supabase
+    .from('checkins')
+    .select(`
+      id,
+      student_name,
+      student_nationality,
+      health_condition,
+      checkin_at,
+      activity_id,
+      instructor_id,
+      activities ( id, name, default_price, default_duration_min ),
+      instructor:users!checkins_instructor_id_fkey ( id, name )
+    `)
+    .eq('school_id', schoolId)
+    .eq('status', 'checked_in')
+    .gte('checkin_at', `${today}T00:00:00`)
+    .order('checkin_at', { ascending: true })
+
+  if (error) throw error
+  return data ?? []
+}
 
 export async function getRecentSessions(schoolId: string, limit = 8) {
   const supabase = createServiceClient()
@@ -10,7 +36,7 @@ export async function getRecentSessions(schoolId: string, limit = 8) {
       duration_min,
       price,
       commission_amount,
-      users!sessions_instructor_id_fkey ( id, name ),
+      instructor:users!sessions_instructor_id_fkey ( id, name ),
       checkins ( student_name ),
       activities ( name )
     `)
@@ -40,7 +66,7 @@ export async function getSessions(
       commission_pct,
       origin,
       session_type,
-      users!sessions_instructor_id_fkey ( id, name ),
+      instructor:users!sessions_instructor_id_fkey ( id, name ),
       checkins ( student_name ),
       activities ( name ),
       partners ( name )
@@ -101,6 +127,7 @@ export async function getTodayStats(schoolId: string) {
     sessions:    sessionsToday ?? 0,
     students:    checkinsToday?.length ?? 0,
     instructors: uniqueInstructors,
+    hasActivity: (sessionsToday ?? 0) > 0 || (checkinsToday?.length ?? 0) > 0,
   }
 }
 
@@ -139,6 +166,39 @@ export async function getPendingCheckins(schoolId: string, instructorId: string)
   return data ?? []
 }
 
+export async function getSessionsByInstructorAndPeriod(
+  schoolId: string,
+  instructorId: string,
+  period: string
+) {
+  const supabase = createServiceClient()
+
+  const [y, m] = period.split('-').map(Number)
+  const start    = `${period}-01`
+  const nextFirst = new Date(y, m, 1).toISOString().slice(0, 10)
+
+  const { data, error } = await supabase
+    .from('sessions')
+    .select(`
+      id,
+      session_date,
+      duration_min,
+      price,
+      commission_pct,
+      commission_amount,
+      checkins ( student_name ),
+      activities ( name )
+    `)
+    .eq('school_id', schoolId)
+    .eq('instructor_id', instructorId)
+    .gte('session_date', start)
+    .lt('session_date', nextFirst)
+    .order('session_date', { ascending: false })
+
+  if (error) throw error
+  return data ?? []
+}
+
 export async function getTodayInstructorStats(schoolId: string, instructorId: string) {
   const supabase = createServiceClient()
   const today = new Date().toISOString().slice(0, 10)
@@ -166,4 +226,5 @@ export async function getTodayInstructorStats(schoolId: string, instructorId: st
 
   return { todayCommission, todayRevenue, seasonTotal, todayCount }
 }
+
 

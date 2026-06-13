@@ -1,4 +1,4 @@
-import { createServiceClient } from '@/lib/supabase-server'
+﻿import { createServiceClient } from '@/lib/supabase-server'
 import { NextResponse } from 'next/server'
 import { headers } from 'next/headers'
 
@@ -37,4 +37,5 @@ export async function POST(request: Request) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true, id: data.id })
 }
+
 

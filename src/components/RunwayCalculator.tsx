@@ -1,4 +1,4 @@
-'use client'
+ï»¿'use client'
 
 import { useState } from 'react'
 
@@ -6,6 +6,9 @@ type Props = {
   seasonProfit: number
   burnRate: number
   currency?: string
+  daysLeft?: number
+  projectedRunway?: number
+  gap?: number
 }
 
 function fmt(n: number) {
@@ -15,7 +18,7 @@ function fmt(n: number) {
   }).format(n)
 }
 
-export default function RunwayCalculator({ seasonProfit, burnRate, currency = 'BRL' }: Props) {
+export default function RunwayCalculator({ seasonProfit, burnRate, currency = 'BRL', daysLeft, projectedRunway, gap }: Props) {
   const [burn, setBurn] = useState(burnRate > 0 ? burnRate : 5000)
   const [profit, setProfit] = useState(seasonProfit > 0 ? seasonProfit : 0)
 
@@ -23,6 +26,20 @@ export default function RunwayCalculator({ seasonProfit, burnRate, currency = 'B
   const runwayMonths = Math.max(0, runway)
 
   const barPct = Math.min(100, (runwayMonths / 12) * 100)
+
+  const monthsCovered = burn > 0 ? profit / burn : 0
+
+  const targetMonths = 6
+
+  const targetProfit = burn * targetMonths
+
+  const profitGap = Math.max(0, targetProfit - profit)
+
+  const estimatedMonth = new Date(
+    Date.now() + monthsCovered * 30 * 24 * 60 * 60 * 1000
+  ).toLocaleDateString("en-US", {
+    month: "long"
+  })
 
   const barColor = runwayMonths >= 6
     ? 'var(--glacial)'
@@ -163,8 +180,57 @@ export default function RunwayCalculator({ seasonProfit, burnRate, currency = 'B
             fontSize: '12px', color: 'var(--mist)',
             lineHeight: '1.6',
           }}>
-            Formula: season profit ÷ monthly burn rate = months of runway
+            Formula: season profit &divide; monthly burn rate = months of runway
           </div>
+
+          {(daysLeft !== undefined && daysLeft > 0) && (
+            <div style={{
+              padding: '14px 16px',
+              background: 'var(--powder)',
+              borderRadius: 'var(--radius-md)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '8px',
+            }}>
+              <div style={{
+                fontSize: '10px', fontWeight: '500',
+                letterSpacing: '0.1em', textTransform: 'uppercase',
+                color: 'var(--mist)', marginBottom: '4px',
+              }}>
+                Ao ritmo atual
+              </div>
+              {projectedRunway !== undefined && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                  <span style={{ color: 'var(--mist)' }}>ProjeÃ§Ã£o ao fim da temporada</span>
+                  <span style={{
+                    fontWeight: '600',
+                    color: projectedRunway >= 6
+                      ? 'var(--glacial-dark)'
+                      : projectedRunway >= 3
+                        ? '#D4A017'
+                        : 'var(--signal)',
+                    fontVariantNumeric: 'tabular-nums',
+                  }}>
+                    {projectedRunway.toFixed(1)} meses
+                  </span>
+                </div>
+              )}
+              {gap !== undefined && gap > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                  <span style={{ color: 'var(--mist)' }}>Faltam para 6 meses</span>
+                  <span style={{ fontWeight: '600', color: 'var(--signal)', fontVariantNumeric: 'tabular-nums' }}>
+                    {fmt(gap)}
+                  </span>
+                </div>
+              )}
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                <span style={{ color: 'var(--mist)' }}>Dias restantes na temporada</span>
+                <span style={{ fontWeight: '600', color: 'var(--mist)' }}>
+                  {daysLeft} dias
+                </span>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Result */}
@@ -228,10 +294,10 @@ export default function RunwayCalculator({ seasonProfit, burnRate, currency = 'B
             fontSize: '12px', color: verdict.color,
             textAlign: 'center', lineHeight: '1.5',
           }}>
-            {fmt(profit)} profit ÷ {fmt(burn)}/month
+            {fmt(profit)} profit &divide; {fmt(burn)}/month
             {runwayMonths > 0
               ? ` = ${runwayMonths.toFixed(1)} months off-season covered`
-              : ' — enter season profit to calculate'
+              : 'â€” enter season profit to calculate'
             }
           </div>
         </div>
@@ -240,4 +306,7 @@ export default function RunwayCalculator({ seasonProfit, burnRate, currency = 'B
     </div>
   )
 }
+
+
+
 

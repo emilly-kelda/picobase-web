@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js'
+﻿import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 
 const supabase = createClient(
@@ -132,4 +132,5 @@ export async function POST(request: Request) {
 
   return NextResponse.json({ ok: true })
 }
+
 

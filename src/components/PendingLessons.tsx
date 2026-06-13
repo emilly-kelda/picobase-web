@@ -1,0 +1,661 @@
+'use client'
+
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+
+type Checkin = {
+  id: string
+  student_name: string
+  student_nationality: string | null
+  health_condition: string | null
+  checkin_at: string
+  activity_id: string | null
+  instructor_id: string | null
+  activities: {
+    id: string
+    name: string
+    default_price: number
+    default_duration_min: number
+  } | null
+  instructor: { id: string; name: string } | { id: string; name: string }[] | null
+}
+
+type Instructor = {
+  id: string
+  name: string
+  commission_pct: number | null
+}
+
+const DURATIONS = [
+  { label: '1h',   value: 60  },
+  { label: '1h30', value: 90  },
+  { label: '2h',   value: 120 },
+  { label: '3h',   value: 180 },
+]
+
+function fmt(n: number) {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency', currency: 'BRL',
+    minimumFractionDigits: 0, maximumFractionDigits: 0,
+  }).format(n)
+}
+
+function fmtTime(iso: string) {
+  return new Date(iso).toLocaleTimeString('pt-BR', {
+    hour: '2-digit', minute: '2-digit',
+  })
+}
+
+function getInitials(name: string) {
+  return name.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase()
+}
+
+function unwrapInstructor(raw: Checkin['instructor']): { id: string; name: string } | null {
+  if (!raw) return null
+  return Array.isArray(raw) ? raw[0] ?? null : raw
+}
+
+export default function PendingLessons({
+  checkins: initialCheckins,
+  instructors,
+}: {
+  checkins: Checkin[]
+  instructors: Instructor[]
+}) {
+  const router = useRouter()
+  const [checkins, setCheckins]         = useState(initialCheckins)
+  const [selected, setSelected]         = useState<Checkin | null>(null)
+  const [duration, setDuration]         = useState(60)
+  const [useCustom, setUseCustom]       = useState(false)
+  const [custom, setCustom]             = useState('')
+  const [price, setPrice]               = useState(0)
+  const [instructorId, setInstructorId] = useState('')
+  const [notes, setNotes]               = useState('')
+  const [showNotes, setShowNotes]       = useState(false)
+  const [confirming, setConfirming]         = useState(false)
+  const [confirmed, setConfirmed]           = useState<string | null>(null)
+  const [showProgression, setShowProgression] = useState(false)
+  const [progLevel,        setProgLevel]      = useState('')
+  const [progNotes,        setProgNotes]      = useState('')
+  const [priceMode, setPriceMode]             = useState<'total' | 'per_hour'>('total')
+  const [pricePerHour, setPricePerHour]       = useState(0)
+
+  function open(checkin: Checkin) {
+    setSelected(checkin)
+    setDuration(checkin.activities?.default_duration_min ?? 60)
+    setPrice(checkin.activities?.default_price ?? 0)
+    setInstructorId(checkin.instructor_id ?? '')
+    setUseCustom(false)
+    setCustom('')
+    setNotes('')
+    setShowNotes(false)
+    setShowProgression(false)
+    setProgLevel('')
+    setProgNotes('')
+    setPriceMode('total')
+    setPricePerHour(0)
+  }
+
+  function close() { setSelected(null) }
+
+  const selectedInstructor = instructors.find(i => i.id === instructorId)
+  const commissionPct      = selectedInstructor?.commission_pct ?? 0.38
+  const finalDuration      = useCustom ? parseInt(custom) || 0 : duration
+  const totalPrice         = priceMode === 'per_hour'
+    ? Math.round(pricePerHour * (finalDuration / 60))
+    : price
+  const commission         = totalPrice * commissionPct
+
+  async function confirm() {
+    if (!selected || !instructorId) return
+    setConfirming(true)
+
+    const res = await fetch('/api/owner/confirm-lesson', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        checkin_id:     selected.id,
+        instructor_id:  instructorId,
+        activity_id:    selected.activity_id,
+        duration_min:   finalDuration,
+        price:          totalPrice,
+        notes,
+        commission_pct: commissionPct,
+      }),
+    })
+
+    const data = await res.json()
+    setConfirming(false)
+
+    if (data.ok) {
+      setConfirmed(selected.student_name)
+      setCheckins(prev => prev.filter(c => c.id !== selected.id))
+      setSelected(null)
+      setTimeout(() => {
+        setConfirmed(null)
+        router.refresh()
+      }, 2000)
+    }
+  }
+
+  if (checkins.length === 0 && !confirmed) return null
+
+  return (
+    <>
+      <div style={{ marginBottom: '28px' }}>
+
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '12px',
+        }}>
+          <div style={{
+            fontSize: '11px', fontWeight: '500',
+            letterSpacing: '0.1em', textTransform: 'uppercase',
+            color: 'var(--mist)',
+            display: 'flex', alignItems: 'center', gap: '8px',
+          }}>
+            Aulas pendentes
+            <span style={{
+              background: 'var(--signal)',
+              color: '#fff',
+              fontSize: '10px', fontWeight: '600',
+              padding: '2px 7px',
+              borderRadius: 'var(--radius-full)',
+              letterSpacing: '0',
+              textTransform: 'none',
+            }}>
+              {checkins.length}
+            </span>
+          </div>
+        </div>
+
+        {confirmed && (
+          <div style={{
+            background: 'var(--glacial-light)',
+            border: '0.5px solid var(--glacial)',
+            borderRadius: 'var(--radius-md)',
+            padding: '12px 16px',
+            fontSize: '13px', fontWeight: '500',
+            color: 'var(--glacial-dark)',
+            display: 'flex', alignItems: 'center', gap: '8px',
+            marginBottom: '12px',
+          }}>
+            <span>✓</span>
+            <span>Aula confirmada — {confirmed}</span>
+          </div>
+        )}
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {checkins.map(checkin => {
+            const instructor = unwrapInstructor(checkin.instructor)
+            return (
+              <div
+                key={checkin.id}
+                style={{
+                  background: '#fff',
+                  border: checkin.health_condition
+                    ? '0.5px solid var(--signal)'
+                    : '0.5px solid var(--border)',
+                  borderRadius: 'var(--radius-lg)',
+                  padding: '16px 20px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '14px',
+                }}
+              >
+                <div style={{
+                  width: '36px', height: '36px',
+                  borderRadius: 'var(--radius-full)',
+                  background: checkin.health_condition
+                    ? 'var(--signal-light)'
+                    : 'var(--glacial-light)',
+                  color: checkin.health_condition
+                    ? 'var(--signal-dark)'
+                    : 'var(--glacial-dark)',
+                  display: 'flex', alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '11px', fontWeight: '600',
+                  flexShrink: 0,
+                }}>
+                  {getInitials(checkin.student_name)}
+                </div>
+
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{
+                    fontSize: '14px', fontWeight: '500',
+                    color: 'var(--slate)', marginBottom: '2px',
+                    display: 'flex', alignItems: 'center', gap: '8px',
+                  }}>
+                    {checkin.student_name}
+                    {checkin.health_condition && (
+                      <span style={{
+                        fontSize: '10px', fontWeight: '500',
+                        color: 'var(--signal-dark)',
+                        background: 'var(--signal-light)',
+                        padding: '2px 8px',
+                        borderRadius: 'var(--radius-full)',
+                      }}>
+                        ⚠ Saúde
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ fontSize: '12px', color: 'var(--mist)' }}>
+                    {checkin.activities?.name ?? 'Atividade não selecionada'}
+                    {' · '}
+                    {instructor?.name ?? 'Sem instrutor'}
+                    {' · '}
+                    {fmtTime(checkin.checkin_at)}
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => open(checkin)}
+                  style={{
+                    padding: '8px 18px',
+                    background: 'var(--slate)',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: '13px', fontWeight: '500',
+                    cursor: 'pointer',
+                    fontFamily: 'var(--font-sans)',
+                    flexShrink: 0,
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  Confirmar →
+                </button>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      {selected && (
+        <div
+          style={{
+            position: 'fixed', inset: 0,
+            background: 'rgba(0,0,0,0.45)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 200,
+            padding: '24px',
+          }}
+          onClick={e => { if (e.target === e.currentTarget) close() }}
+        >
+          <div style={{
+            background: '#fff',
+            borderRadius: 'var(--radius-xl)',
+            width: '100%',
+            maxWidth: '480px',
+            padding: '28px',
+            maxHeight: '90vh',
+            overflowY: 'auto',
+          }}>
+
+            {selected.health_condition && (
+              <div style={{
+                background: 'var(--signal-light)',
+                border: '0.5px solid var(--signal)',
+                borderRadius: 'var(--radius-md)',
+                padding: '12px 16px',
+                marginBottom: '20px',
+                display: 'flex', gap: '10px',
+              }}>
+                <span style={{ fontSize: '18px', flexShrink: 0 }}>⚠️</span>
+                <div>
+                  <div style={{
+                    fontSize: '12px', fontWeight: '600',
+                    color: 'var(--signal-dark)', marginBottom: '2px',
+                  }}>
+                    Alerta médico
+                  </div>
+                  <div style={{ fontSize: '13px', color: 'var(--signal-dark)' }}>
+                    {selected.health_condition}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div style={{ marginBottom: '20px' }}>
+              <div style={{
+                fontSize: '18px', fontWeight: '500',
+                color: 'var(--slate)', marginBottom: '4px',
+              }}>
+                {selected.student_name}
+              </div>
+              <div style={{ fontSize: '13px', color: 'var(--mist)' }}>
+                Check-in às {fmtTime(selected.checkin_at)}
+                {selected.activities?.name && ` · ${selected.activities.name}`}
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <div style={{
+                fontSize: '11px', fontWeight: '500',
+                letterSpacing: '0.1em', textTransform: 'uppercase',
+                color: 'var(--mist)', marginBottom: '8px',
+              }}>
+                Instrutor
+              </div>
+              <select
+                value={instructorId}
+                onChange={e => setInstructorId(e.target.value)}
+                style={{
+                  width: '100%', padding: '10px 14px',
+                  border: '0.5px solid var(--border-strong)',
+                  borderRadius: 'var(--radius-md)',
+                  fontSize: '14px', color: 'var(--slate)',
+                  background: '#fff', fontFamily: 'var(--font-sans)',
+                  outline: 'none', cursor: 'pointer',
+                }}
+              >
+                <option value="">Selecionar instrutor</option>
+                {instructors.map(i => (
+                  <option key={i.id} value={i.id}>
+                    {i.name} · {Math.round((i.commission_pct ?? 0) * 100)}%
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <div style={{
+                fontSize: '11px', fontWeight: '500',
+                letterSpacing: '0.1em', textTransform: 'uppercase',
+                color: 'var(--mist)', marginBottom: '8px',
+              }}>
+                Duração
+              </div>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                {DURATIONS.map(d => (
+                  <button
+                    key={d.value}
+                    onClick={() => { setDuration(d.value); setUseCustom(false) }}
+                    style={{
+                      padding: '9px 16px',
+                      borderRadius: 'var(--radius-md)',
+                      border: `1.5px solid ${!useCustom && duration === d.value ? 'var(--glacial)' : 'var(--border)'}`,
+                      background: !useCustom && duration === d.value ? 'var(--glacial-light)' : '#fff',
+                      color: !useCustom && duration === d.value ? 'var(--glacial-dark)' : 'var(--slate)',
+                      fontSize: '14px', fontWeight: '500',
+                      cursor: 'pointer', fontFamily: 'var(--font-sans)',
+                    }}
+                  >
+                    {d.label}
+                  </button>
+                ))}
+                <button
+                  onClick={() => setUseCustom(true)}
+                  style={{
+                    padding: '9px 16px',
+                    borderRadius: 'var(--radius-md)',
+                    border: `1.5px solid ${useCustom ? 'var(--glacial)' : 'var(--border)'}`,
+                    background: useCustom ? 'var(--glacial-light)' : '#fff',
+                    color: useCustom ? 'var(--glacial-dark)' : 'var(--slate)',
+                    fontSize: '14px', fontWeight: '500',
+                    cursor: 'pointer', fontFamily: 'var(--font-sans)',
+                  }}
+                >
+                  Outro
+                </button>
+              </div>
+              {useCustom && (
+                <input
+                  type="number"
+                  placeholder="Minutos"
+                  value={custom}
+                  onChange={e => setCustom(e.target.value)}
+                  style={{
+                    marginTop: '8px', width: '120px',
+                    padding: '9px 14px',
+                    border: '0.5px solid var(--border-strong)',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: '15px', color: 'var(--slate)',
+                    fontFamily: 'var(--font-sans)', outline: 'none',
+                  }}
+                />
+              )}
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <div style={{
+                fontSize: '11px', fontWeight: '500',
+                letterSpacing: '0.1em', textTransform: 'uppercase',
+                color: 'var(--mist)', marginBottom: '8px',
+                display: 'flex', justifyContent: 'space-between',
+                alignItems: 'center',
+              }}>
+                <span>Valor</span>
+                <div style={{
+                  display: 'flex', gap: '2px',
+                  background: 'var(--powder)',
+                  borderRadius: 'var(--radius-md)', padding: '2px',
+                }}>
+                  {[
+                    { key: 'total',    label: 'Total'  },
+                    { key: 'per_hour', label: '/hora'  },
+                  ].map(m => (
+                    <button
+                      key={m.key}
+                      onClick={() => setPriceMode(m.key as 'total' | 'per_hour')}
+                      style={{
+                        padding: '3px 10px',
+                        borderRadius: '5px',
+                        border: 'none', cursor: 'pointer',
+                        fontFamily: 'var(--font-sans)',
+                        fontSize: '11px', fontWeight: '500',
+                        background: priceMode === m.key ? '#fff' : 'transparent',
+                        color: priceMode === m.key ? 'var(--slate)' : 'var(--mist)',
+                        boxShadow: priceMode === m.key
+                          ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                      }}
+                    >
+                      {m.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {priceMode === 'total' ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                  <input
+                    type="number"
+                    value={price}
+                    onChange={e => setPrice(Number(e.target.value))}
+                    style={{
+                      width: '140px', padding: '10px 14px',
+                      border: '0.5px solid var(--border-strong)',
+                      borderRadius: 'var(--radius-md)',
+                      fontSize: '20px', fontWeight: '600',
+                      color: 'var(--slate)', fontFamily: 'var(--font-sans)',
+                      outline: 'none',
+                    }}
+                  />
+                  <div style={{ fontSize: '13px', color: 'var(--mist)' }}>
+                    → comissão {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 }).format(totalPrice * commissionPct)}
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                    <input
+                      type="number"
+                      value={pricePerHour}
+                      onChange={e => setPricePerHour(Number(e.target.value))}
+                      placeholder="R$/hora"
+                      style={{
+                        width: '140px', padding: '10px 14px',
+                        border: '0.5px solid var(--border-strong)',
+                        borderRadius: 'var(--radius-md)',
+                        fontSize: '20px', fontWeight: '600',
+                        color: 'var(--slate)', fontFamily: 'var(--font-sans)',
+                        outline: 'none',
+                      }}
+                    />
+                    <div style={{ fontSize: '13px', color: 'var(--mist)' }}>
+                      / hora
+                    </div>
+                  </div>
+                  {pricePerHour > 0 && finalDuration > 0 && (
+                    <div style={{
+                      padding: '10px 14px',
+                      background: 'var(--glacial-light)',
+                      borderRadius: 'var(--radius-md)',
+                      fontSize: '13px', color: 'var(--glacial-dark)',
+                      display: 'flex', justifyContent: 'space-between',
+                    }}>
+                      <span>{pricePerHour}/h × {(finalDuration/60).toFixed(1)}h</span>
+                      <span style={{ fontWeight: '600' }}>
+                        = {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 }).format(totalPrice)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {!showNotes ? (
+              <button
+                onClick={() => setShowNotes(true)}
+                style={{
+                  background: 'transparent', border: 'none',
+                  fontSize: '13px', color: 'var(--mist)',
+                  cursor: 'pointer', padding: '0',
+                  fontFamily: 'var(--font-sans)',
+                  marginBottom: '24px',
+                  textDecoration: 'underline',
+                  textDecorationColor: 'var(--border)',
+                }}
+              >
+                + Adicionar observação
+              </button>
+            ) : (
+              <div style={{ marginBottom: '24px' }}>
+                <textarea
+                  value={notes}
+                  onChange={e => setNotes(e.target.value)}
+                  placeholder="Observações sobre a aula..."
+                  style={{
+                    width: '100%', padding: '10px 14px',
+                    border: '0.5px solid var(--border-strong)',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: '14px', color: 'var(--slate)',
+                    fontFamily: 'var(--font-sans)', outline: 'none',
+                    minHeight: '72px', resize: 'vertical' as const,
+                    boxSizing: 'border-box' as const,
+                  }}
+                />
+              </div>
+            )}
+
+            {/* Progression section */}
+            <div style={{ marginBottom: '20px' }}>
+              <button
+                onClick={() => setShowProgression(!showProgression)}
+                style={{
+                  background: 'transparent', border: 'none',
+                  fontSize: '13px', color: 'var(--mist)',
+                  cursor: 'pointer', padding: '0',
+                  fontFamily: 'var(--font-sans)',
+                  textDecoration: 'underline',
+                  textDecorationColor: 'var(--border)',
+                }}
+              >
+                {showProgression ? '− Ocultar progressão' : '+ Atualizar progressão do aluno'}
+              </button>
+
+              {showProgression && (
+                <div style={{ marginTop: '12px' }}>
+                  <div style={{
+                    fontSize: '11px', fontWeight: '500',
+                    letterSpacing: '0.08em', textTransform: 'uppercase',
+                    color: 'var(--mist)', marginBottom: '8px',
+                  }}>
+                    Nível após esta aula
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
+                    {[
+                      { key: 'beginner',     label: 'Iniciante'    },
+                      { key: 'intermediate', label: 'Intermediário' },
+                      { key: 'advanced',     label: 'Avançado'     },
+                    ].map(l => (
+                      <button
+                        key={l.key}
+                        onClick={() => setProgLevel(l.key)}
+                        style={{
+                          flex: 1, padding: '8px',
+                          borderRadius: 'var(--radius-md)',
+                          border: `1.5px solid ${progLevel === l.key ? 'var(--glacial)' : 'var(--border)'}`,
+                          background: progLevel === l.key ? 'var(--glacial-light)' : '#fff',
+                          color: progLevel === l.key ? 'var(--glacial-dark)' : 'var(--mist)',
+                          fontSize: '12px', fontWeight: '500',
+                          cursor: 'pointer', fontFamily: 'var(--font-sans)',
+                        }}
+                      >
+                        {l.label}
+                      </button>
+                    ))}
+                  </div>
+                  <textarea
+                    value={progNotes}
+                    onChange={e => setProgNotes(e.target.value)}
+                    placeholder="Observações sobre a progressão..."
+                    style={{
+                      width: '100%', padding: '10px 12px',
+                      border: '0.5px solid var(--border-strong)',
+                      borderRadius: 'var(--radius-md)',
+                      fontSize: '13px', color: 'var(--slate)',
+                      fontFamily: 'var(--font-sans)', outline: 'none',
+                      minHeight: '60px', resize: 'vertical' as const,
+                      boxSizing: 'border-box' as const,
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                onClick={close}
+                style={{
+                  flex: 1, padding: '12px',
+                  background: '#fff', color: 'var(--mist)',
+                  border: '0.5px solid var(--border)',
+                  borderRadius: 'var(--radius-md)',
+                  fontSize: '14px', cursor: 'pointer',
+                  fontFamily: 'var(--font-sans)',
+                }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirm}
+                disabled={confirming || !instructorId || totalPrice <= 0 || finalDuration <= 0}
+                style={{
+                  flex: 2, padding: '12px',
+                  background: confirming || !instructorId || totalPrice <= 0 || finalDuration <= 0
+                    ? 'var(--border)' : 'var(--glacial)',
+                  color: confirming || !instructorId || totalPrice <= 0 || finalDuration <= 0
+                    ? 'var(--mist)' : '#fff',
+                  border: 'none',
+                  borderRadius: 'var(--radius-md)',
+                  fontSize: '14px', fontWeight: '500',
+                  cursor: confirming || !instructorId || totalPrice <= 0 || finalDuration <= 0
+                    ? 'not-allowed' : 'pointer',
+                  fontFamily: 'var(--font-sans)',
+                }}
+              >
+                {confirming ? 'Confirmando...' : `Confirmar aula · ${fmt(totalPrice)}`}
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+    </>
+  )
+}

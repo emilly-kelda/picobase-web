@@ -1,4 +1,4 @@
-import { createServiceClient } from '@/lib/supabase-server'
+ï»¿import { createServiceClient } from '@/lib/supabase-server'
 
 export type Alert = {
   type: 'warning' | 'info' | 'error'
@@ -25,7 +25,7 @@ export async function getAlerts(schoolId: string): Promise<Alert[]> {
     }).format(total)
     alerts.push({
       type: 'warning',
-      message: `${pendingPayments.length} instructor payment${pendingPayments.length > 1 ? 's' : ''} pending approval — ${fmt} total`,
+      message: `${pendingPayments.length} instructor payment${pendingPayments.length > 1 ? 's' : ''} pending approval ï¿½ ${fmt} total`,
       link: '/owner/payments',
     })
   }
@@ -69,7 +69,7 @@ export async function getAlerts(schoolId: string): Promise<Alert[]> {
     for (const c of healthAlerts) {
       alerts.push({
         type: 'error',
-        message: `Medical alert — ${c.student_name}: ${c.health_condition}`,
+        message: `Medical alert ï¿½ ${c.student_name}: ${c.health_condition}`,
         link: '/owner/students',
       })
     }
@@ -114,4 +114,5 @@ export async function getAlerts(schoolId: string): Promise<Alert[]> {
 
   return alerts
 }
+
 

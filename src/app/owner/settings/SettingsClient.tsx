@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -79,9 +79,11 @@ const sectionBodyStyle = {
 export default function SettingsClient({
   school: initialSchool,
   seasons: initialSeasons,
+  currentLang,
 }: {
   school: School
   seasons: Season[]
+  currentLang: string
 }) {
   const router = useRouter()
   const [school, setSchool] = useState(initialSchool)
@@ -154,6 +156,47 @@ export default function SettingsClient({
   return (
     <div style={{ maxWidth: '720px' }}>
 
+      {/* Language toggle */}
+      <div style={sectionStyle}>
+        <div style={sectionHeaderStyle}>{currentLang === 'pt' ? 'Idioma do portal' : 'Portal language'}</div>
+        <div style={sectionBodyStyle}>
+          <p style={{ fontSize: '13px', color: 'var(--mist)', marginBottom: '16px', marginTop: 0 }}>
+            {currentLang === 'pt'
+              ? 'Escolha o idioma do portal do proprietário.'
+              : 'Choose the language for the owner portal interface.'}
+          </p>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            {[
+              { value: 'pt', label: '🇧🇷 Português' },
+              { value: 'en', label: '🇬🇧 English'   },
+            ].map(option => (
+              <button
+                key={option.value}
+                onClick={async () => {
+                  await fetch('/api/owner/language', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ lang: option.value }),
+                  })
+                  window.location.reload()
+                }}
+                style={{
+                  padding: '10px 20px',
+                  borderRadius: 'var(--radius-md)',
+                  border: `1.5px solid ${currentLang === option.value ? 'var(--glacial)' : 'var(--border-strong)'}`,
+                  background: currentLang === option.value ? 'var(--glacial-light)' : '#fff',
+                  color: currentLang === option.value ? 'var(--glacial-dark)' : 'var(--slate)',
+                  fontSize: '14px', fontWeight: '500',
+                  cursor: 'pointer', fontFamily: 'var(--font-sans)',
+                }}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
       {/* School settings */}
       <div style={sectionStyle}>
         <div style={sectionHeaderStyle}>School</div>
@@ -197,7 +240,7 @@ export default function SettingsClient({
               <label style={labelStyle}>
                 Monthly burn rate
                 <span style={{ marginLeft: '6px', color: 'var(--glacial)', fontWeight: '400', textTransform: 'none', letterSpacing: 0 }}>
-                  {school.burn_rate ? fmt(school.burn_rate) : '�'}
+                  {school.burn_rate ? fmt(school.burn_rate) : '�'}
                 </span>
               </label>
               <input
@@ -364,7 +407,7 @@ export default function SettingsClient({
             { label: 'School ID', value: initialSchool.id                           },
             { label: 'Slug',      value: initialSchool.slug                         },
             { label: 'Currency',  value: initialSchool.currency                     },
-            { label: 'Sports',    value: initialSchool.sport_types?.join(', ') ?? '�' },
+            { label: 'Sports',    value: initialSchool.sport_types?.join(', ') ?? '�' },
           ].map(item => (
             <div key={item.label} style={{ display: 'flex', gap: '16px', alignItems: 'baseline' }}>
               <span style={{
@@ -388,4 +431,5 @@ export default function SettingsClient({
     </div>
   )
 }
+
 
