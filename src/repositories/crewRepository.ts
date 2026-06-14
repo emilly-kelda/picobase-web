@@ -1,4 +1,4 @@
-﻿import { createServiceClient } from '@/lib/supabase-server'
+﻿import { createServiceClient, createServerSupabaseClient } from '@/lib/supabase-server'
 
 export async function getCrewMembers(schoolId: string) {
   const supabase = createServiceClient()
@@ -51,19 +51,35 @@ export async function getCrewMembers(schoolId: string) {
 export async function getPayments(schoolId: string, period?: string) {
   const supabase = createServiceClient()
   const currentPeriod = period ?? new Date().toISOString().slice(0, 7)
+
   const { data, error } = await supabase
     .from('payments')
     .select(`
       id, period, sessions_count, revenue_generated,
       commission_pct, commission_amount, bonus,
       total_to_pay, status, approved_at, paid_at,
-      users!payments_instructor_id_fkey ( id, name, pix_key, wise_email )
+      users!payments_instructor_id_fkey (
+        id, name, email, whatsapp,
+        pix_key, wise_email, commission_pct
+      )
     `)
     .eq('school_id', schoolId)
     .eq('period', currentPeriod)
     .order('total_to_pay', { ascending: false })
+
   if (error) throw error
-  return { payments: data ?? [], period: currentPeriod }
+
+  const payments = data ?? []
+
+  const totalPending  = payments.filter(p => p.status === 'pending').reduce((s, p) => s + p.total_to_pay, 0)
+  const totalApproved = payments.filter(p => p.status === 'approved').reduce((s, p) => s + p.total_to_pay, 0)
+  const totalPaid     = payments.filter(p => p.status === 'paid').reduce((s, p) => s + p.total_to_pay, 0)
+
+  return {
+    payments,
+    period: currentPeriod,
+    summary: { totalPending, totalApproved, totalPaid, total: totalPending + totalApproved + totalPaid },
+  }
 }
 
 export async function getCommissionOverrides(schoolId: string, instructorId: string) {

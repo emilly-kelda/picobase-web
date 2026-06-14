@@ -35,10 +35,7 @@ const CONTENT = {
     nav_calc:    'Calculadora',
     nav_enter:   'Entrar →',
     eyebrow:     'Sistema operacional · escolas sazonais de esportes',
-    h1_line1:    'Sua temporada',
-    h1_accent:   'vai durar',
-    h1_line3:    'o quanto?',
-    sub:         'Do check-in ao pagamento dos instrutores — e a única métrica que importa: quantos meses essa temporada vai te manter na baixa temporada.',
+    sub:         'Do registro das aulas ao pagamento dos instrutores — e a resposta que todo dono de escola sazonal precisa: esta temporada será suficiente para atravessar a baixa temporada?',
     cta_primary:   'Agendar demonstração →',
     cta_secondary: 'Calcular minha reserva',
     stats: [
@@ -66,19 +63,16 @@ const CONTENT = {
       { label: 'Comissões calculadas automaticamente',     before: false },
       { label: 'Reserva de baixa temporada em tempo real', before: false },
     ],
-    calc_eyebrow: 'Calculadora gratuita',
-    calc_h2:      'Quantos meses sua temporada cobre?',
-    calc_body:    'Arraste os controles e descubra agora. No Pico Base, esse número aparece em tempo real no dashboard enquanto a temporada acontece.',
-    calc_link:    'Ver calculadora completa →',
-    runway_label: 'Reserva',
-    runway_sub:   'meses cobertos',
+    calc_eyebrow: 'Ferramenta de planejamento gratuita',
+    calc_h2:      'Essa temporada vai ser suficiente?',
+    calc_body:    'A maioria dos donos de escola sazonal sabe a receita. Poucos sabem por quanto tempo ela vai durar. Ajuste os números abaixo e veja quantos meses sua temporada pode financiar a baixa temporada.',
+    calc_link:    'Abrir calculadora completa →',
+    runway_label: 'Reserva de Baixa Temporada',
+    runway_sub:   'meses financiados',
     profit_label: 'Lucro da temporada',
-    burn_label:   'Custo fixo mensal',
-    verdict_good: 'Confortável',
-    verdict_ok:   'Apertado',
-    verdict_bad:  'Crítico',
+    burn_label:   'Custos operacionais mensais',
     how_eyebrow:  'Como funciona',
-    how_h2:       'Da chegada do aluno ao fechamento do mês.',
+    how_h2:       'Da chegada do aluno ao planejamento da temporada.',
     steps: [
       { n: '01', title: 'Aluno faz check-in',   body: 'Escaneia o QR code, preenche os dados em menos de 2 minutos e assina o waiver digital. Funciona em 4 idiomas.' },
       { n: '02', title: 'Dono confirma a aula', body: 'Vê o aluno pendente no Base Camp, confirma duração e valor. Comissão calculada automaticamente.' },
@@ -107,10 +101,7 @@ const CONTENT = {
     nav_calc:    'Calculator',
     nav_enter:   'Sign in →',
     eyebrow:     'Operating system · seasonal sports schools',
-    h1_line1:    'How long will',
-    h1_accent:   'your season',
-    h1_line3:    'last?',
-    sub:         'From check-in to instructor payroll — and the only metric that matters: how many months this season will keep you alive in the off-season.',
+    sub:         'From check-in to instructor payroll — and the one number that tells you whether this season will carry your school through the off-season.',
     cta_primary:   'Book a demo →',
     cta_secondary: 'Calculate my runway',
     stats: [
@@ -127,9 +118,9 @@ const CONTENT = {
       { label: 'Profit',   value: '$ 2.2k', sub: 'net'     },
     ],
     problem_eyebrow: 'The problem',
-    problem_h2:      'Every school software shows you what happened.',
-    problem_accent:  'Pico Base shows whether this season will carry you through the off-season.',
-    problem_body:    "Seasonal schools don't have linear revenue. You earn in six months and need to survive for twelve. Most owners only find out the season wasn't enough when the money runs out.",
+    problem_h2:      'Most school software tracks lessons.',
+    problem_accent:  'Pico Base tracks whether you\'ll make it through the off-season.',
+    problem_body:    "Most school software helps you record what happened. Pico Base helps you understand whether this season generated enough profit to get you safely through the off-season.",
     before_after: [
       { label: 'WhatsApp to communicate lessons',      before: true  },
       { label: 'Excel to calculate commissions',       before: true  },
@@ -138,19 +129,16 @@ const CONTENT = {
       { label: 'Commissions calculated automatically', before: false },
       { label: 'Off-season runway in real time',       before: false },
     ],
-    calc_eyebrow: 'Free tool',
-    calc_h2:      'How many months does your season cover?',
-    calc_body:    'Drag the sliders and find out now. In Pico Base, this number updates in real time on the dashboard as the season unfolds.',
-    calc_link:    'See full calculator →',
-    runway_label: 'Runway',
-    runway_sub:   'months covered',
+    calc_eyebrow: 'Free planning tool',
+    calc_h2:      'Will this season be enough?',
+    calc_body:    'Most seasonal school owners know revenue. Few know how long that revenue will last. Adjust the numbers below and see how many months your season can fund the off-season.',
+    calc_link:    'Open full runway calculator →',
+    runway_label: 'Off-Season Runway',
+    runway_sub:   'months funded',
     profit_label: 'Season profit',
-    burn_label:   'Monthly fixed costs',
-    verdict_good: 'Comfortable',
-    verdict_ok:   'Tight',
-    verdict_bad:  'Critical',
+    burn_label:   'Monthly operating costs',
     how_eyebrow:  'How it works',
-    how_h2:       'From student arrival to month close.',
+    how_h2:       'From student arrival to season planning.',
     steps: [
       { n: '01', title: 'Student checks in',     body: 'Scans the QR code, fills in details in under 2 minutes, signs the digital waiver. Works in 4 languages.' },
       { n: '02', title: 'Owner confirms lesson', body: 'Sees the pending student in Base Camp, confirms duration and price. Commission calculated automatically.' },
@@ -186,10 +174,41 @@ function RunwayCalc({ t, lang }: { t: typeof CONTENT.pt; lang: Lang }) {
 
   const runway   = burn > 0 ? profit / burn : 0
   const barPct   = Math.min(100, (runway / 12) * 100)
-  const verdict  = runway >= 6 ? t.verdict_good : runway >= 3 ? t.verdict_ok : t.verdict_bad
+  const verdict = runway >= 6
+    ? {
+        label: lang === 'pt' ? 'Sustentável' : 'Sustainable',
+        sub: lang === 'pt'
+          ? 'Sua temporada gera lucro suficiente para atravessar a baixa temporada com segurança.'
+          : 'Your season generates enough profit to comfortably support the off-season.',
+      }
+    : runway >= 3
+    ? {
+        label: lang === 'pt' ? 'Requer atenção' : 'Needs attention',
+        sub: lang === 'pt'
+          ? 'A escola possui alguma margem de segurança, mas uma temporada mais fraca ou custos inesperados podem pressionar o caixa.'
+          : 'The school has some runway, but a weaker season or unexpected costs could create pressure during the off-season.',
+      }
+    : runway > 0
+    ? {
+        label: lang === 'pt' ? 'Em risco' : 'At risk',
+        sub: lang === 'pt'
+          ? 'A temporada atual não gera lucro suficiente para sustentar a escola durante toda a baixa temporada.'
+          : 'The current season does not generate enough profit to safely fund the off-season.',
+      }
+    : {
+        label: '—',
+        sub: lang === 'pt'
+          ? 'Informe o lucro da temporada e os custos mensais para calcular sua autonomia.'
+          : 'Enter your season profit and monthly costs to calculate your runway.',
+      }
   const barColor = runway >= 6 ? C.teal : runway >= 3 ? C.amber : C.signal
-  const badgeCol = runway >= 6 ? C.tealDark  : runway >= 3 ? C.amberDark  : C.signalDark
-  const badgeBg  = runway >= 6 ? C.tealLight : runway >= 3 ? C.amberBg    : C.signalLight
+  const targetMonths = 6
+  const gap = runway >= targetMonths ? 0 : Math.round((targetMonths * burn) - profit)
+  const futureDate = new Date()
+  futureDate.setMonth(futureDate.getMonth() + Math.floor(runway))
+  const runwayUntil = futureDate.toLocaleString(
+    lang === 'pt' ? 'pt-BR' : 'en-US', { month: 'long' }
+  )
 
   function fmt(n: number) {
     return new Intl.NumberFormat(lang === 'pt' ? 'pt-BR' : 'en-US', {
@@ -206,64 +225,67 @@ function RunwayCalc({ t, lang }: { t: typeof CONTENT.pt; lang: Lang }) {
     }}>
       {/* left — result */}
       <div style={{
-        background: C.ocean, padding: '28px 24px',
-        display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
+        background: '#1B4B5A', padding: '28px 24px',
+        display: 'flex', flexDirection: 'column',
       }}>
-        <div>
-          <div style={{
-            fontSize: '9px', fontWeight: '500', letterSpacing: '0.14em',
-            textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)', marginBottom: '12px',
-          }}>
-            {t.runway_label}
-          </div>
-          <div style={{
-            fontSize: '56px', fontWeight: '700', color: C.white,
-            lineHeight: '1', fontVariantNumeric: 'tabular-nums', marginBottom: '6px',
-          }}>
-            {runway > 0 ? runway.toFixed(1) : '—'}
-          </div>
-          <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.35)', marginBottom: '20px' }}>
-            {t.runway_sub}
-          </div>
-          <div style={{
-            height: '4px', background: 'rgba(255,255,255,0.1)',
-            borderRadius: '99px', overflow: 'hidden', marginBottom: '5px',
-          }}>
-            <div style={{
-              height: '100%', width: `${barPct}%`, background: barColor,
-              borderRadius: '99px', transition: 'width 0.35s, background 0.3s',
-            }} />
-          </div>
-          <div style={{
-            display: 'flex', justifyContent: 'space-between',
-            fontSize: '9px', color: 'rgba(255,255,255,0.2)', marginBottom: '20px',
-          }}>
-            <span>0</span><span>6mo</span><span>12mo</span>
-          </div>
+        <div style={{
+          fontSize: '9px', fontWeight: '500',
+          letterSpacing: '0.14em', textTransform: 'uppercase',
+          color: 'rgba(255,255,255,0.4)', marginBottom: '12px',
+        }}>
+          {t.runway_label}
         </div>
         <div style={{
-          padding: '12px 14px',
-          background: 'rgba(255,255,255,0.06)', borderRadius: '10px',
+          fontSize: '64px', fontWeight: '700', color: '#fff',
+          lineHeight: '1', fontVariantNumeric: 'tabular-nums', marginBottom: '4px',
+        }}>
+          {runway > 0 ? runway.toFixed(1) : '—'}
+        </div>
+        <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.35)', marginBottom: '20px' }}>
+          {t.runway_sub}
+        </div>
+        <div style={{
+          height: '4px', background: 'rgba(255,255,255,0.1)',
+          borderRadius: '99px', overflow: 'hidden', marginBottom: '4px',
         }}>
           <div style={{
-            fontSize: '9px', color: 'rgba(255,255,255,0.3)',
-            letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '6px',
-          }}>
-            {lang === 'pt' ? 'Situação' : 'Status'}
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '14px', fontWeight: '600', color: barColor }}>
-              {verdict}
-            </span>
-            <span style={{
-              padding: '3px 10px', borderRadius: '99px',
-              fontSize: '10px', fontWeight: '500',
-              background: badgeBg, color: badgeCol,
-            }}>
-              {runway.toFixed(1)} {lang === 'pt' ? 'mo' : 'mo'}
-            </span>
-          </div>
+            height: '100%', width: `${barPct}%`, background: barColor,
+            borderRadius: '99px', transition: 'width 0.35s, background 0.3s',
+          }} />
         </div>
+        <div style={{
+          display: 'flex', justifyContent: 'space-between',
+          fontSize: '9px', color: 'rgba(255,255,255,0.2)', marginBottom: '24px',
+        }}>
+          <span>0</span><span>6mo</span><span>12mo</span>
+        </div>
+        <div style={{ fontSize: '15px', fontWeight: '600', color: barColor, marginBottom: '8px' }}>
+          {verdict.label}
+        </div>
+        {runway > 0 && (
+          <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.6)', lineHeight: '1.6', margin: '0 0 10px' }}>
+            {lang === 'pt'
+              ? <>Ao lucro atual, a escola pode operar até <strong style={{ color: '#fff' }}>{runwayUntil}</strong>.</>
+              : <>At your current profit, the school can operate until <strong style={{ color: '#fff' }}>{runwayUntil}</strong>.</>
+            }
+          </p>
+        )}
+        {gap > 0 && (
+          <p style={{ fontSize: '12px', color: '#D4A017', lineHeight: '1.6', margin: '0' }}>
+            {lang === 'pt'
+              ? <>Você precisa de mais <strong>{fmt(gap)}</strong> de lucro para atingir <strong>{targetMonths} meses</strong>.</>
+              : <>You need <strong>{fmt(gap)}</strong> more profit to reach <strong>{targetMonths} months</strong>.</>
+            }
+          </p>
+        )}
+        {runway === 0 && (
+          <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.3)', lineHeight: '1.6', margin: '0' }}>
+            {lang === 'pt'
+              ? 'Ajuste os controles para ver sua reserva.'
+              : 'Adjust the sliders to see your runway.'
+            }
+          </p>
+        )}
       </div>
 
       {/* right — inputs */}
@@ -315,8 +337,10 @@ function RunwayCalc({ t, lang }: { t: typeof CONTENT.pt; lang: Lang }) {
           padding: '11px 14px', background: C.powder,
           borderRadius: '10px', fontSize: '12px', color: C.mist, lineHeight: '1.5',
         }}>
-          {fmt(profit)} ÷ {fmt(burn)}{lang === 'pt' ? '/mês' : '/mo'}
-          {runway > 0 ? ` = ${runway.toFixed(1)} ${lang === 'pt' ? 'meses' : 'months'}` : ' = —'}
+          {lang === 'pt'
+            ? 'Lucro da temporada ÷ custos mensais = meses de reserva'
+            : 'Season profit ÷ monthly costs = months of runway'
+          }
         </div>
       </div>
     </div>
@@ -409,14 +433,24 @@ export default function HomePage() {
           </div>
 
           <h1 style={{
-            fontSize: 'clamp(42px, 6vw, 82px)',
-            fontWeight: '700', color: C.slate,
-            lineHeight: '1.04', letterSpacing: '-0.03em',
+            fontSize: 'clamp(36px, 5vw, 72px)',
+            fontWeight: '700', color: '#1A1C22',
+            lineHeight: '1.05', letterSpacing: '-0.03em',
             margin: '0 0 28px',
           }}>
-            {t.h1_line1}<br />
-            <span style={{ color: C.ocean }}>{t.h1_accent}</span><br />
-            {t.h1_line3}
+            {lang === 'pt' ? (
+              <>
+                Uma temporada.<br />
+                <span style={{ color: '#1B4B5A' }}>Doze meses</span><br />
+                para sobreviver.
+              </>
+            ) : (
+              <>
+                One season.<br />
+                <span style={{ color: '#1B4B5A' }}>Twelve months</span><br />
+                to survive.
+              </>
+            )}
           </h1>
 
           <p style={{

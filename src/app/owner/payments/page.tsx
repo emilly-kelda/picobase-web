@@ -1,4 +1,4 @@
-﻿import { getPayments } from '@/repositories/crewRepository'
+import { getPayments } from '@/repositories/crewRepository'
 import PaymentsClient from './PaymentsClient'
 
 const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
@@ -9,7 +9,7 @@ export default async function PaymentsPage({
   searchParams: Promise<{ period?: string }>
 }) {
   const { period } = await searchParams
-  const { payments, period: activePeriod } = await getPayments(SCHOOL_ID, period)
+  const { payments, period: activePeriod, summary } = await getPayments(SCHOOL_ID, period)
 
   const monthOptions = Array.from({ length: 12 }, (_, i) => {
     const d = new Date()
@@ -19,13 +19,17 @@ export default async function PaymentsPage({
     return { value, label }
   })
 
+  const normalizedPayments = payments.map(p => ({
+    ...p,
+    users: Array.isArray(p.users) ? (p.users[0] ?? null) : (p.users ?? null),
+  }))
+
   return (
     <PaymentsClient
-      payments={payments}
+      payments={normalizedPayments as any}
       period={activePeriod}
+      summary={summary}
       monthOptions={monthOptions}
     />
   )
 }
-
-

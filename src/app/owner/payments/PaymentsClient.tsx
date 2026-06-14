@@ -15,50 +15,77 @@ type Payment = {
   status: string
   approved_at: string | null
   paid_at: string | null
-  users: { id: string; name: string; pix_key: string | null; wise_email: string | null } | null
+  users: {
+    id: string
+    name: string
+    email: string | null
+    whatsapp: string | null
+    pix_key: string | null
+    wise_email: string | null
+    commission_pct: number | null
+  } | null
 }
 
-function fmt(n: number) {
+type Summary = {
+  totalPending: number
+  totalApproved: number
+  totalPaid: number
+  total: number
+}
+
+function fmt(n: number | null | undefined) {
+  if (n == null) return '—'
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency', currency: 'BRL',
     minimumFractionDigits: 0, maximumFractionDigits: 0,
   }).format(n)
 }
 
-function fmtPct(n: number) {
+function fmtDate(d: string | null) {
+  if (!d) return null
+  return new Date(d).toLocaleDateString('pt-BR', {
+    day: '2-digit', month: 'short', year: 'numeric',
+  })
+}
+
+function fmtPct(n: number | null | undefined) {
+  if (n == null) return '—'
   return `${Math.round(n * 100)}%`
 }
 
-const STATUS_STYLES: Record<string, { bg: string; color: string; label: string }> = {
-  pending:  { bg: 'var(--amber-light)',   color: 'var(--amber)',        label: 'Pending'  },
-  approved: { bg: 'var(--glacial-light)', color: 'var(--glacial-dark)', label: 'Approved' },
-  paid:     { bg: 'var(--powder)',        color: 'var(--mist)',         label: 'Paid'     },
+function getInitials(name: string) {
+  return name.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase()
+}
+
+const STATUS: Record<string, { label: string; bg: string; color: string }> = {
+  pending:  { label: 'Pendente',  bg: 'var(--amber-light)',   color: 'var(--amber)'        },
+  approved: { label: 'Aprovado',  bg: 'var(--glacial-light)', color: 'var(--glacial-dark)' },
+  paid:     { label: 'Pago',      bg: '#E8F5E9',              color: '#2E7D32'             },
 }
 
 export default function PaymentsClient({
   payments: initialPayments,
   period,
+  summary: initialSummary,
   monthOptions,
 }: {
   payments: Payment[]
   period: string
+  summary: Summary
   monthOptions: { value: string; label: string }[]
 }) {
-  const router = useRouter()
+  const router  = useRouter()
   const [payments, setPayments] = useState(initialPayments)
-  const [loading, setLoading] = useState<string | null>(null)
-  const [closing, setClosing] = useState(false)
-  const [message, setMessage] = useState<string | null>(null)
-  const [breakdown, setBreakdown]               = useState<any[]>([])
-  const [breakdownFor, setBreakdownFor]         = useState<string | null>(null)
+  const [summary,  setSummary]  = useState(initialSummary)
+  const [loading,  setLoading]  = useState<string | null>(null)
+  const [closing,  setClosing]  = useState(false)
+  const [message,  setMessage]  = useState<string | null>(null)
+  const [breakdown, setBreakdown] = useState<any[]>([])
+  const [breakdownFor, setBreakdownFor] = useState<string | null>(null)
   const [loadingBreakdown, setLoadingBreakdown] = useState(false)
 
-  const pending    = payments.filter(p => p.status === 'pending')
-  const approved   = payments.filter(p => p.status === 'approved')
+  const pending     = payments.filter(p => p.status === 'pending')
   const allApproved = payments.length > 0 && pending.length === 0
-
-  const totalPending  = pending.reduce((s, p) => s + p.total_to_pay, 0)
-  const totalApproved = approved.reduce((s, p) => s + p.total_to_pay, 0)
 
   async function closeMonth() {
     setClosing(true)
@@ -70,44 +97,43 @@ export default function PaymentsClient({
     })
     const data = await res.json()
     if (data.ok) {
-      setMessage(`Created ${data.created} payment record${data.created !== 1 ? 's' : ''}`)
+      setMessage(`✓ ${data.created} registro${data.created !== 1 ? 's' : ''} criado${data.created !== 1 ? 's' : ''}`)
       router.refresh()
     } else {
-      setMessage(`Error: ${data.error}`)
+      setMessage(`Erro: ${data.error}`)
     }
     setClosing(false)
   }
 
-  async function approvePayment(id: string) {
+  async function updateStatus(id: string, newStatus: string) {
     setLoading(id)
+    const update: Record<string, string> = { status: newStatus }
+    if (newStatus === 'approved') update.approved_at = new Date().toISOString()
+    if (newStatus === 'paid')     update.paid_at     = new Date().toISOString()
+
     await fetch('/api/owner/close-month', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ payment_id: id, action: 'approve' }),
+      body: JSON.stringify({ payment_id: id, action: 'update_status', ...update }),
     })
-    setPayments(prev =>
-      prev.map(p => p.id === id
-        ? { ...p, status: 'approved', approved_at: new Date().toISOString() }
-        : p
-      )
-    )
-    setLoading(null)
-  }
 
-  async function approveAll() {
-    setLoading('all')
-    for (const p of pending) {
-      await approvePayment(p.id)
-    }
+    setPayments(prev => prev.map(p => p.id === id ? { ...p, ...update } : p))
+    setSummary(prev => {
+      const updated = payments.map(p => p.id === id ? { ...p, ...update } : p)
+      return {
+        totalPending:  updated.filter(p => p.status === 'pending').reduce((s, p) => s + p.total_to_pay, 0),
+        totalApproved: updated.filter(p => p.status === 'approved').reduce((s, p) => s + p.total_to_pay, 0),
+        totalPaid:     updated.filter(p => p.status === 'paid').reduce((s, p) => s + p.total_to_pay, 0),
+        total:         prev.total,
+      }
+    })
     setLoading(null)
   }
 
   async function fetchBreakdown(instructorId: string) {
     setBreakdownFor(instructorId)
     setLoadingBreakdown(true)
-    const res = await fetch(
-      `/api/owner/breakdown?instructor=${instructorId}&period=${period}`
-    )
+    const res = await fetch(`/api/owner/breakdown?instructor=${instructorId}&period=${period}`)
     const data = await res.json()
     setBreakdown(data.sessions ?? [])
     setLoadingBreakdown(false)
@@ -119,29 +145,24 @@ export default function PaymentsClient({
       {/* Header */}
       <div style={{
         display: 'flex', justifyContent: 'space-between',
-        alignItems: 'flex-start', marginBottom: '32px',
+        alignItems: 'flex-start', marginBottom: '28px',
       }}>
         <div>
           <h1 style={{
             fontSize: '22px', fontWeight: '500',
             color: 'var(--slate)', marginBottom: '4px',
           }}>
-            Payments
+            Repasses
           </h1>
           <p style={{ fontSize: '13px', color: 'var(--mist)' }}>
-            Crew payroll &mdash; close the month
+            Folha de pagamento da equipe
           </p>
         </div>
-
-        {/* Period selector */}
         <form method="GET">
           <select
             name="period"
             defaultValue={period}
-            onChange={e => {
-              const form = e.target.closest('form') as HTMLFormElement
-              form?.submit()
-            }}
+            onChange={e => (e.target.closest('form') as HTMLFormElement)?.submit()}
             style={{
               padding: '9px 14px',
               border: '0.5px solid var(--border-strong)',
@@ -162,28 +183,32 @@ export default function PaymentsClient({
       {message && (
         <div style={{
           padding: '12px 16px', borderRadius: 'var(--radius-md)',
-          background: message.startsWith('Error')
-            ? 'var(--signal-light)' : 'var(--glacial-light)',
-          color: message.startsWith('Error')
-            ? 'var(--signal-dark)' : 'var(--glacial-dark)',
+          background: message.startsWith('Erro') ? 'var(--signal-light)' : 'var(--glacial-light)',
+          color: message.startsWith('Erro') ? 'var(--signal-dark)' : 'var(--glacial-dark)',
           fontSize: '13px', marginBottom: '20px',
         }}>
           {message}
         </div>
       )}
 
-      {/* No payments yet */}
+      {/* No payments */}
       {payments.length === 0 && (
         <div style={{
           background: '#fff', border: '0.5px solid var(--border)',
-          borderRadius: 'var(--radius-lg)', padding: '40px',
+          borderRadius: 'var(--radius-lg)', padding: '48px',
           textAlign: 'center',
         }}>
-          <div style={{ fontSize: '14px', color: 'var(--slate)', marginBottom: '8px', fontWeight: '500' }}>
-            No payment records for {period}
+          <div style={{
+            fontSize: '14px', fontWeight: '500',
+            color: 'var(--slate)', marginBottom: '8px',
+          }}>
+            Nenhum repasse para {period}
           </div>
-          <div style={{ fontSize: '13px', color: 'var(--mist)', marginBottom: '24px' }}>
-            Calculate commissions from all confirmed sessions this period.
+          <div style={{
+            fontSize: '13px', color: 'var(--mist)',
+            marginBottom: '24px', lineHeight: '1.6',
+          }}>
+            Calcule as comissões de todas as aulas confirmadas neste período.
           </div>
           <button
             onClick={closeMonth}
@@ -198,66 +223,72 @@ export default function PaymentsClient({
               fontFamily: 'var(--font-sans)',
             }}
           >
-            {closing ? 'Calculating...' : `Close ${period} ?`}
+            {closing ? 'Calculando...' : `Fechar ${period} →`}
           </button>
         </div>
       )}
 
-      {/* Payments exist */}
       {payments.length > 0 && (
         <>
-          {/* Summary */}
+          {/* Summary card */}
           <div style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
-            gap: '12px', marginBottom: '20px',
+            background: '#fff', border: '0.5px solid var(--border)',
+            borderRadius: 'var(--radius-lg)', overflow: 'hidden',
+            marginBottom: '20px',
           }}>
             <div style={{
-              background: '#fff', border: '0.5px solid var(--border)',
-              borderRadius: 'var(--radius-lg)', padding: '16px 20px',
-              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              padding: '14px 20px',
+              borderBottom: '0.5px solid var(--border)',
+              fontSize: '12px', fontWeight: '500',
+              letterSpacing: '0.08em', textTransform: 'uppercase',
+              color: 'var(--mist)',
             }}>
-              <span style={{ fontSize: '11px', fontWeight: '500', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--mist)' }}>
-                Pending approval
-              </span>
-              <span style={{ fontSize: '20px', fontWeight: '600', color: 'var(--amber)', fontVariantNumeric: 'tabular-nums' }}>
-                {fmt(totalPending)}
-              </span>
+              Folha de pagamento · {period}
             </div>
-            <div style={{
-              background: '#fff', border: '0.5px solid var(--border)',
-              borderRadius: 'var(--radius-lg)', padding: '16px 20px',
-              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            }}>
-              <span style={{ fontSize: '11px', fontWeight: '500', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--mist)' }}>
-                Approved
-              </span>
-              <span style={{ fontSize: '20px', fontWeight: '600', color: 'var(--glacial-dark)', fontVariantNumeric: 'tabular-nums' }}>
-                {fmt(totalApproved)}
-              </span>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)' }}>
+              {[
+                { label: 'Pendente',     value: fmt(summary.totalPending),  color: 'var(--amber)'        },
+                { label: 'Aprovado',     value: fmt(summary.totalApproved), color: 'var(--glacial-dark)' },
+                { label: 'Pago',         value: fmt(summary.totalPaid),     color: '#2E7D32'             },
+                { label: 'Total devido', value: fmt(summary.total),         color: 'var(--slate)'        },
+              ].map((item, i) => (
+                <div key={item.label} style={{
+                  padding: '16px 20px',
+                  borderLeft: i > 0 ? '0.5px solid var(--border)' : 'none',
+                }}>
+                  <div style={{
+                    fontSize: '10px', fontWeight: '500',
+                    letterSpacing: '0.1em', textTransform: 'uppercase',
+                    color: 'var(--mist)', marginBottom: '6px',
+                  }}>
+                    {item.label}
+                  </div>
+                  <div style={{
+                    fontSize: '20px', fontWeight: '600',
+                    color: item.color, fontVariantNumeric: 'tabular-nums',
+                  }}>
+                    {item.value}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 
           {/* Actions */}
-          <div style={{
-            display: 'flex', gap: '10px',
-            marginBottom: '20px', flexWrap: 'wrap',
-          }}>
-            {!allApproved && (
+          <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', flexWrap: 'wrap' }}>
+            {pending.length > 0 && (
               <button
-                onClick={approveAll}
+                onClick={() => pending.forEach(p => updateStatus(p.id, 'approved'))}
                 disabled={loading === 'all'}
                 style={{
                   padding: '9px 18px',
                   background: 'var(--slate)', color: '#fff',
                   border: 'none', borderRadius: 'var(--radius-md)',
                   fontSize: '13px', fontWeight: '500',
-                  cursor: loading === 'all' ? 'not-allowed' : 'pointer',
-                  opacity: loading === 'all' ? 0.6 : 1,
-                  fontFamily: 'var(--font-sans)',
+                  cursor: 'pointer', fontFamily: 'var(--font-sans)',
                 }}
               >
-                Approve all
+                ✓ Aprovar todos
               </button>
             )}
             {allApproved && (
@@ -270,10 +301,10 @@ export default function PaymentsClient({
                     borderRadius: 'var(--radius-md)',
                     fontSize: '13px', fontWeight: '500',
                     textDecoration: 'none',
-                    display: 'inline-flex', alignItems: 'center', gap: '6px',
+                    display: 'inline-flex', alignItems: 'center',
                   }}
                 >
-                  BTG PIX CSV
+                  ↓ BTG PIX CSV
                 </a>
                 <a
                   href={`/api/owner/export?period=${period}&format=wise`}
@@ -284,56 +315,68 @@ export default function PaymentsClient({
                     borderRadius: 'var(--radius-md)',
                     fontSize: '13px', fontWeight: '500',
                     textDecoration: 'none',
-                    display: 'inline-flex', alignItems: 'center', gap: '6px',
+                    display: 'inline-flex', alignItems: 'center',
                   }}
                 >
-                  Wise CSV
+                  ↓ Wise CSV
                 </a>
               </>
             )}
           </div>
 
-          {/* Payment cards */}
+          {/* Instructor cards */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {payments.map(p => {
-              const st = STATUS_STYLES[p.status] ?? STATUS_STYLES.pending
-              const user = p.users as any
+              const user   = p.users as any
+              const st     = STATUS[p.status] ?? STATUS.pending
+              const avgLesson = p.sessions_count > 0
+                ? p.revenue_generated / p.sessions_count
+                : 0
+              const hasPix  = !!user?.pix_key
+              const hasWise = !!user?.wise_email
+              const hasPaymentDetails = hasPix || hasWise
+
               return (
                 <div key={p.id} style={{
                   background: '#fff',
                   border: '0.5px solid var(--border)',
                   borderRadius: 'var(--radius-lg)',
-                  padding: '20px 24px',
+                  overflow: 'hidden',
                 }}>
-                  <div
-                    onClick={() => fetchBreakdown(user?.id)}
-                    style={{
-                      display: 'flex', justifyContent: 'space-between',
-                      alignItems: 'flex-start', marginBottom: '16px',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <div>
+
+                  {/* Card header */}
+                  <div style={{
+                    padding: '18px 24px',
+                    borderBottom: '0.5px solid var(--border)',
+                    display: 'flex', alignItems: 'center', gap: '14px',
+                  }}>
+                    <div style={{
+                      width: '40px', height: '40px',
+                      borderRadius: 'var(--radius-full)',
+                      background: 'var(--glacial-light)',
+                      color: 'var(--glacial-dark)',
+                      display: 'flex', alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '13px', fontWeight: '600', flexShrink: 0,
+                    }}>
+                      {getInitials(user?.name ?? '?')}
+                    </div>
+
+                    <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{
                         fontSize: '15px', fontWeight: '500',
-                        color: 'var(--slate)', marginBottom: '4px',
+                        color: 'var(--slate)', marginBottom: '2px',
                       }}>
                         {user?.name ?? '—'}
                       </div>
                       <div style={{ fontSize: '12px', color: 'var(--mist)' }}>
-                        {p.sessions_count} sessions &middot; {fmtPct(p.commission_pct)} commission
+                        {p.sessions_count} aulas · {fmtPct(p.commission_pct)} comissão
                       </div>
                     </div>
+
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                       <span style={{
-                        fontSize: '12px',
-                        color: 'var(--glacial)',
-                        flexShrink: 0,
-                      }}>
-                        View sessions &rarr;
-                      </span>
-                      <span style={{
-                        padding: '3px 10px',
+                        padding: '4px 12px',
                         borderRadius: 'var(--radius-full)',
                         fontSize: '11px', fontWeight: '500',
                         background: st.bg, color: st.color,
@@ -341,7 +384,7 @@ export default function PaymentsClient({
                         {st.label}
                       </span>
                       <div style={{
-                        fontSize: '22px', fontWeight: '600',
+                        fontSize: '24px', fontWeight: '600',
                         color: 'var(--slate)', fontVariantNumeric: 'tabular-nums',
                       }}>
                         {fmt(p.total_to_pay)}
@@ -349,64 +392,152 @@ export default function PaymentsClient({
                     </div>
                   </div>
 
-                  {/* Stats row */}
+                  {/* Metrics row */}
                   <div style={{
-                    display: 'flex', gap: '24px',
-                    padding: '12px 0',
-                    borderTop: '0.5px solid var(--border)',
-                    borderBottom: user?.pix_key || p.status === 'pending'
-                      ? '0.5px solid var(--border)' : 'none',
-                    marginBottom: user?.pix_key || p.status === 'pending' ? '12px' : '0',
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(5, 1fr)',
+                    borderBottom: '0.5px solid var(--border)',
                   }}>
                     {[
-                      { label: 'Revenue',    value: fmt(p.revenue_generated) },
-                      { label: 'Commission', value: fmt(p.commission_amount) },
-                      { label: 'Bonus',      value: fmt(p.bonus)             },
-                      { label: 'Total',      value: fmt(p.total_to_pay)      },
-                    ].map(item => (
-                      <div key={item.label}>
-                        <div style={{ fontSize: '10px', color: 'var(--mist)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '3px' }}>
+                      { label: 'Receita gerada', value: fmt(p.revenue_generated) },
+                      { label: 'Comissão',        value: fmt(p.commission_amount) },
+                      { label: 'Bônus',           value: fmt(p.bonus)             },
+                      { label: 'Média por aula',  value: fmt(avgLesson)           },
+                      { label: 'Total repasse',   value: fmt(p.total_to_pay)      },
+                    ].map((item, i) => (
+                      <div key={item.label} style={{
+                        padding: '12px 16px',
+                        borderLeft: i > 0 ? '0.5px solid var(--border)' : 'none',
+                      }}>
+                        <div style={{
+                          fontSize: '10px', fontWeight: '500',
+                          letterSpacing: '0.08em', textTransform: 'uppercase',
+                          color: 'var(--mist)', marginBottom: '4px',
+                        }}>
                           {item.label}
                         </div>
-                        <div style={{ fontSize: '13px', fontWeight: '500', color: 'var(--slate)', fontVariantNumeric: 'tabular-nums' }}>
+                        <div style={{
+                          fontSize: '14px', fontWeight: '600',
+                          color: 'var(--slate)', fontVariantNumeric: 'tabular-nums',
+                        }}>
                           {item.value}
                         </div>
                       </div>
                     ))}
                   </div>
 
-                  {/* PIX key + approve button */}
+                  {/* Bottom row — payment details + actions */}
                   <div style={{
+                    padding: '14px 24px',
                     display: 'flex', justifyContent: 'space-between',
-                    alignItems: 'center',
+                    alignItems: 'center', gap: '16px',
                   }}>
-                    {user?.pix_key ? (
-                      <div style={{ fontSize: '12px', color: 'var(--mist)' }}>
-                        PIX <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--slate)' }}>{user.pix_key}</span>
-                      </div>
-                    ) : (
-                      <div style={{ fontSize: '12px', color: 'var(--mist)' }}>No payment details</div>
-                    )}
+                    {/* Payment info */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      {hasPix && (
+                        <div style={{ fontSize: '12px', color: 'var(--mist)' }}>
+                          PIX{' '}
+                          <span style={{
+                            fontFamily: 'var(--font-mono)',
+                            color: 'var(--slate)', fontSize: '11px',
+                          }}>
+                            {user.pix_key}
+                          </span>
+                        </div>
+                      )}
+                      {hasWise && (
+                        <div style={{ fontSize: '12px', color: 'var(--mist)' }}>
+                          Wise{' '}
+                          <span style={{
+                            fontFamily: 'var(--font-mono)',
+                            color: 'var(--slate)', fontSize: '11px',
+                          }}>
+                            {user.wise_email}
+                          </span>
+                        </div>
+                      )}
+                      {!hasPaymentDetails && (
+                        <div style={{
+                          fontSize: '12px', color: 'var(--signal-dark)',
+                          display: 'flex', alignItems: 'center', gap: '6px',
+                        }}>
+                          <span style={{
+                            width: '6px', height: '6px', borderRadius: '50%',
+                            background: 'var(--signal)', flexShrink: 0,
+                          }} />
+                          Dados de pagamento não cadastrados
+                        </div>
+                      )}
+                      {p.paid_at && (
+                        <div style={{ fontSize: '11px', color: 'var(--mist)', marginTop: '2px' }}>
+                          Pago em {fmtDate(p.paid_at)}
+                        </div>
+                      )}
+                    </div>
 
-                    {p.status === 'pending' && (
+                    {/* Actions */}
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                       <button
-                        onClick={() => approvePayment(p.id)}
-                        disabled={loading === p.id}
+                        onClick={() => fetchBreakdown(user?.id)}
                         style={{
-                          padding: '7px 16px',
-                          background: 'var(--glacial-light)',
-                          color: 'var(--glacial-dark)',
-                          border: '0.5px solid var(--glacial)',
+                          padding: '7px 14px',
+                          background: 'var(--powder)',
+                          border: '0.5px solid var(--border)',
                           borderRadius: 'var(--radius-md)',
-                          fontSize: '12px', fontWeight: '500',
-                          cursor: loading === p.id ? 'not-allowed' : 'pointer',
-                          opacity: loading === p.id ? 0.6 : 1,
-                          fontFamily: 'var(--font-sans)',
+                          fontSize: '12px', color: 'var(--mist)',
+                          cursor: 'pointer', fontFamily: 'var(--font-sans)',
                         }}
                       >
-                        {loading === p.id ? 'Approving...' : 'Approve'}
+                        Ver aulas →
                       </button>
-                    )}
+
+                      {p.status === 'pending' && (
+                        <button
+                          onClick={() => updateStatus(p.id, 'approved')}
+                          disabled={loading === p.id}
+                          style={{
+                            padding: '7px 16px',
+                            background: 'var(--glacial-light)',
+                            color: 'var(--glacial-dark)',
+                            border: '0.5px solid var(--glacial)',
+                            borderRadius: 'var(--radius-md)',
+                            fontSize: '12px', fontWeight: '500',
+                            cursor: loading === p.id ? 'not-allowed' : 'pointer',
+                            fontFamily: 'var(--font-sans)',
+                          }}
+                        >
+                          {loading === p.id ? '...' : '✓ Aprovar'}
+                        </button>
+                      )}
+
+                      {p.status === 'approved' && (
+                        <button
+                          onClick={() => updateStatus(p.id, 'paid')}
+                          disabled={loading === p.id}
+                          style={{
+                            padding: '7px 16px',
+                            background: '#E8F5E9', color: '#2E7D32',
+                            border: '0.5px solid #A5D6A7',
+                            borderRadius: 'var(--radius-md)',
+                            fontSize: '12px', fontWeight: '500',
+                            cursor: loading === p.id ? 'not-allowed' : 'pointer',
+                            fontFamily: 'var(--font-sans)',
+                          }}
+                        >
+                          {loading === p.id ? '...' : '✓ Marcar como pago'}
+                        </button>
+                      )}
+
+                      {p.status === 'paid' && (
+                        <div style={{
+                          fontSize: '12px', color: '#2E7D32',
+                          display: 'flex', alignItems: 'center', gap: '5px',
+                        }}>
+                          <span>✓</span>
+                          <span>Pago{p.paid_at ? ` em ${fmtDate(p.paid_at)}` : ''}</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               )
@@ -415,14 +546,13 @@ export default function PaymentsClient({
         </>
       )}
 
-      {/* Breakdown modal */}
+      {/* Session breakdown modal */}
       {breakdownFor && (
         <div
           style={{
             position: 'fixed', inset: 0,
             background: 'rgba(0,0,0,0.4)',
-            display: 'flex',
-            alignItems: 'flex-end',
+            display: 'flex', alignItems: 'flex-end',
             zIndex: 100,
           }}
           onClick={e => { if (e.target === e.currentTarget) setBreakdownFor(null) }}
@@ -430,32 +560,23 @@ export default function PaymentsClient({
           <div style={{
             background: '#fff',
             borderRadius: '24px 24px 0 0',
-            width: '100%',
-            maxHeight: '85vh',
-            overflowY: 'auto',
-            padding: '24px 24px 40px',
+            width: '100%', maxHeight: '85vh',
+            overflowY: 'auto', padding: '24px 24px 40px',
           }}>
-            {/* Handle */}
             <div style={{
-              width: '36px', height: '4px',
-              background: 'var(--border)',
-              borderRadius: '2px',
-              margin: '0 auto 20px',
+              width: '36px', height: '4px', background: 'var(--border)',
+              borderRadius: '2px', margin: '0 auto 20px',
             }} />
-
-            {/* Header */}
             <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: '20px',
+              display: 'flex', justifyContent: 'space-between',
+              alignItems: 'center', marginBottom: '20px',
             }}>
               <div>
                 <div style={{
                   fontSize: '17px', fontWeight: '600',
                   color: 'var(--slate)', marginBottom: '3px',
                 }}>
-                  Session breakdown
+                  Detalhamento de aulas
                 </div>
                 <div style={{ fontSize: '13px', color: 'var(--mist)' }}>
                   {(payments.find(p => (p.users as any)?.id === breakdownFor)?.users as any)?.name ?? '—'}
@@ -466,54 +587,37 @@ export default function PaymentsClient({
               <button
                 onClick={() => setBreakdownFor(null)}
                 style={{
-                  background: 'var(--powder)',
-                  border: 'none',
-                  borderRadius: '50%',
-                  width: '32px', height: '32px',
-                  fontSize: '18px', cursor: 'pointer',
-                  color: 'var(--mist)',
-                  display: 'flex', alignItems: 'center',
-                  justifyContent: 'center',
+                  background: 'var(--powder)', border: 'none',
+                  borderRadius: '50%', width: '32px', height: '32px',
+                  fontSize: '16px', cursor: 'pointer', color: 'var(--mist)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontFamily: 'var(--font-sans)',
                 }}
               >
-                &times;
+                ×
               </button>
             </div>
 
             {loadingBreakdown ? (
-              <div style={{
-                padding: '40px', textAlign: 'center',
-                fontSize: '13px', color: 'var(--mist)',
-              }}>
-                Loading...
+              <div style={{ padding: '40px', textAlign: 'center', fontSize: '13px', color: 'var(--mist)' }}>
+                Carregando...
               </div>
             ) : breakdown.length === 0 ? (
-              <div style={{
-                padding: '40px', textAlign: 'center',
-                fontSize: '13px', color: 'var(--mist)',
-              }}>
-                No sessions found for this period.
+              <div style={{ padding: '40px', textAlign: 'center', fontSize: '13px', color: 'var(--mist)' }}>
+                Nenhuma aula encontrada.
               </div>
             ) : (
               <>
-                {/* Sessions list */}
                 <div style={{
-                  display: 'flex', flexDirection: 'column',
-                  gap: '0',
                   border: '0.5px solid var(--border)',
-                  borderRadius: 'var(--radius-lg)',
-                  overflow: 'hidden',
+                  borderRadius: 'var(--radius-lg)', overflow: 'hidden',
                   marginBottom: '16px',
                 }}>
                   {breakdown.map((s: any, i: number) => (
                     <div key={s.id} style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      padding: '14px 16px',
-                      borderBottom: i < breakdown.length - 1
-                        ? '0.5px solid var(--border)' : 'none',
+                      display: 'flex', justifyContent: 'space-between',
+                      alignItems: 'center', padding: '14px 16px',
+                      borderBottom: i < breakdown.length - 1 ? '0.5px solid var(--border)' : 'none',
                       background: i % 2 === 0 ? '#fff' : 'var(--powder)',
                     }}>
                       <div style={{ flex: 1, minWidth: 0 }}>
@@ -541,33 +645,29 @@ export default function PaymentsClient({
                           {fmt(s.commission_amount)}
                         </div>
                         <div style={{ fontSize: '11px', color: 'var(--mist)' }}>
-                          of {fmt(s.price)}
+                          de {fmt(s.price)}
                         </div>
                       </div>
                     </div>
                   ))}
                 </div>
 
-                {/* Totals */}
                 <div style={{
-                  background: 'var(--powder)',
-                  borderRadius: 'var(--radius-lg)',
+                  background: 'var(--powder)', borderRadius: 'var(--radius-lg)',
                   padding: '14px 16px',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                 }}>
                   <div>
                     <div style={{ fontSize: '12px', color: 'var(--mist)', marginBottom: '2px' }}>
-                      {breakdown.length} sessions
+                      {breakdown.length} aulas
                     </div>
                     <div style={{ fontSize: '12px', color: 'var(--mist)' }}>
-                      Revenue {fmt(breakdown.reduce((s: number, r: any) => s + (r.price ?? 0), 0))}
+                      Receita {fmt(breakdown.reduce((s: number, r: any) => s + (r.price ?? 0), 0))}
                     </div>
                   </div>
                   <div style={{ textAlign: 'right' }}>
                     <div style={{ fontSize: '11px', color: 'var(--mist)', marginBottom: '2px' }}>
-                      Total commission
+                      Total comissão
                     </div>
                     <div style={{
                       fontSize: '20px', fontWeight: '600',
