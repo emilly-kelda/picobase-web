@@ -41,6 +41,46 @@ export async function GET(request: Request) {
     }).join('\n')
   }
 
+  if (format === 'partners') {
+    const { data: referrals } = await supabase
+      .from('referrals')
+      .select(`
+        commission_amount, session_price,
+        partners ( name, pix_key, wise_email, finance_email )
+      `)
+      .eq('school_id', SCHOOL_ID)
+      .eq('period', period)
+      .eq('status', 'approved')
+
+    if (!referrals?.length) {
+      return new Response('No approved partner commissions', { status: 404 })
+    }
+
+    const partnerTotals = new Map<string, { name: string; pix: string; total: number }>()
+    for (const r of referrals) {
+      const p = Array.isArray(r.partners) ? (r.partners[0] ?? null) : r.partners as any
+      if (!p) continue
+      const existing = partnerTotals.get(p.name) ?? {
+        name: p.name,
+        pix: p.pix_key ?? p.wise_email ?? p.finance_email ?? '',
+        total: 0,
+      }
+      partnerTotals.set(p.name, { ...existing, total: existing.total + (r.commission_amount ?? 0) })
+    }
+
+    csv = 'parceiro,pix,valor,descricao\n'
+    csv += Array.from(partnerTotals.values())
+      .map(p => `${p.name},${p.pix},${p.total},Pico Base ${period}`)
+      .join('\n')
+
+    return new Response(csv, {
+      headers: {
+        'Content-Type': 'text/csv',
+        'Content-Disposition': `attachment; filename="parceiros_${period}.csv"`,
+      },
+    })
+  }
+
   return new Response(csv, {
     headers: {
       'Content-Type': 'text/csv',

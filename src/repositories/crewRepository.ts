@@ -1,4 +1,4 @@
-﻿import { createServiceClient, createServerSupabaseClient } from '@/lib/supabase-server'
+﻿import { createServiceClient } from '@/lib/supabase-server'
 
 export async function getCrewMembers(schoolId: string) {
   const supabase = createServiceClient()
@@ -80,6 +80,72 @@ export async function getPayments(schoolId: string, period?: string) {
     period: currentPeriod,
     summary: { totalPending, totalApproved, totalPaid, total: totalPending + totalApproved + totalPaid },
   }
+}
+
+export async function getPartnerCommissions(schoolId: string, period: string) {
+  const supabase = createServiceClient()
+
+  const { data, error } = await supabase
+    .from('referrals')
+    .select(`
+      id, commission_pct, commission_amount, session_price, status, approved_at, paid_at,
+      partners ( id, name, pix_key, wise_email, finance_email, type, commission_pct )
+    `)
+    .eq('school_id', schoolId)
+    .eq('period', period)
+
+  if (error) throw error
+
+  const referrals = data ?? []
+
+  const partnerMap = new Map<string, {
+    partner: any
+    sessions: number
+    revenue: number
+    commission: number
+    status: string
+    referral_ids: string[]
+  }>()
+
+  for (const r of referrals) {
+    const partner = Array.isArray(r.partners) ? (r.partners[0] ?? null) : r.partners as any
+    if (!partner) continue
+    const existing = partnerMap.get(partner.id) ?? {
+      partner,
+      sessions: 0,
+      revenue: 0,
+      commission: 0,
+      status: r.status,
+      referral_ids: [],
+    }
+    partnerMap.set(partner.id, {
+      ...existing,
+      sessions:     existing.sessions + 1,
+      revenue:      existing.revenue + (r.session_price ?? 0),
+      commission:   existing.commission + (r.commission_amount ?? 0),
+      referral_ids: [...existing.referral_ids, r.id],
+    })
+  }
+
+  return Array.from(partnerMap.values())
+    .sort((a, b) => b.commission - a.commission)
+}
+
+export async function approvePartnerCommissions(referralIds: string[], markAsPaid = false) {
+  const supabase = createServiceClient()
+  const update: Record<string, string> = {
+    status:      markAsPaid ? 'paid' : 'approved',
+    approved_at: new Date().toISOString(),
+  }
+  if (markAsPaid) update.paid_at = new Date().toISOString()
+
+  const { error } = await supabase
+    .from('referrals')
+    .update(update)
+    .in('id', referralIds)
+
+  if (error) throw error
+  return { ok: true }
 }
 
 export async function getCommissionOverrides(schoolId: string, instructorId: string) {

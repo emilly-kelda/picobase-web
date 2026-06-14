@@ -1,4 +1,4 @@
-import { getPayments } from '@/repositories/crewRepository'
+import { getPayments, getPartnerCommissions } from '@/repositories/crewRepository'
 import PaymentsClient from './PaymentsClient'
 
 const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
@@ -9,7 +9,12 @@ export default async function PaymentsPage({
   searchParams: Promise<{ period?: string }>
 }) {
   const { period } = await searchParams
-  const { payments, period: activePeriod, summary } = await getPayments(SCHOOL_ID, period)
+  const activePeriod = period ?? new Date().toISOString().slice(0, 7)
+
+  const [{ payments, period: resolvedPeriod, summary }, partnerCommissions] = await Promise.all([
+    getPayments(SCHOOL_ID, period),
+    getPartnerCommissions(SCHOOL_ID, activePeriod),
+  ])
 
   const monthOptions = Array.from({ length: 12 }, (_, i) => {
     const d = new Date()
@@ -27,9 +32,10 @@ export default async function PaymentsPage({
   return (
     <PaymentsClient
       payments={normalizedPayments as any}
-      period={activePeriod}
+      period={resolvedPeriod}
       summary={summary}
       monthOptions={monthOptions}
+      partnerCommissions={partnerCommissions}
     />
   )
 }

@@ -33,6 +33,23 @@ type Summary = {
   total: number
 }
 
+type PartnerCommission = {
+  partner: {
+    id: string
+    name: string
+    pix_key: string | null
+    wise_email: string | null
+    finance_email: string | null
+    type: string | null
+    commission_pct: number | null
+  }
+  sessions: number
+  revenue: number
+  commission: number
+  status: string
+  referral_ids: string[]
+}
+
 function fmt(n: number | null | undefined) {
   if (n == null) return '—'
   return new Intl.NumberFormat('pt-BR', {
@@ -68,11 +85,13 @@ export default function PaymentsClient({
   period,
   summary: initialSummary,
   monthOptions,
+  partnerCommissions,
 }: {
   payments: Payment[]
   period: string
   summary: Summary
   monthOptions: { value: string; label: string }[]
+  partnerCommissions: PartnerCommission[]
 }) {
   const router  = useRouter()
   const [payments, setPayments] = useState(initialPayments)
@@ -83,6 +102,7 @@ export default function PaymentsClient({
   const [breakdown, setBreakdown] = useState<any[]>([])
   const [breakdownFor, setBreakdownFor] = useState<string | null>(null)
   const [loadingBreakdown, setLoadingBreakdown] = useState(false)
+  const [partnerData, setPartnerData] = useState(partnerCommissions)
 
   const pending     = payments.filter(p => p.status === 'pending')
   const allApproved = payments.length > 0 && pending.length === 0
@@ -127,6 +147,21 @@ export default function PaymentsClient({
         total:         prev.total,
       }
     })
+    setLoading(null)
+  }
+
+  async function approvePartner(referralIds: string[], markAsPaid = false) {
+    setLoading(referralIds[0])
+    await fetch('/api/owner/partner-commissions', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ referral_ids: referralIds, mark_as_paid: markAsPaid }),
+    })
+    setPartnerData(prev => prev.map(p =>
+      p.referral_ids.some(id => referralIds.includes(id))
+        ? { ...p, status: markAsPaid ? 'paid' : 'approved' }
+        : p
+    ))
     setLoading(null)
   }
 
@@ -192,7 +227,7 @@ export default function PaymentsClient({
       )}
 
       {/* No payments */}
-      {payments.length === 0 && (
+      {payments.length === 0 && partnerData.length === 0 && (
         <div style={{
           background: '#fff', border: '0.5px solid var(--border)',
           borderRadius: 'var(--radius-lg)', padding: '48px',
@@ -230,7 +265,7 @@ export default function PaymentsClient({
 
       {payments.length > 0 && (
         <>
-          {/* Summary card */}
+          {/* Instructor summary card */}
           <div style={{
             background: '#fff', border: '0.5px solid var(--border)',
             borderRadius: 'var(--radius-lg)', overflow: 'hidden',
@@ -273,6 +308,68 @@ export default function PaymentsClient({
               ))}
             </div>
           </div>
+
+          {/* Partner summary card */}
+          {partnerData.length > 0 && (
+            <div style={{
+              background: '#fff', border: '0.5px solid var(--border)',
+              borderRadius: 'var(--radius-lg)', overflow: 'hidden',
+              marginBottom: '20px',
+            }}>
+              <div style={{
+                padding: '14px 20px',
+                borderBottom: '0.5px solid var(--border)',
+                fontSize: '12px', fontWeight: '500',
+                letterSpacing: '0.08em', textTransform: 'uppercase',
+                color: 'var(--mist)',
+              }}>
+                Comissões de parceiros · {period}
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)' }}>
+                {[
+                  {
+                    label: 'Pendente',
+                    value: fmt(partnerData.filter(p => p.status === 'pending').reduce((s, p) => s + p.commission, 0)),
+                    color: 'var(--amber)',
+                  },
+                  {
+                    label: 'Aprovado',
+                    value: fmt(partnerData.filter(p => p.status === 'approved').reduce((s, p) => s + p.commission, 0)),
+                    color: 'var(--glacial-dark)',
+                  },
+                  {
+                    label: 'Pago',
+                    value: fmt(partnerData.filter(p => p.status === 'paid').reduce((s, p) => s + p.commission, 0)),
+                    color: '#2E7D32',
+                  },
+                  {
+                    label: 'Total parceiros',
+                    value: fmt(partnerData.reduce((s, p) => s + p.commission, 0)),
+                    color: 'var(--slate)',
+                  },
+                ].map((item, i) => (
+                  <div key={item.label} style={{
+                    padding: '16px 20px',
+                    borderLeft: i > 0 ? '0.5px solid var(--border)' : 'none',
+                  }}>
+                    <div style={{
+                      fontSize: '10px', fontWeight: '500',
+                      letterSpacing: '0.1em', textTransform: 'uppercase',
+                      color: 'var(--mist)', marginBottom: '6px',
+                    }}>
+                      {item.label}
+                    </div>
+                    <div style={{
+                      fontSize: '20px', fontWeight: '600',
+                      color: item.color, fontVariantNumeric: 'tabular-nums',
+                    }}>
+                      {item.value}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Actions */}
           <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', flexWrap: 'wrap' }}>
@@ -321,6 +418,22 @@ export default function PaymentsClient({
                   ↓ Wise CSV
                 </a>
               </>
+            )}
+            {partnerData.length > 0 && partnerData.every(p => p.status !== 'pending') && (
+              <a
+                href={`/api/owner/export?period=${period}&format=partners`}
+                style={{
+                  padding: '9px 18px',
+                  background: '#fff', color: 'var(--slate)',
+                  border: '0.5px solid var(--border-strong)',
+                  borderRadius: 'var(--radius-md)',
+                  fontSize: '13px', fontWeight: '500',
+                  textDecoration: 'none',
+                  display: 'inline-flex', alignItems: 'center',
+                }}
+              >
+                ↓ Parceiros CSV
+              </a>
             )}
           </div>
 
@@ -543,6 +656,203 @@ export default function PaymentsClient({
               )
             })}
           </div>
+
+          {/* Partner cards */}
+          {partnerData.length > 0 && (
+            <div style={{ marginTop: '24px' }}>
+              <div style={{
+                fontSize: '11px', fontWeight: '500',
+                letterSpacing: '0.1em', textTransform: 'uppercase',
+                color: 'var(--mist)', marginBottom: '12px',
+              }}>
+                Parceiros
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {partnerData.map(p => {
+                  const st = STATUS[p.status] ?? STATUS.pending
+                  const hasPix     = !!p.partner.pix_key
+                  const hasWise    = !!p.partner.wise_email
+                  const hasFinance = !!p.partner.finance_email
+
+                  return (
+                    <div key={p.partner.id} style={{
+                      background: '#fff',
+                      border: '0.5px solid var(--border)',
+                      borderRadius: 'var(--radius-lg)',
+                      overflow: 'hidden',
+                    }}>
+                      {/* Header */}
+                      <div style={{
+                        padding: '18px 24px',
+                        borderBottom: '0.5px solid var(--border)',
+                        display: 'flex', alignItems: 'center', gap: '14px',
+                      }}>
+                        <div style={{
+                          width: '40px', height: '40px',
+                          borderRadius: 'var(--radius-md)',
+                          background: 'var(--amber-light)',
+                          color: 'var(--amber)',
+                          display: 'flex', alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '18px', flexShrink: 0,
+                        }}>
+                          {p.partner.type === 'hotel' ? '🏨' : p.partner.type === 'agency' ? '✈' : '🤝'}
+                        </div>
+
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{
+                            fontSize: '15px', fontWeight: '500',
+                            color: 'var(--slate)', marginBottom: '2px',
+                          }}>
+                            {p.partner.name}
+                          </div>
+                          <div style={{ fontSize: '12px', color: 'var(--mist)' }}>
+                            {p.sessions} {p.sessions === 1 ? 'aula' : 'aulas'} indicadas
+                            {p.partner.commission_pct != null && ` · ${Math.round(p.partner.commission_pct * 100)}% comissão`}
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <span style={{
+                            padding: '4px 12px',
+                            borderRadius: 'var(--radius-full)',
+                            fontSize: '11px', fontWeight: '500',
+                            background: st.bg, color: st.color,
+                          }}>
+                            {st.label}
+                          </span>
+                          <div style={{
+                            fontSize: '24px', fontWeight: '600',
+                            color: 'var(--slate)', fontVariantNumeric: 'tabular-nums',
+                          }}>
+                            {fmt(p.commission)}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Metrics */}
+                      <div style={{
+                        display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)',
+                        borderBottom: '0.5px solid var(--border)',
+                      }}>
+                        {[
+                          { label: 'Receita gerada', value: fmt(p.revenue)                                        },
+                          { label: 'Comissão',        value: fmt(p.commission)                                    },
+                          { label: 'Média por aula',  value: fmt(p.sessions > 0 ? p.revenue / p.sessions : 0)   },
+                        ].map((item, i) => (
+                          <div key={item.label} style={{
+                            padding: '12px 16px',
+                            borderLeft: i > 0 ? '0.5px solid var(--border)' : 'none',
+                          }}>
+                            <div style={{
+                              fontSize: '10px', fontWeight: '500',
+                              letterSpacing: '0.08em', textTransform: 'uppercase',
+                              color: 'var(--mist)', marginBottom: '4px',
+                            }}>
+                              {item.label}
+                            </div>
+                            <div style={{
+                              fontSize: '14px', fontWeight: '600',
+                              color: 'var(--slate)', fontVariantNumeric: 'tabular-nums',
+                            }}>
+                              {item.value}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Footer */}
+                      <div style={{
+                        padding: '14px 24px',
+                        display: 'flex', justifyContent: 'space-between',
+                        alignItems: 'center', gap: '16px',
+                      }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                          {hasPix && (
+                            <div style={{ fontSize: '12px', color: 'var(--mist)' }}>
+                              PIX{' '}
+                              <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--slate)', fontSize: '11px' }}>
+                                {p.partner.pix_key}
+                              </span>
+                            </div>
+                          )}
+                          {hasWise && (
+                            <div style={{ fontSize: '12px', color: 'var(--mist)' }}>
+                              Wise{' '}
+                              <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--slate)', fontSize: '11px' }}>
+                                {p.partner.wise_email}
+                              </span>
+                            </div>
+                          )}
+                          {hasFinance && !hasPix && !hasWise && (
+                            <div style={{ fontSize: '12px', color: 'var(--mist)' }}>
+                              Email{' '}
+                              <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--slate)', fontSize: '11px' }}>
+                                {p.partner.finance_email}
+                              </span>
+                            </div>
+                          )}
+                          {!hasPix && !hasWise && !hasFinance && (
+                            <div style={{
+                              fontSize: '12px', color: 'var(--signal-dark)',
+                              display: 'flex', alignItems: 'center', gap: '6px',
+                            }}>
+                              <span style={{
+                                width: '6px', height: '6px', borderRadius: '50%',
+                                background: 'var(--signal)', flexShrink: 0,
+                              }} />
+                              Dados de pagamento não cadastrados
+                            </div>
+                          )}
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          {p.status === 'pending' && (
+                            <button
+                              onClick={() => approvePartner(p.referral_ids)}
+                              disabled={loading === p.referral_ids[0]}
+                              style={{
+                                padding: '7px 16px',
+                                background: 'var(--glacial-light)',
+                                color: 'var(--glacial-dark)',
+                                border: '0.5px solid var(--glacial)',
+                                borderRadius: 'var(--radius-md)',
+                                fontSize: '12px', fontWeight: '500',
+                                cursor: 'pointer', fontFamily: 'var(--font-sans)',
+                              }}
+                            >
+                              {loading === p.referral_ids[0] ? '...' : '✓ Aprovar'}
+                            </button>
+                          )}
+                          {p.status === 'approved' && (
+                            <button
+                              onClick={() => approvePartner(p.referral_ids, true)}
+                              disabled={loading === p.referral_ids[0]}
+                              style={{
+                                padding: '7px 16px',
+                                background: '#E8F5E9', color: '#2E7D32',
+                                border: '0.5px solid #A5D6A7',
+                                borderRadius: 'var(--radius-md)',
+                                fontSize: '12px', fontWeight: '500',
+                                cursor: 'pointer', fontFamily: 'var(--font-sans)',
+                              }}
+                            >
+                              {loading === p.referral_ids[0] ? '...' : '✓ Marcar como pago'}
+                            </button>
+                          )}
+                          {p.status === 'paid' && (
+                            <div style={{ fontSize: '12px', color: '#2E7D32' }}>
+                              ✓ Pago
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
         </>
       )}
 

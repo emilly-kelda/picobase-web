@@ -104,7 +104,6 @@ export default function PendingLessons({
   const totalPrice         = priceMode === 'per_hour'
     ? Math.round(pricePerHour * (finalDuration / 60))
     : price
-  const commission         = totalPrice * commissionPct
 
   async function confirm() {
     if (!selected || !instructorId) return
@@ -360,6 +359,19 @@ export default function PendingLessons({
                   </option>
                 ))}
               </select>
+              {selected?.instructor_id && (
+                <div style={{
+                  fontSize: '11px',
+                  color: 'var(--glacial-dark)',
+                  marginTop: '6px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                }}>
+                  <span>✓</span>
+                  <span>Selecionado pelo aluno no check-in</span>
+                </div>
+              )}
             </div>
 
             <div style={{ marginBottom: '20px' }}>
