@@ -95,7 +95,7 @@ export async function getTodayStats(schoolId: string) {
   const supabase = createServiceClient()
   const today = new Date().toISOString().slice(0, 10)
 
-  const [{ count: sessionsToday }, { data: checkinsToday }, { data: instructorsToday }] =
+  const [{ count: sessionsToday }, { data: checkinsToday }, { data: instructorsToday }, { data: revenueToday }] =
     await Promise.all([
       supabase
         .from('sessions')
@@ -117,16 +117,28 @@ export async function getTodayStats(schoolId: string) {
         .eq('school_id', schoolId)
         .gte('session_date', today)
         .lte('session_date', today),
+
+      supabase
+        .from('sessions')
+        .select('price, commission_amount')
+        .eq('school_id', schoolId)
+        .gte('session_date', today)
+        .lte('session_date', today),
     ])
 
   const uniqueInstructors = new Set(
     (instructorsToday ?? []).map(s => s.instructor_id)
   ).size
 
+  const todayRevenue     = (revenueToday ?? []).reduce((s, r) => s + (r.price ?? 0), 0)
+  const todayCommissions = (revenueToday ?? []).reduce((s, r) => s + (r.commission_amount ?? 0), 0)
+
   return {
     sessions:    sessionsToday ?? 0,
     students:    checkinsToday?.length ?? 0,
     instructors: uniqueInstructors,
+    revenue:     todayRevenue,
+    commissions: todayCommissions,
     hasActivity: (sessionsToday ?? 0) > 0 || (checkinsToday?.length ?? 0) > 0,
   }
 }
@@ -225,6 +237,43 @@ export async function getTodayInstructorStats(schoolId: string, instructorId: st
   const todayCount      = todaySessions?.length ?? 0
 
   return { todayCommission, todayRevenue, seasonTotal, todayCount }
+}
+
+export async function getMissedLessons(schoolId: string) {
+  const supabase = createServiceClient()
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  const { data: checkins, error } = await supabase
+    .from('checkins')
+    .select(`
+      id,
+      student_name,
+      checkin_at,
+      instructor_id,
+      instructor:users!checkins_instructor_id_fkey (
+        id,
+        name
+      )
+    `)
+    .eq('school_id', schoolId)
+    .eq('status', 'checked_in')
+    .lt('checkin_at', today.toISOString())
+
+  if (error) throw error
+
+  const { data: sessions } = await supabase
+    .from('sessions')
+    .select('checkin_id')
+
+  const sessionIds = new Set(
+    (sessions ?? []).map(s => s.checkin_id)
+  )
+
+  return (checkins ?? []).filter(
+    c => !sessionIds.has(c.id)
+  )
 }
 
 

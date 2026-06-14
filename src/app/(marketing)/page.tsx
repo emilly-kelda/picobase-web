@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 
 // ─── palette ───────────────────────────────────────────────────────────────
-// signal  #E8471A   ocean-dark #1B4B5A   teal  #00A896
+// signal  #E8471A   teal  #00A896   teal-dark  #007868
 // amber   #FFF8E8   powder     #F0EEE9   storm #2B3340
 // slate   #1A1C22   mist       #6A6C78   fog   #8A8C98
 
@@ -12,7 +12,7 @@ const C = {
   signal:       '#E8471A',
   signalLight:  '#FDF0EC',
   signalDark:   '#B83010',
-  ocean:        '#1B4B5A',
+  ocean:        '#00A896',
   teal:         '#00A896',
   tealLight:    '#E0F8F5',
   tealDark:     '#007868',
@@ -441,13 +441,13 @@ export default function HomePage() {
             {lang === 'pt' ? (
               <>
                 Uma temporada.<br />
-                <span style={{ color: '#1B4B5A' }}>Doze meses</span><br />
+                <span style={{ color: '#00A896' }}>Doze meses</span><br />
                 para sobreviver.
               </>
             ) : (
               <>
                 One season.<br />
-                <span style={{ color: '#1B4B5A' }}>Twelve months</span><br />
+                <span style={{ color: '#00A896' }}>Twelve months</span><br />
                 to survive.
               </>
             )}
@@ -565,7 +565,7 @@ export default function HomePage() {
               }}>
                 {t.problem_h2}
               </h2>
-              <p style={{ fontSize: '17px', fontWeight: '600', color: C.ocean, margin: '0 0 20px' }}>
+              <p style={{ fontSize: '17px', fontWeight: '600', color: C.tealDark, margin: '0 0 20px' }}>
                 {t.problem_accent}
               </p>
               <p style={{ fontSize: '14px', color: C.mist, lineHeight: '1.7', margin: '0' }}>

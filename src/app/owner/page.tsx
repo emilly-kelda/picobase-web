@@ -170,13 +170,45 @@ export default async function OwnerPage() {
         </div>
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(3, 1fr)',
+          gridTemplateColumns: 'repeat(5, 1fr)',
           gap: '12px', marginBottom: '28px',
         }}>
           {[
-            { label: t.today_students,    value: String(today.students),    sub: t.today_checked_in, empty: today.students === 0    },
-            { label: t.today_sessions,    value: String(today.sessions),    sub: t.today_confirmed,  empty: today.sessions === 0    },
-            { label: t.today_instructors, value: String(today.instructors), sub: t.today_active,     empty: today.instructors === 0 },
+            {
+              label: t.today_students,
+              value: String(today.students),
+              sub:   t.today_checked_in,
+              empty: today.students === 0,
+              mono:  false,
+            },
+            {
+              label: t.today_sessions,
+              value: String(today.sessions),
+              sub:   t.today_confirmed,
+              empty: today.sessions === 0,
+              mono:  false,
+            },
+            {
+              label: t.today_instructors,
+              value: String(today.instructors),
+              sub:   t.today_active,
+              empty: today.instructors === 0,
+              mono:  false,
+            },
+            {
+              label: lang === 'pt' ? 'Receita hoje' : 'Revenue today',
+              value: fmt(today.revenue),
+              sub:   lang === 'pt' ? 'confirmada hoje' : 'confirmed today',
+              empty: today.revenue === 0,
+              mono:  true,
+            },
+            {
+              label: lang === 'pt' ? 'Comissões hoje' : 'Commissions today',
+              value: fmt(today.commissions),
+              sub:   lang === 'pt' ? 'a pagar' : 'to pay',
+              empty: today.commissions === 0,
+              mono:  true,
+            },
           ].map(card => (
             <div key={card.label} style={{
               background: '#fff',
@@ -194,7 +226,8 @@ export default async function OwnerPage() {
                 {card.label}
               </div>
               <div style={{
-                fontSize: '36px', fontWeight: '600',
+                fontSize: card.mono ? '20px' : '36px',
+                fontWeight: '600',
                 color: card.empty ? 'var(--mist)' : 'var(--slate)',
                 lineHeight: '1', marginBottom: '4px',
                 fontVariantNumeric: 'tabular-nums',

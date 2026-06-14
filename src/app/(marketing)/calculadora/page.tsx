@@ -161,7 +161,7 @@ export default function CalculadoraPage() {
             </div>
             <input type="range" min={0} max={300000} step={1000} value={profit}
               onChange={e => setProfit(Number(e.target.value))}
-              style={{ width: '100%', accentColor: '#00A896', cursor: 'pointer' }}
+              style={{ width: '100%', accentColor: '#1B4B5A', cursor: 'pointer' }}
             />
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#C8C6C0', marginTop: '4px' }}>
               <span>R$ 0</span><span>R$ 300k</span>
@@ -204,7 +204,7 @@ export default function CalculadoraPage() {
             )}
             <button onClick={() => { setCustom(!custom); setCustomBurn('') }} style={{
               background: 'transparent', border: 'none',
-              fontSize: '12px', color: '#00A896',
+              fontSize: '12px', color: '#1B4B5A',
               cursor: 'pointer', padding: '6px 0', fontFamily: 'inherit',
             }}>
               {custom ? '← Usar controle deslizante' : 'Digitar valor exato →'}
