@@ -42,6 +42,27 @@ export async function getScheduledLessons(
   return data ?? []
 }
 
+export async function getMissedLessons(schoolId: string) {
+  const supabase = createServiceClient()
+  const now = new Date().toISOString()
+
+  const { data, error } = await supabase
+    .from('scheduled_lessons')
+    .select(`
+      id, student_name, scheduled_at, duration_min, notes,
+      activities ( id, name ),
+      instructor:users!scheduled_lessons_instructor_id_fkey ( id, name )
+    `)
+    .eq('school_id', schoolId)
+    .eq('status', 'scheduled')
+    .lt('scheduled_at', now)
+    .order('scheduled_at', { ascending: false })
+    .limit(10)
+
+  if (error) throw error
+  return data ?? []
+}
+
 export async function createScheduledLesson(payload: {
   school_id: string
   student_name: string

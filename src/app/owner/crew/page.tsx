@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { getCrewMembers } from '@/repositories/crewRepository'
 
 const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
@@ -28,6 +29,7 @@ export default async function CrewPage() {
 
   return (
     <div>
+      <style>{`.crew-card{transition:border-color 0.15s}.crew-card:hover{border-color:var(--glacial)!important}`}</style>
 
       {/* Header */}
       <div style={{
@@ -94,7 +96,12 @@ export default async function CrewPage() {
         gap: '12px',
       }}>
         {crew.map(member => (
-          <div key={member.id} style={{
+          <Link
+            key={member.id}
+            href={`/owner/crew/${member.id}`}
+            style={{ textDecoration: 'none', display: 'block' }}
+          >
+          <div className="crew-card" style={{
             background: '#fff',
             border: '0.5px solid var(--border)',
             borderRadius: 'var(--radius-lg)',
@@ -230,6 +237,7 @@ export default async function CrewPage() {
             </div>
 
           </div>
+          </Link>
         ))}
 
         {crew.length === 0 && (
