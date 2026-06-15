@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import Logo from '@/components/Logo'
 
 export default function CalculadoraPage() {
   const [profit, setProfit] = useState(0)
@@ -13,14 +14,25 @@ export default function CalculadoraPage() {
   const runway     = activeBurn > 0 ? profit / activeBurn : 0
   const barPct     = Math.min(100, (runway / 12) * 100)
   const barColor   = runway >= 6 ? '#00A896' : runway >= 3 ? '#D4A017' : '#E8471A'
-
-  const verdict = runway >= 6
-    ? { label: 'Confortável', sub: 'Sua temporada cobre mais de 6 meses de baixa temporada. Ótima posição.' }
+  const safetyScore = runway >= 9
+    ? { label: 'Protegido',  color: '#007868', bg: '#E0F8F5', sub: 'Sua temporada cobre mais de 9 meses. Posição excelente.' }
+    : runway >= 6
+    ? { label: 'Saudável',   color: '#00A896', bg: '#E0F8F5', sub: 'Cobertura confortável para a baixa temporada.' }
     : runway >= 3
-      ? { label: 'Apertado', sub: 'Você tem alguma reserva, mas uma temporada fraca pode comprometer o negócio.' }
-      : runway > 0
-        ? { label: 'Crítico', sub: 'A temporada atual não cobre nem 3 meses. Revise custos ou aumente receita.' }
-        : { label: '—', sub: 'Insira o lucro da temporada para calcular.' }
+    ? { label: 'Vulnerável', color: '#8A5E00', bg: '#FFF8E8', sub: 'Alguma reserva, mas uma temporada fraca pode comprometer o caixa.' }
+    : runway > 0
+    ? { label: 'Crítico',    color: '#B83010', bg: '#FDF0EC', sub: 'A temporada não cobre a baixa temporada. Revise custos ou receita.' }
+    : { label: '—', color: 'rgba(255,255,255,0.3)', bg: 'rgba(255,255,255,0.06)', sub: 'Insira os valores para calcular.' }
+  const targetMonths    = 12
+  const gap             = runway >= targetMonths ? 0 : Math.round((targetMonths * activeBurn) - profit)
+  const avgLessonProfit = 250
+  const lessonsNeeded   = gap > 0 ? Math.ceil(gap / avgLessonProfit) : 0
+  const survivalDate    = (() => {
+    if (runway <= 0) return null
+    const d = new Date()
+    d.setMonth(d.getMonth() + Math.floor(runway))
+    return d.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })
+  })()
 
   function fmt(n: number) {
     return new Intl.NumberFormat('pt-BR', {
@@ -49,11 +61,8 @@ export default function CalculadoraPage() {
         padding: '0 40px',
         justifyContent: 'space-between',
       }}>
-        <Link href="/" style={{
-          fontSize: '16px', fontWeight: '600',
-          color: '#1A1C22', textDecoration: 'none',
-        }}>
-          Pico Base
+        <Link href="/" style={{ textDecoration: 'none' }}>
+          <Logo size={20} variant="full" />
         </Link>
         <Link href="/owner" style={{
           fontSize: '13px', fontWeight: '500',
@@ -130,15 +139,60 @@ export default function CalculadoraPage() {
           <div style={{
             display: 'inline-block', padding: '8px 20px',
             borderRadius: '99px', fontSize: '14px', fontWeight: '500',
-            background: runway >= 6 ? '#E0F8F5' : runway >= 3 ? '#FFF8E8' : runway > 0 ? '#FDF0EC' : 'rgba(255,255,255,0.08)',
-            color: runway >= 6 ? '#007868' : runway >= 3 ? '#7A4C00' : runway > 0 ? '#8B1818' : 'rgba(255,255,255,0.3)',
-            marginBottom: '12px',
+            background: safetyScore.bg,
+            color: safetyScore.color,
+            marginBottom: '8px',
           }}>
-            {verdict.label}
+            {safetyScore.label}
           </div>
-          <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.35)', margin: '0', lineHeight: '1.5' }}>
-            {verdict.sub}
+          <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.35)', margin: '0 0 16px', lineHeight: '1.5' }}>
+            {safetyScore.sub}
           </p>
+          {survivalDate && (
+            <div style={{
+              padding: '14px 16px',
+              background: 'rgba(255,255,255,0.06)',
+              borderRadius: '10px', textAlign: 'left',
+              marginBottom: '12px',
+            }}>
+              <div style={{
+                fontSize: '11px', color: 'rgba(255,255,255,0.3)',
+                marginBottom: '4px', letterSpacing: '0.06em',
+              }}>
+                A escola opera até
+              </div>
+              <div style={{ fontSize: '22px', fontWeight: '600', color: '#fff' }}>
+                {survivalDate}
+              </div>
+            </div>
+          )}
+          {gap > 0 && (
+            <div style={{
+              padding: '14px 16px',
+              background: '#FFF8E8', borderRadius: '10px',
+              textAlign: 'left',
+            }}>
+              <div style={{
+                fontSize: '12px', color: '#8A5E00',
+                fontWeight: '500', marginBottom: '6px',
+              }}>
+                Para atingir {targetMonths} meses de reserva:
+              </div>
+              <div style={{
+                fontSize: '24px', fontWeight: '700',
+                color: '#8A5E00', fontVariantNumeric: 'tabular-nums',
+                marginBottom: '4px',
+              }}>
+                + {new Intl.NumberFormat('pt-BR', {
+                  style: 'currency', currency: 'BRL',
+                  minimumFractionDigits: 0,
+                }).format(gap)}
+              </div>
+              <div style={{ fontSize: '12px', color: '#8A5E00', opacity: 0.7 }}>
+                ≈ {lessonsNeeded} aulas a mais (média R$ {avgLessonProfit}/aula)
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Inputs */}
@@ -173,7 +227,7 @@ export default function CalculadoraPage() {
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
               <label style={{ fontSize: '13px', fontWeight: '500', color: '#1A1C22' }}>
-                Custo fixo mensal (baixa temporada)
+                Custo operacional mensal
               </label>
               <span style={{ fontSize: '15px', fontWeight: '600', color: '#1A1C22', fontVariantNumeric: 'tabular-nums' }}>
                 {fmt(activeBurn)}

@@ -1,5 +1,100 @@
 ﻿import { createServiceClient } from '@/lib/supabase-server'
 
+export async function getPackageDashboard(schoolId: string) {
+  const supabase = createServiceClient()
+
+  const [{ data: allPackages }, { data: allSales }] = await Promise.all([
+    supabase
+      .from('packages')
+      .select('id, name, sport, type, base_price, final_price, total_minutes')
+      .eq('school_id', schoolId)
+      .eq('active', true)
+      .order('base_price', { ascending: false }),
+
+    supabase
+      .from('package_sales')
+      .select('id, package_id, student_name, minutes_purchased, minutes_used, price_paid, sold_at')
+      .eq('school_id', schoolId)
+      .order('sold_at', { ascending: false }),
+  ])
+
+  const packages = allPackages ?? []
+  const sales    = allSales ?? []
+  const now      = Date.now()
+
+  const enrichedSales = sales.map(s => {
+    const minutesUsed      = s.minutes_used ?? 0
+    const minutesPurchased = s.minutes_purchased ?? 0
+    const pctUsed          = minutesPurchased > 0 ? minutesUsed / minutesPurchased : 0
+    const daysSince        = Math.floor((now - new Date(s.sold_at).getTime()) / 86400000)
+    const minutesRemaining = minutesPurchased - minutesUsed
+    const pkg              = packages.find(p => p.id === s.package_id)
+
+    const atRisk = pctUsed < 1 && minutesRemaining > 0 && daysSince > 21 && pctUsed < 0.3
+
+    return {
+      ...s,
+      minutesUsed,
+      minutesPurchased,
+      minutesRemaining,
+      pctUsed,
+      daysSince,
+      atRisk,
+      packageName: pkg?.name ?? '—',
+      studentName: s.student_name ?? 'Desconhecido',
+      studentId:   null as string | null,
+    }
+  })
+
+  const totalMinutesSold      = enrichedSales.reduce((s, r) => s + r.minutesPurchased, 0)
+  const totalMinutesUsed      = enrichedSales.reduce((s, r) => s + r.minutesUsed, 0)
+  const totalMinutesRemaining = enrichedSales.reduce((s, r) => s + r.minutesRemaining, 0)
+  const totalRevenue          = enrichedSales.reduce((s, r) => s + (r.price_paid ?? 0), 0)
+  const utilizationPct        = totalMinutesSold > 0
+    ? Math.round((totalMinutesUsed / totalMinutesSold) * 100) : 0
+
+  const unrealizedRevenue = enrichedSales.reduce((s, r) => {
+    const remainingRatio = r.minutesPurchased > 0 ? r.minutesRemaining / r.minutesPurchased : 0
+    return s + (r.price_paid ?? 0) * remainingRatio
+  }, 0)
+
+  const atRiskSales = enrichedSales.filter(s => s.atRisk)
+
+  const packageTypes = packages.map(pkg => {
+    const pkgSales         = enrichedSales.filter(s => s.package_id === pkg.id)
+    const minutesSold      = pkgSales.reduce((s, r) => s + r.minutesPurchased, 0)
+    const minutesUsed      = pkgSales.reduce((s, r) => s + r.minutesUsed, 0)
+    const minutesRemaining = pkgSales.reduce((s, r) => s + r.minutesRemaining, 0)
+    const revenue          = pkgSales.reduce((s, r) => s + (r.price_paid ?? 0), 0)
+    const utilPct          = minutesSold > 0 ? Math.round((minutesUsed / minutesSold) * 100) : 0
+
+    return {
+      id:    pkg.id,
+      name:  pkg.name,
+      price: pkg.final_price ?? pkg.base_price ?? 0,
+      count: pkgSales.length,
+      revenue,
+      minutesSold,
+      minutesUsed,
+      minutesRemaining,
+      utilPct,
+      hasNoSales: pkgSales.length === 0,
+    }
+  })
+
+  return {
+    summary: {
+      totalRevenue,
+      totalMinutesRemaining,
+      unrealizedRevenue,
+      utilizationPct,
+      atRiskCount: atRiskSales.length,
+    },
+    packageTypes,
+    atRiskSales,
+  }
+}
+
 export async function getPackages(schoolId: string) {
   const supabase = createServiceClient()
   const { data, error } = await supabase

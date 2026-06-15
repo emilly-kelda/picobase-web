@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import Logo from '@/components/Logo'
 
 // ─── palette ───────────────────────────────────────────────────────────────
 // signal  #E8471A   teal  #00A896   teal-dark  #007868
@@ -201,14 +202,27 @@ function RunwayCalc({ t, lang }: { t: typeof CONTENT.pt; lang: Lang }) {
           ? 'Informe o lucro da temporada e os custos mensais para calcular sua autonomia.'
           : 'Enter your season profit and monthly costs to calculate your runway.',
       }
-  const barColor = runway >= 6 ? C.teal : runway >= 3 ? C.amber : C.signal
-  const targetMonths = 6
+  const targetMonths = 12
   const gap = runway >= targetMonths ? 0 : Math.round((targetMonths * burn) - profit)
   const futureDate = new Date()
   futureDate.setMonth(futureDate.getMonth() + Math.floor(runway))
   const runwayUntil = futureDate.toLocaleString(
     lang === 'pt' ? 'pt-BR' : 'en-US', { month: 'long' }
   )
+  const safetyScore = runway >= 9 ? { label: lang === 'pt' ? 'Protegido' : 'Protected', color: '#007868', bg: '#E0F8F5' }
+    : runway >= 6 ? { label: lang === 'pt' ? 'Saudável' : 'Healthy', color: '#00A896', bg: '#E0F8F5' }
+    : runway >= 3 ? { label: lang === 'pt' ? 'Vulnerável' : 'Vulnerable', color: '#8A5E00', bg: '#FFF8E8' }
+    : runway > 0  ? { label: lang === 'pt' ? 'Crítico' : 'Critical', color: '#B83010', bg: '#FDF0EC' }
+    : { label: '—', color: '#6A6C78', bg: 'rgba(255,255,255,0.08)' }
+  const barColor = safetyScore.color
+  const avgLessonProfit = 250
+  const lessonsNeeded   = gap > 0 ? Math.ceil(gap / avgLessonProfit) : 0
+  const survivalDate = (() => {
+    if (runway <= 0) return null
+    const d = new Date()
+    d.setMonth(d.getMonth() + Math.floor(runway))
+    return d.toLocaleString(lang === 'pt' ? 'pt-BR' : 'en-US', { month: 'long', year: 'numeric' })
+  })()
 
   function fmt(n: number) {
     return new Intl.NumberFormat(lang === 'pt' ? 'pt-BR' : 'en-US', {
@@ -229,11 +243,18 @@ function RunwayCalc({ t, lang }: { t: typeof CONTENT.pt; lang: Lang }) {
         display: 'flex', flexDirection: 'column',
       }}>
         <div style={{
-          fontSize: '9px', fontWeight: '500',
-          letterSpacing: '0.14em', textTransform: 'uppercase',
-          color: 'rgba(255,255,255,0.4)', marginBottom: '12px',
+          display: 'inline-flex', alignSelf: 'flex-start',
+          padding: '4px 12px', borderRadius: '99px',
+          background: runway > 0 ? safetyScore.bg : 'rgba(255,255,255,0.08)',
+          marginBottom: '16px',
         }}>
-          {t.runway_label}
+          <span style={{
+            fontSize: '11px', fontWeight: '600',
+            color: runway > 0 ? safetyScore.color : 'rgba(255,255,255,0.3)',
+            letterSpacing: '0.04em',
+          }}>
+            {safetyScore.label}
+          </span>
         </div>
         <div style={{
           fontSize: '64px', fontWeight: '700', color: '#fff',
@@ -255,28 +276,33 @@ function RunwayCalc({ t, lang }: { t: typeof CONTENT.pt; lang: Lang }) {
         </div>
         <div style={{
           display: 'flex', justifyContent: 'space-between',
-          fontSize: '9px', color: 'rgba(255,255,255,0.2)', marginBottom: '24px',
+          fontSize: '9px', color: 'rgba(255,255,255,0.2)', marginBottom: '20px',
         }}>
-          <span>0</span><span>6mo</span><span>12mo</span>
+          <span>0</span><span>6mo</span><span style={{ color: '#00A896' }}>12mo ✓</span>
         </div>
-        <div style={{ fontSize: '15px', fontWeight: '600', color: barColor, marginBottom: '8px' }}>
-          {verdict.label}
-        </div>
-        {runway > 0 && (
-          <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.6)', lineHeight: '1.6', margin: '0 0 10px' }}>
+        {survivalDate && (
+          <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.55)', lineHeight: '1.5', margin: '0 0 12px' }}>
             {lang === 'pt'
-              ? <>Ao lucro atual, a escola pode operar até <strong style={{ color: '#fff' }}>{runwayUntil}</strong>.</>
-              : <>At your current profit, the school can operate until <strong style={{ color: '#fff' }}>{runwayUntil}</strong>.</>
+              ? <>Escola operacional até <strong style={{ color: '#fff' }}>{survivalDate}</strong>.</>
+              : <>School operational until <strong style={{ color: '#fff' }}>{survivalDate}</strong>.</>
             }
           </p>
         )}
         {gap > 0 && (
-          <p style={{ fontSize: '12px', color: '#D4A017', lineHeight: '1.6', margin: '0' }}>
-            {lang === 'pt'
-              ? <>Você precisa de mais <strong>{fmt(gap)}</strong> de lucro para atingir <strong>{targetMonths} meses</strong>.</>
-              : <>You need <strong>{fmt(gap)}</strong> more profit to reach <strong>{targetMonths} months</strong>.</>
-            }
-          </p>
+          <div style={{
+            background: 'rgba(255,255,255,0.07)', borderRadius: '10px',
+            padding: '12px 14px',
+          }}>
+            <div style={{ fontSize: '11px', color: '#D4A017', fontWeight: '600', marginBottom: '4px' }}>
+              {lang === 'pt' ? `Faltam ${fmt(gap)}` : `Gap: ${fmt(gap)}`}
+            </div>
+            <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', lineHeight: '1.5' }}>
+              {lang === 'pt'
+                ? `≈ ${lessonsNeeded} aulas extras para atingir 6 meses`
+                : `≈ ${lessonsNeeded} extra lessons to reach 6 months`
+              }
+            </div>
+          </div>
         )}
         {runway === 0 && (
           <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.3)', lineHeight: '1.6', margin: '0' }}>
@@ -359,6 +385,34 @@ export default function HomePage() {
     { bg: C.tealLight,  color: C.tealDark,   sub: C.tealDark              },
   ]
 
+  const payoutQuestions = [
+    {
+      q: lang === 'pt' ? 'Quem precisa receber?' : 'Who needs to be paid?',
+      a: lang === 'pt'
+        ? 'Instrutores e parceiros em uma única lista.'
+        : 'Instructors and partners in a single list.',
+    },
+    {
+      q: lang === 'pt' ? 'Quanto devo pagar?' : 'How much do I owe?',
+      a: lang === 'pt'
+        ? 'Calculado automaticamente a partir das aulas registradas.'
+        : 'Automatically calculated from recorded lessons.',
+    },
+    {
+      q: lang === 'pt' ? 'Como faço o pagamento?' : 'How do I pay?',
+      a: lang === 'pt'
+        ? 'Exporte PIX ou Wise em um clique.'
+        : 'Export PIX or Wise in one click.',
+    },
+  ]
+
+  const payoutFooterItems = [
+    lang === 'pt' ? '✓ Comissões automáticas'            : '✓ Automatic commissions',
+    lang === 'pt' ? '✓ Indicações de hotéis e agências'  : '✓ Hotel and agency referrals',
+    lang === 'pt' ? '✓ Exportação PIX e Wise'            : '✓ PIX and Wise export',
+    lang === 'pt' ? '✓ Fechamento mensal em minutos'      : '✓ Monthly close in minutes',
+  ]
+
   return (
     <div>
 
@@ -370,11 +424,8 @@ export default function HomePage() {
         height: '56px', display: 'flex', alignItems: 'center',
         padding: '0 40px', justifyContent: 'space-between',
       }}>
-        <Link href="/" style={{
-          fontSize: '16px', fontWeight: '600',
-          color: C.slate, textDecoration: 'none', letterSpacing: '0.01em',
-        }}>
-          Pico Base
+        <Link href="/" style={{ textDecoration: 'none' }}>
+          <Logo size={20} variant="full" />
         </Link>
 
         <nav style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -638,6 +689,308 @@ export default function HomePage() {
             </Link>
           </div>
           <RunwayCalc t={t} lang={lang} />
+        </div>
+      </section>
+
+      {/* ── PAYOUTS SECTION ── */}
+      <section style={{
+        background: '#fff',
+        padding: '100px 40px',
+        borderBottom: '0.5px solid #E4E0D8',
+      }}>
+        <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+
+          {/* Header */}
+          <div style={{
+            display: 'grid', gridTemplateColumns: '1fr 1fr',
+            gap: '72px', alignItems: 'flex-start',
+            marginBottom: '48px',
+          }}>
+            <div>
+              <div style={{
+                fontSize: '10px', fontWeight: '500',
+                letterSpacing: '0.18em', textTransform: 'uppercase',
+                color: '#8A8C98', marginBottom: '16px',
+              }}>
+                {lang === 'pt' ? 'Repasses' : 'Payouts'}
+              </div>
+              <h2 style={{
+                fontSize: 'clamp(22px, 2.8vw, 34px)',
+                fontWeight: '600', color: '#1A1C22',
+                lineHeight: '1.2', margin: '0 0 16px',
+                letterSpacing: '-0.02em',
+              }}>
+                {lang === 'pt'
+                  ? <>O mês acabou.<br />Os números já estão prontos.</>
+                  : <>Month&apos;s over.<br />The numbers are already ready.</>
+                }
+              </h2>
+              <p style={{
+                fontSize: '14px', color: '#6A6C78',
+                lineHeight: '1.7', margin: '0 0 28px',
+              }}>
+                {lang === 'pt'
+                  ? 'Cada aula confirmada atualiza automaticamente os valores de instrutores e parceiros. No fechamento do mês, tudo já está pronto para pagamento.'
+                  : 'Every confirmed lesson automatically updates instructor and partner amounts. At month close, everything is ready to pay.'
+                }
+              </p>
+
+              {/* Three questions */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {payoutQuestions.map((item, i) => (
+                  <div key={i} style={{
+                    display: 'flex', gap: '14px', alignItems: 'flex-start',
+                  }}>
+                    <span style={{
+                      width: '22px', height: '22px',
+                      borderRadius: '50%',
+                      background: '#E0F8F5',
+                      color: '#007868',
+                      display: 'flex', alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '11px', fontWeight: '700',
+                      flexShrink: 0, marginTop: '1px',
+                    }}>
+                      {i + 1}
+                    </span>
+                    <div>
+                      <div style={{
+                        fontSize: '14px', fontWeight: '600',
+                        color: '#1A1C22', marginBottom: '3px',
+                      }}>
+                        {item.q}
+                      </div>
+                      <div style={{ fontSize: '13px', color: '#8A8C98', lineHeight: '1.5' }}>
+                        {item.a}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Summary cards */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{
+                display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)',
+                gap: '8px',
+              }}>
+                {[
+                  {
+                    label: lang === 'pt' ? 'Pendente para aprovação' : 'Pending approval',
+                    value: lang === 'pt' ? 'R$ 1.381' : '$ 1.381',
+                    color: '#8A5E00', bg: '#FFF8E8',
+                  },
+                  {
+                    label: lang === 'pt' ? 'Total a pagar' : 'Total to pay',
+                    value: lang === 'pt' ? 'R$ 1.600' : '$ 1.600',
+                    color: '#1A1C22', bg: '#F0EEE9',
+                  },
+                ].map(card => (
+                  <div key={card.label} style={{
+                    background: card.bg,
+                    borderRadius: '10px', padding: '16px 18px',
+                  }}>
+                    <div style={{
+                      fontSize: '11px', fontWeight: '500',
+                      color: card.color, marginBottom: '8px',
+                      opacity: 0.7, lineHeight: '1.4',
+                    }}>
+                      {card.label}
+                    </div>
+                    <div style={{
+                      fontSize: '24px', fontWeight: '700',
+                      color: card.color, fontVariantNumeric: 'tabular-nums',
+                    }}>
+                      {card.value}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Mock Repasses list */}
+          <div style={{
+            background: '#fff',
+            border: '0.5px solid #E4E0D8',
+            borderRadius: '14px',
+            overflow: 'hidden',
+          }}>
+            {/* List header */}
+            <div style={{
+              padding: '13px 20px',
+              borderBottom: '0.5px solid #E4E0D8',
+              display: 'flex', justifyContent: 'space-between',
+              alignItems: 'center',
+              background: '#F0EEE9',
+            }}>
+              <span style={{
+                fontSize: '11px', fontWeight: '500',
+                letterSpacing: '0.1em', textTransform: 'uppercase',
+                color: '#8A8C98',
+              }}>
+                {lang === 'pt' ? 'Equipe · Junho 2026' : 'Team · June 2026'}
+              </span>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <span style={{
+                  padding: '5px 12px', borderRadius: '99px',
+                  fontSize: '11px', fontWeight: '500',
+                  background: '#fff', color: '#1A1C22',
+                  border: '0.5px solid #E4E0D8',
+                }}>
+                  {lang === 'pt' ? '↓ Exportar PIX (BTG)' : '↓ Export PIX (BTG)'}
+                </span>
+                <span style={{
+                  padding: '5px 12px', borderRadius: '99px',
+                  fontSize: '11px', fontWeight: '500',
+                  background: '#fff', color: '#1A1C22',
+                  border: '0.5px solid #E4E0D8',
+                }}>
+                  {lang === 'pt' ? '↓ Exportar Wise' : '↓ Export Wise'}
+                </span>
+              </div>
+            </div>
+
+            {/* Marco row */}
+            <div style={{
+              display: 'flex', alignItems: 'center',
+              gap: '14px', padding: '16px 20px',
+              borderBottom: '0.5px solid #E4E0D8',
+            }}>
+              <div style={{
+                width: '38px', height: '38px', borderRadius: '50%',
+                background: '#E0F8F5', color: '#007868',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '12px', fontWeight: '600', flexShrink: 0,
+              }}>
+                MF
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: '14px', fontWeight: '500', color: '#1A1C22', marginBottom: '2px' }}>
+                  Marco Ferreira
+                </div>
+                <div style={{ fontSize: '12px', color: '#8A8C98' }}>
+                  {lang === 'pt' ? '6 aulas · 38% de comissão' : '6 lessons · 38% commission'}
+                </div>
+              </div>
+              <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                <div style={{ fontSize: '18px', fontWeight: '600', color: '#1A1C22', marginBottom: '4px', fontVariantNumeric: 'tabular-nums' }}>
+                  {lang === 'pt' ? 'R$ 1.178' : '$ 1.178'}
+                </div>
+                <span style={{ padding: '2px 10px', borderRadius: '99px', fontSize: '11px', fontWeight: '500', background: '#FFF8E8', color: '#8A5E00' }}>
+                  {lang === 'pt' ? 'Pendente' : 'Pending'}
+                </span>
+              </div>
+              <div style={{ fontSize: '16px', color: '#C8C6C0', flexShrink: 0 }}>▾</div>
+            </div>
+
+            {/* Partners divider */}
+            <div style={{
+              padding: '8px 20px',
+              background: '#F0EEE9',
+              borderBottom: '0.5px solid #E4E0D8',
+              fontSize: '10px', fontWeight: '500',
+              letterSpacing: '0.1em', textTransform: 'uppercase',
+              color: '#8A8C98',
+            }}>
+              {lang === 'pt' ? 'Parceiros' : 'Partners'}
+            </div>
+
+            {/* Hotel row */}
+            <div style={{
+              display: 'flex', alignItems: 'center',
+              gap: '14px', padding: '16px 20px',
+              borderBottom: '0.5px solid #E4E0D8',
+            }}>
+              <div style={{
+                width: '38px', height: '38px', borderRadius: '8px',
+                background: '#FFF8E8',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '18px', flexShrink: 0,
+              }}>
+                🏨
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: '14px', fontWeight: '500', color: '#1A1C22', marginBottom: '2px' }}>
+                  Vila do Vento Hotel
+                </div>
+                <div style={{ fontSize: '12px', color: '#8A8C98' }}>
+                  {lang === 'pt'
+                    ? '4 alunos indicados · 10% de comissão'
+                    : '4 students referred · 10% commission'
+                  }
+                </div>
+              </div>
+              <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                <div style={{ fontSize: '18px', fontWeight: '600', color: '#1A1C22', marginBottom: '4px', fontVariantNumeric: 'tabular-nums' }}>
+                  {lang === 'pt' ? 'R$ 135' : '$ 135'}
+                </div>
+                <span style={{ padding: '2px 10px', borderRadius: '99px', fontSize: '11px', fontWeight: '500', background: '#E0F8F5', color: '#007868' }}>
+                  {lang === 'pt' ? 'Aprovado' : 'Approved'}
+                </span>
+              </div>
+              <div style={{ fontSize: '16px', color: '#C8C6C0', flexShrink: 0 }}>▾</div>
+            </div>
+
+            {/* Agency row */}
+            <div style={{
+              display: 'flex', alignItems: 'center',
+              gap: '14px', padding: '16px 20px',
+            }}>
+              <div style={{
+                width: '38px', height: '38px', borderRadius: '8px',
+                background: '#EEF3FC',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '18px', flexShrink: 0,
+              }}>
+                ✈
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: '14px', fontWeight: '500', color: '#1A1C22', marginBottom: '2px' }}>
+                  Kite Brazil Travel
+                </div>
+                <div style={{ fontSize: '12px', color: '#8A8C98' }}>
+                  {lang === 'pt'
+                    ? '2 alunos indicados · 12% de comissão'
+                    : '2 students referred · 12% commission'
+                  }
+                </div>
+              </div>
+              <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                <div style={{ fontSize: '18px', fontWeight: '600', color: '#1A1C22', marginBottom: '4px', fontVariantNumeric: 'tabular-nums' }}>
+                  {lang === 'pt' ? 'R$ 84' : '$ 84'}
+                </div>
+                <span style={{ padding: '2px 10px', borderRadius: '99px', fontSize: '11px', fontWeight: '500', background: '#FFF8E8', color: '#8A5E00' }}>
+                  {lang === 'pt' ? 'Pendente' : 'Pending'}
+                </span>
+              </div>
+              <div style={{ fontSize: '16px', color: '#C8C6C0', flexShrink: 0 }}>▾</div>
+            </div>
+          </div>
+
+          {/* Footer note */}
+          <div style={{
+            marginTop: '20px',
+            display: 'flex', justifyContent: 'space-between',
+            alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px',
+          }}>
+            <div style={{ fontSize: '13px', color: '#8A8C98', maxWidth: '360px', lineHeight: '1.5' }}>
+              {lang === 'pt'
+                ? 'Cada aula registrada atualiza automaticamente os repasses da equipe e dos parceiros.'
+                : 'Every recorded lesson automatically updates team and partner payouts.'
+              }
+            </div>
+            <div style={{
+              display: 'flex', gap: '16px', flexWrap: 'wrap',
+              fontSize: '12px', color: '#8A8C98',
+            }}>
+              {payoutFooterItems.map(item => (
+                <span key={item}>{item}</span>
+              ))}
+            </div>
+          </div>
+
         </div>
       </section>
 

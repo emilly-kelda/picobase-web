@@ -281,10 +281,10 @@ export default function SettingsClient({
             </div>
 
             {[
-              { key: 'waiver_en', label: '???? English'    },
-              { key: 'waiver_pt', label: '???? Portuguese' },
-              { key: 'waiver_fr', label: '???? French'     },
-              { key: 'waiver_es', label: '???? Spanish'    },
+              { key: 'waiver_en', label: 'EN · English'    },
+              { key: 'waiver_pt', label: 'PT · Português'  },
+              { key: 'waiver_fr', label: 'FR · Français'   },
+              { key: 'waiver_es', label: 'ES · Español'    },
             ].map(({ key, label }) => (
               <div key={key} style={{ marginBottom: '16px' }}>
                 <label style={labelStyle}>{label}</label>

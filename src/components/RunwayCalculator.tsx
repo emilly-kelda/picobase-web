@@ -35,23 +35,30 @@ export default function RunwayCalculator({ seasonProfit, burnRate, currency = 'B
 
   const profitGap = Math.max(0, targetProfit - profit)
 
-  const estimatedMonth = new Date(
-    Date.now() + monthsCovered * 30 * 24 * 60 * 60 * 1000
-  ).toLocaleDateString("en-US", {
-    month: "long"
-  })
-
   const barColor = runwayMonths >= 6
     ? 'var(--glacial)'
     : runwayMonths >= 3
       ? '#D4A017'
       : 'var(--signal)'
 
-  const verdict = runwayMonths >= 6
-    ? { label: 'Comfortable', color: 'var(--glacial-dark)', bg: 'var(--glacial-light)' }
+  const safetyScore = runwayMonths >= 9
+    ? { label: 'Protegido',  color: '#007868', bg: '#E0F8F5' }
+    : runwayMonths >= 6
+    ? { label: 'Saudável',   color: '#00A896', bg: '#E0F8F5' }
     : runwayMonths >= 3
-      ? { label: 'Tight', color: '#7A4C00', bg: '#FBF3E2' }
-      : { label: 'Critical', color: 'var(--signal-dark)', bg: 'var(--signal-light)' }
+    ? { label: 'Vulnerável', color: '#8A5E00', bg: '#FFF8E8' }
+    : runwayMonths > 0
+    ? { label: 'Crítico',    color: '#B83010', bg: '#FDF0EC' }
+    : { label: '—',          color: 'var(--mist)', bg: 'var(--powder)' }
+
+  const avgLessonProfit = 250
+  const lessonsNeeded   = profitGap > 0 ? Math.ceil(profitGap / avgLessonProfit) : 0
+  const survivalDate    = (() => {
+    if (runwayMonths <= 0) return null
+    const d = new Date()
+    d.setMonth(d.getMonth() + Math.floor(runwayMonths))
+    return d.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })
+  })()
 
   return (
     <div style={{
@@ -82,9 +89,9 @@ export default function RunwayCalculator({ seasonProfit, burnRate, currency = 'B
           padding: '4px 12px',
           borderRadius: 'var(--radius-full)',
           fontSize: '12px', fontWeight: '500',
-          background: verdict.bg, color: verdict.color,
+          background: safetyScore.bg, color: safetyScore.color,
         }}>
-          {verdict.label}
+          {safetyScore.label}
         </span>
       </div>
 
@@ -143,7 +150,7 @@ export default function RunwayCalculator({ seasonProfit, burnRate, currency = 'B
                 letterSpacing: '0.1em', textTransform: 'uppercase',
                 color: 'var(--mist)',
               }}>
-                Monthly burn rate
+                Custo operacional mensal
               </label>
               <span style={{
                 fontSize: '13px', fontWeight: '600',
@@ -180,7 +187,7 @@ export default function RunwayCalculator({ seasonProfit, burnRate, currency = 'B
             fontSize: '12px', color: 'var(--mist)',
             lineHeight: '1.6',
           }}>
-            Formula: season profit &divide; monthly burn rate = months of runway
+            Lucro da temporada &divide; custo operacional mensal = meses de reserva
           </div>
 
           {(daysLeft !== undefined && daysLeft > 0) && (
@@ -286,20 +293,53 @@ export default function RunwayCalculator({ seasonProfit, burnRate, currency = 'B
             </div>
           </div>
 
-          {/* Summary */}
+          {/* Safety score badge */}
           <div style={{
-            width: '100%', padding: '12px 16px',
-            background: verdict.bg,
-            borderRadius: 'var(--radius-md)',
-            fontSize: '12px', color: verdict.color,
-            textAlign: 'center', lineHeight: '1.5',
+            display: 'inline-block',
+            padding: '4px 14px', borderRadius: '99px',
+            fontSize: '12px', fontWeight: '600',
+            background: safetyScore.bg, color: safetyScore.color,
+            marginTop: '2px',
           }}>
-            {fmt(profit)} profit &divide; {fmt(burn)}/month
-            {runwayMonths > 0
-              ? ` = ${runwayMonths.toFixed(1)} months off-season covered`
-              : '— enter season profit to calculate'
-            }
+            {safetyScore.label}
           </div>
+
+          {/* Survival date */}
+          {survivalDate && (
+            <div style={{
+              fontSize: '13px', color: 'var(--mist)',
+              lineHeight: '1.5', textAlign: 'center',
+            }}>
+              A escola opera até{' '}
+              <strong style={{ color: 'var(--slate)' }}>{survivalDate}</strong>.
+            </div>
+          )}
+
+          {/* Gap + lessons */}
+          {profitGap > 0 && (
+            <div style={{
+              width: '100%', padding: '12px 14px',
+              background: '#FFF8E8',
+              borderRadius: 'var(--radius-md)',
+            }}>
+              <div style={{
+                fontSize: '12px', color: '#8A5E00',
+                fontWeight: '500', marginBottom: '4px',
+              }}>
+                Para atingir {targetMonths} meses de reserva:
+              </div>
+              <div style={{
+                fontSize: '18px', fontWeight: '700',
+                color: '#8A5E00', fontVariantNumeric: 'tabular-nums',
+                marginBottom: '3px',
+              }}>
+                + {fmt(profitGap)}
+              </div>
+              <div style={{ fontSize: '11px', color: '#8A5E00', opacity: 0.7 }}>
+                ≈ {lessonsNeeded} aulas a mais
+              </div>
+            </div>
+          )}
         </div>
 
       </div>

@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { getT } from '@/lib/i18n'
 import type { Lang } from '@/lib/i18n'
+import Logo from '@/components/Logo'
 
 type Season = { id: string; label: string }
 
@@ -107,15 +108,8 @@ export default function OwnerNav({ schoolName, seasons = [], activeSeasonId, act
         }}>
 
           {/* Logo */}
-          <Link href="/owner" style={{
-            fontSize: '15px',
-            fontWeight: '600',
-            color: 'var(--slate)',
-            letterSpacing: '0.01em',
-            textDecoration: 'none',
-            flexShrink: 0,
-          }}>
-            Pico Base
+          <Link href="/owner" style={{ textDecoration: 'none', flexShrink: 0 }}>
+            <Logo size={18} variant="full" />
           </Link>
 
           {/* Flat nav */}
