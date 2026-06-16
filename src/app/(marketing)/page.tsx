@@ -127,9 +127,6 @@ const CONTENT = {
       'Qualquer negócio sem pico sazonal claro',
     ],
 
-    founder_eyebrow: 'Uma mensagem direta',
-    founder_quote:   'Eu construí o Pico Base depois de ver donos de escola fecharem as portas após uma temporada que parecia boa. O problema não foi a temporada. Foi não saber a tempo.',
-    founder_name:    '— Fundador, Pico Base',
     cta_h2:         'Veja se esta temporada vai ser suficiente.',
     cta_sub:        'Configuramos a escola completa em uma semana. Você começa no primeiro dia da temporada.',
     cta_demo:       'Agendar demonstração →',
@@ -239,9 +236,6 @@ const CONTENT = {
       'Any business without a clear seasonal peak',
     ],
 
-    founder_eyebrow: 'A direct message',
-    founder_quote:   "I built Pico Base after watching school owners close their doors after a season that seemed good. The problem wasn't the season. It was not knowing in time.",
-    founder_name:    '— Founder, Pico Base',
     cta_h2:         'See if this season will be enough.',
     cta_sub:        'We set up the full school in one week. You start on the first day of the season.',
     cta_demo:       'Book a demo →',
@@ -1167,71 +1161,6 @@ export default function HomePage() {
                 ))}
               </div>
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── FOUNDER CTA ──────────────────────────────────────────────────── */}
-      <section style={{ background: C.storm, padding: '100px 40px' }}>
-        <div style={{ maxWidth: '640px', margin: '0 auto', textAlign: 'center' }}>
-          <div style={{
-            fontSize: '10px', fontWeight: '500', letterSpacing: '0.18em',
-            textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)', marginBottom: '32px',
-          }}>
-            {t.founder_eyebrow}
-          </div>
-
-          <blockquote style={{
-            fontSize: 'clamp(17px, 2vw, 22px)', color: 'rgba(255,255,255,0.7)',
-            lineHeight: '1.65', margin: '0 0 20px', fontWeight: '300',
-            fontStyle: 'italic',
-          }}>
-            &ldquo;{t.founder_quote}&rdquo;
-          </blockquote>
-
-          <div style={{
-            fontSize: '12px', color: 'rgba(255,255,255,0.25)',
-            marginBottom: '64px', letterSpacing: '0.04em',
-          }}>
-            {t.founder_name}
-          </div>
-
-          <div style={{
-            height: '0.5px', background: 'rgba(255,255,255,0.06)',
-            marginBottom: '64px',
-          }} />
-
-          <h2 style={{
-            fontSize: 'clamp(28px, 4vw, 48px)', fontWeight: '700', color: C.white,
-            lineHeight: '1.1', margin: '0 0 16px', letterSpacing: '-0.03em',
-          }}>
-            {t.cta_h2}
-          </h2>
-          <p style={{
-            fontSize: '15px', color: 'rgba(255,255,255,0.35)',
-            lineHeight: '1.6', margin: '0 0 36px',
-          }}>
-            {t.cta_sub}
-          </p>
-
-          <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <Link href="/demo" style={{
-              display: 'inline-flex', alignItems: 'center',
-              background: C.signal, color: C.white,
-              padding: '14px 32px', borderRadius: '10px',
-              fontSize: '15px', fontWeight: '500', textDecoration: 'none',
-            }}>
-              {t.cta_demo}
-            </Link>
-            <Link href="/calculadora" style={{
-              display: 'inline-flex', alignItems: 'center',
-              background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.55)',
-              padding: '14px 32px', borderRadius: '10px',
-              fontSize: '15px', fontWeight: '500', textDecoration: 'none',
-              border: '0.5px solid rgba(255,255,255,0.1)',
-            }}>
-              {t.cta_calc}
-            </Link>
           </div>
         </div>
       </section>
