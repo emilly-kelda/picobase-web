@@ -22,7 +22,7 @@ export default function CalculadoraPage() {
     ? { label: 'Vulnerável', color: '#8A5E00', bg: '#FFF8E8', sub: 'Alguma reserva, mas uma temporada fraca pode comprometer o caixa.' }
     : runway > 0
     ? { label: 'Crítico',    color: '#B83010', bg: '#FDF0EC', sub: 'A temporada não cobre a baixa temporada. Revise custos ou receita.' }
-    : { label: '—', color: 'rgba(255,255,255,0.3)', bg: 'rgba(255,255,255,0.06)', sub: 'Insira os valores para calcular.' }
+    : { label: '—', color: 'rgba(255,255,255,0.3)', bg: 'rgba(255,255,255,0.06)', sub: 'Ajuste os valores ao lado para ver sua reserva de baixa temporada.' }
   const targetMonths    = 12
   const gap             = runway >= targetMonths ? 0 : Math.round((targetMonths * activeBurn) - profit)
   const avgLessonProfit = 250
@@ -50,6 +50,18 @@ export default function CalculadoraPage() {
       fontFamily: 'var(--font-geist-sans, system-ui)',
     }}>
 
+      <style>{`
+        .calc-columns {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 24px;
+          align-items: start;
+        }
+        @media (max-width: 768px) {
+          .calc-columns { grid-template-columns: 1fr; }
+        }
+      `}</style>
+
       {/* Nav */}
       <header style={{
         position: 'fixed', top: 0, left: 0, right: 0, zIndex: 50,
@@ -74,9 +86,10 @@ export default function CalculadoraPage() {
         </Link>
       </header>
 
-      <div style={{ maxWidth: '720px', margin: '0 auto', padding: '60px 40px' }}>
+      <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '60px 40px' }}>
 
-        <div style={{ marginBottom: '48px' }}>
+        {/* Headline */}
+        <div style={{ marginBottom: '40px' }}>
           <div style={{
             fontSize: '11px', fontWeight: '500',
             letterSpacing: '0.16em', textTransform: 'uppercase',
@@ -93,177 +106,182 @@ export default function CalculadoraPage() {
             Calculadora de Reserva<br />de Baixa Temporada
           </h1>
           <p style={{ fontSize: '16px', color: '#6A6C78', lineHeight: '1.6', margin: '0' }}>
-            Descubra quantos meses de baixa temporada sua temporada atual consegue cobrir.
+            Digite o lucro da sua temporada e o custo mensal da escola para descobrir quantos meses de baixa temporada você consegue cobrir.
           </p>
         </div>
 
-        {/* Result */}
-        <div style={{
-          background: '#1A1C22', borderRadius: '20px',
-          padding: '40px', marginBottom: '24px', textAlign: 'center',
-        }}>
-          <div style={{
-            fontSize: '11px', fontWeight: '500',
-            letterSpacing: '0.16em', textTransform: 'uppercase',
-            color: 'rgba(255,255,255,0.3)', marginBottom: '12px',
-          }}>
-            Reserva de Baixa Temporada
-          </div>
-          <div style={{
-            fontSize: '96px', fontWeight: '700',
-            color: runway > 0 ? barColor : 'rgba(255,255,255,0.2)',
-            lineHeight: '1', fontVariantNumeric: 'tabular-nums',
-            marginBottom: '8px', transition: 'color 0.3s',
-          }}>
-            {runway > 0 ? runway.toFixed(1) : '—'}
-          </div>
-          <div style={{ fontSize: '16px', color: 'rgba(255,255,255,0.4)', marginBottom: '32px' }}>
-            meses cobertos
-          </div>
-          <div style={{
-            height: '8px', background: 'rgba(255,255,255,0.08)',
-            borderRadius: '99px', overflow: 'hidden', marginBottom: '8px',
-          }}>
-            <div style={{
-              height: '100%', width: `${barPct}%`,
-              background: barColor, borderRadius: '99px',
-              transition: 'width 0.4s, background 0.3s',
-            }} />
-          </div>
-          <div style={{
-            display: 'flex', justifyContent: 'space-between',
-            fontSize: '11px', color: 'rgba(255,255,255,0.2)', marginBottom: '28px',
-          }}>
-            {['0', '3mo', '6mo', '9mo', '12mo'].map(m => <span key={m}>{m}</span>)}
-          </div>
-          <div style={{
-            display: 'inline-block', padding: '8px 20px',
-            borderRadius: '99px', fontSize: '14px', fontWeight: '500',
-            background: safetyScore.bg,
-            color: safetyScore.color,
-            marginBottom: '8px',
-          }}>
-            {safetyScore.label}
-          </div>
-          <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.35)', margin: '0 0 16px', lineHeight: '1.5' }}>
-            {safetyScore.sub}
-          </p>
-          {survivalDate && (
-            <div style={{
-              padding: '14px 16px',
-              background: 'rgba(255,255,255,0.06)',
-              borderRadius: '10px', textAlign: 'left',
-              marginBottom: '12px',
-            }}>
-              <div style={{
-                fontSize: '11px', color: 'rgba(255,255,255,0.3)',
-                marginBottom: '4px', letterSpacing: '0.06em',
-              }}>
-                A escola opera até
-              </div>
-              <div style={{ fontSize: '22px', fontWeight: '600', color: '#fff' }}>
-                {survivalDate}
-              </div>
-            </div>
-          )}
-          {gap > 0 && (
-            <div style={{
-              padding: '14px 16px',
-              background: '#FFF8E8', borderRadius: '10px',
-              textAlign: 'left',
-            }}>
-              <div style={{
-                fontSize: '12px', color: '#8A5E00',
-                fontWeight: '500', marginBottom: '6px',
-              }}>
-                Para atingir {targetMonths} meses de reserva:
-              </div>
-              <div style={{
-                fontSize: '24px', fontWeight: '700',
-                color: '#8A5E00', fontVariantNumeric: 'tabular-nums',
-                marginBottom: '4px',
-              }}>
-                + {new Intl.NumberFormat('pt-BR', {
-                  style: 'currency', currency: 'BRL',
-                  minimumFractionDigits: 0,
-                }).format(gap)}
-              </div>
-              <div style={{ fontSize: '12px', color: '#8A5E00', opacity: 0.7 }}>
-                ≈ {lessonsNeeded} aulas a mais (média R$ {avgLessonProfit}/aula)
-              </div>
-            </div>
-          )}
-        </div>
+        {/* Two-column: Inputs (left) + Results (right) */}
+        <div className="calc-columns" style={{ marginBottom: '32px' }}>
 
-        {/* Inputs */}
-        <div style={{
-          background: '#fff', borderRadius: '16px',
-          padding: '32px', marginBottom: '24px',
-          border: '0.5px solid #E4E0D8',
-        }}>
-          <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#1A1C22', margin: '0 0 24px' }}>
-            Seus números
-          </h3>
-          <div style={{ marginBottom: '28px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-              <label style={{ fontSize: '13px', fontWeight: '500', color: '#1A1C22' }}>
-                Lucro da temporada
-              </label>
-              <span style={{ fontSize: '15px', fontWeight: '600', color: '#1A1C22', fontVariantNumeric: 'tabular-nums' }}>
-                {fmt(profit)}
-              </span>
-            </div>
-            <input type="range" min={0} max={300000} step={1000} value={profit}
-              onChange={e => setProfit(Number(e.target.value))}
-              style={{ width: '100%', accentColor: '#1B4B5A', cursor: 'pointer' }}
-            />
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#C8C6C0', marginTop: '4px' }}>
-              <span>R$ 0</span><span>R$ 300k</span>
-            </div>
-            <div style={{ fontSize: '12px', color: '#8A8C98', marginTop: '8px' }}>
-              Receita total menos comissões e custos variáveis da temporada.
-            </div>
-          </div>
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-              <label style={{ fontSize: '13px', fontWeight: '500', color: '#1A1C22' }}>
-                Custo operacional mensal
-              </label>
-              <span style={{ fontSize: '15px', fontWeight: '600', color: '#1A1C22', fontVariantNumeric: 'tabular-nums' }}>
-                {fmt(activeBurn)}
-              </span>
-            </div>
-            {!custom ? (
-              <>
-                <input type="range" min={500} max={50000} step={500} value={burn}
-                  onChange={e => setBurn(Number(e.target.value))}
-                  style={{ width: '100%', accentColor: '#E8471A', cursor: 'pointer' }}
-                />
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#C8C6C0', marginTop: '4px' }}>
-                  <span>R$ 500</span><span>R$ 50k</span>
-                </div>
-              </>
-            ) : (
-              <input type="number" value={customBurn}
-                onChange={e => setCustomBurn(e.target.value)}
-                placeholder="Digite o valor exato..."
-                style={{
-                  width: '100%', padding: '10px 14px',
-                  border: '0.5px solid #D8D2C8', borderRadius: '8px',
-                  fontSize: '15px', color: '#1A1C22',
-                  fontFamily: 'inherit', outline: 'none',
-                  boxSizing: 'border-box' as const,
-                }}
+          {/* Inputs */}
+          <div style={{
+            background: '#fff', borderRadius: '16px',
+            padding: '32px',
+            border: '0.5px solid #E4E0D8',
+          }}>
+            <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#1A1C22', margin: '0 0 24px' }}>
+              Seus números
+            </h3>
+            <div style={{ marginBottom: '28px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+                <label style={{ fontSize: '13px', fontWeight: '500', color: '#1A1C22' }}>
+                  Lucro da temporada
+                </label>
+                <span style={{ fontSize: '15px', fontWeight: '600', color: '#1A1C22', fontVariantNumeric: 'tabular-nums' }}>
+                  {fmt(profit)}
+                </span>
+              </div>
+              <input type="range" min={0} max={300000} step={1000} value={profit}
+                onChange={e => setProfit(Number(e.target.value))}
+                style={{ width: '100%', accentColor: '#1B4B5A', cursor: 'pointer' }}
               />
-            )}
-            <button onClick={() => { setCustom(!custom); setCustomBurn('') }} style={{
-              background: 'transparent', border: 'none',
-              fontSize: '12px', color: '#1B4B5A',
-              cursor: 'pointer', padding: '6px 0', fontFamily: 'inherit',
-            }}>
-              {custom ? '← Usar controle deslizante' : 'Digitar valor exato →'}
-            </button>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#C8C6C0', marginTop: '4px' }}>
+                <span>R$ 0</span><span>R$ 300k</span>
+              </div>
+              <div style={{ fontSize: '12px', color: '#8A8C98', marginTop: '8px' }}>
+                Receita total menos comissões e custos variáveis da temporada.
+              </div>
+            </div>
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+                <label style={{ fontSize: '13px', fontWeight: '500', color: '#1A1C22' }}>
+                  Custo operacional mensal
+                </label>
+                <span style={{ fontSize: '15px', fontWeight: '600', color: '#1A1C22', fontVariantNumeric: 'tabular-nums' }}>
+                  {fmt(activeBurn)}
+                </span>
+              </div>
+              {!custom ? (
+                <>
+                  <input type="range" min={500} max={50000} step={500} value={burn}
+                    onChange={e => setBurn(Number(e.target.value))}
+                    style={{ width: '100%', accentColor: '#E8471A', cursor: 'pointer' }}
+                  />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#C8C6C0', marginTop: '4px' }}>
+                    <span>R$ 500</span><span>R$ 50k</span>
+                  </div>
+                </>
+              ) : (
+                <input type="number" value={customBurn}
+                  onChange={e => setCustomBurn(e.target.value)}
+                  placeholder="Digite o valor exato..."
+                  style={{
+                    width: '100%', padding: '10px 14px',
+                    border: '0.5px solid #D8D2C8', borderRadius: '8px',
+                    fontSize: '15px', color: '#1A1C22',
+                    fontFamily: 'inherit', outline: 'none',
+                    boxSizing: 'border-box' as const,
+                  }}
+                />
+              )}
+              <button onClick={() => { setCustom(!custom); setCustomBurn('') }} style={{
+                background: 'transparent', border: 'none',
+                fontSize: '12px', color: '#1B4B5A',
+                cursor: 'pointer', padding: '6px 0', fontFamily: 'inherit',
+              }}>
+                {custom ? '← Usar controle deslizante' : 'Digitar valor exato →'}
+              </button>
+            </div>
           </div>
+
+          {/* Results */}
+          <div style={{
+            background: '#1A1C22', borderRadius: '20px',
+            padding: '40px', textAlign: 'center',
+          }}>
+            <div style={{
+              fontSize: '11px', fontWeight: '500',
+              letterSpacing: '0.16em', textTransform: 'uppercase',
+              color: 'rgba(255,255,255,0.3)', marginBottom: '12px',
+            }}>
+              Reserva de Baixa Temporada
+            </div>
+            <div style={{
+              fontSize: '96px', fontWeight: '700',
+              color: runway > 0 ? barColor : 'rgba(255,255,255,0.2)',
+              lineHeight: '1', fontVariantNumeric: 'tabular-nums',
+              marginBottom: '8px', transition: 'color 0.3s',
+            }}>
+              {runway > 0 ? runway.toFixed(1) : '—'}
+            </div>
+            <div style={{ fontSize: '16px', color: 'rgba(255,255,255,0.4)', marginBottom: '32px' }}>
+              meses cobertos
+            </div>
+            <div style={{
+              height: '8px', background: 'rgba(255,255,255,0.08)',
+              borderRadius: '99px', overflow: 'hidden', marginBottom: '8px',
+            }}>
+              <div style={{
+                height: '100%', width: `${barPct}%`,
+                background: barColor, borderRadius: '99px',
+                transition: 'width 0.4s, background 0.3s',
+              }} />
+            </div>
+            <div style={{
+              display: 'flex', justifyContent: 'space-between',
+              fontSize: '11px', color: 'rgba(255,255,255,0.2)', marginBottom: '28px',
+            }}>
+              {['0', '3mo', '6mo', '9mo', '12mo'].map(m => <span key={m}>{m}</span>)}
+            </div>
+            <div style={{
+              display: 'inline-block', padding: '8px 20px',
+              borderRadius: '99px', fontSize: '14px', fontWeight: '500',
+              background: safetyScore.bg,
+              color: safetyScore.color,
+              marginBottom: '8px',
+            }}>
+              {safetyScore.label}
+            </div>
+            <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.35)', margin: '0 0 16px', lineHeight: '1.5' }}>
+              {safetyScore.sub}
+            </p>
+            {survivalDate && (
+              <div style={{
+                padding: '14px 16px',
+                background: 'rgba(255,255,255,0.06)',
+                borderRadius: '10px', textAlign: 'left',
+                marginBottom: '12px',
+              }}>
+                <div style={{
+                  fontSize: '11px', color: 'rgba(255,255,255,0.3)',
+                  marginBottom: '4px', letterSpacing: '0.06em',
+                }}>
+                  A escola opera até
+                </div>
+                <div style={{ fontSize: '22px', fontWeight: '600', color: '#fff' }}>
+                  {survivalDate}
+                </div>
+              </div>
+            )}
+            {gap > 0 && (
+              <div style={{
+                padding: '14px 16px',
+                background: '#FFF8E8', borderRadius: '10px',
+                textAlign: 'left',
+              }}>
+                <div style={{
+                  fontSize: '12px', color: '#8A5E00',
+                  fontWeight: '500', marginBottom: '6px',
+                }}>
+                  Para atingir {targetMonths} meses de reserva:
+                </div>
+                <div style={{
+                  fontSize: '24px', fontWeight: '700',
+                  color: '#8A5E00', fontVariantNumeric: 'tabular-nums',
+                  marginBottom: '4px',
+                }}>
+                  + {new Intl.NumberFormat('pt-BR', {
+                    style: 'currency', currency: 'BRL',
+                    minimumFractionDigits: 0,
+                  }).format(gap)}
+                </div>
+                <div style={{ fontSize: '12px', color: '#8A5E00', opacity: 0.7 }}>
+                  ≈ {lessonsNeeded} aulas a mais (média R$ {avgLessonProfit}/aula)
+                </div>
+              </div>
+            )}
+          </div>
+
         </div>
 
         {/* Scenario table */}
