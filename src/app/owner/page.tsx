@@ -56,9 +56,19 @@ export default async function OwnerPage() {
 
   const t = getT(lang)
 
-  const runwayMonths = runway.winter_runway_months ?? 0
   const monthlyBurn  = (runway as any).burn_rate ?? 0
+  const runwayMonths = monthlyBurn > 0
+    ? (runway.season_profit ?? 0) / monthlyBurn
+    : (runway.winter_runway_months ?? 0)
   const gapToTarget  = Math.max(0, 6 * monthlyBurn - (runway.season_profit ?? 0))
+
+  console.log(
+    '[runway] season_profit=%s  burn_rate=%s  → computed=%s months  (db.winter_runway_months=%s)',
+    runway.season_profit,
+    monthlyBurn,
+    monthlyBurn > 0 ? ((runway.season_profit ?? 0) / monthlyBurn).toFixed(2) : 'n/a',
+    runway.winter_runway_months,
+  )
 
   const instructorList = instructors.map(i => ({
     id: i.id,
@@ -162,6 +172,15 @@ export default async function OwnerPage() {
             activePackages={(activePackages as any).filter((p: any) => p.status === 'active')}
           />
 
+          {/* Runway Calculator */}
+          <RunwayCalculator
+            seasonProfit={runway.season_profit ?? 0}
+            burnRate={monthlyBurn}
+            daysLeft={projection?.daysLeft}
+            projectedRunway={projection?.projectedRunway}
+            gap={projection?.gap}
+          />
+
           {/* Sessions table */}
           <div>
             <div style={{
@@ -241,14 +260,6 @@ export default async function OwnerPage() {
             </table>
           </div>
 
-          {/* Runway Calculator */}
-          <RunwayCalculator
-            seasonProfit={runway.season_profit ?? 0}
-            burnRate={monthlyBurn}
-            daysLeft={projection?.daysLeft}
-            projectedRunway={projection?.projectedRunway}
-            gap={projection?.gap}
-          />
         </div>
 
         {/* ════════════════════════════════════════════════════════════════

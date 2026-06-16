@@ -10,21 +10,25 @@ export async function POST(request: Request) {
   if (!body.name?.trim()) return NextResponse.json({ error: 'Name is required' }, { status: 400 })
   if (!body.email?.trim()) return NextResponse.json({ error: 'Email is required' }, { status: 400 })
 
+  const insertPayload = {
+    id:               crypto.randomUUID(),
+    school_id:        SCHOOL_ID,
+    role:             'instructor',
+    active:           true,
+    name:             body.name.trim(),
+    email:            body.email.trim(),
+    commission_pct:   body.commission_pct ?? null,
+    experience_years: body.experience_years ?? null,
+    sports:           body.sports?.length > 0 ? body.sports : null,
+    languages:        body.languages?.length > 0 ? body.languages : null,
+    certifications:   body.certifications?.length > 0 ? body.certifications : null,
+    pix_key:          body.pix_key || null,
+  }
+  console.log('[crew/POST] inserting instructor:', insertPayload)
+
   const { data, error } = await supabase
     .from('users')
-    .insert({
-      school_id:        SCHOOL_ID,
-      role:             'instructor',
-      active:           true,
-      name:             body.name.trim(),
-      email:            body.email.trim(),
-      commission_pct:   body.commission_pct ?? null,
-      experience_years: body.experience_years ?? null,
-      sports:           body.sports?.length > 0 ? body.sports : null,
-      languages:        body.languages?.length > 0 ? body.languages : null,
-      certifications:   body.certifications?.length > 0 ? body.certifications : null,
-      pix_key:          body.pix_key || null,
-    })
+    .insert(insertPayload)
     .select(`
       id, name, email, whatsapp, commission_pct, pix_key, wise_email, active, created_at,
       nationality, languages, sports, certifications, bio, experience_years,
@@ -32,7 +36,10 @@ export async function POST(request: Request) {
     `)
     .single()
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) {
+    console.error('[crew/POST] insert failed:', error.message, '| id:', insertPayload.id)
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
   return NextResponse.json({ ok: true, instructor: data })
 }
 
