@@ -33,9 +33,10 @@ const CONTENT = {
     nav_enter:   'Entrar →',
 
     hero_eyebrow: 'Sistema operacional · escolas sazonais de esportes',
-    hero_h1a:    'Esta temporada',
-    hero_h1b:    'será suficiente?',
-    hero_sub:    'Você ganha em seis meses e precisa sobreviver em doze. A maioria dos donos de escola sazonal só descobre que a temporada não foi suficiente quando o dinheiro acaba. Pico Base mostra a resposta antes disso.',
+    hero_h1a:    'Uma temporada.',
+    hero_h1b:    'Doze meses',
+    hero_h1c:    'para sobreviver.',
+    hero_sub:    'Do registro das aulas ao pagamento dos instrutores — e a resposta que todo dono de escola sazonal precisa: esta temporada será suficiente para atravessar a baixa temporada?',
     hero_cta1:   'Agendar demonstração →',
     hero_cta2:   'Calcular minha reserva',
 
@@ -144,9 +145,10 @@ const CONTENT = {
     nav_enter:   'Sign in →',
 
     hero_eyebrow: 'Operating system · seasonal sports schools',
-    hero_h1a:    'Will this season',
-    hero_h1b:    'be enough?',
-    hero_sub:    "You earn in six months and need to survive twelve. Most seasonal school owners find out the season wasn't enough when the money runs out. Pico Base shows you the answer before that.",
+    hero_h1a:    'One season.',
+    hero_h1b:    'Twelve months',
+    hero_h1c:    'to survive.',
+    hero_sub:    'From check-in to instructor payroll — and the one number that tells you whether this season will carry your school through the off-season.',
     hero_cta1:   'Book a demo →',
     hero_cta2:   'Calculate my runway',
 
@@ -446,8 +448,8 @@ export default function HomePage() {
       {/* ── NAV ─────────────────────────────────────────────────────────── */}
       <header style={{
         position: 'fixed', top: 0, left: 0, right: 0, zIndex: 50,
-        background: 'rgba(13,15,18,0.92)', backdropFilter: 'blur(12px)',
-        borderBottom: '0.5px solid rgba(255,255,255,0.06)',
+        background: 'rgba(255,255,255,0.94)', backdropFilter: 'blur(12px)',
+        borderBottom: `0.5px solid ${C.powderBorder}`,
         height: '56px', display: 'flex', alignItems: 'center',
         padding: '0 40px', justifyContent: 'space-between',
       }}>
@@ -457,14 +459,14 @@ export default function HomePage() {
 
         <nav style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
           <Link href="/calculadora" style={{
-            fontSize: '13px', color: 'rgba(255,255,255,0.4)',
+            fontSize: '13px', color: C.fog,
             textDecoration: 'none', padding: '6px 14px',
           }}>
             {t.nav_calc}
           </Link>
 
           <div style={{
-            display: 'flex', gap: '2px', background: 'rgba(255,255,255,0.06)',
+            display: 'flex', gap: '2px', background: C.powder,
             borderRadius: '8px', padding: '2px', marginRight: '4px',
           }}>
             {(['pt', 'en'] as Lang[]).map(l => (
@@ -473,8 +475,9 @@ export default function HomePage() {
                 fontSize: '12px', fontWeight: '500',
                 border: 'none', cursor: 'pointer',
                 fontFamily: 'var(--font-geist-sans, system-ui)',
-                background: lang === l ? 'rgba(255,255,255,0.12)' : 'transparent',
-                color: lang === l ? C.white : 'rgba(255,255,255,0.35)',
+                background: lang === l ? C.white : 'transparent',
+                color: lang === l ? C.slate : C.fog,
+                boxShadow: lang === l ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
                 transition: 'all 0.15s',
               }}>
                 {l.toUpperCase()}
@@ -484,7 +487,7 @@ export default function HomePage() {
 
           <Link href="/owner" style={{
             fontSize: '13px', fontWeight: '500',
-            color: C.dark, background: C.white,
+            color: C.white, background: C.slate,
             textDecoration: 'none', padding: '8px 18px', borderRadius: '8px',
           }}>
             {t.nav_enter}
@@ -494,35 +497,36 @@ export default function HomePage() {
 
       {/* ── HERO ─────────────────────────────────────────────────────────── */}
       <section style={{
-        background: C.dark, minHeight: '100vh',
+        background: C.white, minHeight: '100vh',
         display: 'flex', flexDirection: 'column', justifyContent: 'center',
         padding: '120px 40px 80px',
       }}>
         <div style={{ maxWidth: '860px', margin: '0 auto', width: '100%' }}>
           <div style={{
             fontSize: '11px', fontWeight: '500', letterSpacing: '0.2em',
-            textTransform: 'uppercase', color: 'rgba(255,255,255,0.25)',
+            textTransform: 'uppercase', color: C.fog,
             marginBottom: '32px', display: 'flex', alignItems: 'center', gap: '12px',
           }}>
-            <span style={{ display: 'inline-block', width: '24px', height: '1px', background: 'rgba(255,255,255,0.15)' }} />
+            <span style={{ display: 'inline-block', width: '24px', height: '1px', background: C.fog }} />
             {t.hero_eyebrow}
           </div>
 
           <h1 style={{
-            fontSize: 'clamp(42px, 7vw, 88px)',
-            fontWeight: '700', color: C.white,
-            lineHeight: '1.0', letterSpacing: '-0.04em',
-            margin: '0 0 32px',
+            fontSize: 'clamp(36px, 5.5vw, 72px)',
+            fontWeight: '700', color: C.slate,
+            lineHeight: '1.05', letterSpacing: '-0.03em',
+            margin: '0 0 28px',
           }}>
             {t.hero_h1a}<br />
-            <span style={{ color: C.teal }}>{t.hero_h1b}</span>
+            <span style={{ color: C.teal }}>{(t as typeof CONTENT.pt & { hero_h1c: string }).hero_h1b}</span><br />
+            {(t as typeof CONTENT.pt & { hero_h1c: string }).hero_h1c}
           </h1>
 
           <p style={{
             fontSize: 'clamp(15px, 1.8vw, 18px)',
-            color: 'rgba(255,255,255,0.45)',
+            color: C.mist,
             maxWidth: '520px', lineHeight: '1.7',
-            margin: '0 0 40px', fontWeight: '300',
+            margin: '0 0 36px', fontWeight: '300',
           }}>
             {t.hero_sub}
           </p>
@@ -531,17 +535,17 @@ export default function HomePage() {
             <Link href="/demo" style={{
               display: 'inline-flex', alignItems: 'center',
               background: C.signal, color: C.white,
-              padding: '14px 28px', borderRadius: '10px',
+              padding: '13px 26px', borderRadius: '10px',
               fontSize: '14px', fontWeight: '500', textDecoration: 'none',
             }}>
               {t.hero_cta1}
             </Link>
             <Link href="/calculadora" style={{
               display: 'inline-flex', alignItems: 'center',
-              background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.6)',
-              padding: '14px 28px', borderRadius: '10px',
+              background: C.powder, color: C.slate,
+              padding: '13px 26px', borderRadius: '10px',
               fontSize: '14px', fontWeight: '500', textDecoration: 'none',
-              border: '0.5px solid rgba(255,255,255,0.1)',
+              border: `0.5px solid ${C.powderBorder}`,
             }}>
               {t.hero_cta2}
             </Link>
@@ -550,7 +554,7 @@ export default function HomePage() {
       </section>
 
       {/* ── TICKER ───────────────────────────────────────────────────────── */}
-      <div style={{ background: C.signal, overflow: 'hidden', padding: '12px 0' }}>
+      <div style={{ background: C.slate, overflow: 'hidden', padding: '12px 0' }}>
         <div style={{
           display: 'flex',
           width: 'max-content',
@@ -661,13 +665,13 @@ export default function HomePage() {
 
       {/* ── WITHOUT VISIBILITY ───────────────────────────────────────────── */}
       <section style={{
-        background: C.dark, padding: '100px 40px',
+        background: C.storm, padding: '100px 40px',
       }}>
         <div style={{ maxWidth: '960px', margin: '0 auto' }}>
           <div style={{ marginBottom: '56px' }}>
             <div style={{
               fontSize: '10px', fontWeight: '500', letterSpacing: '0.18em',
-              textTransform: 'uppercase', color: 'rgba(255,255,255,0.25)', marginBottom: '14px',
+              textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)', marginBottom: '14px',
             }}>
               {t.without_eyebrow}
             </div>
@@ -682,8 +686,8 @@ export default function HomePage() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
             {t.without_items.map((item, i) => (
               <div key={i} style={{
-                background: 'rgba(255,255,255,0.04)',
-                border: '0.5px solid rgba(255,255,255,0.08)',
+                background: 'rgba(255,255,255,0.06)',
+                border: '0.5px solid rgba(255,255,255,0.1)',
                 borderTop: `2px solid ${C.signal}`,
                 borderRadius: '12px', padding: '28px 24px',
               }}>
@@ -694,7 +698,7 @@ export default function HomePage() {
                 }}>
                   {item.title}
                 </div>
-                <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.4)', lineHeight: '1.6' }}>
+                <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', lineHeight: '1.6' }}>
                   {item.body}
                 </div>
               </div>
@@ -1168,11 +1172,11 @@ export default function HomePage() {
       </section>
 
       {/* ── FOUNDER CTA ──────────────────────────────────────────────────── */}
-      <section style={{ background: C.dark, padding: '100px 40px' }}>
+      <section style={{ background: C.storm, padding: '100px 40px' }}>
         <div style={{ maxWidth: '640px', margin: '0 auto', textAlign: 'center' }}>
           <div style={{
             fontSize: '10px', fontWeight: '500', letterSpacing: '0.18em',
-            textTransform: 'uppercase', color: 'rgba(255,255,255,0.25)', marginBottom: '32px',
+            textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)', marginBottom: '32px',
           }}>
             {t.founder_eyebrow}
           </div>
@@ -1234,7 +1238,7 @@ export default function HomePage() {
 
       {/* ── FOOTER ───────────────────────────────────────────────────────── */}
       <footer style={{
-        background: '#0A0C0F', padding: '28px 40px',
+        background: C.slate, padding: '28px 40px',
         display: 'flex', justifyContent: 'space-between',
         alignItems: 'center', flexWrap: 'wrap', gap: '16px',
         borderTop: '0.5px solid rgba(255,255,255,0.06)',
