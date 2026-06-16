@@ -13,10 +13,10 @@ export async function POST(request: Request) {
     price,
     notes,
     commission_pct,
+    session_date,
   } = body
 
   const supabase = createServiceClient()
-  const today = new Date().toISOString().slice(0, 10)
   const commission_amount = price * commission_pct
 
   const { error: sessionError } = await supabase
@@ -26,7 +26,7 @@ export async function POST(request: Request) {
       checkin_id,
       instructor_id,
       activity_id:      activity_id || null,
-      session_date:     today,
+      session_date:     session_date ?? new Date().toISOString().slice(0, 10),
       duration_min,
       price,
       commission_pct,

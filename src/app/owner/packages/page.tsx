@@ -20,7 +20,7 @@ function fmtH(minutes: number) {
 }
 
 export default async function PackagesPage() {
-  const { summary, packageTypes, atRiskSales } = await getPackageDashboard(SCHOOL_ID)
+  const { summary, packageTypes, studentsWithHours } = await getPackageDashboard(SCHOOL_ID)
 
   const summaryCards = [
     {
@@ -28,35 +28,28 @@ export default async function PackagesPage() {
       value: fmt(summary.totalRevenue),
       color: 'var(--slate)',
       bg:    '#fff',
+      sub:   null,
+    },
+    {
+      label: 'Horas vendidas',
+      value: fmtH(summary.totalMinutesSold),
+      color: 'var(--slate)',
+      bg:    '#fff',
+      sub:   'total contratado',
+    },
+    {
+      label: 'Horas entregues',
+      value: fmtH(summary.totalMinutesDelivered),
+      color: 'var(--glacial-dark)',
+      bg:    '#E0F8F5',
+      sub:   'já realizadas',
     },
     {
       label: 'Horas restantes',
       value: fmtH(summary.totalMinutesRemaining),
       color: summary.totalMinutesRemaining > 0 ? '#8A5E00' : 'var(--glacial-dark)',
       bg:    summary.totalMinutesRemaining > 0 ? '#FFF8E8' : '#E0F8F5',
-      sub:   'a entregar aos alunos',
-    },
-    {
-      label: 'Receita não realizada',
-      value: fmt(summary.unrealizedRevenue),
-      color: '#8A5E00',
-      bg:    '#FFF8E8',
-      sub:   'receita pré-paga ainda não entregue',
-    },
-    {
-      label: 'Utilização',
-      value: `${summary.utilizationPct}%`,
-      color: summary.utilizationPct >= 70 ? 'var(--glacial-dark)'
-           : summary.utilizationPct >= 40 ? '#8A5E00'
-           : 'var(--signal-dark)',
-      bg:    '#fff',
-    },
-    {
-      label: 'Em risco de expirar',
-      value: String(summary.atRiskCount),
-      color: summary.atRiskCount > 0 ? 'var(--signal-dark)' : 'var(--glacial-dark)',
-      bg:    summary.atRiskCount > 0 ? 'var(--signal-light)' : '#E0F8F5',
-      sub:   summary.atRiskCount > 0 ? 'sem uso há mais de 21 dias' : 'tudo em dia',
+      sub:   `${summary.activeStudents} aluno${summary.activeStudents !== 1 ? 's' : ''} com saldo`,
     },
   ]
 
@@ -82,7 +75,7 @@ export default async function PackagesPage() {
 
       {/* ── SECTION 1: Summary metrics ── */}
       <div style={{
-        display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)',
+        display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)',
         gap: '10px', marginBottom: '32px',
       }}>
         {summaryCards.map(card => (
@@ -147,8 +140,7 @@ export default async function PackagesPage() {
             <tr style={{ background: 'var(--powder)' }}>
               {[
                 'Pacote', 'Preço', 'Vendidos', 'Receita',
-                'Horas vendidas', 'Horas utilizadas', 'Horas restantes',
-                'Utilização', '',
+                'Horas vendidas', 'Horas entregues', 'Horas restantes', '',
               ].map((h, i) => (
                 <th key={i} style={{
                   padding: '10px 16px', textAlign: i === 0 ? 'left' : 'right',
@@ -231,36 +223,6 @@ export default async function PackagesPage() {
                   {pkg.hasNoSales ? '—' : fmtH(pkg.minutesRemaining)}
                 </td>
                 <td style={{ padding: '14px 16px', textAlign: 'right' }}>
-                  {!pkg.hasNoSales && (
-                    <div style={{
-                      display: 'flex', alignItems: 'center',
-                      gap: '8px', justifyContent: 'flex-end',
-                    }}>
-                      <div style={{
-                        width: '60px', height: '4px',
-                        background: 'var(--powder)',
-                        borderRadius: '99px', overflow: 'hidden',
-                      }}>
-                        <div style={{
-                          height: '100%',
-                          width: `${pkg.utilPct}%`,
-                          background: pkg.utilPct >= 70 ? 'var(--glacial)'
-                            : pkg.utilPct >= 40 ? '#D4A017' : 'var(--signal)',
-                          borderRadius: '99px',
-                        }} />
-                      </div>
-                      <span style={{
-                        fontSize: '12px', fontWeight: '500',
-                        color: pkg.utilPct >= 70 ? 'var(--glacial-dark)'
-                          : pkg.utilPct >= 40 ? '#8A5E00' : 'var(--signal-dark)',
-                        minWidth: '32px', textAlign: 'right',
-                      }}>
-                        {pkg.utilPct}%
-                      </span>
-                    </div>
-                  )}
-                </td>
-                <td style={{ padding: '14px 16px', textAlign: 'right' }}>
                   <SellPackageButton
                     packageId={pkg.id}
                     packageName={pkg.name}
@@ -274,8 +236,8 @@ export default async function PackagesPage() {
         </table>
       </div>
 
-      {/* ── SECTION 3: At-risk students ── */}
-      {atRiskSales.length > 0 ? (
+      {/* ── SECTION 3: Students with remaining hours ── */}
+      {studentsWithHours.length > 0 ? (
         <div style={{
           background: '#fff',
           border: '0.5px solid var(--border)',
@@ -285,23 +247,22 @@ export default async function PackagesPage() {
           <div style={{
             padding: '14px 24px',
             borderBottom: '0.5px solid var(--border)',
-            background: 'var(--signal-light)',
             display: 'flex', justifyContent: 'space-between',
             alignItems: 'center',
           }}>
             <span style={{
               fontSize: '11px', fontWeight: '500',
               letterSpacing: '0.1em', textTransform: 'uppercase',
-              color: 'var(--signal-dark)',
+              color: 'var(--mist)',
             }}>
-              Pacotes em risco · {atRiskSales.length}
+              Alunos com horas restantes
             </span>
-            <span style={{ fontSize: '12px', color: 'var(--signal-dark)' }}>
-              Sem uso há mais de 21 dias com menos de 30% utilizado
+            <span style={{ fontSize: '12px', color: 'var(--mist)' }}>
+              {studentsWithHours.length} aluno{studentsWithHours.length !== 1 ? 's' : ''}
             </span>
           </div>
 
-          {atRiskSales.map((sale, i) => {
+          {studentsWithHours.map((sale, i) => {
             const initials = sale.studentName
               .split(' ')
               .slice(0, 2)
@@ -309,16 +270,18 @@ export default async function PackagesPage() {
               .join('')
               .toUpperCase()
 
+            const pctUsed = Math.round(sale.pctUsed * 100)
+
             return (
               <div key={sale.id} style={{
                 display: 'flex', alignItems: 'center',
                 gap: '16px', padding: '14px 24px',
-                borderBottom: i < atRiskSales.length - 1
+                borderBottom: i < studentsWithHours.length - 1
                   ? '0.5px solid var(--border)' : 'none',
               }}>
                 <div style={{
                   width: '36px', height: '36px', borderRadius: '50%',
-                  background: 'var(--signal-light)', color: 'var(--signal-dark)',
+                  background: '#E0F8F5', color: 'var(--glacial-dark)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: '11px', fontWeight: '600', flexShrink: 0,
                 }}>
@@ -333,31 +296,31 @@ export default async function PackagesPage() {
                     {sale.studentName}
                   </div>
                   <div style={{ fontSize: '12px', color: 'var(--mist)' }}>
-                    {sale.packageName} · último uso há {sale.daysSince} dias
+                    {sale.packageName}
                   </div>
                 </div>
 
-                <div style={{ width: '120px' }}>
+                <div style={{ width: '140px' }}>
                   <div style={{
                     height: '4px', background: 'var(--powder)',
                     borderRadius: '99px', overflow: 'hidden', marginBottom: '4px',
                   }}>
                     <div style={{
                       height: '100%',
-                      width: `${Math.round(sale.pctUsed * 100)}%`,
-                      background: 'var(--signal)',
+                      width: `${pctUsed}%`,
+                      background: 'var(--glacial)',
                       borderRadius: '99px',
                     }} />
                   </div>
                   <div style={{ fontSize: '11px', color: 'var(--mist)', textAlign: 'center' }}>
-                    {fmtH(sale.minutesUsed)} / {fmtH(sale.minutesPurchased)}
+                    {fmtH(sale.minutesUsed)} de {fmtH(sale.minutesPurchased)} entregues
                   </div>
                 </div>
 
-                <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                <div style={{ textAlign: 'right', flexShrink: 0, minWidth: '64px' }}>
                   <div style={{
                     fontSize: '15px', fontWeight: '600',
-                    color: 'var(--signal-dark)', fontVariantNumeric: 'tabular-nums',
+                    color: '#8A5E00', fontVariantNumeric: 'tabular-nums',
                   }}>
                     {fmtH(sale.minutesRemaining)}
                   </div>
@@ -393,19 +356,12 @@ export default async function PackagesPage() {
           padding: '20px 24px',
           display: 'flex', alignItems: 'center', gap: '12px',
         }}>
-          <span style={{ fontSize: '20px' }}>✓</span>
-          <div>
-            <div style={{
-              fontSize: '14px', fontWeight: '500',
-              color: 'var(--glacial-dark)',
-            }}>
-              Nenhum pacote em risco
-            </div>
-            <div style={{
-              fontSize: '12px', color: 'var(--glacial-dark)', opacity: 0.7,
-            }}>
-              Todos os alunos estão utilizando seus pacotes regularmente.
-            </div>
+          <span style={{ fontSize: '18px', color: 'var(--glacial-dark)' }}>✓</span>
+          <div style={{
+            fontSize: '14px', fontWeight: '500',
+            color: 'var(--glacial-dark)',
+          }}>
+            Todas as horas foram entregues.
           </div>
         </div>
       )}

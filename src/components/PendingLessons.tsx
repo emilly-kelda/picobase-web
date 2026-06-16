@@ -79,6 +79,7 @@ export default function PendingLessons({
   const [progNotes,        setProgNotes]      = useState('')
   const [priceMode, setPriceMode]             = useState<'total' | 'per_hour'>('total')
   const [pricePerHour, setPricePerHour]       = useState(0)
+  const [sessionDate, setSessionDate]         = useState(new Date().toISOString().slice(0, 10))
 
   function open(checkin: Checkin) {
     setSelected(checkin)
@@ -94,6 +95,7 @@ export default function PendingLessons({
     setProgNotes('')
     setPriceMode('total')
     setPricePerHour(0)
+    setSessionDate(new Date().toISOString().slice(0, 10))
   }
 
   function close() { setSelected(null) }
@@ -120,6 +122,7 @@ export default function PendingLessons({
         price:          totalPrice,
         notes,
         commission_pct: commissionPct,
+        session_date:   sessionDate,
       }),
     })
 
@@ -359,7 +362,7 @@ export default function PendingLessons({
                   </option>
                 ))}
               </select>
-              {selected?.instructor_id && (
+              {selected?.instructor_id && selected.instructor_id === instructorId && (
                 <div style={{
                   fontSize: '11px',
                   color: 'var(--glacial-dark)',
@@ -372,6 +375,32 @@ export default function PendingLessons({
                   <span>Selecionado pelo aluno no check-in</span>
                 </div>
               )}
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <div style={{
+                fontSize: '11px', fontWeight: '500',
+                letterSpacing: '0.1em', textTransform: 'uppercase',
+                color: 'var(--mist)', marginBottom: '8px',
+              }}>
+                Data da aula
+              </div>
+              <input
+                type="date"
+                value={sessionDate}
+                onChange={e => setSessionDate(e.target.value)}
+                style={{
+                  padding: '9px 12px',
+                  border: '0.5px solid var(--border-strong)',
+                  borderRadius: 'var(--radius-md)',
+                  fontSize: '14px', color: 'var(--slate)',
+                  fontFamily: 'var(--font-sans)', outline: 'none',
+                  background: '#fff', cursor: 'pointer',
+                }}
+              />
+              <div style={{ fontSize: '11px', color: 'var(--mist)', marginTop: '4px' }}>
+                Altere se a aula foi em outro dia
+              </div>
             </div>
 
             <div style={{ marginBottom: '20px' }}>

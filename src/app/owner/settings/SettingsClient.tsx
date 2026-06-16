@@ -238,9 +238,9 @@ export default function SettingsClient({
             </div>
             <div>
               <label style={labelStyle}>
-                Monthly burn rate
+                Custos operacionais mensais
                 <span style={{ marginLeft: '6px', color: 'var(--glacial)', fontWeight: '400', textTransform: 'none', letterSpacing: 0 }}>
-                  {school.burn_rate ? fmt(school.burn_rate) : '�'}
+                  {school.burn_rate ? fmt(school.burn_rate) : '—'}
                 </span>
               </label>
               <input
@@ -251,7 +251,7 @@ export default function SettingsClient({
                 onChange={e => setSchool(s => ({ ...s, burn_rate: Number(e.target.value) }))}
               />
               <div style={{ fontSize: '11px', color: 'var(--mist)', marginTop: '4px' }}>
-                Fixed monthly costs during off-season. Used to calculate Off-Season Runway.
+                Custos fixos mensais na baixa temporada. Usado para calcular a Reserva de Baixa Temporada.
               </div>
             </div>
           </div>
@@ -366,7 +366,7 @@ export default function SettingsClient({
                     />
                   </div>
                   <div>
-                    <label style={labelStyle}>Burn rate / month</label>
+                    <label style={labelStyle}>Custos operacionais mensais</label>
                     <input
                       style={inputStyle}
                       type="number"

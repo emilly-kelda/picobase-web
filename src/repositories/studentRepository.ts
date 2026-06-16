@@ -48,15 +48,25 @@ export async function getStudentById(schoolId: string, id: string) {
   return data
 }
 
-export async function getSessionsByStudent(schoolId: string, studentName: string) {
+export async function getSessionsByStudent(schoolId: string, studentName: string, studentId?: string) {
   const supabase = createServiceClient()
-  const { data: checkinData } = await supabase
-    .from('checkins')
-    .select('session_id')
-    .eq('school_id', schoolId)
-    .eq('student_name', studentName)
-  const sessionIds = (checkinData ?? []).map((c: any) => c.session_id).filter(Boolean)
+
+  const [nameResult, idResult] = await Promise.all([
+    supabase.from('checkins').select('session_id').eq('school_id', schoolId).eq('student_name', studentName),
+    studentId
+      ? supabase.from('checkins').select('session_id').eq('school_id', schoolId).eq('student_id', studentId)
+      : Promise.resolve({ data: [] as { session_id: string | null }[] }),
+  ])
+
+  const sessionIds = [
+    ...new Set([
+      ...(nameResult.data ?? []).map((c: any) => c.session_id).filter(Boolean),
+      ...(idResult.data ?? []).map((c: any) => c.session_id).filter(Boolean),
+    ]),
+  ]
+
   if (sessionIds.length === 0) return []
+
   const { data, error } = await supabase
     .from('sessions')
     .select(`

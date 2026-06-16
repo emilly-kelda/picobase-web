@@ -97,7 +97,6 @@ export default function PaymentsClient({
   const [payments,    setPayments]    = useState(initialPayments)
   const [summary,     setSummary]     = useState(initialSummary)
   const [partnerData, setPartnerData] = useState(partnerCommissions)
-  const [expanded,    setExpanded]    = useState<string | null>(null)
   const [loading,     setLoading]     = useState<string | null>(null)
   const [closing,     setClosing]     = useState(false)
   const [message,     setMessage]     = useState<string | null>(null)
@@ -406,192 +405,157 @@ export default function PaymentsClient({
 
             {/* Instructor rows */}
             {payments.map((p, idx) => {
-              const user    = p.users as any
-              const st      = STATUS[p.status] ?? STATUS.pending
-              const isOpen  = expanded === p.id
-              const avgLesson = p.sessions_count > 0
-                ? p.revenue_generated / p.sessions_count : 0
-              const hasPix  = !!user?.pix_key
-              const hasWise = !!user?.wise_email
+              const user      = p.users as any
+              const st        = STATUS[p.status] ?? STATUS.pending
+              const avgLesson = p.sessions_count > 0 ? p.revenue_generated / p.sessions_count : 0
+              const hasPix    = !!user?.pix_key
+              const hasWise   = !!user?.wise_email
 
               return (
                 <div key={p.id} style={{
                   borderBottom: idx < payments.length - 1 || partnerData.length > 0
                     ? '0.5px solid var(--border)' : 'none',
                 }}>
-                  {/* Row */}
-                  <div
-                    onClick={() => setExpanded(isOpen ? null : p.id)}
-                    onMouseEnter={e => (e.currentTarget.style.background = 'var(--powder)')}
-                    onMouseLeave={e => (e.currentTarget.style.background = isOpen ? 'var(--powder)' : '#fff')}
-                    style={{
-                      display: 'flex', alignItems: 'center',
-                      gap: '14px', padding: '14px 20px',
-                      cursor: 'pointer',
-                      background: isOpen ? 'var(--powder)' : '#fff',
-                      transition: 'background 0.15s',
-                    }}
-                  >
-                    {/* Avatar */}
+                  {/* Main row */}
+                  <div style={{
+                    display: 'flex', alignItems: 'center',
+                    gap: '14px', padding: '16px 20px',
+                    borderBottom: '0.5px solid var(--border)',
+                  }}>
                     <div style={{
                       width: '38px', height: '38px', borderRadius: '50%',
-                      background: 'var(--glacial-light)',
-                      color: 'var(--glacial-dark)',
+                      background: 'var(--glacial-light)', color: 'var(--glacial-dark)',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       fontSize: '12px', fontWeight: '600', flexShrink: 0,
                     }}>
                       {getInitials(user?.name ?? '?')}
                     </div>
-
-                    {/* Name + sub */}
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{
-                        fontSize: '14px', fontWeight: '500',
-                        color: 'var(--slate)', marginBottom: '2px',
-                      }}>
+                      <div style={{ fontSize: '14px', fontWeight: '500', color: 'var(--slate)', marginBottom: '3px' }}>
                         {user?.name ?? '—'}
                       </div>
                       <div style={{ fontSize: '12px', color: 'var(--mist)' }}>
-                        {p.sessions_count} aulas · {fmtPct(p.commission_pct)}
+                        {p.sessions_count} {p.sessions_count === 1 ? 'aula' : 'aulas'}
+                        {' · '}{fmtPct(p.commission_pct)} comissão
                         {hasPix && ` · PIX ${user.pix_key}`}
                         {!hasPix && hasWise && ` · Wise ${user.wise_email}`}
                         {!hasPix && !hasWise && (
-                          <span style={{ color: 'var(--signal)' }}> · Dados de pagamento em falta</span>
+                          <span style={{ color: 'var(--signal)' }}>{' · '}Dados de pagamento em falta</span>
                         )}
                       </div>
                     </div>
-
-                    {/* Amount + badge */}
                     <div style={{ textAlign: 'right', flexShrink: 0 }}>
                       <div style={{
-                        fontSize: '16px', fontWeight: '500',
-                        color: 'var(--slate)', marginBottom: '4px',
-                        fontVariantNumeric: 'tabular-nums',
+                        fontSize: '20px', fontWeight: '600', color: 'var(--slate)',
+                        marginBottom: '5px', fontVariantNumeric: 'tabular-nums',
                       }}>
                         {fmt(p.total_to_pay)}
                       </div>
                       <span style={{
-                        padding: '2px 10px', borderRadius: '99px',
+                        padding: '3px 10px', borderRadius: '99px',
                         fontSize: '11px', fontWeight: '500',
                         background: st.bg, color: st.color,
                       }}>
                         {st.label}
                       </span>
                     </div>
-
-                    {/* Chevron */}
-                    <div style={{
-                      fontSize: '16px', color: 'var(--mist)',
-                      transform: isOpen ? 'rotate(180deg)' : 'rotate(0)',
-                      transition: 'transform 0.2s',
-                      flexShrink: 0,
-                      pointerEvents: 'none',
-                    }}>
-                      ▾
-                    </div>
                   </div>
 
-                  {/* Expanded detail */}
-                  {isOpen && (
-                    <div style={{
-                      background: 'var(--powder)',
-                      borderTop: '0.5px solid var(--border)',
-                      padding: '16px 20px',
-                    }}>
-                      {/* Metrics */}
-                      <div style={{
-                        display: 'grid', gridTemplateColumns: 'repeat(4,1fr)',
-                        gap: '0', marginBottom: '14px',
-                        background: '#fff', border: '0.5px solid var(--border)',
-                        borderRadius: 'var(--radius-md)', overflow: 'hidden',
+                  {/* Metrics — always visible */}
+                  <div style={{
+                    display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)',
+                    background: 'var(--powder)', borderBottom: '0.5px solid var(--border)',
+                  }}>
+                    {[
+                      { label: 'Receita gerada', value: fmt(p.revenue_generated) },
+                      { label: 'Comissão',       value: fmt(p.commission_amount) },
+                      { label: 'Média/aula',     value: fmt(avgLesson)           },
+                    ].map((item, i) => (
+                      <div key={item.label} style={{
+                        padding: '12px 20px',
+                        borderLeft: i > 0 ? '0.5px solid var(--border)' : 'none',
                       }}>
-                        {[
-                          { label: 'Receita gerada', value: fmt(p.revenue_generated) },
-                          { label: 'Comissão',       value: fmt(p.commission_amount) },
-                          { label: 'Bônus',          value: fmt(p.bonus)             },
-                          { label: 'Média/aula',     value: fmt(avgLesson)           },
-                        ].map((item, i) => (
-                          <div key={item.label} style={{
-                            padding: '12px 16px',
-                            borderLeft: i > 0 ? '0.5px solid var(--border)' : 'none',
-                          }}>
-                            <div style={{
-                              fontSize: '10px', fontWeight: '500',
-                              letterSpacing: '0.08em', textTransform: 'uppercase',
-                              color: 'var(--mist)', marginBottom: '4px',
-                            }}>
-                              {item.label}
-                            </div>
-                            <div style={{
-                              fontSize: '14px', fontWeight: '600',
-                              color: 'var(--slate)', fontVariantNumeric: 'tabular-nums',
-                            }}>
-                              {item.value}
-                            </div>
-                          </div>
-                        ))}
+                        <div style={{
+                          fontSize: '10px', fontWeight: '500',
+                          letterSpacing: '0.08em', textTransform: 'uppercase',
+                          color: 'var(--mist)', marginBottom: '4px',
+                        }}>
+                          {item.label}
+                        </div>
+                        <div style={{
+                          fontSize: '15px', fontWeight: '600',
+                          color: 'var(--slate)', fontVariantNumeric: 'tabular-nums',
+                        }}>
+                          {item.value}
+                        </div>
                       </div>
+                    ))}
+                  </div>
 
-                      {/* Actions */}
-                      <div style={{
-                        display: 'flex', justifyContent: 'space-between',
-                        alignItems: 'center',
-                      }}>
-                        <div>
-                          {p.paid_at && (
-                            <span style={{ fontSize: '12px', color: '#2E7D32' }}>
-                              ✓ Pago em {fmtDate(p.paid_at)}
-                            </span>
-                          )}
-                        </div>
-                        <div style={{ display: 'flex', gap: '8px' }}>
-                          <button
-                            onClick={e => { e.stopPropagation(); fetchBreakdown(user?.id) }}
-                            style={{
-                              padding: '7px 14px',
-                              background: '#fff', color: 'var(--mist)',
-                              border: '0.5px solid var(--border)',
-                              borderRadius: '99px', fontSize: '12px',
-                              cursor: 'pointer', fontFamily: 'var(--font-sans)',
-                            }}
-                          >
-                            Ver aulas →
-                          </button>
-                          {p.status === 'pending' && (
-                            <button
-                              onClick={e => { e.stopPropagation(); updateStatus(p.id, 'approved') }}
-                              disabled={loading === p.id}
-                              style={{
-                                padding: '7px 16px',
-                                background: 'var(--glacial)', color: '#fff',
-                                border: 'none', borderRadius: '99px',
-                                fontSize: '12px', fontWeight: '500',
-                                cursor: 'pointer', fontFamily: 'var(--font-sans)',
-                              }}
-                            >
-                              {loading === p.id ? '...' : `Aprovar ${fmt(p.total_to_pay)}`}
-                            </button>
-                          )}
-                          {p.status === 'approved' && (
-                            <button
-                              onClick={e => { e.stopPropagation(); updateStatus(p.id, 'paid') }}
-                              disabled={loading === p.id}
-                              style={{
-                                padding: '7px 16px',
-                                background: '#E8F5E9', color: '#2E7D32',
-                                border: '0.5px solid #A5D6A7',
-                                borderRadius: '99px', fontSize: '12px',
-                                fontWeight: '500', cursor: 'pointer',
-                                fontFamily: 'var(--font-sans)',
-                              }}
-                            >
-                              {loading === p.id ? '...' : 'Marcar como pago'}
-                            </button>
-                          )}
-                        </div>
-                      </div>
+                  {/* Actions row */}
+                  <div style={{
+                    padding: '12px 20px',
+                    display: 'flex', justifyContent: 'space-between',
+                    alignItems: 'center', background: '#fff',
+                  }}>
+                    <div>
+                      {p.paid_at && (
+                        <span style={{ fontSize: '12px', color: '#2E7D32' }}>
+                          ✓ Pago em {fmtDate(p.paid_at)}
+                        </span>
+                      )}
                     </div>
-                  )}
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button
+                        onClick={() => fetchBreakdown(user?.id)}
+                        style={{
+                          padding: '7px 14px',
+                          background: '#fff', color: 'var(--mist)',
+                          border: '0.5px solid var(--border)',
+                          borderRadius: '99px', fontSize: '12px',
+                          cursor: 'pointer', fontFamily: 'var(--font-sans)',
+                        }}
+                      >
+                        Ver aulas →
+                      </button>
+                      {p.status === 'pending' && (
+                        <button
+                          onClick={() => updateStatus(p.id, 'approved')}
+                          disabled={loading === p.id}
+                          style={{
+                            padding: '7px 16px',
+                            background: 'var(--glacial)', color: '#fff',
+                            border: 'none', borderRadius: '99px',
+                            fontSize: '12px', fontWeight: '500',
+                            cursor: 'pointer', fontFamily: 'var(--font-sans)',
+                          }}
+                        >
+                          {loading === p.id ? '...' : `Aprovar ${fmt(p.total_to_pay)}`}
+                        </button>
+                      )}
+                      {p.status === 'approved' && (
+                        <button
+                          onClick={() => updateStatus(p.id, 'paid')}
+                          disabled={loading === p.id}
+                          style={{
+                            padding: '7px 16px',
+                            background: '#E8F5E9', color: '#2E7D32',
+                            border: '0.5px solid #A5D6A7',
+                            borderRadius: '99px', fontSize: '12px',
+                            fontWeight: '500', cursor: 'pointer',
+                            fontFamily: 'var(--font-sans)',
+                          }}
+                        >
+                          {loading === p.id ? '...' : 'Marcar como pago'}
+                        </button>
+                      )}
+                      {p.status === 'paid' && (
+                        <span style={{ fontSize: '12px', color: '#2E7D32' }}>
+                          ✓ Pago{p.paid_at ? ` em ${fmtDate(p.paid_at)}` : ''}
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </div>
               )
             })}
@@ -612,162 +576,133 @@ export default function PaymentsClient({
                 </div>
 
                 {partnerData.map((p, idx) => {
-                  const st     = STATUS[p.status] ?? STATUS.pending
-                  const isOpen = expanded === `partner-${p.partner.id}`
-                  const icon   = p.partner.type === 'hotel' ? '🏨'
+                  const st             = STATUS[p.status] ?? STATUS.pending
+                  const icon           = p.partner.type === 'hotel' ? '🏨'
                     : p.partner.type === 'agency' ? '✈️' : '🤝'
+                  const avgPerReferral = p.sessions > 0 ? p.revenue / p.sessions : 0
 
                   return (
                     <div key={p.partner.id} style={{
                       borderBottom: idx < partnerData.length - 1
                         ? '0.5px solid var(--border)' : 'none',
                     }}>
-                      <div
-                        onClick={() => setExpanded(isOpen ? null : `partner-${p.partner.id}`)}
-                        onMouseEnter={e => (e.currentTarget.style.background = 'var(--powder)')}
-                        onMouseLeave={e => (e.currentTarget.style.background = isOpen ? 'var(--powder)' : '#fff')}
-                        style={{
-                          display: 'flex', alignItems: 'center',
-                          gap: '14px', padding: '14px 20px',
-                          cursor: 'pointer',
-                          background: isOpen ? 'var(--powder)' : '#fff',
-                          transition: 'background 0.15s',
-                        }}
-                      >
-                        {/* Icon */}
+                      {/* Main row */}
+                      <div style={{
+                        display: 'flex', alignItems: 'center',
+                        gap: '14px', padding: '16px 20px',
+                        borderBottom: '0.5px solid var(--border)',
+                      }}>
                         <div style={{
-                          width: '38px', height: '38px',
-                          borderRadius: '8px',
+                          width: '38px', height: '38px', borderRadius: '8px',
                           background: '#FFF8E8',
                           display: 'flex', alignItems: 'center',
-                          justifyContent: 'center', fontSize: '18px',
-                          flexShrink: 0,
+                          justifyContent: 'center', fontSize: '18px', flexShrink: 0,
                         }}>
                           {icon}
                         </div>
-
-                        {/* Name + sub */}
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{
-                            fontSize: '14px', fontWeight: '500',
-                            color: 'var(--slate)', marginBottom: '2px',
-                          }}>
+                          <div style={{ fontSize: '14px', fontWeight: '500', color: 'var(--slate)', marginBottom: '3px' }}>
                             {p.partner.name}
                           </div>
                           <div style={{ fontSize: '12px', color: 'var(--mist)' }}>
                             {p.sessions} {p.sessions === 1 ? 'indicação' : 'indicações'}
-                            {p.partner.commission_pct && ` · ${Math.round(p.partner.commission_pct * 100)}%`}
+                            {p.partner.commission_pct && ` · ${Math.round(p.partner.commission_pct * 100)}% comissão`}
                             {p.partner.pix_key && ` · PIX ${p.partner.pix_key}`}
+                            {!p.partner.pix_key && p.partner.wise_email && ` · Wise ${p.partner.wise_email}`}
+                            {!p.partner.pix_key && !p.partner.wise_email && !p.partner.finance_email && (
+                              <span style={{ color: 'var(--signal)' }}>{' · '}Dados de pagamento em falta</span>
+                            )}
                           </div>
                         </div>
-
-                        {/* Amount + badge */}
                         <div style={{ textAlign: 'right', flexShrink: 0 }}>
                           <div style={{
-                            fontSize: '16px', fontWeight: '500',
-                            color: 'var(--slate)', marginBottom: '4px',
-                            fontVariantNumeric: 'tabular-nums',
+                            fontSize: '20px', fontWeight: '600', color: 'var(--slate)',
+                            marginBottom: '5px', fontVariantNumeric: 'tabular-nums',
                           }}>
                             {fmt(p.commission)}
                           </div>
                           <span style={{
-                            padding: '2px 10px', borderRadius: '99px',
+                            padding: '3px 10px', borderRadius: '99px',
                             fontSize: '11px', fontWeight: '500',
                             background: st.bg, color: st.color,
                           }}>
                             {st.label}
                           </span>
                         </div>
-
-                        <div style={{
-                          fontSize: '16px', color: 'var(--mist)',
-                          transform: isOpen ? 'rotate(180deg)' : 'rotate(0)',
-                          transition: 'transform 0.2s', flexShrink: 0,
-                          pointerEvents: 'none',
-                        }}>
-                          ▾
-                        </div>
                       </div>
 
-                      {/* Expanded partner detail */}
-                      {isOpen && (
-                        <div style={{
-                          background: 'var(--powder)',
-                          borderTop: '0.5px solid var(--border)',
-                          padding: '16px 20px',
-                        }}>
-                          <div style={{
-                            display: 'grid', gridTemplateColumns: 'repeat(3,1fr)',
-                            gap: '0', marginBottom: '14px',
-                            background: '#fff', border: '0.5px solid var(--border)',
-                            borderRadius: 'var(--radius-md)', overflow: 'hidden',
+                      {/* Metrics — always visible */}
+                      <div style={{
+                        display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)',
+                        background: 'var(--powder)', borderBottom: '0.5px solid var(--border)',
+                      }}>
+                        {[
+                          { label: 'Receita gerada',  value: fmt(p.revenue)       },
+                          { label: 'Comissão',        value: fmt(p.commission)    },
+                          { label: 'Média/indicação', value: fmt(avgPerReferral)  },
+                        ].map((item, i) => (
+                          <div key={item.label} style={{
+                            padding: '12px 20px',
+                            borderLeft: i > 0 ? '0.5px solid var(--border)' : 'none',
                           }}>
-                            {[
-                              { label: 'Receita gerada',  value: fmt(p.revenue)                                       },
-                              { label: 'Comissão',        value: fmt(p.commission)                                    },
-                              { label: 'Média/indicação', value: fmt(p.sessions > 0 ? p.revenue / p.sessions : 0)    },
-                            ].map((item, i) => (
-                              <div key={item.label} style={{
-                                padding: '12px 16px',
-                                borderLeft: i > 0 ? '0.5px solid var(--border)' : 'none',
-                              }}>
-                                <div style={{
-                                  fontSize: '10px', fontWeight: '500',
-                                  letterSpacing: '0.08em', textTransform: 'uppercase',
-                                  color: 'var(--mist)', marginBottom: '4px',
-                                }}>
-                                  {item.label}
-                                </div>
-                                <div style={{
-                                  fontSize: '14px', fontWeight: '600',
-                                  color: 'var(--slate)', fontVariantNumeric: 'tabular-nums',
-                                }}>
-                                  {item.value}
-                                </div>
-                              </div>
-                            ))}
+                            <div style={{
+                              fontSize: '10px', fontWeight: '500',
+                              letterSpacing: '0.08em', textTransform: 'uppercase',
+                              color: 'var(--mist)', marginBottom: '4px',
+                            }}>
+                              {item.label}
+                            </div>
+                            <div style={{
+                              fontSize: '15px', fontWeight: '600',
+                              color: 'var(--slate)', fontVariantNumeric: 'tabular-nums',
+                            }}>
+                              {item.value}
+                            </div>
                           </div>
+                        ))}
+                      </div>
 
-                          <div style={{
-                            display: 'flex', justifyContent: 'flex-end', gap: '8px',
-                          }}>
-                            {p.status === 'pending' && (
-                              <button
-                                onClick={e => { e.stopPropagation(); approvePartner(p.referral_ids) }}
-                                disabled={loading === p.referral_ids[0]}
-                                style={{
-                                  padding: '7px 16px',
-                                  background: 'var(--glacial)', color: '#fff',
-                                  border: 'none', borderRadius: '99px',
-                                  fontSize: '12px', fontWeight: '500',
-                                  cursor: 'pointer', fontFamily: 'var(--font-sans)',
-                                }}
-                              >
-                                {loading === p.referral_ids[0] ? '...' : `Aprovar ${fmt(p.commission)}`}
-                              </button>
-                            )}
-                            {p.status === 'approved' && (
-                              <button
-                                onClick={e => { e.stopPropagation(); approvePartner(p.referral_ids, true) }}
-                                disabled={loading === p.referral_ids[0]}
-                                style={{
-                                  padding: '7px 16px',
-                                  background: '#E8F5E9', color: '#2E7D32',
-                                  border: '0.5px solid #A5D6A7',
-                                  borderRadius: '99px', fontSize: '12px',
-                                  fontWeight: '500', cursor: 'pointer',
-                                  fontFamily: 'var(--font-sans)',
-                                }}
-                              >
-                                {loading === p.referral_ids[0] ? '...' : 'Marcar como pago'}
-                              </button>
-                            )}
-                            {p.status === 'paid' && (
-                              <span style={{ fontSize: '12px', color: '#2E7D32' }}>✓ Pago</span>
-                            )}
-                          </div>
-                        </div>
-                      )}
+                      {/* Actions */}
+                      <div style={{
+                        padding: '12px 20px',
+                        display: 'flex', justifyContent: 'flex-end',
+                        alignItems: 'center', gap: '8px', background: '#fff',
+                      }}>
+                        {p.status === 'pending' && (
+                          <button
+                            onClick={() => approvePartner(p.referral_ids)}
+                            disabled={loading === p.referral_ids[0]}
+                            style={{
+                              padding: '7px 16px',
+                              background: 'var(--glacial)', color: '#fff',
+                              border: 'none', borderRadius: '99px',
+                              fontSize: '12px', fontWeight: '500',
+                              cursor: 'pointer', fontFamily: 'var(--font-sans)',
+                            }}
+                          >
+                            {loading === p.referral_ids[0] ? '...' : `Aprovar ${fmt(p.commission)}`}
+                          </button>
+                        )}
+                        {p.status === 'approved' && (
+                          <button
+                            onClick={() => approvePartner(p.referral_ids, true)}
+                            disabled={loading === p.referral_ids[0]}
+                            style={{
+                              padding: '7px 16px',
+                              background: '#E8F5E9', color: '#2E7D32',
+                              border: '0.5px solid #A5D6A7',
+                              borderRadius: '99px', fontSize: '12px',
+                              fontWeight: '500', cursor: 'pointer',
+                              fontFamily: 'var(--font-sans)',
+                            }}
+                          >
+                            {loading === p.referral_ids[0] ? '...' : 'Marcar como pago'}
+                          </button>
+                        )}
+                        {p.status === 'paid' && (
+                          <span style={{ fontSize: '12px', color: '#2E7D32' }}>✓ Pago</span>
+                        )}
+                      </div>
                     </div>
                   )
                 })}

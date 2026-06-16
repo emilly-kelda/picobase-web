@@ -46,19 +46,11 @@ export async function getPackageDashboard(schoolId: string) {
     }
   })
 
-  const totalMinutesSold      = enrichedSales.reduce((s, r) => s + r.minutesPurchased, 0)
-  const totalMinutesUsed      = enrichedSales.reduce((s, r) => s + r.minutesUsed, 0)
-  const totalMinutesRemaining = enrichedSales.reduce((s, r) => s + r.minutesRemaining, 0)
   const totalRevenue          = enrichedSales.reduce((s, r) => s + (r.price_paid ?? 0), 0)
-  const utilizationPct        = totalMinutesSold > 0
-    ? Math.round((totalMinutesUsed / totalMinutesSold) * 100) : 0
-
-  const unrealizedRevenue = enrichedSales.reduce((s, r) => {
-    const remainingRatio = r.minutesPurchased > 0 ? r.minutesRemaining / r.minutesPurchased : 0
-    return s + (r.price_paid ?? 0) * remainingRatio
-  }, 0)
-
-  const atRiskSales = enrichedSales.filter(s => s.atRisk)
+  const totalMinutesSold      = enrichedSales.reduce((s, r) => s + r.minutesPurchased, 0)
+  const totalMinutesDelivered = enrichedSales.reduce((s, r) => s + r.minutesUsed, 0)
+  const totalMinutesRemaining = enrichedSales.reduce((s, r) => s + r.minutesRemaining, 0)
+  const activeStudents        = enrichedSales.filter(s => s.minutesRemaining > 0).length
 
   const packageTypes = packages.map(pkg => {
     const pkgSales         = enrichedSales.filter(s => s.package_id === pkg.id)
@@ -85,13 +77,15 @@ export async function getPackageDashboard(schoolId: string) {
   return {
     summary: {
       totalRevenue,
+      totalMinutesSold,
+      totalMinutesDelivered,
       totalMinutesRemaining,
-      unrealizedRevenue,
-      utilizationPct,
-      atRiskCount: atRiskSales.length,
+      activeStudents,
     },
     packageTypes,
-    atRiskSales,
+    studentsWithHours: enrichedSales
+      .filter(s => s.minutesRemaining > 0)
+      .sort((a, b) => b.minutesRemaining - a.minutesRemaining),
   }
 }
 

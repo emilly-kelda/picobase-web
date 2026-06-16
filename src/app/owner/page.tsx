@@ -4,11 +4,12 @@ import { getRecentSessions, getTodayStats, getPendingLessons } from '@/repositor
 import { getAlerts } from '@/repositories/alertRepository'
 import { getInstructors } from '@/repositories/studentRepository'
 import { getActivitiesForCheckin } from '@/repositories/checkinRepository'
-import { getScheduledLessons } from '@/repositories/scheduledLessonRepository'
+import { getScheduledLessons, getMissedLessons } from '@/repositories/scheduledLessonRepository'
 import { getPackageSales } from '@/repositories/packageRepository'
 import RunwayCalculator from '@/components/RunwayCalculator'
 import PendingLessons from '@/components/PendingLessons'
 import ScheduledLessons from '@/components/ScheduledLessons'
+import MissedLessons from '@/components/MissedLessons'
 import { getPortalLang } from '@/lib/language'
 import { getT } from '@/lib/i18n'
 
@@ -33,7 +34,7 @@ function fmtDate(d: string) {
 export default async function OwnerPage() {
   const cookieStore = await cookies()
   const seasonId = cookieStore.get('active_season_id')?.value
-  const [runway, sessions, alerts, today, lang, projection, pending, instructors, todayLessons, tomorrowLessons, activities, activePackages] = await Promise.all([
+  const [runway, sessions, alerts, today, lang, projection, pending, instructors, todayLessons, tomorrowLessons, activities, activePackages, missedLessons] = await Promise.all([
     getRunwayData(SCHOOL_ID, seasonId),
     getRecentSessions(SCHOOL_ID),
     getAlerts(SCHOOL_ID),
@@ -46,6 +47,7 @@ export default async function OwnerPage() {
     getScheduledLessons(SCHOOL_ID, 'tomorrow'),
     getActivitiesForCheckin(SCHOOL_ID),
     getPackageSales(SCHOOL_ID, 50),
+    getMissedLessons(SCHOOL_ID),
   ])
   const t = getT(lang)
 
@@ -122,6 +124,9 @@ export default async function OwnerPage() {
         </div>
       )}
 
+      {/* ── MISSED LESSONS ── */}
+      <MissedLessons lessons={missedLessons as any} lang={lang} />
+
       {/* ── PENDING LESSONS ── */}
       <PendingLessons
         checkins={pending as any}
@@ -175,66 +180,81 @@ export default async function OwnerPage() {
         }}>
           {[
             {
-              label: t.today_students,
+              label: lang === 'pt' ? 'Alunos' : 'Students',
               value: String(today.students),
-              sub:   t.today_checked_in,
+              sub:   lang === 'pt' ? 'check-in hoje' : 'checked in today',
               empty: today.students === 0,
-              mono:  false,
+              bg:    today.students === 0 ? 'var(--powder)' : '#EEF3FC',
+              color: today.students === 0 ? 'var(--mist)' : '#1A4B8A',
             },
             {
-              label: t.today_sessions,
+              label: lang === 'pt' ? 'Aulas' : 'Sessions',
               value: String(today.sessions),
-              sub:   t.today_confirmed,
+              sub:   lang === 'pt' ? 'confirmadas hoje' : 'confirmed today',
               empty: today.sessions === 0,
-              mono:  false,
+              bg:    today.sessions === 0 ? 'var(--powder)' : '#E0F8F5',
+              color: today.sessions === 0 ? 'var(--mist)' : '#007868',
             },
             {
-              label: t.today_instructors,
+              label: lang === 'pt' ? 'Instrutores' : 'Instructors',
               value: String(today.instructors),
-              sub:   t.today_active,
+              sub:   lang === 'pt' ? 'ativos hoje' : 'active today',
               empty: today.instructors === 0,
-              mono:  false,
+              bg:    today.instructors === 0 ? 'var(--powder)' : '#F0EBFA',
+              color: today.instructors === 0 ? 'var(--mist)' : '#4B2080',
             },
             {
               label: lang === 'pt' ? 'Receita hoje' : 'Revenue today',
-              value: fmt(today.revenue),
-              sub:   lang === 'pt' ? 'confirmada hoje' : 'confirmed today',
-              empty: today.revenue === 0,
-              mono:  true,
+              value: new Intl.NumberFormat('pt-BR', {
+                style: 'currency', currency: 'BRL',
+                minimumFractionDigits: 0, maximumFractionDigits: 0,
+              }).format(today.revenue ?? 0),
+              sub:   lang === 'pt' ? 'confirmada' : 'confirmed',
+              empty: (today.revenue ?? 0) === 0,
+              bg:    (today.revenue ?? 0) === 0 ? 'var(--powder)' : '#E0F8F5',
+              color: (today.revenue ?? 0) === 0 ? 'var(--mist)' : '#007868',
             },
             {
-              label: lang === 'pt' ? 'Comissões hoje' : 'Commissions today',
-              value: fmt(today.commissions),
+              label: lang === 'pt' ? 'Comissões' : 'Commissions',
+              value: new Intl.NumberFormat('pt-BR', {
+                style: 'currency', currency: 'BRL',
+                minimumFractionDigits: 0, maximumFractionDigits: 0,
+              }).format(today.commissions ?? 0),
               sub:   lang === 'pt' ? 'a pagar' : 'to pay',
-              empty: today.commissions === 0,
-              mono:  true,
+              empty: (today.commissions ?? 0) === 0,
+              bg:    (today.commissions ?? 0) === 0 ? 'var(--powder)' : '#FFF8E8',
+              color: (today.commissions ?? 0) === 0 ? 'var(--mist)' : '#8A5E00',
             },
           ].map(card => (
             <div key={card.label} style={{
-              background: '#fff',
+              background: card.bg,
               border: '0.5px solid var(--border)',
               borderRadius: 'var(--radius-lg)',
               padding: '20px 24px',
-              opacity: card.empty ? 0.5 : 1,
-              transition: 'opacity 0.2s',
+              transition: 'background 0.2s',
             }}>
               <div style={{
                 fontSize: '10px', fontWeight: '500',
                 letterSpacing: '0.12em', textTransform: 'uppercase',
-                color: 'var(--mist)', marginBottom: '10px',
+                color: card.empty ? 'var(--mist)' : card.color,
+                marginBottom: '10px', opacity: card.empty ? 0.6 : 0.8,
               }}>
                 {card.label}
               </div>
               <div style={{
-                fontSize: card.mono ? '20px' : '36px',
+                fontSize: card.value.startsWith('R$') ? '20px' : '36px',
                 fontWeight: '600',
-                color: card.empty ? 'var(--mist)' : 'var(--slate)',
+                color: card.empty ? 'var(--mist)' : card.color,
                 lineHeight: '1', marginBottom: '4px',
                 fontVariantNumeric: 'tabular-nums',
               }}>
                 {card.value}
               </div>
-              <div style={{ fontSize: '11px', color: 'var(--mist)' }}>
+              <div style={{
+                fontSize: '11px',
+                color: card.empty ? 'var(--mist)' : card.color,
+                opacity: 0.6,
+              }}>
                 {card.sub}
               </div>
             </div>

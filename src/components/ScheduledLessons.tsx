@@ -7,6 +7,7 @@ type Lesson = {
   id: string
   student_name: string | null
   scheduled_at: string
+  duration_min: number
   status: string
   notes: string | null
   activities: { id: string; name: string; default_price: number; default_duration_min: number } | null
@@ -125,6 +126,20 @@ export default function ScheduledLessons({
   const [weekdays, setWeekdays]     = useState<number[]>([1, 3, 5])
   const [editableDates, setEditableDates] = useState<{ date: string; time: string }[]>([])
   const [editingIndex, setEditingIndex]   = useState<number | null>(null)
+  const [studentSuggestions, setStudentSuggestions] = useState<
+    Array<{ name: string; packageName: string; minutesRemaining: number }>
+  >([])
+  const [showSuggestions, setShowSuggestions]       = useState(false)
+  const [customDuration,   setCustomDuration]       = useState(false)
+  const [customMinutes,    setCustomMinutes]         = useState(45)
+  const [editLesson,       setEditLesson]            = useState<Lesson | null>(null)
+  const [editForm,         setEditForm]              = useState({
+    student_name: '', activity_id: '', instructor_id: '',
+    date: '', time: '', duration_min: 60, notes: '',
+  })
+  const [editCustomDuration, setEditCustomDuration] = useState(false)
+  const [editCustomMinutes,  setEditCustomMinutes]  = useState(45)
+  const [editSaving,         setEditSaving]         = useState(false)
 
   const [form, setForm] = useState({
     student_name:  '',
@@ -136,6 +151,13 @@ export default function ScheduledLessons({
     duration_min:  60,
     notes:         '',
   })
+
+  useEffect(() => {
+    fetch('/api/owner/students-with-packages')
+      .then(r => r.json())
+      .then(data => setStudentSuggestions(data.students ?? []))
+      .catch(() => setStudentSuggestions([]))
+  }, [])
 
   // Sync editable dates whenever scheduling params change
   useEffect(() => {
@@ -201,6 +223,7 @@ export default function ScheduledLessons({
     if (!form.student_name.trim()) return
     setSaving(true)
 
+    const finalDuration = customDuration ? customMinutes : form.duration_min
     const dates = editableDates.map(d => `${d.date}T${d.time}:00`)
 
     const results = await Promise.all(
@@ -213,7 +236,7 @@ export default function ScheduledLessons({
             activity_id:   form.activity_id || null,
             instructor_id: form.instructor_id || null,
             scheduled_at,
-            duration_min:  form.duration_min,
+            duration_min:  finalDuration,
             notes:         form.notes || null,
           }),
         })
@@ -238,6 +261,8 @@ export default function ScheduledLessons({
     setWeekdays([1, 3, 5])
     setEditableDates([])
     setEditingIndex(null)
+    setCustomDuration(false)
+    setCustomMinutes(45)
   }
 
   async function cancel(id: string) {
@@ -248,6 +273,43 @@ export default function ScheduledLessons({
       body: JSON.stringify({ id }),
     })
     setDeleting(null)
+    router.refresh()
+  }
+
+  function openEditModal(lesson: Lesson) {
+    setEditLesson(lesson)
+    setEditForm({
+      student_name:  lesson.student_name ?? '',
+      activity_id:   lesson.activities?.id ?? '',
+      instructor_id: lesson.instructor?.id ?? '',
+      date:          lesson.scheduled_at.slice(0, 10),
+      time:          lesson.scheduled_at.slice(11, 16),
+      duration_min:  lesson.duration_min || 60,
+      notes:         lesson.notes ?? '',
+    })
+    setEditCustomDuration(false)
+    setEditCustomMinutes(45)
+  }
+
+  async function saveEdit() {
+    if (!editLesson) return
+    setEditSaving(true)
+    const finalEditDuration = editCustomDuration ? editCustomMinutes : editForm.duration_min
+    await fetch('/api/owner/schedule', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id:            editLesson.id,
+        student_name:  editForm.student_name,
+        activity_id:   editForm.activity_id || null,
+        instructor_id: editForm.instructor_id || null,
+        scheduled_at:  `${editForm.date}T${editForm.time}:00`,
+        duration_min:  finalEditDuration,
+        notes:         editForm.notes || null,
+      }),
+    })
+    setEditSaving(false)
+    setEditLesson(null)
     router.refresh()
   }
 
@@ -387,6 +449,17 @@ export default function ScheduledLessons({
                     : lesson.status === 'checked_in' ? 'Check-in'
                     : 'Agendada'}
                 </span>
+                <button
+                  onClick={() => openEditModal(lesson)}
+                  style={{
+                    background: 'transparent', border: 'none',
+                    fontSize: '12px', color: 'var(--mist)',
+                    cursor: 'pointer', padding: '4px 8px',
+                    fontFamily: 'var(--font-sans)',
+                  }}
+                >
+                  Editar
+                </button>
                 {lesson.status === 'scheduled' && (
                   <button
                     onClick={() => cancel(lesson.id)}
@@ -406,7 +479,209 @@ export default function ScheduledLessons({
         )}
       </div>
 
-      {/* Modal */}
+      {/* Edit modal */}
+      {editLesson && (
+        <div
+          style={{
+            position: 'fixed', inset: 0,
+            background: 'rgba(0,0,0,0.45)',
+            display: 'flex', alignItems: 'center',
+            justifyContent: 'center', zIndex: 200, padding: '24px',
+          }}
+          onClick={e => { if (e.target === e.currentTarget) setEditLesson(null) }}
+        >
+          <div style={{
+            background: '#fff', borderRadius: 'var(--radius-xl)',
+            width: '100%', maxWidth: '480px',
+            padding: '28px', maxHeight: '90vh', overflowY: 'auto',
+          }}>
+            <div style={{
+              fontSize: '18px', fontWeight: '500',
+              color: 'var(--slate)', marginBottom: '20px',
+            }}>
+              Editar aula
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+
+              <div>
+                <label style={labelStyle}>Aluno</label>
+                <input
+                  style={inputStyle}
+                  type="text"
+                  value={editForm.student_name}
+                  onChange={e => setEditForm(f => ({ ...f, student_name: e.target.value }))}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={labelStyle}>Atividade</label>
+                  <select
+                    style={{ ...inputStyle, cursor: 'pointer' }}
+                    value={editForm.activity_id}
+                    onChange={e => setEditForm(f => ({ ...f, activity_id: e.target.value }))}
+                  >
+                    <option value="">Selecionar</option>
+                    {activities.map(a => (
+                      <option key={a.id} value={a.id}>{a.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label style={labelStyle}>Instrutor</label>
+                  <select
+                    style={{ ...inputStyle, cursor: 'pointer' }}
+                    value={editForm.instructor_id}
+                    onChange={e => setEditForm(f => ({ ...f, instructor_id: e.target.value }))}
+                  >
+                    <option value="">Selecionar</option>
+                    {instructors.map(i => (
+                      <option key={i.id} value={i.id}>{i.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={labelStyle}>Data</label>
+                  <input
+                    style={inputStyle}
+                    type="date"
+                    value={editForm.date}
+                    onChange={e => setEditForm(f => ({ ...f, date: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label style={labelStyle}>Horário</label>
+                  <input
+                    style={inputStyle}
+                    type="time"
+                    value={editForm.time}
+                    onChange={e => setEditForm(f => ({ ...f, time: e.target.value }))}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={labelStyle}>Duração</label>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  {[
+                    { label: '1h',   value: 60  },
+                    { label: '1h30', value: 90  },
+                    { label: '2h',   value: 120 },
+                    { label: '3h',   value: 180 },
+                  ].map(d => (
+                    <button
+                      key={d.value}
+                      onClick={() => {
+                        setEditCustomDuration(false)
+                        setEditForm(f => ({ ...f, duration_min: d.value }))
+                      }}
+                      style={{
+                        flex: 1, padding: '9px 8px',
+                        borderRadius: 'var(--radius-md)',
+                        border: `1.5px solid ${!editCustomDuration && editForm.duration_min === d.value
+                          ? 'var(--glacial)' : 'var(--border)'}`,
+                        background: !editCustomDuration && editForm.duration_min === d.value
+                          ? 'var(--glacial-light)' : '#fff',
+                        color: !editCustomDuration && editForm.duration_min === d.value
+                          ? 'var(--glacial-dark)' : 'var(--slate)',
+                        fontSize: '13px', fontWeight: '500',
+                        cursor: 'pointer', fontFamily: 'var(--font-sans)',
+                      }}
+                    >
+                      {d.label}
+                    </button>
+                  ))}
+                  <button
+                    onClick={() => setEditCustomDuration(true)}
+                    style={{
+                      flex: 1, padding: '9px 8px',
+                      borderRadius: 'var(--radius-md)',
+                      border: `1.5px solid ${editCustomDuration ? 'var(--glacial)' : 'var(--border)'}`,
+                      background: editCustomDuration ? 'var(--glacial-light)' : '#fff',
+                      color: editCustomDuration ? 'var(--glacial-dark)' : 'var(--mist)',
+                      fontSize: '13px', fontWeight: '500',
+                      cursor: 'pointer', fontFamily: 'var(--font-sans)',
+                    }}
+                  >
+                    Outro
+                  </button>
+                </div>
+                {editCustomDuration && (
+                  <div style={{
+                    display: 'flex', alignItems: 'center',
+                    gap: '8px', marginTop: '10px',
+                  }}>
+                    <input
+                      type="number"
+                      min={15} max={480} step={5}
+                      value={editCustomMinutes}
+                      onChange={e => setEditCustomMinutes(Number(e.target.value))}
+                      style={{
+                        width: '80px', padding: '8px 12px',
+                        border: '0.5px solid var(--border-strong)',
+                        borderRadius: 'var(--radius-md)',
+                        fontSize: '15px', fontWeight: '600',
+                        color: 'var(--slate)', fontFamily: 'var(--font-sans)',
+                        outline: 'none',
+                      }}
+                    />
+                    <span style={{ fontSize: '13px', color: 'var(--mist)' }}>minutos</span>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label style={labelStyle}>Observações</label>
+                <input
+                  style={inputStyle}
+                  type="text"
+                  placeholder="Opcional..."
+                  value={editForm.notes}
+                  onChange={e => setEditForm(f => ({ ...f, notes: e.target.value }))}
+                />
+              </div>
+
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', marginTop: '24px' }}>
+              <button
+                onClick={() => setEditLesson(null)}
+                style={{
+                  flex: 1, padding: '11px',
+                  background: '#fff', color: 'var(--mist)',
+                  border: '0.5px solid var(--border)',
+                  borderRadius: 'var(--radius-md)',
+                  fontSize: '14px', cursor: 'pointer',
+                  fontFamily: 'var(--font-sans)',
+                }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={saveEdit}
+                disabled={editSaving}
+                style={{
+                  flex: 2, padding: '11px',
+                  background: editSaving ? 'var(--border)' : 'var(--slate)',
+                  color: editSaving ? 'var(--mist)' : '#fff',
+                  border: 'none', borderRadius: 'var(--radius-md)',
+                  fontSize: '14px', fontWeight: '500',
+                  cursor: editSaving ? 'not-allowed' : 'pointer',
+                  fontFamily: 'var(--font-sans)',
+                }}
+              >
+                {editSaving ? 'Salvando...' : 'Salvar alterações'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Schedule modal */}
       {showModal && (
         <div
           style={{
@@ -434,14 +709,63 @@ export default function ScheduledLessons({
               {/* Student */}
               <div>
                 <label style={labelStyle}>Aluno *</label>
-                <input
-                  style={inputStyle}
-                  type="text"
-                  placeholder="Nome do aluno"
-                  value={form.student_name}
-                  onChange={e => onStudentChange(e.target.value)}
-                  autoFocus
-                />
+                <div style={{ position: 'relative' }}>
+                  <input
+                    style={inputStyle}
+                    type="text"
+                    placeholder="Nome do aluno"
+                    value={form.student_name}
+                    onChange={e => onStudentChange(e.target.value)}
+                    onFocus={() => setShowSuggestions(true)}
+                    onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                    autoFocus
+                  />
+                  {showSuggestions && studentSuggestions.length > 0 && (
+                    <div style={{
+                      position: 'absolute', top: '100%', left: 0, right: 0,
+                      background: '#fff', border: '0.5px solid var(--border)',
+                      borderRadius: 'var(--radius-md)', zIndex: 50,
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                      maxHeight: '200px', overflowY: 'auto',
+                    }}>
+                      {studentSuggestions
+                        .filter(s => !form.student_name ||
+                          s.name.toLowerCase().includes(form.student_name.toLowerCase()))
+                        .map((s, i) => (
+                          <div
+                            key={i}
+                            onMouseDown={() => {
+                              onStudentChange(s.name)
+                              setShowSuggestions(false)
+                            }}
+                            style={{
+                              padding: '10px 14px', cursor: 'pointer',
+                              borderBottom: '0.5px solid var(--border)',
+                              display: 'flex', justifyContent: 'space-between',
+                              alignItems: 'center',
+                            }}
+                          >
+                            <div>
+                              <div style={{ fontSize: '13px', fontWeight: '500', color: 'var(--slate)' }}>
+                                {s.name}
+                              </div>
+                              <div style={{ fontSize: '11px', color: 'var(--mist)' }}>
+                                {s.packageName}
+                              </div>
+                            </div>
+                            <div style={{
+                              fontSize: '11px', fontWeight: '500',
+                              color: 'var(--glacial-dark)',
+                              background: 'var(--glacial-light)',
+                              padding: '2px 8px', borderRadius: '99px',
+                            }}>
+                              {Math.floor(s.minutesRemaining / 60)}h restantes
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  )}
+                </div>
                 {matchedPackage && (
                   <div style={{
                     marginTop: '6px', padding: '8px 12px',
@@ -525,6 +849,7 @@ export default function ScheduledLessons({
                     <button
                       key={d.value}
                       onClick={() => {
+                        setCustomDuration(false)
                         const newMax = matchedPackage
                           ? Math.floor(
                               (matchedPackage.minutes_purchased - matchedPackage.minutes_used) / d.value
@@ -539,11 +864,11 @@ export default function ScheduledLessons({
                       style={{
                         flex: 1, padding: '9px 8px',
                         borderRadius: 'var(--radius-md)',
-                        border: `1.5px solid ${form.duration_min === d.value
+                        border: `1.5px solid ${!customDuration && form.duration_min === d.value
                           ? 'var(--glacial)' : 'var(--border)'}`,
-                        background: form.duration_min === d.value
+                        background: !customDuration && form.duration_min === d.value
                           ? 'var(--glacial-light)' : '#fff',
-                        color: form.duration_min === d.value
+                        color: !customDuration && form.duration_min === d.value
                           ? 'var(--glacial-dark)' : 'var(--slate)',
                         fontSize: '13px', fontWeight: '500',
                         cursor: 'pointer', fontFamily: 'var(--font-sans)',
@@ -552,7 +877,43 @@ export default function ScheduledLessons({
                       {d.label}
                     </button>
                   ))}
+                  <button
+                    onClick={() => setCustomDuration(true)}
+                    style={{
+                      flex: 1, padding: '9px 8px',
+                      borderRadius: 'var(--radius-md)',
+                      border: `1.5px solid ${customDuration ? 'var(--glacial)' : 'var(--border)'}`,
+                      background: customDuration ? 'var(--glacial-light)' : '#fff',
+                      color: customDuration ? 'var(--glacial-dark)' : 'var(--mist)',
+                      fontSize: '13px', fontWeight: '500',
+                      cursor: 'pointer', fontFamily: 'var(--font-sans)',
+                    }}
+                  >
+                    Outro
+                  </button>
                 </div>
+                {customDuration && (
+                  <div style={{
+                    display: 'flex', alignItems: 'center',
+                    gap: '8px', marginTop: '10px',
+                  }}>
+                    <input
+                      type="number"
+                      min={15} max={480} step={5}
+                      value={customMinutes}
+                      onChange={e => setCustomMinutes(Number(e.target.value))}
+                      style={{
+                        width: '80px', padding: '8px 12px',
+                        border: '0.5px solid var(--border-strong)',
+                        borderRadius: 'var(--radius-md)',
+                        fontSize: '15px', fontWeight: '600',
+                        color: 'var(--slate)', fontFamily: 'var(--font-sans)',
+                        outline: 'none',
+                      }}
+                    />
+                    <span style={{ fontSize: '13px', color: 'var(--mist)' }}>minutos</span>
+                  </div>
+                )}
               </div>
 
               {/* Recurrence mode */}

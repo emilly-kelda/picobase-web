@@ -56,7 +56,7 @@ export default async function StudentDetailPage({
   }
 
   const [sessions, packageMap] = await Promise.all([
-    getSessionsByStudent(SCHOOL_ID, student.name),
+    getSessionsByStudent(SCHOOL_ID, student.name, student.id),
     getActivePackagesByStudent(SCHOOL_ID),
   ])
 

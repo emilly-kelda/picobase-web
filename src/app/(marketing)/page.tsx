@@ -5,15 +5,10 @@ import Link from 'next/link'
 import Logo from '@/components/Logo'
 
 // ─── palette ───────────────────────────────────────────────────────────────
-// signal  #E8471A   teal  #00A896   teal-dark  #007868
-// amber   #FFF8E8   powder     #F0EEE9   storm #2B3340
-// slate   #1A1C22   mist       #6A6C78   fog   #8A8C98
-
 const C = {
   signal:       '#E8471A',
   signalLight:  '#FDF0EC',
   signalDark:   '#B83010',
-  ocean:        '#00A896',
   teal:         '#00A896',
   tealLight:    '#E0F8F5',
   tealDark:     '#007868',
@@ -28,6 +23,7 @@ const C = {
   mist:         '#6A6C78',
   fog:          '#8A8C98',
   white:        '#fff',
+  dark:         '#0D0F12',
 }
 
 // ─── content ───────────────────────────────────────────────────────────────
@@ -35,64 +31,109 @@ const CONTENT = {
   pt: {
     nav_calc:    'Calculadora',
     nav_enter:   'Entrar →',
-    eyebrow:     'Sistema operacional · escolas sazonais de esportes',
-    sub:         'Do registro das aulas ao pagamento dos instrutores — e a resposta que todo dono de escola sazonal precisa: esta temporada será suficiente para atravessar a baixa temporada?',
-    cta_primary:   'Agendar demonstração →',
-    cta_secondary: 'Calcular minha reserva',
-    stats: [
-      { n: '< 2min', label: 'para um aluno fazer check-in'      },
-      { n: '4',      label: 'idiomas suportados'                 },
-      { n: '1',      label: 'dashboard para a temporada inteira' },
+
+    hero_eyebrow: 'Sistema operacional · escolas sazonais de esportes',
+    hero_h1a:    'Esta temporada',
+    hero_h1b:    'será suficiente?',
+    hero_sub:    'Você ganha em seis meses e precisa sobreviver em doze. A maioria dos donos de escola sazonal só descobre que a temporada não foi suficiente quando o dinheiro acaba. Pico Base mostra a resposta antes disso.',
+    hero_cta1:   'Agendar demonstração →',
+    hero_cta2:   'Calcular minha reserva',
+
+    ticker: [
+      '6 meses de receita',
+      '12 meses de despesa',
+      'Comissões calculadas no Excel',
+      'Waivers em papel',
+      'Instrutores pagos no olho',
+      'Nenhum número confiável',
+      'Temporada encerrada — e agora?',
+      'Check-in em papel',
+      'Planilha desatualizada',
+      'Caixa no negativo em março',
     ],
-    alert_label: 'Atenção',
-    alert_band:  '2 pacotes expirando esta semana · 1 alerta médico ativo',
-    metrics: [
-      { label: 'Reserva',  value: '4.7',      sub: 'meses'     },
-      { label: 'Receita',  value: 'R$ 3,6k',  sub: 'temporada' },
-      { label: 'Alertas',  value: '3',         sub: 'atenção'   },
-      { label: 'Lucro',    value: 'R$ 2,2k',  sub: 'líquido'   },
-    ],
-    problem_eyebrow: 'O problema',
-    problem_h2:      'Todo software de escola mostra o que aconteceu.',
-    problem_accent:  'Pico Base mostra se essa temporada é suficiente para atravessar a baixa temporada.',
-    problem_body:    'Escolas sazonais não têm receita linear. Você ganha em seis meses e precisa sobreviver em doze. A maioria dos donos descobre que a temporada não foi suficiente só quando o dinheiro acaba.',
-    before_after: [
-      { label: 'WhatsApp para comunicar aulas',            before: true  },
-      { label: 'Excel para calcular comissões',            before: true  },
-      { label: 'Papel para registrar waivers',             before: true  },
-      { label: 'Check-in digital em 2 minutos',            before: false },
-      { label: 'Comissões calculadas automaticamente',     before: false },
-      { label: 'Reserva de baixa temporada em tempo real', before: false },
-    ],
-    calc_eyebrow: 'Ferramenta de planejamento gratuita',
-    calc_h2:      'Essa temporada vai ser suficiente?',
-    calc_body:    'A maioria dos donos de escola sazonal sabe a receita. Poucos sabem por quanto tempo ela vai durar. Ajuste os números abaixo e veja quantos meses sua temporada pode financiar a baixa temporada.',
-    calc_link:    'Abrir calculadora completa →',
+
+    calc_eyebrow: 'Calculadora gratuita',
+    calc_h2:     'Esta temporada vai ser suficiente?',
+    calc_sub:    'A maioria dos donos de escola sazonal sabe a receita. Poucos sabem por quanto tempo ela vai durar. Ajuste os números abaixo e veja.',
+    calc_link:   'Abrir calculadora completa →',
     runway_label: 'Reserva de Baixa Temporada',
-    runway_sub:   'meses financiados',
+    runway_sub:  'meses financiados',
     profit_label: 'Lucro da temporada',
-    burn_label:   'Custos operacionais mensais',
-    how_eyebrow:  'Como funciona',
-    how_h2:       'Da chegada do aluno ao planejamento da temporada.',
-    steps: [
-      { n: '01', title: 'Aluno faz check-in',   body: 'Escaneia o QR code, preenche os dados em menos de 2 minutos e assina o waiver digital. Funciona em 4 idiomas.' },
-      { n: '02', title: 'Dono confirma a aula', body: 'Vê o aluno pendente no Base Camp, confirma duração e valor. Comissão calculada automaticamente.' },
-      { n: '03', title: 'Dashboard atualiza',    body: 'Receita, comissões e Reserva de Baixa Temporada em tempo real. Feche o mês e exporte o pagamento dos instrutores.' },
+    burn_label:  'Custos mensais',
+
+    q_eyebrow:   'As perguntas que todo dono faz',
+    q_h2:        'Todo dono de escola sazonal carrega as mesmas dúvidas.',
+    questions: [
+      { n: '01', q: 'Esta temporada vai durar?',      a: 'Veja em tempo real quantos meses de baixa temporada esta temporada vai financiar.' },
+      { n: '02', q: 'Quanto devo para minha equipe?', a: 'Comissões calculadas automaticamente a cada aula confirmada. Sem planilha, sem erro.' },
+      { n: '03', q: 'Onde estão os waivers?',         a: 'Check-in digital com waiver assinado, arquivado e pesquisável.' },
+      { n: '04', q: 'A escola sobrevive o inverno?',  a: 'O painel de reserva mostra exatamente até quando o caixa aguenta.' },
     ],
-    for_eyebrow: 'Feito para',
-    for_h2:      'Qualquer escola sazonal de esportes',
-    sports: [
-      { emoji: '🪁',  label: 'Kitesurf'  },
-      { emoji: '🌊',  label: 'Wingfoil'  },
-      { emoji: '🏄',  label: 'Windsurf'  },
-      { emoji: '⛷️', label: 'Ski'       },
-      { emoji: '🏂',  label: 'Snowboard' },
-      { emoji: '🏄‍♂️', label: 'Surf'   },
+
+    without_eyebrow: 'O que acontece sem visibilidade',
+    without_h2:  'Cada um desses cenários é evitável.',
+    without_items: [
+      { icon: '📋', title: 'Waiver perdido',             body: 'Um aluno se machuca. Você não encontra o waiver assinado. A escola responde pelos prejuízos.' },
+      { icon: '💸', title: 'Comissão errada',            body: 'Você paga o instrutor na intuição. Em um mês fraco, você paga mais do que deveria — e nunca vai saber.' },
+      { icon: '📉', title: 'Temporada boa, caixa zerado', body: 'Você fechou uma boa temporada. Dois meses depois, o caixa acabou. Ninguém te avisou.' },
     ],
-    cta_h2:  'Sua temporada começa em quanto tempo?',
-    cta_sub: 'Configuramos a escola completa em uma semana. Você começa a usar no primeiro dia da temporada.',
-    cta_demo: 'Agendar demonstração →',
-    cta_calc: 'Calcular minha reserva',
+
+    dash_eyebrow: 'Reserva em tempo real',
+    dash_h2:     'A resposta no centro do painel.',
+    dash_sub:    'Não enterrada num relatório. Não calculada depois. Atualizada automaticamente a cada aula confirmada.',
+    dash_runway: 'meses de reserva',
+    dash_status: 'Saudável',
+    dash_sessions: 'Aulas esta semana',
+    dash_revenue:  'Receita da temporada',
+    dash_updated:  'Atualizado agora',
+
+    tabs_eyebrow: 'Como o Pico Base responde',
+    tabs_h2:     'Da chegada do aluno à reserva de baixa temporada.',
+    tabs:        ['Check-in', 'Aulas', 'Repasses', 'Reserva'],
+    tabs_content: [
+      { title: 'Check-in em 2 minutos',    body: 'Aluno escaneia o QR code, preenche os dados e assina o waiver digital. Funciona offline. Funciona em 4 idiomas. Nenhum papel.' },
+      { title: 'Confirme e calcule',        body: 'Veja os alunos pendentes no painel. Confirme duração, valor e instrutor. A comissão é calculada automaticamente.' },
+      { title: 'Feche o mês em minutos',   body: 'Cada aula atualiza os repasses automaticamente. No fechamento, exporte PIX ou Wise com um clique.' },
+      { title: 'Reserva em tempo real',    body: 'Cada aula confirmada atualiza a Reserva de Baixa Temporada. Você sabe em tempo real se esta temporada vai ser suficiente.' },
+    ],
+
+    cmp_eyebrow: 'Por que não uma planilha?',
+    cmp_h2:      'Pico Base foi feito para responder a pergunta que planilha não responde.',
+    cmp_headers: ['', 'Pico Base', 'Planilha', 'SaaS genérico'],
+    cmp_rows: [
+      ['Check-in digital',           '✓', '✗', 'Parcial'],
+      ['Waiver digital',              '✓', '✗', '✗'],
+      ['Comissões automáticas',       '✓', 'Manual', '✗'],
+      ['Reserva de baixa temporada',  '✓', 'Manual', '✗'],
+      ['Repasses PIX / Wise',         '✓', '✗', '✗'],
+      ['Feito para escola sazonal',   '✓', '✗', '✗'],
+    ],
+
+    who_eyebrow: 'Para quem é',
+    who_h2:      'Escolas sazonais de esportes.',
+    who_for_h:   'Para você se:',
+    who_not_h:   'Não é para você se:',
+    who_for: [
+      'Você tem uma escola de kitesurf, windsurf, wingfoil, surf, ski ou snowboard',
+      'Sua receita vem em 4–7 meses e você precisa sobreviver em 12',
+      'Você quer saber em tempo real se a temporada vai ser suficiente',
+      'Você tem instrutores com comissões diferentes',
+      'Você precisa de waivers digitais e check-in rápido',
+    ],
+    who_not: [
+      'Academia aberta o ano inteiro',
+      'Escola de natação ou ioga com receita linear',
+      'Qualquer negócio sem pico sazonal claro',
+    ],
+
+    founder_eyebrow: 'Uma mensagem direta',
+    founder_quote:   'Eu construí o Pico Base depois de ver donos de escola fecharem as portas após uma temporada que parecia boa. O problema não foi a temporada. Foi não saber a tempo.',
+    founder_name:    '— Fundador, Pico Base',
+    cta_h2:         'Veja se esta temporada vai ser suficiente.',
+    cta_sub:        'Configuramos a escola completa em uma semana. Você começa no primeiro dia da temporada.',
+    cta_demo:       'Agendar demonstração →',
+    cta_calc:       'Calcular minha reserva',
+
     footer_tag:   'O sistema operacional para escolas sazonais de esportes.',
     footer_calc:  'Calculadora',
     footer_demo:  'Demonstração',
@@ -101,64 +142,109 @@ const CONTENT = {
   en: {
     nav_calc:    'Calculator',
     nav_enter:   'Sign in →',
-    eyebrow:     'Operating system · seasonal sports schools',
-    sub:         'From check-in to instructor payroll — and the one number that tells you whether this season will carry your school through the off-season.',
-    cta_primary:   'Book a demo →',
-    cta_secondary: 'Calculate my runway',
-    stats: [
-      { n: '< 2min', label: 'for a student to check in'      },
-      { n: '4',      label: 'languages supported'             },
-      { n: '1',      label: 'dashboard for the whole season'  },
+
+    hero_eyebrow: 'Operating system · seasonal sports schools',
+    hero_h1a:    'Will this season',
+    hero_h1b:    'be enough?',
+    hero_sub:    "You earn in six months and need to survive twelve. Most seasonal school owners find out the season wasn't enough when the money runs out. Pico Base shows you the answer before that.",
+    hero_cta1:   'Book a demo →',
+    hero_cta2:   'Calculate my runway',
+
+    ticker: [
+      '6 months of revenue',
+      '12 months of expenses',
+      'Commissions in a spreadsheet',
+      'Paper waivers',
+      'Instructors paid by gut feel',
+      'No reliable numbers',
+      'Season over — what now?',
+      'Paper check-in',
+      'Outdated spreadsheet',
+      'Cash negative by March',
     ],
-    alert_label: 'Attention',
-    alert_band:  '2 packages expiring this week · 1 active medical alert',
-    metrics: [
-      { label: 'Runway',   value: '4.7',    sub: 'months'  },
-      { label: 'Revenue',  value: '$ 3.6k', sub: 'season'  },
-      { label: 'Alerts',   value: '3',      sub: 'active'  },
-      { label: 'Profit',   value: '$ 2.2k', sub: 'net'     },
-    ],
-    problem_eyebrow: 'The problem',
-    problem_h2:      'Most school software tracks lessons.',
-    problem_accent:  'Pico Base tracks whether you\'ll make it through the off-season.',
-    problem_body:    "Most school software helps you record what happened. Pico Base helps you understand whether this season generated enough profit to get you safely through the off-season.",
-    before_after: [
-      { label: 'WhatsApp to communicate lessons',      before: true  },
-      { label: 'Excel to calculate commissions',       before: true  },
-      { label: 'Paper waivers',                        before: true  },
-      { label: 'Digital check-in in 2 minutes',        before: false },
-      { label: 'Commissions calculated automatically', before: false },
-      { label: 'Off-season runway in real time',       before: false },
-    ],
+
     calc_eyebrow: 'Free planning tool',
-    calc_h2:      'Will this season be enough?',
-    calc_body:    'Most seasonal school owners know revenue. Few know how long that revenue will last. Adjust the numbers below and see how many months your season can fund the off-season.',
-    calc_link:    'Open full runway calculator →',
+    calc_h2:     'Will this season be enough?',
+    calc_sub:    'Most seasonal school owners know revenue. Few know how long it will last. Adjust the numbers below and see.',
+    calc_link:   'Open full runway calculator →',
     runway_label: 'Off-Season Runway',
-    runway_sub:   'months funded',
+    runway_sub:  'months funded',
     profit_label: 'Season profit',
-    burn_label:   'Monthly operating costs',
-    how_eyebrow:  'How it works',
-    how_h2:       'From student arrival to season planning.',
-    steps: [
-      { n: '01', title: 'Student checks in',     body: 'Scans the QR code, fills in details in under 2 minutes, signs the digital waiver. Works in 4 languages.' },
-      { n: '02', title: 'Owner confirms lesson', body: 'Sees the pending student in Base Camp, confirms duration and price. Commission calculated automatically.' },
-      { n: '03', title: 'Dashboard updates',     body: 'Revenue, commissions, and Off-Season Runway updated in real time. Close the month and export instructor payroll.' },
+    burn_label:  'Monthly costs',
+
+    q_eyebrow:   'Questions every owner asks',
+    q_h2:        'Every seasonal school owner carries the same questions.',
+    questions: [
+      { n: '01', q: 'Will this season last?',       a: 'See in real time how many off-season months this season will fund.' },
+      { n: '02', q: 'What do I owe my team?',       a: 'Commissions calculated automatically with every confirmed lesson. No spreadsheet, no errors.' },
+      { n: '03', q: 'Where are the waivers?',       a: 'Digital check-in with signed waiver, archived and searchable.' },
+      { n: '04', q: 'Can the school survive winter?', a: 'The runway dashboard shows exactly how long current funds will last.' },
     ],
-    for_eyebrow: 'Built for',
-    for_h2:      'Any seasonal sports school',
-    sports: [
-      { emoji: '🪁',  label: 'Kitesurfing'  },
-      { emoji: '🌊',  label: 'Wingfoil'     },
-      { emoji: '🏄',  label: 'Windsurfing'  },
-      { emoji: '⛷️', label: 'Skiing'       },
-      { emoji: '🏂',  label: 'Snowboarding' },
-      { emoji: '🏄‍♂️', label: 'Surfing'    },
+
+    without_eyebrow: 'What happens without visibility',
+    without_h2:  'Each of these scenarios is preventable.',
+    without_items: [
+      { icon: '📋', title: 'Lost waiver',          body: "A student gets hurt. You can't find the signed waiver. The school takes the liability." },
+      { icon: '💸', title: 'Wrong commission',      body: "You pay the instructor by gut feel. In a slow month, you pay more than you should — and never know it." },
+      { icon: '📉', title: 'Good season, zero cash', body: "You closed a great season. Two months later, the money's gone. Nobody warned you." },
     ],
-    cta_h2:  'How soon does your season start?',
-    cta_sub: 'We set up the full school in one week. You start using it on the first day of the season.',
-    cta_demo: 'Book a demo →',
-    cta_calc: 'Calculate my runway',
+
+    dash_eyebrow: 'Real-time runway',
+    dash_h2:     'The answer at the center of the dashboard.',
+    dash_sub:    'Not buried in a report. Not calculated after the fact. Updated automatically with every confirmed lesson.',
+    dash_runway: 'months of runway',
+    dash_status: 'Healthy',
+    dash_sessions: 'Lessons this week',
+    dash_revenue:  'Season revenue',
+    dash_updated:  'Updated now',
+
+    tabs_eyebrow: 'How Pico Base answers',
+    tabs_h2:     'From student arrival to off-season runway.',
+    tabs:        ['Check-in', 'Lessons', 'Payouts', 'Runway'],
+    tabs_content: [
+      { title: 'Check-in in 2 minutes',    body: 'Student scans the QR code, fills in details, signs the digital waiver. Works offline. Works in 4 languages. No paper.' },
+      { title: 'Confirm and calculate',    body: 'See pending students in the dashboard. Confirm duration, price, and instructor. Commission calculated automatically.' },
+      { title: 'Close the month in minutes', body: 'Every lesson automatically updates payouts. At month close, export PIX or Wise in one click.' },
+      { title: 'Real-time runway',         body: 'Every confirmed lesson updates the Off-Season Runway. You know in real time whether this season will be enough.' },
+    ],
+
+    cmp_eyebrow: 'Why not a spreadsheet?',
+    cmp_h2:      "Pico Base was built to answer the question a spreadsheet can't.",
+    cmp_headers: ['', 'Pico Base', 'Spreadsheet', 'Generic SaaS'],
+    cmp_rows: [
+      ['Digital check-in',          '✓', '✗', 'Partial'],
+      ['Digital waiver',             '✓', '✗', '✗'],
+      ['Automatic commissions',      '✓', 'Manual', '✗'],
+      ['Off-season runway',          '✓', 'Manual', '✗'],
+      ['PIX / Wise payouts',         '✓', '✗', '✗'],
+      ['Built for seasonal schools', '✓', '✗', '✗'],
+    ],
+
+    who_eyebrow: "Who it's for",
+    who_h2:      'Seasonal sports schools.',
+    who_for_h:   'For you if:',
+    who_not_h:   'Not for you if:',
+    who_for: [
+      'You run a kitesurf, windsurf, wingfoil, surf, ski, or snowboard school',
+      'Your revenue comes in 4–7 months and you need to survive 12',
+      'You want to know in real time if the season will be enough',
+      'You have instructors on different commission rates',
+      'You need digital waivers and fast check-in',
+    ],
+    who_not: [
+      'Year-round gyms or fitness studios',
+      'Swim schools or yoga studios with linear revenue',
+      'Any business without a clear seasonal peak',
+    ],
+
+    founder_eyebrow: 'A direct message',
+    founder_quote:   "I built Pico Base after watching school owners close their doors after a season that seemed good. The problem wasn't the season. It was not knowing in time.",
+    founder_name:    '— Founder, Pico Base',
+    cta_h2:         'See if this season will be enough.',
+    cta_sub:        'We set up the full school in one week. You start on the first day of the season.',
+    cta_demo:       'Book a demo →',
+    cta_calc:       'Calculate my runway',
+
     footer_tag:   'The operating system for seasonal sports schools.',
     footer_calc:  'Calculator',
     footer_demo:  'Demo',
@@ -168,53 +254,21 @@ const CONTENT = {
 
 type Lang = 'pt' | 'en'
 
-// ─── embedded mini-calculator ───────────────────────────────────────────────
+// ─── embedded runway calculator ─────────────────────────────────────────────
 function RunwayCalc({ t, lang }: { t: typeof CONTENT.pt; lang: Lang }) {
   const [profit, setProfit] = useState(28000)
   const [burn,   setBurn]   = useState(6000)
 
-  const runway   = burn > 0 ? profit / burn : 0
-  const barPct   = Math.min(100, (runway / 12) * 100)
-  const verdict = runway >= 6
-    ? {
-        label: lang === 'pt' ? 'Sustentável' : 'Sustainable',
-        sub: lang === 'pt'
-          ? 'Sua temporada gera lucro suficiente para atravessar a baixa temporada com segurança.'
-          : 'Your season generates enough profit to comfortably support the off-season.',
-      }
-    : runway >= 3
-    ? {
-        label: lang === 'pt' ? 'Requer atenção' : 'Needs attention',
-        sub: lang === 'pt'
-          ? 'A escola possui alguma margem de segurança, mas uma temporada mais fraca ou custos inesperados podem pressionar o caixa.'
-          : 'The school has some runway, but a weaker season or unexpected costs could create pressure during the off-season.',
-      }
-    : runway > 0
-    ? {
-        label: lang === 'pt' ? 'Em risco' : 'At risk',
-        sub: lang === 'pt'
-          ? 'A temporada atual não gera lucro suficiente para sustentar a escola durante toda a baixa temporada.'
-          : 'The current season does not generate enough profit to safely fund the off-season.',
-      }
-    : {
-        label: '—',
-        sub: lang === 'pt'
-          ? 'Informe o lucro da temporada e os custos mensais para calcular sua autonomia.'
-          : 'Enter your season profit and monthly costs to calculate your runway.',
-      }
-  const targetMonths = 12
-  const gap = runway >= targetMonths ? 0 : Math.round((targetMonths * burn) - profit)
-  const futureDate = new Date()
-  futureDate.setMonth(futureDate.getMonth() + Math.floor(runway))
-  const runwayUntil = futureDate.toLocaleString(
-    lang === 'pt' ? 'pt-BR' : 'en-US', { month: 'long' }
-  )
-  const safetyScore = runway >= 9 ? { label: lang === 'pt' ? 'Protegido' : 'Protected', color: '#007868', bg: '#E0F8F5' }
-    : runway >= 6 ? { label: lang === 'pt' ? 'Saudável' : 'Healthy', color: '#00A896', bg: '#E0F8F5' }
-    : runway >= 3 ? { label: lang === 'pt' ? 'Vulnerável' : 'Vulnerable', color: '#8A5E00', bg: '#FFF8E8' }
-    : runway > 0  ? { label: lang === 'pt' ? 'Crítico' : 'Critical', color: '#B83010', bg: '#FDF0EC' }
-    : { label: '—', color: '#6A6C78', bg: 'rgba(255,255,255,0.08)' }
-  const barColor = safetyScore.color
+  const runway  = burn > 0 ? profit / burn : 0
+  const barPct  = Math.min(100, (runway / 12) * 100)
+  const safetyScore =
+    runway >= 9 ? { label: lang === 'pt' ? 'Protegido'   : 'Protected',   color: '#007868', bg: '#E0F8F5' }
+    : runway >= 6 ? { label: lang === 'pt' ? 'Saudável'    : 'Healthy',     color: '#00A896', bg: '#E0F8F5' }
+    : runway >= 3 ? { label: lang === 'pt' ? 'Vulnerável'  : 'Vulnerable',  color: '#8A5E00', bg: '#FFF8E8' }
+    : runway > 0  ? { label: lang === 'pt' ? 'Crítico'     : 'Critical',    color: '#B83010', bg: '#FDF0EC' }
+    :               { label: '—',                                             color: '#6A6C78', bg: 'rgba(255,255,255,0.08)' }
+
+  const gap = runway >= 12 ? 0 : Math.round((12 * burn) - profit)
   const avgLessonProfit = 250
   const lessonsNeeded   = gap > 0 ? Math.ceil(gap / avgLessonProfit) : 0
   const survivalDate = (() => {
@@ -270,7 +324,7 @@ function RunwayCalc({ t, lang }: { t: typeof CONTENT.pt; lang: Lang }) {
           borderRadius: '99px', overflow: 'hidden', marginBottom: '4px',
         }}>
           <div style={{
-            height: '100%', width: `${barPct}%`, background: barColor,
+            height: '100%', width: `${barPct}%`, background: safetyScore.color,
             borderRadius: '99px', transition: 'width 0.35s, background 0.3s',
           }} />
         </div>
@@ -298,8 +352,8 @@ function RunwayCalc({ t, lang }: { t: typeof CONTENT.pt; lang: Lang }) {
             </div>
             <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', lineHeight: '1.5' }}>
               {lang === 'pt'
-                ? `≈ ${lessonsNeeded} aulas extras para atingir 6 meses`
-                : `≈ ${lessonsNeeded} extra lessons to reach 6 months`
+                ? `≈ ${lessonsNeeded} aulas extras para atingir 12 meses`
+                : `≈ ${lessonsNeeded} extra lessons to reach 12 months`
               }
             </div>
           </div>
@@ -375,52 +429,25 @@ function RunwayCalc({ t, lang }: { t: typeof CONTENT.pt; lang: Lang }) {
 
 // ─── page ───────────────────────────────────────────────────────────────────
 export default function HomePage() {
-  const [lang, setLang] = useState<Lang>('pt')
+  const [lang, setLang]       = useState<Lang>('pt')
+  const [activeTab, setActiveTab] = useState(0)
   const t = CONTENT[lang]
-
-  const metricCards = [
-    { bg: C.ocean,      color: C.white,      sub: 'rgba(255,255,255,0.4)' },
-    { bg: C.powder,     color: C.slate,      sub: C.fog                   },
-    { bg: C.signalLight,color: C.signal,     sub: C.signalDark            },
-    { bg: C.tealLight,  color: C.tealDark,   sub: C.tealDark              },
-  ]
-
-  const payoutQuestions = [
-    {
-      q: lang === 'pt' ? 'Quem precisa receber?' : 'Who needs to be paid?',
-      a: lang === 'pt'
-        ? 'Instrutores e parceiros em uma única lista.'
-        : 'Instructors and partners in a single list.',
-    },
-    {
-      q: lang === 'pt' ? 'Quanto devo pagar?' : 'How much do I owe?',
-      a: lang === 'pt'
-        ? 'Calculado automaticamente a partir das aulas registradas.'
-        : 'Automatically calculated from recorded lessons.',
-    },
-    {
-      q: lang === 'pt' ? 'Como faço o pagamento?' : 'How do I pay?',
-      a: lang === 'pt'
-        ? 'Exporte PIX ou Wise em um clique.'
-        : 'Export PIX or Wise in one click.',
-    },
-  ]
-
-  const payoutFooterItems = [
-    lang === 'pt' ? '✓ Comissões automáticas'            : '✓ Automatic commissions',
-    lang === 'pt' ? '✓ Indicações de hotéis e agências'  : '✓ Hotel and agency referrals',
-    lang === 'pt' ? '✓ Exportação PIX e Wise'            : '✓ PIX and Wise export',
-    lang === 'pt' ? '✓ Fechamento mensal em minutos'      : '✓ Monthly close in minutes',
-  ]
+  const tickerItems = [...t.ticker, ...t.ticker]
 
   return (
     <div>
+      <style>{`
+        @keyframes ticker {
+          0%   { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
+      `}</style>
 
       {/* ── NAV ─────────────────────────────────────────────────────────── */}
       <header style={{
         position: 'fixed', top: 0, left: 0, right: 0, zIndex: 50,
-        background: 'rgba(255,255,255,0.94)', backdropFilter: 'blur(12px)',
-        borderBottom: `0.5px solid ${C.powderBorder}`,
+        background: 'rgba(13,15,18,0.92)', backdropFilter: 'blur(12px)',
+        borderBottom: '0.5px solid rgba(255,255,255,0.06)',
         height: '56px', display: 'flex', alignItems: 'center',
         padding: '0 40px', justifyContent: 'space-between',
       }}>
@@ -430,14 +457,14 @@ export default function HomePage() {
 
         <nav style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
           <Link href="/calculadora" style={{
-            fontSize: '13px', color: C.fog,
+            fontSize: '13px', color: 'rgba(255,255,255,0.4)',
             textDecoration: 'none', padding: '6px 14px',
           }}>
             {t.nav_calc}
           </Link>
 
           <div style={{
-            display: 'flex', gap: '2px', background: C.powder,
+            display: 'flex', gap: '2px', background: 'rgba(255,255,255,0.06)',
             borderRadius: '8px', padding: '2px', marginRight: '4px',
           }}>
             {(['pt', 'en'] as Lang[]).map(l => (
@@ -446,9 +473,8 @@ export default function HomePage() {
                 fontSize: '12px', fontWeight: '500',
                 border: 'none', cursor: 'pointer',
                 fontFamily: 'var(--font-geist-sans, system-ui)',
-                background: lang === l ? C.white : 'transparent',
-                color: lang === l ? C.slate : C.fog,
-                boxShadow: lang === l ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                background: lang === l ? 'rgba(255,255,255,0.12)' : 'transparent',
+                color: lang === l ? C.white : 'rgba(255,255,255,0.35)',
                 transition: 'all 0.15s',
               }}>
                 {l.toUpperCase()}
@@ -458,7 +484,7 @@ export default function HomePage() {
 
           <Link href="/owner" style={{
             fontSize: '13px', fontWeight: '500',
-            color: C.white, background: C.slate,
+            color: C.dark, background: C.white,
             textDecoration: 'none', padding: '8px 18px', borderRadius: '8px',
           }}>
             {t.nav_enter}
@@ -468,195 +494,82 @@ export default function HomePage() {
 
       {/* ── HERO ─────────────────────────────────────────────────────────── */}
       <section style={{
-        background: C.white, minHeight: '100vh',
-        display: 'flex', flexDirection: 'column',
-        justifyContent: 'center', padding: '120px 40px 0',
+        background: C.dark, minHeight: '100vh',
+        display: 'flex', flexDirection: 'column', justifyContent: 'center',
+        padding: '120px 40px 80px',
       }}>
-        <div style={{ maxWidth: '900px', margin: '0 auto', width: '100%' }}>
-
+        <div style={{ maxWidth: '860px', margin: '0 auto', width: '100%' }}>
           <div style={{
             fontSize: '11px', fontWeight: '500', letterSpacing: '0.2em',
-            textTransform: 'uppercase', color: C.fog, marginBottom: '28px',
-            display: 'flex', alignItems: 'center', gap: '12px',
+            textTransform: 'uppercase', color: 'rgba(255,255,255,0.25)',
+            marginBottom: '32px', display: 'flex', alignItems: 'center', gap: '12px',
           }}>
-            <span style={{ display: 'inline-block', width: '24px', height: '1px', background: C.fog }} />
-            {t.eyebrow}
+            <span style={{ display: 'inline-block', width: '24px', height: '1px', background: 'rgba(255,255,255,0.15)' }} />
+            {t.hero_eyebrow}
           </div>
 
           <h1 style={{
-            fontSize: 'clamp(36px, 5vw, 72px)',
-            fontWeight: '700', color: '#1A1C22',
-            lineHeight: '1.05', letterSpacing: '-0.03em',
-            margin: '0 0 28px',
+            fontSize: 'clamp(42px, 7vw, 88px)',
+            fontWeight: '700', color: C.white,
+            lineHeight: '1.0', letterSpacing: '-0.04em',
+            margin: '0 0 32px',
           }}>
-            {lang === 'pt' ? (
-              <>
-                Uma temporada.<br />
-                <span style={{ color: '#00A896' }}>Doze meses</span><br />
-                para sobreviver.
-              </>
-            ) : (
-              <>
-                One season.<br />
-                <span style={{ color: '#00A896' }}>Twelve months</span><br />
-                to survive.
-              </>
-            )}
+            {t.hero_h1a}<br />
+            <span style={{ color: C.teal }}>{t.hero_h1b}</span>
           </h1>
 
           <p style={{
-            fontSize: 'clamp(15px, 1.8vw, 18px)', color: C.mist,
+            fontSize: 'clamp(15px, 1.8vw, 18px)',
+            color: 'rgba(255,255,255,0.45)',
             maxWidth: '520px', lineHeight: '1.7',
-            margin: '0 0 36px', fontWeight: '300',
+            margin: '0 0 40px', fontWeight: '300',
           }}>
-            {t.sub}
+            {t.hero_sub}
           </p>
 
-          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '48px' }}>
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
             <Link href="/demo" style={{
-              display: 'inline-flex', alignItems: 'center', gap: '6px',
+              display: 'inline-flex', alignItems: 'center',
               background: C.signal, color: C.white,
-              padding: '13px 26px', borderRadius: '10px',
+              padding: '14px 28px', borderRadius: '10px',
               fontSize: '14px', fontWeight: '500', textDecoration: 'none',
             }}>
-              {t.cta_primary}
+              {t.hero_cta1}
             </Link>
             <Link href="/calculadora" style={{
-              display: 'inline-flex', alignItems: 'center', gap: '6px',
-              background: C.powder, color: C.slate,
-              padding: '13px 26px', borderRadius: '10px',
+              display: 'inline-flex', alignItems: 'center',
+              background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.6)',
+              padding: '14px 28px', borderRadius: '10px',
               fontSize: '14px', fontWeight: '500', textDecoration: 'none',
-              border: `0.5px solid ${C.powderBorder}`,
+              border: '0.5px solid rgba(255,255,255,0.1)',
             }}>
-              {t.cta_secondary}
+              {t.hero_cta2}
             </Link>
           </div>
-
-          <div style={{
-            paddingTop: '28px', borderTop: `0.5px solid ${C.powderBorder}`,
-            display: 'flex', gap: '48px', flexWrap: 'wrap',
-          }}>
-            {t.stats.map((s, i) => (
-              <div key={i}>
-                <div style={{
-                  fontSize: '28px', fontWeight: '600', color: C.slate,
-                  fontVariantNumeric: 'tabular-nums', marginBottom: '4px',
-                }}>
-                  {s.n}
-                </div>
-                <div style={{ fontSize: '12px', color: C.fog }}>{s.label}</div>
-              </div>
-            ))}
-          </div>
         </div>
+      </section>
 
-        {/* amber alert band */}
+      {/* ── TICKER ───────────────────────────────────────────────────────── */}
+      <div style={{ background: C.signal, overflow: 'hidden', padding: '12px 0' }}>
         <div style={{
-          background: C.amberBg, borderTop: `0.5px solid ${C.amberBorder}`,
-          padding: '12px 40px', display: 'flex', alignItems: 'center',
-          gap: '12px', marginTop: '48px',
+          display: 'flex',
+          width: 'max-content',
+          animation: 'ticker 28s linear infinite',
         }}>
-          <span style={{
-            fontSize: '9px', fontWeight: '600', color: C.amberDark,
-            letterSpacing: '0.12em', textTransform: 'uppercase', flexShrink: 0,
-          }}>
-            {t.alert_label}
-          </span>
-          <span style={{ width: '1px', height: '14px', background: C.amber, opacity: 0.5 }} />
-          <span style={{ fontSize: '13px', color: C.amberDark }}>{t.alert_band}</span>
-        </div>
-
-        {/* 4-column metric strip */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)' }}>
-          {t.metrics.map((m, i) => {
-            const card = metricCards[i]
-            return (
-              <div key={i} style={{
-                background: card.bg, padding: '20px 28px',
-                borderLeft: i > 0 ? '0.5px solid rgba(0,0,0,0.06)' : 'none',
-              }}>
-                <div style={{
-                  fontSize: '9px', fontWeight: '500', letterSpacing: '0.12em',
-                  textTransform: 'uppercase', color: card.sub, marginBottom: '6px',
-                }}>
-                  {m.label}
-                </div>
-                <div style={{
-                  fontSize: '28px', fontWeight: '700', color: card.color,
-                  lineHeight: '1', fontVariantNumeric: 'tabular-nums', marginBottom: '4px',
-                }}>
-                  {m.value}
-                </div>
-                <div style={{ fontSize: '11px', color: card.sub }}>{m.sub}</div>
-              </div>
-            )
-          })}
-        </div>
-      </section>
-
-      {/* ── PROBLEM ──────────────────────────────────────────────────────── */}
-      <section style={{
-        background: C.white, padding: '100px 40px',
-        borderTop: `0.5px solid ${C.powderBorder}`,
-        borderBottom: `0.5px solid ${C.powderBorder}`,
-      }}>
-        <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '72px', alignItems: 'center' }}>
-
-            <div>
-              <div style={{
-                fontSize: '10px', fontWeight: '500', letterSpacing: '0.18em',
-                textTransform: 'uppercase', color: C.fog, marginBottom: '16px',
-              }}>
-                {t.problem_eyebrow}
-              </div>
-              <h2 style={{
-                fontSize: 'clamp(22px, 2.8vw, 34px)', fontWeight: '600', color: C.slate,
-                lineHeight: '1.2', margin: '0 0 16px', letterSpacing: '-0.02em',
-              }}>
-                {t.problem_h2}
-              </h2>
-              <p style={{ fontSize: '17px', fontWeight: '600', color: C.tealDark, margin: '0 0 20px' }}>
-                {t.problem_accent}
-              </p>
-              <p style={{ fontSize: '14px', color: C.mist, lineHeight: '1.7', margin: '0' }}>
-                {t.problem_body}
-              </p>
-            </div>
-
-            <div style={{
-              borderRadius: '14px', border: `0.5px solid ${C.powderBorder}`, overflow: 'hidden',
+          {tickerItems.map((item, i) => (
+            <span key={i} style={{
+              padding: '0 28px',
+              fontSize: '12px', fontWeight: '500',
+              color: 'rgba(255,255,255,0.85)',
+              whiteSpace: 'nowrap',
+              display: 'flex', alignItems: 'center', gap: '28px',
             }}>
-              {t.before_after.map((item, i) => (
-                <div key={i} style={{
-                  display: 'flex', alignItems: 'center', gap: '12px',
-                  padding: '13px 20px',
-                  borderBottom: i < t.before_after.length - 1 ? `0.5px solid ${C.powder}` : 'none',
-                  background: item.before ? C.white : '#FAFAF8',
-                }}>
-                  <span style={{
-                    width: '20px', height: '20px', borderRadius: '50%', flexShrink: 0,
-                    background: item.before ? C.signalLight : C.tealLight,
-                    color: item.before ? C.signal : C.teal,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '10px', fontWeight: '700',
-                  }}>
-                    {item.before ? '✕' : '✓'}
-                  </span>
-                  <span style={{
-                    fontSize: '13px', fontWeight: item.before ? '400' : '500',
-                    color: item.before ? '#C8C6C0' : C.slate,
-                    textDecoration: item.before ? 'line-through' : 'none',
-                  }}>
-                    {item.label}
-                  </span>
-                </div>
-              ))}
-            </div>
-
-          </div>
+              {item}
+              <span style={{ width: '3px', height: '3px', borderRadius: '50%', background: 'rgba(255,255,255,0.4)', display: 'inline-block' }} />
+            </span>
+          ))}
         </div>
-      </section>
+      </div>
 
       {/* ── CALCULATOR ───────────────────────────────────────────────────── */}
       <section style={{
@@ -664,9 +577,9 @@ export default function HomePage() {
         borderBottom: `0.5px solid ${C.powderBorder}`,
       }}>
         <div style={{
-          maxWidth: '900px', margin: '0 auto',
-          display: 'grid', gridTemplateColumns: '1fr 1fr',
-          gap: '72px', alignItems: 'center',
+          maxWidth: '960px', margin: '0 auto',
+          display: 'grid', gridTemplateColumns: '1fr 1.4fr',
+          gap: '64px', alignItems: 'center',
         }}>
           <div>
             <div style={{
@@ -676,15 +589,15 @@ export default function HomePage() {
               {t.calc_eyebrow}
             </div>
             <h2 style={{
-              fontSize: 'clamp(22px, 2.8vw, 34px)', fontWeight: '600', color: C.slate,
-              lineHeight: '1.2', margin: '0 0 16px', letterSpacing: '-0.02em',
+              fontSize: 'clamp(24px, 3vw, 38px)', fontWeight: '700', color: C.slate,
+              lineHeight: '1.1', margin: '0 0 16px', letterSpacing: '-0.03em',
             }}>
               {t.calc_h2}
             </h2>
             <p style={{ fontSize: '14px', color: C.mist, lineHeight: '1.7', margin: '0 0 24px' }}>
-              {t.calc_body}
+              {t.calc_sub}
             </p>
-            <Link href="/calculadora" style={{ fontSize: '13px', color: C.ocean, textDecoration: 'none' }}>
+            <Link href="/calculadora" style={{ fontSize: '13px', color: C.teal, textDecoration: 'none' }}>
               {t.calc_link}
             </Link>
           </div>
@@ -692,354 +605,485 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── PAYOUTS SECTION ── */}
-      <section style={{
-        background: '#fff',
-        padding: '100px 40px',
-        borderBottom: '0.5px solid #E4E0D8',
-      }}>
-        <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-
-          {/* Header */}
-          <div style={{
-            display: 'grid', gridTemplateColumns: '1fr 1fr',
-            gap: '72px', alignItems: 'flex-start',
-            marginBottom: '48px',
-          }}>
-            <div>
-              <div style={{
-                fontSize: '10px', fontWeight: '500',
-                letterSpacing: '0.18em', textTransform: 'uppercase',
-                color: '#8A8C98', marginBottom: '16px',
-              }}>
-                {lang === 'pt' ? 'Repasses' : 'Payouts'}
-              </div>
-              <h2 style={{
-                fontSize: 'clamp(22px, 2.8vw, 34px)',
-                fontWeight: '600', color: '#1A1C22',
-                lineHeight: '1.2', margin: '0 0 16px',
-                letterSpacing: '-0.02em',
-              }}>
-                {lang === 'pt'
-                  ? <>O mês acabou.<br />Os números já estão prontos.</>
-                  : <>Month&apos;s over.<br />The numbers are already ready.</>
-                }
-              </h2>
-              <p style={{
-                fontSize: '14px', color: '#6A6C78',
-                lineHeight: '1.7', margin: '0 0 28px',
-              }}>
-                {lang === 'pt'
-                  ? 'Cada aula confirmada atualiza automaticamente os valores de instrutores e parceiros. No fechamento do mês, tudo já está pronto para pagamento.'
-                  : 'Every confirmed lesson automatically updates instructor and partner amounts. At month close, everything is ready to pay.'
-                }
-              </p>
-
-              {/* Three questions */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                {payoutQuestions.map((item, i) => (
-                  <div key={i} style={{
-                    display: 'flex', gap: '14px', alignItems: 'flex-start',
-                  }}>
-                    <span style={{
-                      width: '22px', height: '22px',
-                      borderRadius: '50%',
-                      background: '#E0F8F5',
-                      color: '#007868',
-                      display: 'flex', alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '11px', fontWeight: '700',
-                      flexShrink: 0, marginTop: '1px',
-                    }}>
-                      {i + 1}
-                    </span>
-                    <div>
-                      <div style={{
-                        fontSize: '14px', fontWeight: '600',
-                        color: '#1A1C22', marginBottom: '3px',
-                      }}>
-                        {item.q}
-                      </div>
-                      <div style={{ fontSize: '13px', color: '#8A8C98', lineHeight: '1.5' }}>
-                        {item.a}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Summary cards */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <div style={{
-                display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)',
-                gap: '8px',
-              }}>
-                {[
-                  {
-                    label: lang === 'pt' ? 'Pendente para aprovação' : 'Pending approval',
-                    value: lang === 'pt' ? 'R$ 1.381' : '$ 1.381',
-                    color: '#8A5E00', bg: '#FFF8E8',
-                  },
-                  {
-                    label: lang === 'pt' ? 'Total a pagar' : 'Total to pay',
-                    value: lang === 'pt' ? 'R$ 1.600' : '$ 1.600',
-                    color: '#1A1C22', bg: '#F0EEE9',
-                  },
-                ].map(card => (
-                  <div key={card.label} style={{
-                    background: card.bg,
-                    borderRadius: '10px', padding: '16px 18px',
-                  }}>
-                    <div style={{
-                      fontSize: '11px', fontWeight: '500',
-                      color: card.color, marginBottom: '8px',
-                      opacity: 0.7, lineHeight: '1.4',
-                    }}>
-                      {card.label}
-                    </div>
-                    <div style={{
-                      fontSize: '24px', fontWeight: '700',
-                      color: card.color, fontVariantNumeric: 'tabular-nums',
-                    }}>
-                      {card.value}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Mock Repasses list */}
-          <div style={{
-            background: '#fff',
-            border: '0.5px solid #E4E0D8',
-            borderRadius: '14px',
-            overflow: 'hidden',
-          }}>
-            {/* List header */}
-            <div style={{
-              padding: '13px 20px',
-              borderBottom: '0.5px solid #E4E0D8',
-              display: 'flex', justifyContent: 'space-between',
-              alignItems: 'center',
-              background: '#F0EEE9',
-            }}>
-              <span style={{
-                fontSize: '11px', fontWeight: '500',
-                letterSpacing: '0.1em', textTransform: 'uppercase',
-                color: '#8A8C98',
-              }}>
-                {lang === 'pt' ? 'Equipe · Junho 2026' : 'Team · June 2026'}
-              </span>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <span style={{
-                  padding: '5px 12px', borderRadius: '99px',
-                  fontSize: '11px', fontWeight: '500',
-                  background: '#fff', color: '#1A1C22',
-                  border: '0.5px solid #E4E0D8',
-                }}>
-                  {lang === 'pt' ? '↓ Exportar PIX (BTG)' : '↓ Export PIX (BTG)'}
-                </span>
-                <span style={{
-                  padding: '5px 12px', borderRadius: '99px',
-                  fontSize: '11px', fontWeight: '500',
-                  background: '#fff', color: '#1A1C22',
-                  border: '0.5px solid #E4E0D8',
-                }}>
-                  {lang === 'pt' ? '↓ Exportar Wise' : '↓ Export Wise'}
-                </span>
-              </div>
-            </div>
-
-            {/* Marco row */}
-            <div style={{
-              display: 'flex', alignItems: 'center',
-              gap: '14px', padding: '16px 20px',
-              borderBottom: '0.5px solid #E4E0D8',
-            }}>
-              <div style={{
-                width: '38px', height: '38px', borderRadius: '50%',
-                background: '#E0F8F5', color: '#007868',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '12px', fontWeight: '600', flexShrink: 0,
-              }}>
-                MF
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: '14px', fontWeight: '500', color: '#1A1C22', marginBottom: '2px' }}>
-                  Marco Ferreira
-                </div>
-                <div style={{ fontSize: '12px', color: '#8A8C98' }}>
-                  {lang === 'pt' ? '6 aulas · 38% de comissão' : '6 lessons · 38% commission'}
-                </div>
-              </div>
-              <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                <div style={{ fontSize: '18px', fontWeight: '600', color: '#1A1C22', marginBottom: '4px', fontVariantNumeric: 'tabular-nums' }}>
-                  {lang === 'pt' ? 'R$ 1.178' : '$ 1.178'}
-                </div>
-                <span style={{ padding: '2px 10px', borderRadius: '99px', fontSize: '11px', fontWeight: '500', background: '#FFF8E8', color: '#8A5E00' }}>
-                  {lang === 'pt' ? 'Pendente' : 'Pending'}
-                </span>
-              </div>
-              <div style={{ fontSize: '16px', color: '#C8C6C0', flexShrink: 0 }}>▾</div>
-            </div>
-
-            {/* Partners divider */}
-            <div style={{
-              padding: '8px 20px',
-              background: '#F0EEE9',
-              borderBottom: '0.5px solid #E4E0D8',
-              fontSize: '10px', fontWeight: '500',
-              letterSpacing: '0.1em', textTransform: 'uppercase',
-              color: '#8A8C98',
-            }}>
-              {lang === 'pt' ? 'Parceiros' : 'Partners'}
-            </div>
-
-            {/* Hotel row */}
-            <div style={{
-              display: 'flex', alignItems: 'center',
-              gap: '14px', padding: '16px 20px',
-              borderBottom: '0.5px solid #E4E0D8',
-            }}>
-              <div style={{
-                width: '38px', height: '38px', borderRadius: '8px',
-                background: '#FFF8E8',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '18px', flexShrink: 0,
-              }}>
-                🏨
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: '14px', fontWeight: '500', color: '#1A1C22', marginBottom: '2px' }}>
-                  Vila do Vento Hotel
-                </div>
-                <div style={{ fontSize: '12px', color: '#8A8C98' }}>
-                  {lang === 'pt'
-                    ? '4 alunos indicados · 10% de comissão'
-                    : '4 students referred · 10% commission'
-                  }
-                </div>
-              </div>
-              <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                <div style={{ fontSize: '18px', fontWeight: '600', color: '#1A1C22', marginBottom: '4px', fontVariantNumeric: 'tabular-nums' }}>
-                  {lang === 'pt' ? 'R$ 135' : '$ 135'}
-                </div>
-                <span style={{ padding: '2px 10px', borderRadius: '99px', fontSize: '11px', fontWeight: '500', background: '#E0F8F5', color: '#007868' }}>
-                  {lang === 'pt' ? 'Aprovado' : 'Approved'}
-                </span>
-              </div>
-              <div style={{ fontSize: '16px', color: '#C8C6C0', flexShrink: 0 }}>▾</div>
-            </div>
-
-            {/* Agency row */}
-            <div style={{
-              display: 'flex', alignItems: 'center',
-              gap: '14px', padding: '16px 20px',
-            }}>
-              <div style={{
-                width: '38px', height: '38px', borderRadius: '8px',
-                background: '#EEF3FC',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '18px', flexShrink: 0,
-              }}>
-                ✈
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: '14px', fontWeight: '500', color: '#1A1C22', marginBottom: '2px' }}>
-                  Kite Brazil Travel
-                </div>
-                <div style={{ fontSize: '12px', color: '#8A8C98' }}>
-                  {lang === 'pt'
-                    ? '2 alunos indicados · 12% de comissão'
-                    : '2 students referred · 12% commission'
-                  }
-                </div>
-              </div>
-              <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                <div style={{ fontSize: '18px', fontWeight: '600', color: '#1A1C22', marginBottom: '4px', fontVariantNumeric: 'tabular-nums' }}>
-                  {lang === 'pt' ? 'R$ 84' : '$ 84'}
-                </div>
-                <span style={{ padding: '2px 10px', borderRadius: '99px', fontSize: '11px', fontWeight: '500', background: '#FFF8E8', color: '#8A5E00' }}>
-                  {lang === 'pt' ? 'Pendente' : 'Pending'}
-                </span>
-              </div>
-              <div style={{ fontSize: '16px', color: '#C8C6C0', flexShrink: 0 }}>▾</div>
-            </div>
-          </div>
-
-          {/* Footer note */}
-          <div style={{
-            marginTop: '20px',
-            display: 'flex', justifyContent: 'space-between',
-            alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px',
-          }}>
-            <div style={{ fontSize: '13px', color: '#8A8C98', maxWidth: '360px', lineHeight: '1.5' }}>
-              {lang === 'pt'
-                ? 'Cada aula registrada atualiza automaticamente os repasses da equipe e dos parceiros.'
-                : 'Every recorded lesson automatically updates team and partner payouts.'
-              }
-            </div>
-            <div style={{
-              display: 'flex', gap: '16px', flexWrap: 'wrap',
-              fontSize: '12px', color: '#8A8C98',
-            }}>
-              {payoutFooterItems.map(item => (
-                <span key={item}>{item}</span>
-              ))}
-            </div>
-          </div>
-
-        </div>
-      </section>
-
-      {/* ── HOW IT WORKS ─────────────────────────────────────────────────── */}
+      {/* ── FOUR QUESTIONS ───────────────────────────────────────────────── */}
       <section style={{
         background: C.white, padding: '100px 40px',
         borderBottom: `0.5px solid ${C.powderBorder}`,
       }}>
-        <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-          <div style={{
-            fontSize: '10px', fontWeight: '500', letterSpacing: '0.18em',
-            textTransform: 'uppercase', color: C.fog, marginBottom: '14px',
-          }}>
-            {t.how_eyebrow}
+        <div style={{ maxWidth: '960px', margin: '0 auto' }}>
+          <div style={{ marginBottom: '56px' }}>
+            <div style={{
+              fontSize: '10px', fontWeight: '500', letterSpacing: '0.18em',
+              textTransform: 'uppercase', color: C.fog, marginBottom: '14px',
+            }}>
+              {t.q_eyebrow}
+            </div>
+            <h2 style={{
+              fontSize: 'clamp(22px, 2.8vw, 36px)', fontWeight: '700', color: C.slate,
+              lineHeight: '1.2', margin: '0', letterSpacing: '-0.03em', maxWidth: '480px',
+            }}>
+              {t.q_h2}
+            </h2>
           </div>
-          <h2 style={{
-            fontSize: 'clamp(22px, 2.8vw, 34px)', fontWeight: '600', color: C.slate,
-            lineHeight: '1.2', margin: '0 0 48px',
-            letterSpacing: '-0.02em', maxWidth: '480px',
-          }}>
-            {t.how_h2}
-          </h2>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '2px' }}>
-            {t.steps.map((step, i) => (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px' }}>
+            {t.questions.map((q, i) => (
               <div key={i} style={{
-                background: i === 1 ? C.ocean : C.powder,
-                padding: '28px',
-                borderRadius: i === 0 ? '14px 0 0 14px' : i === 2 ? '0 14px 14px 0' : '0',
+                padding: '32px 36px',
+                background: i % 2 === 0 ? C.powder : C.white,
+                borderRadius:
+                  i === 0 ? '14px 0 0 0' :
+                  i === 1 ? '0 14px 0 0' :
+                  i === 2 ? '0 0 0 14px' : '0 0 14px 0',
+                border: `0.5px solid ${C.powderBorder}`,
               }}>
                 <div style={{
-                  fontSize: '12px', fontWeight: '600', marginBottom: '14px',
+                  fontSize: '12px', fontWeight: '600',
+                  color: C.teal, marginBottom: '12px',
                   fontFamily: 'var(--font-geist-mono, monospace)',
-                  color: i === 1 ? 'rgba(255,255,255,0.35)' : C.teal,
                 }}>
-                  {step.n}
+                  {q.n}
                 </div>
                 <div style={{
-                  fontSize: '15px', fontWeight: '600', lineHeight: '1.3', marginBottom: '10px',
-                  color: i === 1 ? C.white : C.slate,
+                  fontSize: '16px', fontWeight: '600', color: C.slate,
+                  lineHeight: '1.3', marginBottom: '10px', letterSpacing: '-0.01em',
                 }}>
-                  {step.title}
+                  {q.q}
                 </div>
+                <div style={{ fontSize: '13px', color: C.mist, lineHeight: '1.6' }}>
+                  {q.a}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── WITHOUT VISIBILITY ───────────────────────────────────────────── */}
+      <section style={{
+        background: C.dark, padding: '100px 40px',
+      }}>
+        <div style={{ maxWidth: '960px', margin: '0 auto' }}>
+          <div style={{ marginBottom: '56px' }}>
+            <div style={{
+              fontSize: '10px', fontWeight: '500', letterSpacing: '0.18em',
+              textTransform: 'uppercase', color: 'rgba(255,255,255,0.25)', marginBottom: '14px',
+            }}>
+              {t.without_eyebrow}
+            </div>
+            <h2 style={{
+              fontSize: 'clamp(22px, 2.8vw, 36px)', fontWeight: '700', color: C.white,
+              lineHeight: '1.2', margin: '0', letterSpacing: '-0.03em',
+            }}>
+              {t.without_h2}
+            </h2>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+            {t.without_items.map((item, i) => (
+              <div key={i} style={{
+                background: 'rgba(255,255,255,0.04)',
+                border: '0.5px solid rgba(255,255,255,0.08)',
+                borderTop: `2px solid ${C.signal}`,
+                borderRadius: '12px', padding: '28px 24px',
+              }}>
+                <div style={{ fontSize: '28px', marginBottom: '16px' }}>{item.icon}</div>
                 <div style={{
-                  fontSize: '13px', lineHeight: '1.6',
-                  color: i === 1 ? 'rgba(255,255,255,0.5)' : C.mist,
+                  fontSize: '15px', fontWeight: '600', color: C.white,
+                  marginBottom: '10px', lineHeight: '1.3',
                 }}>
-                  {step.body}
+                  {item.title}
                 </div>
+                <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.4)', lineHeight: '1.6' }}>
+                  {item.body}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── DECISION DASHBOARD ───────────────────────────────────────────── */}
+      <section style={{
+        background: C.powder, padding: '100px 40px',
+        borderBottom: `0.5px solid ${C.powderBorder}`,
+      }}>
+        <div style={{ maxWidth: '960px', margin: '0 auto' }}>
+          <div style={{
+            display: 'grid', gridTemplateColumns: '1fr 1.4fr',
+            gap: '72px', alignItems: 'center',
+          }}>
+            <div>
+              <div style={{
+                fontSize: '10px', fontWeight: '500', letterSpacing: '0.18em',
+                textTransform: 'uppercase', color: C.fog, marginBottom: '14px',
+              }}>
+                {t.dash_eyebrow}
+              </div>
+              <h2 style={{
+                fontSize: 'clamp(22px, 2.8vw, 36px)', fontWeight: '700', color: C.slate,
+                lineHeight: '1.2', margin: '0 0 16px', letterSpacing: '-0.03em',
+              }}>
+                {t.dash_h2}
+              </h2>
+              <p style={{ fontSize: '14px', color: C.mist, lineHeight: '1.7', margin: '0' }}>
+                {t.dash_sub}
+              </p>
+            </div>
+
+            {/* Dashboard mock */}
+            <div style={{
+              background: C.dark, borderRadius: '16px',
+              overflow: 'hidden', border: '0.5px solid rgba(255,255,255,0.06)',
+            }}>
+              {/* top bar */}
+              <div style={{
+                padding: '12px 20px',
+                borderBottom: '0.5px solid rgba(255,255,255,0.06)',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              }}>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  {['#FF5F57', '#FFBD2E', '#28C840'].map(color => (
+                    <span key={color} style={{ width: '10px', height: '10px', borderRadius: '50%', background: color }} />
+                  ))}
+                </div>
+                <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.2)' }}>Base Camp</span>
+                <span style={{ width: '60px' }} />
+              </div>
+
+              {/* runway hero */}
+              <div style={{ padding: '28px 24px', borderBottom: '0.5px solid rgba(255,255,255,0.06)' }}>
+                <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.25)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '8px' }}>
+                  {t.dash_runway}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px', marginBottom: '12px' }}>
+                  <span style={{ fontSize: '52px', fontWeight: '700', color: C.white, lineHeight: '1', fontVariantNumeric: 'tabular-nums' }}>
+                    6.2
+                  </span>
+                  <span style={{
+                    padding: '4px 10px', borderRadius: '99px', fontSize: '11px', fontWeight: '600',
+                    background: C.tealLight, color: C.tealDark,
+                  }}>
+                    {t.dash_status}
+                  </span>
+                </div>
+                <div style={{ height: '4px', background: 'rgba(255,255,255,0.08)', borderRadius: '99px', overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: '52%', background: C.teal, borderRadius: '99px' }} />
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px', color: 'rgba(255,255,255,0.15)', marginTop: '4px' }}>
+                  <span>0</span><span>6mo</span><span style={{ color: C.teal }}>12mo ✓</span>
+                </div>
+              </div>
+
+              {/* stats row */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0' }}>
+                {[
+                  { label: t.dash_sessions, value: '14' },
+                  { label: t.dash_revenue,  value: lang === 'pt' ? 'R$ 38k' : '$ 38k' },
+                ].map((stat, i) => (
+                  <div key={i} style={{
+                    padding: '18px 24px',
+                    borderRight: i === 0 ? '0.5px solid rgba(255,255,255,0.06)' : 'none',
+                  }}>
+                    <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.2)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '6px' }}>
+                      {stat.label}
+                    </div>
+                    <div style={{ fontSize: '24px', fontWeight: '700', color: C.white, fontVariantNumeric: 'tabular-nums' }}>
+                      {stat.value}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* updated line */}
+              <div style={{
+                padding: '10px 24px',
+                borderTop: '0.5px solid rgba(255,255,255,0.04)',
+                fontSize: '10px', color: 'rgba(255,255,255,0.15)',
+                display: 'flex', alignItems: 'center', gap: '6px',
+              }}>
+                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: C.teal, display: 'inline-block' }} />
+                {t.dash_updated}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── TABS ─────────────────────────────────────────────────────────── */}
+      <section style={{
+        background: C.white, padding: '100px 40px',
+        borderBottom: `0.5px solid ${C.powderBorder}`,
+      }}>
+        <div style={{ maxWidth: '960px', margin: '0 auto' }}>
+          <div style={{ marginBottom: '48px' }}>
+            <div style={{
+              fontSize: '10px', fontWeight: '500', letterSpacing: '0.18em',
+              textTransform: 'uppercase', color: C.fog, marginBottom: '14px',
+            }}>
+              {t.tabs_eyebrow}
+            </div>
+            <h2 style={{
+              fontSize: 'clamp(22px, 2.8vw, 36px)', fontWeight: '700', color: C.slate,
+              lineHeight: '1.2', margin: '0', letterSpacing: '-0.03em',
+            }}>
+              {t.tabs_h2}
+            </h2>
+          </div>
+
+          {/* tab buttons */}
+          <div style={{
+            display: 'flex', gap: '4px',
+            background: C.powder, borderRadius: '12px', padding: '4px',
+            marginBottom: '40px', width: 'fit-content',
+          }}>
+            {t.tabs.map((tab, i) => (
+              <button key={i} onClick={() => setActiveTab(i)} style={{
+                padding: '8px 20px', borderRadius: '9px', border: 'none',
+                fontSize: '13px', fontWeight: '500', cursor: 'pointer',
+                fontFamily: 'var(--font-geist-sans, system-ui)',
+                background: activeTab === i ? C.white : 'transparent',
+                color: activeTab === i ? C.slate : C.fog,
+                boxShadow: activeTab === i ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
+                transition: 'all 0.15s',
+              }}>
+                {tab}
+              </button>
+            ))}
+          </div>
+
+          {/* tab content */}
+          <div style={{
+            display: 'grid', gridTemplateColumns: '1fr 1fr',
+            gap: '48px', alignItems: 'center',
+          }}>
+            <div>
+              <h3 style={{
+                fontSize: '22px', fontWeight: '700', color: C.slate,
+                margin: '0 0 14px', letterSpacing: '-0.02em',
+              }}>
+                {t.tabs_content[activeTab].title}
+              </h3>
+              <p style={{ fontSize: '15px', color: C.mist, lineHeight: '1.7', margin: '0' }}>
+                {t.tabs_content[activeTab].body}
+              </p>
+            </div>
+
+            {/* Tab mock panels — rendered conditionally to avoid textTransform type issues */}
+            <div>
+              {activeTab === 0 && (
+                <div style={{
+                  background: C.powder, borderRadius: '14px', padding: '24px',
+                  border: `0.5px solid ${C.powderBorder}`,
+                }}>
+                  <div style={{ fontSize: '10px', fontWeight: '500', letterSpacing: '0.12em', textTransform: 'uppercase', color: C.fog, marginBottom: '16px' }}>
+                    {lang === 'pt' ? 'Check-in pendente' : 'Pending check-in'}
+                  </div>
+                  {[
+                    { name: 'Leila Santos',  sport: 'Kitesurf', flag: '🇧🇷' },
+                    { name: 'Tom Eriksson', sport: 'Wingfoil', flag: '🇸🇪' },
+                  ].map((s, i) => (
+                    <div key={i} style={{
+                      display: 'flex', alignItems: 'center', gap: '12px',
+                      background: C.white, borderRadius: '10px', padding: '12px 14px',
+                      marginBottom: '8px', border: `0.5px solid ${C.powderBorder}`,
+                    }}>
+                      <span style={{ fontSize: '20px' }}>{s.flag}</span>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '13px', fontWeight: '500', color: C.slate }}>{s.name}</div>
+                        <div style={{ fontSize: '11px', color: C.fog }}>{s.sport}</div>
+                      </div>
+                      <span style={{
+                        padding: '4px 10px', borderRadius: '99px', fontSize: '10px', fontWeight: '600',
+                        background: C.tealLight, color: C.tealDark,
+                      }}>
+                        ✓ Waiver
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {activeTab === 1 && (
+                <div style={{
+                  background: C.powder, borderRadius: '14px', padding: '24px',
+                  border: `0.5px solid ${C.powderBorder}`,
+                }}>
+                  <div style={{ fontSize: '10px', fontWeight: '500', letterSpacing: '0.12em', textTransform: 'uppercase', color: C.fog, marginBottom: '16px' }}>
+                    {lang === 'pt' ? 'Confirmar aula' : 'Confirm lesson'}
+                  </div>
+                  <div style={{ background: C.white, borderRadius: '10px', padding: '16px', border: `0.5px solid ${C.powderBorder}` }}>
+                    <div style={{ fontSize: '14px', fontWeight: '600', color: C.slate, marginBottom: '12px' }}>Leila Santos</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '14px' }}>
+                      {[
+                        { label: lang === 'pt' ? 'Duração' : 'Duration', value: '90 min' },
+                        { label: lang === 'pt' ? 'Valor'   : 'Price',    value: lang === 'pt' ? 'R$ 350' : '$ 350' },
+                        { label: lang === 'pt' ? 'Instrutor' : 'Instructor', value: 'Marco F.' },
+                        { label: lang === 'pt' ? 'Comissão' : 'Commission',  value: '38% → R$ 133' },
+                      ].map(field => (
+                        <div key={field.label} style={{ background: C.powder, borderRadius: '8px', padding: '10px 12px' }}>
+                          <div style={{ fontSize: '9px', color: C.fog, marginBottom: '3px' }}>{field.label}</div>
+                          <div style={{ fontSize: '12px', fontWeight: '600', color: C.slate }}>{field.value}</div>
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{
+                      background: C.signal, color: C.white, borderRadius: '8px',
+                      padding: '10px', textAlign: 'center', fontSize: '13px', fontWeight: '500',
+                    }}>
+                      {lang === 'pt' ? 'Confirmar aula →' : 'Confirm lesson →'}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 2 && (
+                <div style={{
+                  background: C.powder, borderRadius: '14px', padding: '24px',
+                  border: `0.5px solid ${C.powderBorder}`,
+                }}>
+                  <div style={{ fontSize: '10px', fontWeight: '500', letterSpacing: '0.12em', textTransform: 'uppercase', color: C.fog, marginBottom: '16px' }}>
+                    {lang === 'pt' ? 'Repasses · Junho 2026' : 'Payouts · June 2026'}
+                  </div>
+                  {[
+                    { initials: 'MF', name: 'Marco Ferreira', detail: lang === 'pt' ? '6 aulas · 38%' : '6 lessons · 38%', amount: lang === 'pt' ? 'R$ 1.178' : '$ 1.178', status: lang === 'pt' ? 'Pendente' : 'Pending', statusBg: C.amberBg, statusColor: C.amberDark },
+                    { initials: 'AK', name: 'Ana Köhler',     detail: lang === 'pt' ? '4 aulas · 35%' : '4 lessons · 35%', amount: lang === 'pt' ? 'R$ 840'  : '$ 840',   status: lang === 'pt' ? 'Aprovado' : 'Approved', statusBg: C.tealLight, statusColor: C.tealDark },
+                  ].map((row, i) => (
+                    <div key={i} style={{
+                      display: 'flex', alignItems: 'center', gap: '12px',
+                      background: C.white, borderRadius: '10px', padding: '12px 14px',
+                      marginBottom: '8px', border: `0.5px solid ${C.powderBorder}`,
+                    }}>
+                      <div style={{
+                        width: '34px', height: '34px', borderRadius: '50%',
+                        background: C.tealLight, color: C.tealDark,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: '11px', fontWeight: '700', flexShrink: 0,
+                      }}>
+                        {row.initials}
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '13px', fontWeight: '500', color: C.slate }}>{row.name}</div>
+                        <div style={{ fontSize: '11px', color: C.fog }}>{row.detail}</div>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: '15px', fontWeight: '700', color: C.slate, fontVariantNumeric: 'tabular-nums' }}>{row.amount}</div>
+                        <span style={{ padding: '2px 8px', borderRadius: '99px', fontSize: '10px', fontWeight: '500', background: row.statusBg, color: row.statusColor }}>{row.status}</span>
+                      </div>
+                    </div>
+                  ))}
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                    {[
+                      lang === 'pt' ? '↓ PIX (BTG)' : '↓ PIX (BTG)',
+                      lang === 'pt' ? '↓ Wise'      : '↓ Wise',
+                    ].map(btn => (
+                      <div key={btn} style={{
+                        flex: 1, textAlign: 'center', padding: '8px',
+                        borderRadius: '8px', border: `0.5px solid ${C.powderBorder}`,
+                        fontSize: '11px', fontWeight: '500', color: C.slate,
+                        background: C.white, cursor: 'pointer',
+                      }}>
+                        {btn}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 3 && (
+                <div style={{
+                  background: '#1B4B5A', borderRadius: '14px', padding: '28px 24px',
+                }}>
+                  <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.3)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '8px' }}>
+                    {t.runway_label}
+                  </div>
+                  <div style={{ fontSize: '56px', fontWeight: '700', color: C.white, lineHeight: '1', fontVariantNumeric: 'tabular-nums', marginBottom: '4px' }}>
+                    6.2
+                  </div>
+                  <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.35)', marginBottom: '20px' }}>
+                    {t.runway_sub}
+                  </div>
+                  <div style={{ height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '99px', overflow: 'hidden', marginBottom: '4px' }}>
+                    <div style={{ height: '100%', width: '52%', background: C.teal, borderRadius: '99px' }} />
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px', color: 'rgba(255,255,255,0.2)', marginBottom: '20px' }}>
+                    <span>0</span><span>6mo</span><span style={{ color: C.teal }}>12mo ✓</span>
+                  </div>
+                  <div style={{ background: 'rgba(255,255,255,0.07)', borderRadius: '10px', padding: '12px 14px' }}>
+                    <div style={{ fontSize: '11px', color: C.amber, fontWeight: '600', marginBottom: '4px' }}>
+                      {lang === 'pt' ? 'Faltam R$ 35.000' : 'Gap: $ 35.000'}
+                    </div>
+                    <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', lineHeight: '1.5' }}>
+                      {lang === 'pt' ? '≈ 140 aulas para atingir 12 meses' : '≈ 140 lessons to reach 12 months'}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── COMPARISON TABLE ─────────────────────────────────────────────── */}
+      <section style={{
+        background: C.powder, padding: '100px 40px',
+        borderBottom: `0.5px solid ${C.powderBorder}`,
+      }}>
+        <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+          <div style={{ marginBottom: '48px' }}>
+            <div style={{
+              fontSize: '10px', fontWeight: '500', letterSpacing: '0.18em',
+              textTransform: 'uppercase', color: C.fog, marginBottom: '14px',
+            }}>
+              {t.cmp_eyebrow}
+            </div>
+            <h2 style={{
+              fontSize: 'clamp(22px, 2.8vw, 36px)', fontWeight: '700', color: C.slate,
+              lineHeight: '1.2', margin: '0', letterSpacing: '-0.03em',
+            }}>
+              {t.cmp_h2}
+            </h2>
+          </div>
+
+          <div style={{ borderRadius: '14px', overflow: 'hidden', border: `0.5px solid ${C.powderBorder}` }}>
+            {/* header row */}
+            <div style={{
+              display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr',
+              background: C.slate, padding: '14px 20px',
+            }}>
+              {t.cmp_headers.map((h, i) => (
+                <div key={i} style={{
+                  fontSize: '11px', fontWeight: '500', letterSpacing: '0.08em',
+                  color: i === 1 ? C.teal : 'rgba(255,255,255,0.35)',
+                  textAlign: i > 0 ? 'center' : 'left',
+                }}>
+                  {h}
+                </div>
+              ))}
+            </div>
+            {/* data rows */}
+            {t.cmp_rows.map((row, ri) => (
+              <div key={ri} style={{
+                display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr',
+                padding: '13px 20px',
+                background: ri % 2 === 0 ? C.white : '#FAFAF8',
+                borderBottom: ri < t.cmp_rows.length - 1 ? `0.5px solid ${C.powderBorder}` : 'none',
+              }}>
+                {row.map((cell, ci) => (
+                  <div key={ci} style={{
+                    fontSize: ci === 0 ? '13px' : '14px',
+                    fontWeight: ci === 1 ? '600' : '400',
+                    color:
+                      ci === 0 ? C.slate :
+                      cell === '✓' && ci === 1 ? C.tealDark :
+                      cell === '✗' ? '#C8C6C0' :
+                      cell === 'Manual' || cell === 'Parcial' || cell === 'Partial' ? C.amberDark :
+                      C.slate,
+                    textAlign: ci > 0 ? 'center' : 'left',
+                  }}>
+                    {cell}
+                  </div>
+                ))}
               </div>
             ))}
           </div>
@@ -1048,41 +1092,111 @@ export default function HomePage() {
 
       {/* ── WHO IT'S FOR ─────────────────────────────────────────────────── */}
       <section style={{
-        background: C.powder, padding: '80px 40px',
+        background: C.white, padding: '100px 40px',
         borderBottom: `0.5px solid ${C.powderBorder}`,
       }}>
-        <div style={{ maxWidth: '900px', margin: '0 auto', textAlign: 'center' }}>
-          <div style={{
-            fontSize: '10px', fontWeight: '500', letterSpacing: '0.18em',
-            textTransform: 'uppercase', color: C.fog, marginBottom: '14px',
-          }}>
-            {t.for_eyebrow}
+        <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+          <div style={{ marginBottom: '48px' }}>
+            <div style={{
+              fontSize: '10px', fontWeight: '500', letterSpacing: '0.18em',
+              textTransform: 'uppercase', color: C.fog, marginBottom: '14px',
+            }}>
+              {t.who_eyebrow}
+            </div>
+            <h2 style={{
+              fontSize: 'clamp(22px, 2.8vw, 36px)', fontWeight: '700', color: C.slate,
+              lineHeight: '1.2', margin: '0', letterSpacing: '-0.03em',
+            }}>
+              {t.who_h2}
+            </h2>
           </div>
-          <h2 style={{
-            fontSize: '28px', fontWeight: '600', color: C.slate,
-            margin: '0 0 40px', letterSpacing: '-0.02em',
-          }}>
-            {t.for_h2}
-          </h2>
-          <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', flexWrap: 'wrap' }}>
-            {t.sports.map(sport => (
-              <div key={sport.label} style={{
-                display: 'flex', alignItems: 'center', gap: '7px',
-                background: C.white, padding: '9px 16px',
-                borderRadius: '99px', border: `0.5px solid ${C.powderBorder}`,
-                fontSize: '13px', fontWeight: '500', color: C.slate,
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px' }}>
+            {/* For */}
+            <div style={{
+              border: `0.5px solid ${C.tealLight}`,
+              borderRadius: '14px', overflow: 'hidden',
+            }}>
+              <div style={{
+                padding: '14px 20px', background: C.tealLight,
+                fontSize: '11px', fontWeight: '600', color: C.tealDark,
+                letterSpacing: '0.08em',
               }}>
-                <span style={{ fontSize: '16px' }}>{sport.emoji}</span>
-                {sport.label}
+                {t.who_for_h}
               </div>
-            ))}
+              <div style={{ padding: '8px 0' }}>
+                {t.who_for.map((item, i) => (
+                  <div key={i} style={{
+                    display: 'flex', alignItems: 'flex-start', gap: '10px',
+                    padding: '10px 20px',
+                    borderBottom: i < t.who_for.length - 1 ? `0.5px solid ${C.tealLight}` : 'none',
+                  }}>
+                    <span style={{ color: C.teal, fontWeight: '700', fontSize: '13px', flexShrink: 0, marginTop: '1px' }}>✓</span>
+                    <span style={{ fontSize: '13px', color: C.slate, lineHeight: '1.5' }}>{item}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Not for */}
+            <div style={{
+              border: `0.5px solid ${C.powderBorder}`,
+              borderRadius: '14px', overflow: 'hidden',
+            }}>
+              <div style={{
+                padding: '14px 20px', background: C.powder,
+                fontSize: '11px', fontWeight: '600', color: C.mist,
+                letterSpacing: '0.08em',
+              }}>
+                {t.who_not_h}
+              </div>
+              <div style={{ padding: '8px 0' }}>
+                {t.who_not.map((item, i) => (
+                  <div key={i} style={{
+                    display: 'flex', alignItems: 'flex-start', gap: '10px',
+                    padding: '10px 20px',
+                    borderBottom: i < t.who_not.length - 1 ? `0.5px solid ${C.powderBorder}` : 'none',
+                  }}>
+                    <span style={{ color: '#C8C6C0', fontWeight: '700', fontSize: '13px', flexShrink: 0, marginTop: '1px' }}>✕</span>
+                    <span style={{ fontSize: '13px', color: C.mist, lineHeight: '1.5' }}>{item}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* ── CTA ──────────────────────────────────────────────────────────── */}
-      <section style={{ background: C.storm, padding: '100px 40px', textAlign: 'center' }}>
-        <div style={{ maxWidth: '560px', margin: '0 auto' }}>
+      {/* ── FOUNDER CTA ──────────────────────────────────────────────────── */}
+      <section style={{ background: C.dark, padding: '100px 40px' }}>
+        <div style={{ maxWidth: '640px', margin: '0 auto', textAlign: 'center' }}>
+          <div style={{
+            fontSize: '10px', fontWeight: '500', letterSpacing: '0.18em',
+            textTransform: 'uppercase', color: 'rgba(255,255,255,0.25)', marginBottom: '32px',
+          }}>
+            {t.founder_eyebrow}
+          </div>
+
+          <blockquote style={{
+            fontSize: 'clamp(17px, 2vw, 22px)', color: 'rgba(255,255,255,0.7)',
+            lineHeight: '1.65', margin: '0 0 20px', fontWeight: '300',
+            fontStyle: 'italic',
+          }}>
+            &ldquo;{t.founder_quote}&rdquo;
+          </blockquote>
+
+          <div style={{
+            fontSize: '12px', color: 'rgba(255,255,255,0.25)',
+            marginBottom: '64px', letterSpacing: '0.04em',
+          }}>
+            {t.founder_name}
+          </div>
+
+          <div style={{
+            height: '0.5px', background: 'rgba(255,255,255,0.06)',
+            marginBottom: '64px',
+          }} />
+
           <h2 style={{
             fontSize: 'clamp(28px, 4vw, 48px)', fontWeight: '700', color: C.white,
             lineHeight: '1.1', margin: '0 0 16px', letterSpacing: '-0.03em',
@@ -1090,14 +1204,15 @@ export default function HomePage() {
             {t.cta_h2}
           </h2>
           <p style={{
-            fontSize: '15px', color: 'rgba(255,255,255,0.4)',
+            fontSize: '15px', color: 'rgba(255,255,255,0.35)',
             lineHeight: '1.6', margin: '0 0 36px',
           }}>
             {t.cta_sub}
           </p>
+
           <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
             <Link href="/demo" style={{
-              display: 'inline-flex', alignItems: 'center', gap: '6px',
+              display: 'inline-flex', alignItems: 'center',
               background: C.signal, color: C.white,
               padding: '14px 32px', borderRadius: '10px',
               fontSize: '15px', fontWeight: '500', textDecoration: 'none',
@@ -1106,11 +1221,10 @@ export default function HomePage() {
             </Link>
             <Link href="/calculadora" style={{
               display: 'inline-flex', alignItems: 'center',
-              background: 'rgba(255,255,255,0.08)',
-              color: 'rgba(255,255,255,0.6)',
+              background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.55)',
               padding: '14px 32px', borderRadius: '10px',
               fontSize: '15px', fontWeight: '500', textDecoration: 'none',
-              border: '0.5px solid rgba(255,255,255,0.12)',
+              border: '0.5px solid rgba(255,255,255,0.1)',
             }}>
               {t.cta_calc}
             </Link>
@@ -1120,27 +1234,30 @@ export default function HomePage() {
 
       {/* ── FOOTER ───────────────────────────────────────────────────────── */}
       <footer style={{
-        background: C.slate, padding: '28px 40px',
+        background: '#0A0C0F', padding: '28px 40px',
         display: 'flex', justifyContent: 'space-between',
         alignItems: 'center', flexWrap: 'wrap', gap: '16px',
+        borderTop: '0.5px solid rgba(255,255,255,0.06)',
       }}>
-        <span style={{ fontWeight: '600', color: C.white, fontSize: '14px' }}>Pico Base</span>
-        <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.3)' }}>
+        <span style={{ fontWeight: '600', color: 'rgba(255,255,255,0.6)', fontSize: '14px' }}>
+          Pico Base
+        </span>
+        <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.2)' }}>
           {t.footer_tag}
         </span>
-        <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
           {[
             { href: '/calculadora', label: t.footer_calc  },
             { href: '/demo',        label: t.footer_demo  },
             { href: '/owner',       label: t.footer_enter },
           ].map(link => (
             <Link key={link.href} href={link.href} style={{
-              fontSize: '12px', color: 'rgba(255,255,255,0.35)', textDecoration: 'none',
+              fontSize: '12px', color: 'rgba(255,255,255,0.3)', textDecoration: 'none',
             }}>
               {link.label}
             </Link>
           ))}
-          <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.15)' }}>
+          <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.12)' }}>
             © {new Date().getFullYear()}
           </span>
         </div>

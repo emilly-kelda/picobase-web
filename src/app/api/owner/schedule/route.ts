@@ -41,3 +41,18 @@ export async function DELETE(request: Request) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
 }
+
+export async function PATCH(request: Request) {
+  const body = await request.json()
+  const { id, ...updates } = body
+  const supabase = createServiceClient()
+
+  const { error } = await supabase
+    .from('scheduled_lessons')
+    .update(updates)
+    .eq('id', id)
+    .eq('school_id', SCHOOL_ID)
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ ok: true })
+}

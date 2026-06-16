@@ -8,14 +8,8 @@ type MissedLesson = {
   student_name: string
   scheduled_at: string
   duration_min: number | null
-  notes: string | null
-  activities: { id: string; name: string } | { id: string; name: string }[] | null
-  instructor: { id: string; name: string } | { id: string; name: string }[] | null
-}
-
-function unwrap<T>(v: T | T[] | null): T | null {
-  if (!v) return null
-  return Array.isArray(v) ? (v[0] ?? null) : v
+  activities: { name: string } | null
+  instructor: { name: string } | null
 }
 
 export default function MissedLessons({
@@ -90,9 +84,6 @@ export default function MissedLessons({
             { day: '2-digit', month: 'short' }
           )
 
-          const activity   = unwrap(lesson.activities)
-          const instructor = unwrap(lesson.instructor)
-
           return (
             <div
               key={lesson.id}
@@ -116,9 +107,9 @@ export default function MissedLessons({
                   {lesson.student_name}
                 </div>
                 <div style={{ fontSize: '11px', color: 'var(--mist)' }}>
-                  {activity?.name ?? '—'}
+                  {lesson.activities?.name ?? '—'}
                   {' · '}
-                  {instructor?.name ?? '—'}
+                  {lesson.instructor?.name ?? '—'}
                   {' · '}
                   {formattedDate} {formattedTime}
                 </div>
