@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Logo from '@/components/Logo'
 
@@ -43,8 +43,15 @@ export default function CalculadoraPage() {
 
   const scenarios = [3000, 5000, 8000, 12000, 20000]
 
+  const [scrolled, setScrolled] = useState(false)
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 80)
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
   return (
-    <div style={{
+    <div className="calc-wrap" style={{
       minHeight: '100vh', background: '#F0EEE9',
       paddingTop: '56px',
       fontFamily: 'var(--font-geist-sans, system-ui)',
@@ -57,13 +64,21 @@ export default function CalculadoraPage() {
           gap: 24px;
           align-items: start;
         }
+        .calc-sticky { display: none; }
         @media (max-width: 768px) {
-          .calc-columns { grid-template-columns: 1fr; }
+          .calc-columns  { grid-template-columns: 1fr; }
+          .calc-wrap     { padding-bottom: 76px !important; }
+          .calc-nav      { padding: 0 20px !important; }
+          .calc-main     { padding: 32px 20px !important; }
+          .calc-sticky   { display: flex !important; }
+        }
+        @media (min-width: 769px) {
+          .calc-sticky { display: none !important; }
         }
       `}</style>
 
       {/* Nav */}
-      <header style={{
+      <header className="calc-nav" style={{
         position: 'fixed', top: 0, left: 0, right: 0, zIndex: 50,
         background: 'rgba(255,255,255,0.94)',
         backdropFilter: 'blur(12px)',
@@ -86,7 +101,7 @@ export default function CalculadoraPage() {
         </Link>
       </header>
 
-      <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '60px 40px' }}>
+      <div className="calc-main" style={{ maxWidth: '1100px', margin: '0 auto', padding: '60px 40px' }}>
 
         {/* Headline */}
         <div style={{ marginBottom: '40px' }}>
@@ -327,12 +342,45 @@ export default function CalculadoraPage() {
             background: '#E8471A', color: '#fff',
             padding: '14px 28px', borderRadius: '10px',
             fontSize: '15px', fontWeight: '500', textDecoration: 'none',
+            minHeight: '48px',
           }}>
             Agendar demonstração →
           </Link>
         </div>
 
       </div>
+
+      {/* Sticky CTA — mobile only, after scroll */}
+      <div
+        className="calc-sticky"
+        style={{
+          position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 45,
+          background: '#fff', borderTop: '0.5px solid #E4E0D8',
+          padding: '12px 20px', gap: '10px',
+          display: scrolled ? 'flex' : 'none',
+          boxShadow: '0 -4px 16px rgba(0,0,0,0.05)',
+        }}
+      >
+        <Link href="/" style={{
+          flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: '#F0EEE9', color: '#1A1C22',
+          padding: '14px', borderRadius: '10px',
+          fontSize: '14px', fontWeight: '500', textDecoration: 'none',
+          border: '0.5px solid #E4E0D8', minHeight: '48px',
+        }}>
+          ← Início
+        </Link>
+        <Link href="/demo" style={{
+          flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: '#E8471A', color: '#fff',
+          padding: '14px', borderRadius: '10px',
+          fontSize: '14px', fontWeight: '500', textDecoration: 'none',
+          minHeight: '48px',
+        }}>
+          Agendar demo →
+        </Link>
+      </div>
+
     </div>
   )
 }

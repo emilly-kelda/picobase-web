@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Logo from '@/components/Logo'
 
@@ -23,7 +23,7 @@ const C = {
   mist:         '#6A6C78',
   fog:          '#8A8C98',
   white:        '#fff',
-  dark:         '#0D0F12',
+  dark:         '#1A1C22',
 }
 
 // ─── content ───────────────────────────────────────────────────────────────
@@ -282,13 +282,13 @@ function RunwayCalc({ t, lang }: { t: typeof CONTENT.pt; lang: Lang }) {
   }
 
   return (
-    <div style={{
+    <div className="ms-rw" style={{
       display: 'grid', gridTemplateColumns: '1fr 1fr',
       borderRadius: '16px', border: `0.5px solid ${C.powderBorder}`,
       overflow: 'hidden', width: '100%',
     }}>
       {/* left — result */}
-      <div style={{
+      <div className="ms-rw-result" style={{
         background: '#1B4B5A', padding: '28px 24px',
         display: 'flex', flexDirection: 'column',
       }}>
@@ -365,7 +365,7 @@ function RunwayCalc({ t, lang }: { t: typeof CONTENT.pt; lang: Lang }) {
       </div>
 
       {/* right — inputs */}
-      <div style={{
+      <div className="ms-rw-inputs" style={{
         background: C.white, padding: '28px 24px',
         borderLeft: `0.5px solid ${C.powderBorder}`,
         display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
@@ -425,22 +425,117 @@ function RunwayCalc({ t, lang }: { t: typeof CONTENT.pt; lang: Lang }) {
 
 // ─── page ───────────────────────────────────────────────────────────────────
 export default function HomePage() {
-  const [lang, setLang]       = useState<Lang>('pt')
+  const [lang, setLang]           = useState<Lang>('pt')
   const [activeTab, setActiveTab] = useState(0)
+  const [menuOpen, setMenuOpen]   = useState(false)
+  const [openAccordion, setOpenAccordion] = useState<number | null>(0)
+  const [scrolled, setScrolled]   = useState(false)
   const t = CONTENT[lang]
   const tickerItems = [...t.ticker, ...t.ticker]
 
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 80)
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
+  useEffect(() => {
+    document.body.style.overflow = menuOpen ? 'hidden' : ''
+    return () => { document.body.style.overflow = '' }
+  }, [menuOpen])
+
   return (
-    <div>
+    <div className="ms-main">
       <style>{`
         @keyframes ticker {
           0%   { transform: translateX(0); }
           100% { transform: translateX(-50%); }
         }
+
+        /* ── defaults (desktop) ─────────────────────────────────── */
+        .ms-mob-trigger  { display: none; }
+        .ms-accordion    { display: none; }
+        .ms-sticky       { display: none; }
+
+        /* ── mobile (≤ 768px) ───────────────────────────────────── */
+        @media (max-width: 768px) {
+          /* main wrapper: leave room for sticky bar */
+          .ms-main { padding-bottom: 76px; }
+
+          /* nav */
+          .ms-nav-header { padding: 0 20px !important; }
+          .ms-desk-nav   { display: none !important; }
+          .ms-mob-trigger {
+            display: flex !important;
+            align-items: center;
+            justify-content: center;
+          }
+
+          /* hero */
+          .ms-hero {
+            min-height: 0 !important;
+            padding: 84px 24px 56px !important;
+            justify-content: flex-start !important;
+          }
+
+          /* section padding */
+          .ms-section { padding: 64px 24px !important; }
+
+          /* ticker */
+          .ms-ticker { padding: 9px 0 !important; }
+
+          /* 2-col grids → 1 col */
+          .ms-g2      { grid-template-columns: 1fr !important; gap: 32px !important; }
+          .ms-g2-calc { grid-template-columns: 1fr !important; gap: 32px !important; }
+          .ms-g2-dash { grid-template-columns: 1fr !important; gap: 32px !important; }
+
+          /* 3-col grid → 1 col */
+          .ms-g3 { grid-template-columns: 1fr !important; }
+
+          /* 4-question grid → 1 col, fix rounded corners */
+          .ms-q-grid { grid-template-columns: 1fr !important; gap: 2px !important; }
+          .ms-q-card { border-radius: 0 !important; }
+          .ms-q-card:first-child { border-radius: 14px 14px 0 0 !important; }
+          .ms-q-card:last-child  { border-radius: 0 0 14px 14px !important; }
+          .ms-q-card + .ms-q-card { border-top: none !important; }
+
+          /* RunwayCalc: swap order so inputs come first */
+          .ms-rw        { display: flex !important; flex-direction: column !important; }
+          .ms-rw-result { order: 2; }
+          .ms-rw-inputs { order: 1; border-left: none !important; border-top: 0.5px solid #E4E0D8 !important; }
+
+          /* who grid */
+          .ms-who-grid { grid-template-columns: 1fr !important; gap: 16px !important; }
+
+          /* tabs → accordion */
+          .ms-tab-bar     { display: none !important; }
+          .ms-tab-content { display: none !important; }
+          .ms-accordion   { display: block !important; }
+
+          /* comparison table: horizontal scroll */
+          .ms-cmp-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+          .ms-cmp-inner  { min-width: 520px; }
+
+          /* footer */
+          .ms-footer {
+            padding: 24px 20px !important;
+            flex-direction: column !important;
+            align-items: flex-start !important;
+            gap: 20px !important;
+          }
+
+          /* sticky CTA */
+          .ms-sticky { display: flex !important; }
+        }
+
+        /* desktop: always hide sticky */
+        @media (min-width: 769px) {
+          .ms-sticky { display: none !important; }
+        }
       `}</style>
 
       {/* ── NAV ─────────────────────────────────────────────────────────── */}
-      <header style={{
+      <header className="ms-nav-header" style={{
         position: 'fixed', top: 0, left: 0, right: 0, zIndex: 50,
         background: 'rgba(255,255,255,0.94)', backdropFilter: 'blur(12px)',
         borderBottom: `0.5px solid ${C.powderBorder}`,
@@ -451,7 +546,8 @@ export default function HomePage() {
           <Logo size={20} variant="full" />
         </Link>
 
-        <nav style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+        {/* Desktop nav */}
+        <nav className="ms-desk-nav" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
           <Link href="/calculadora" style={{
             fontSize: '13px', color: C.fog,
             textDecoration: 'none', padding: '6px 14px',
@@ -487,10 +583,88 @@ export default function HomePage() {
             {t.nav_enter}
           </Link>
         </nav>
+
+        {/* Mobile hamburger */}
+        <button
+          className="ms-mob-trigger"
+          onClick={() => setMenuOpen(!menuOpen)}
+          style={{
+            background: 'none', border: 'none', cursor: 'pointer',
+            padding: '8px', fontSize: '22px', color: C.slate, lineHeight: 1,
+            minWidth: '48px', minHeight: '48px',
+            fontFamily: 'var(--font-geist-sans, system-ui)',
+          }}
+          aria-label={menuOpen ? 'Fechar menu' : 'Abrir menu'}
+        >
+          {menuOpen ? '✕' : '☰'}
+        </button>
       </header>
 
+      {/* Mobile menu overlay */}
+      {menuOpen && (
+        <div style={{
+          position: 'fixed', top: '56px', left: 0, right: 0, bottom: 0, zIndex: 40,
+          background: C.white, padding: '0 24px 32px',
+          display: 'flex', flexDirection: 'column',
+          borderTop: `0.5px solid ${C.powderBorder}`,
+          overflowY: 'auto',
+        }}>
+          {[
+            { href: '/calculadora',  label: t.footer_calc },
+            { href: '#tabs',         label: lang === 'pt' ? 'Como funciona' : 'How it works' },
+            { href: '/demo',         label: lang === 'pt' ? 'Demonstração'  : 'Demo' },
+          ].map(link => (
+            <Link
+              key={link.href}
+              href={link.href}
+              onClick={() => setMenuOpen(false)}
+              style={{
+                fontSize: '18px', fontWeight: '500', color: C.slate,
+                textDecoration: 'none', padding: '0',
+                borderBottom: `0.5px solid ${C.powderBorder}`,
+                display: 'flex', alignItems: 'center',
+                minHeight: '60px',
+              }}
+            >
+              {link.label}
+            </Link>
+          ))}
+
+          <div style={{ marginTop: '24px', display: 'flex', gap: '8px' }}>
+            {(['pt', 'en'] as Lang[]).map(l => (
+              <button key={l} onClick={() => setLang(l)} style={{
+                padding: '10px 20px', borderRadius: '8px',
+                fontSize: '14px', fontWeight: '500',
+                border: `0.5px solid ${C.powderBorder}`,
+                cursor: 'pointer', minHeight: '44px',
+                background: lang === l ? C.slate : C.white,
+                color: lang === l ? C.white : C.slate,
+                fontFamily: 'var(--font-geist-sans, system-ui)',
+              }}>
+                {l.toUpperCase()}
+              </button>
+            ))}
+          </div>
+
+          <Link
+            href="/demo"
+            onClick={() => setMenuOpen(false)}
+            style={{
+              marginTop: '16px',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: C.signal, color: C.white,
+              padding: '16px 24px', borderRadius: '12px',
+              fontSize: '16px', fontWeight: '500', textDecoration: 'none',
+              minHeight: '56px',
+            }}
+          >
+            {t.hero_cta1}
+          </Link>
+        </div>
+      )}
+
       {/* ── HERO ─────────────────────────────────────────────────────────── */}
-      <section style={{
+      <section className="ms-hero" style={{
         background: C.white, minHeight: '100vh',
         display: 'flex', flexDirection: 'column', justifyContent: 'center',
         padding: '120px 40px 80px',
@@ -529,17 +703,19 @@ export default function HomePage() {
             <Link href="/demo" style={{
               display: 'inline-flex', alignItems: 'center',
               background: C.signal, color: C.white,
-              padding: '13px 26px', borderRadius: '10px',
+              padding: '14px 26px', borderRadius: '10px',
               fontSize: '14px', fontWeight: '500', textDecoration: 'none',
+              minHeight: '48px',
             }}>
               {t.hero_cta1}
             </Link>
             <Link href="/calculadora" style={{
               display: 'inline-flex', alignItems: 'center',
               background: C.powder, color: C.slate,
-              padding: '13px 26px', borderRadius: '10px',
+              padding: '14px 26px', borderRadius: '10px',
               fontSize: '14px', fontWeight: '500', textDecoration: 'none',
               border: `0.5px solid ${C.powderBorder}`,
+              minHeight: '48px',
             }}>
               {t.hero_cta2}
             </Link>
@@ -548,7 +724,7 @@ export default function HomePage() {
       </section>
 
       {/* ── TICKER ───────────────────────────────────────────────────────── */}
-      <div style={{ background: C.slate, overflow: 'hidden', padding: '12px 0' }}>
+      <div className="ms-ticker" style={{ background: C.slate, overflow: 'hidden', padding: '12px 0' }}>
         <div style={{
           display: 'flex',
           width: 'max-content',
@@ -570,7 +746,7 @@ export default function HomePage() {
       </div>
 
       {/* ── CALCULATOR ───────────────────────────────────────────────────── */}
-      <section style={{
+      <section className="ms-section" style={{
         background: C.powder, padding: '100px 40px',
         borderBottom: `0.5px solid ${C.powderBorder}`,
       }}>
@@ -578,7 +754,7 @@ export default function HomePage() {
           maxWidth: '960px', margin: '0 auto',
           display: 'grid', gridTemplateColumns: '1fr 1.4fr',
           gap: '64px', alignItems: 'center',
-        }}>
+        }} className="ms-g2-calc">
           <div>
             <div style={{
               fontSize: '10px', fontWeight: '500', letterSpacing: '0.18em',
@@ -604,7 +780,7 @@ export default function HomePage() {
       </section>
 
       {/* ── FOUR QUESTIONS ───────────────────────────────────────────────── */}
-      <section style={{
+      <section className="ms-section" style={{
         background: C.white, padding: '100px 40px',
         borderBottom: `0.5px solid ${C.powderBorder}`,
       }}>
@@ -624,9 +800,9 @@ export default function HomePage() {
             </h2>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px' }}>
+          <div className="ms-q-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px' }}>
             {t.questions.map((q, i) => (
-              <div key={i} style={{
+              <div key={i} className="ms-q-card" style={{
                 padding: '32px 36px',
                 background: i % 2 === 0 ? C.powder : C.white,
                 borderRadius:
@@ -658,7 +834,7 @@ export default function HomePage() {
       </section>
 
       {/* ── WITHOUT VISIBILITY ───────────────────────────────────────────── */}
-      <section style={{
+      <section className="ms-section" style={{
         background: C.storm, padding: '100px 40px',
       }}>
         <div style={{ maxWidth: '960px', margin: '0 auto' }}>
@@ -677,7 +853,7 @@ export default function HomePage() {
             </h2>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+          <div className="ms-g3" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
             {t.without_items.map((item, i) => (
               <div key={i} style={{
                 background: 'rgba(255,255,255,0.06)',
@@ -702,12 +878,12 @@ export default function HomePage() {
       </section>
 
       {/* ── DECISION DASHBOARD ───────────────────────────────────────────── */}
-      <section style={{
+      <section className="ms-section" style={{
         background: C.powder, padding: '100px 40px',
         borderBottom: `0.5px solid ${C.powderBorder}`,
       }}>
         <div style={{ maxWidth: '960px', margin: '0 auto' }}>
-          <div style={{
+          <div className="ms-g2-dash" style={{
             display: 'grid', gridTemplateColumns: '1fr 1.4fr',
             gap: '72px', alignItems: 'center',
           }}>
@@ -809,7 +985,7 @@ export default function HomePage() {
       </section>
 
       {/* ── TABS ─────────────────────────────────────────────────────────── */}
-      <section style={{
+      <section id="tabs" className="ms-section" style={{
         background: C.white, padding: '100px 40px',
         borderBottom: `0.5px solid ${C.powderBorder}`,
       }}>
@@ -829,8 +1005,8 @@ export default function HomePage() {
             </h2>
           </div>
 
-          {/* tab buttons */}
-          <div style={{
+          {/* Desktop: tab buttons */}
+          <div className="ms-tab-bar" style={{
             display: 'flex', gap: '4px',
             background: C.powder, borderRadius: '12px', padding: '4px',
             marginBottom: '40px', width: 'fit-content',
@@ -844,14 +1020,15 @@ export default function HomePage() {
                 color: activeTab === i ? C.slate : C.fog,
                 boxShadow: activeTab === i ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
                 transition: 'all 0.15s',
+                minHeight: '40px',
               }}>
                 {tab}
               </button>
             ))}
           </div>
 
-          {/* tab content */}
-          <div style={{
+          {/* Desktop: tab content */}
+          <div className="ms-tab-content" style={{
             display: 'grid', gridTemplateColumns: '1fr 1fr',
             gap: '48px', alignItems: 'center',
           }}>
@@ -867,7 +1044,6 @@ export default function HomePage() {
               </p>
             </div>
 
-            {/* Tab mock panels — rendered conditionally to avoid textTransform type issues */}
             <div>
               {activeTab === 0 && (
                 <div style={{
@@ -1019,11 +1195,48 @@ export default function HomePage() {
               )}
             </div>
           </div>
+
+          {/* Mobile: accordion */}
+          <div className="ms-accordion">
+            {t.tabs.map((tab, i) => (
+              <div key={i} style={{ borderBottom: `0.5px solid ${C.powderBorder}` }}>
+                <button
+                  onClick={() => setOpenAccordion(openAccordion === i ? null : i)}
+                  style={{
+                    width: '100%', display: 'flex', justifyContent: 'space-between',
+                    alignItems: 'center', padding: '18px 0',
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    minHeight: '56px', fontFamily: 'var(--font-geist-sans, system-ui)',
+                  }}
+                >
+                  <span style={{ fontSize: '15px', fontWeight: '500', color: C.slate }}>
+                    {tab}
+                  </span>
+                  <span style={{ fontSize: '20px', color: C.fog, lineHeight: 1 }}>
+                    {openAccordion === i ? '−' : '+'}
+                  </span>
+                </button>
+                {openAccordion === i && (
+                  <div style={{ paddingBottom: '24px' }}>
+                    <h3 style={{
+                      fontSize: '18px', fontWeight: '700', color: C.slate,
+                      margin: '0 0 10px', letterSpacing: '-0.02em',
+                    }}>
+                      {t.tabs_content[i].title}
+                    </h3>
+                    <p style={{ fontSize: '14px', color: C.mist, lineHeight: '1.7', margin: '0' }}>
+                      {t.tabs_content[i].body}
+                    </p>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
       {/* ── COMPARISON TABLE ─────────────────────────────────────────────── */}
-      <section style={{
+      <section className="ms-section" style={{
         background: C.powder, padding: '100px 40px',
         borderBottom: `0.5px solid ${C.powderBorder}`,
       }}>
@@ -1043,53 +1256,55 @@ export default function HomePage() {
             </h2>
           </div>
 
-          <div style={{ borderRadius: '14px', overflow: 'hidden', border: `0.5px solid ${C.powderBorder}` }}>
-            {/* header row */}
-            <div style={{
-              display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr',
-              background: C.slate, padding: '14px 20px',
-            }}>
-              {t.cmp_headers.map((h, i) => (
-                <div key={i} style={{
-                  fontSize: '11px', fontWeight: '500', letterSpacing: '0.08em',
-                  color: i === 1 ? C.teal : 'rgba(255,255,255,0.35)',
-                  textAlign: i > 0 ? 'center' : 'left',
-                }}>
-                  {h}
-                </div>
-              ))}
-            </div>
-            {/* data rows */}
-            {t.cmp_rows.map((row, ri) => (
-              <div key={ri} style={{
+          <div className="ms-cmp-scroll">
+            <div className="ms-cmp-inner" style={{ borderRadius: '14px', overflow: 'hidden', border: `0.5px solid ${C.powderBorder}` }}>
+              {/* header row */}
+              <div style={{
                 display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr',
-                padding: '13px 20px',
-                background: ri % 2 === 0 ? C.white : '#FAFAF8',
-                borderBottom: ri < t.cmp_rows.length - 1 ? `0.5px solid ${C.powderBorder}` : 'none',
+                background: C.slate, padding: '14px 20px',
               }}>
-                {row.map((cell, ci) => (
-                  <div key={ci} style={{
-                    fontSize: ci === 0 ? '13px' : '14px',
-                    fontWeight: ci === 1 ? '600' : '400',
-                    color:
-                      ci === 0 ? C.slate :
-                      cell === '✓' && ci === 1 ? C.tealDark :
-                      cell === '✗' ? '#C8C6C0' :
-                      cell === 'Manual' || cell === 'Parcial' || cell === 'Partial' ? C.amberDark :
-                      C.slate,
-                    textAlign: ci > 0 ? 'center' : 'left',
+                {t.cmp_headers.map((h, i) => (
+                  <div key={i} style={{
+                    fontSize: '11px', fontWeight: '500', letterSpacing: '0.08em',
+                    color: i === 1 ? C.teal : 'rgba(255,255,255,0.35)',
+                    textAlign: i > 0 ? 'center' : 'left',
                   }}>
-                    {cell}
+                    {h}
                   </div>
                 ))}
               </div>
-            ))}
+              {/* data rows */}
+              {t.cmp_rows.map((row, ri) => (
+                <div key={ri} style={{
+                  display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr',
+                  padding: '13px 20px',
+                  background: ri % 2 === 0 ? C.white : '#FAFAF8',
+                  borderBottom: ri < t.cmp_rows.length - 1 ? `0.5px solid ${C.powderBorder}` : 'none',
+                }}>
+                  {row.map((cell, ci) => (
+                    <div key={ci} style={{
+                      fontSize: ci === 0 ? '13px' : '14px',
+                      fontWeight: ci === 1 ? '600' : '400',
+                      color:
+                        ci === 0 ? C.slate :
+                        cell === '✓' && ci === 1 ? C.tealDark :
+                        cell === '✗' ? '#C8C6C0' :
+                        cell === 'Manual' || cell === 'Parcial' || cell === 'Partial' ? C.amberDark :
+                        C.slate,
+                      textAlign: ci > 0 ? 'center' : 'left',
+                    }}>
+                      {cell}
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>
 
       {/* ── WHO IT'S FOR ─────────────────────────────────────────────────── */}
-      <section style={{
+      <section className="ms-section" style={{
         background: C.white, padding: '100px 40px',
         borderBottom: `0.5px solid ${C.powderBorder}`,
       }}>
@@ -1109,7 +1324,7 @@ export default function HomePage() {
             </h2>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px' }}>
+          <div className="ms-who-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px' }}>
             {/* For */}
             <div style={{
               border: `0.5px solid ${C.tealLight}`,
@@ -1166,7 +1381,7 @@ export default function HomePage() {
       </section>
 
       {/* ── FOOTER ───────────────────────────────────────────────────────── */}
-      <footer style={{
+      <footer className="ms-footer" style={{
         background: C.slate, padding: '28px 40px',
         display: 'flex', justifyContent: 'space-between',
         alignItems: 'center', flexWrap: 'wrap', gap: '16px',
@@ -1195,6 +1410,40 @@ export default function HomePage() {
           </span>
         </div>
       </footer>
+
+      {/* ── STICKY CTA (mobile only, visible after scroll) ───────────────── */}
+      <div
+        className="ms-sticky"
+        style={{
+          position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 45,
+          background: C.white,
+          borderTop: `0.5px solid ${C.powderBorder}`,
+          padding: '12px 20px',
+          display: scrolled ? 'flex' : 'none',
+          gap: '10px',
+          boxShadow: '0 -4px 16px rgba(0,0,0,0.05)',
+        }}
+      >
+        <Link href="/calculadora" style={{
+          flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: C.powder, color: C.slate,
+          padding: '14px', borderRadius: '10px',
+          fontSize: '14px', fontWeight: '500', textDecoration: 'none',
+          border: `0.5px solid ${C.powderBorder}`,
+          minHeight: '48px',
+        }}>
+          {t.hero_cta2}
+        </Link>
+        <Link href="/demo" style={{
+          flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: C.signal, color: C.white,
+          padding: '14px', borderRadius: '10px',
+          fontSize: '14px', fontWeight: '500', textDecoration: 'none',
+          minHeight: '48px',
+        }}>
+          {t.hero_cta1}
+        </Link>
+      </div>
 
     </div>
   )
