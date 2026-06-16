@@ -1,17 +1,13 @@
-import { createClient } from '@supabase/supabase-js'
+import { createServiceClient } from '@/lib/supabase-server'
 import { renderToBuffer } from '@react-pdf/renderer'
 import { ReceiptPDF } from '@/lib/receipt-pdf'
 import React from 'react'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ instructorId: string }> }
 ) {
+  const supabase = createServiceClient()
   const { instructorId } = await params
   const { searchParams } = new URL(request.url)
   const period = searchParams.get('period') ||

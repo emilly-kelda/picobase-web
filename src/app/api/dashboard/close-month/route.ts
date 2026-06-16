@@ -1,14 +1,10 @@
-﻿import { createClient } from '@supabase/supabase-js'
+import { createServiceClient } from '@/lib/supabase-server'
 import { NextResponse } from 'next/server'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
 
 const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
 
 export async function POST(request: Request) {
+  const supabase = createServiceClient()
   const body = await request.json()
   const { period } = body
 
@@ -16,7 +12,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Period required' }, { status: 400 })
   }
 
-  // Call the close_month function we built in migration 004
   const { data, error } = await supabase
     .rpc('close_month', {
       p_school_id: SCHOOL_ID,
@@ -31,6 +26,7 @@ export async function POST(request: Request) {
 }
 
 export async function GET(request: Request) {
+  const supabase = createServiceClient()
   const { searchParams } = new URL(request.url)
   const period = searchParams.get('period') ||
     new Date().toISOString().slice(0, 7)
@@ -60,5 +56,3 @@ export async function GET(request: Request) {
 
   return NextResponse.json({ payments: payments || [], period })
 }
-
-

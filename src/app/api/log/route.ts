@@ -1,13 +1,9 @@
-﻿import { createClient } from '@supabase/supabase-js'
+import { createServiceClient } from '@/lib/supabase-server'
 import { NextResponse } from 'next/server'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
 
 // GET — fetch today's pending checkins for this instructor
 export async function GET(request: Request) {
+  const supabase = createServiceClient()
   const { searchParams } = new URL(request.url)
   const token = searchParams.get('token')
 
@@ -15,7 +11,6 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Missing token' }, { status: 401 })
   }
 
-  // Find instructor by token
   const { data: instructor, error: instrError } = await supabase
     .from('users')
     .select('id, name, school_id')
@@ -71,6 +66,7 @@ export async function GET(request: Request) {
 
 // POST — confirm session
 export async function POST(request: Request) {
+  const supabase = createServiceClient()
   const body = await request.json()
   const { token, checkin_id, duration_min, price } = body
 
@@ -78,7 +74,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Missing token' }, { status: 401 })
   }
 
-  // Verify instructor by token
   const { data: instructor, error: instrError } = await supabase
     .from('users')
     .select('id, school_id, commission_pct')
@@ -91,7 +86,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
   }
 
-  // Get checkin
   const { data: checkin } = await supabase
     .from('checkins')
     .select('*')
@@ -103,7 +97,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Checkin not found' }, { status: 404 })
   }
 
-  // Insert session
   const { error: sessionError } = await supabase
     .from('sessions')
     .insert({
@@ -124,7 +117,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: sessionError.message }, { status: 500 })
   }
 
-  // Update checkin status
   await supabase
     .from('checkins')
     .update({ status: 'session_confirmed' })
@@ -132,5 +124,3 @@ export async function POST(request: Request) {
 
   return NextResponse.json({ ok: true })
 }
-
-
