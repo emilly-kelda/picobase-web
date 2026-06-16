@@ -10,8 +10,23 @@ export async function POST(request: Request) {
   if (!body.name?.trim()) return NextResponse.json({ error: 'Name is required' }, { status: 400 })
   if (!body.email?.trim()) return NextResponse.json({ error: 'Email is required' }, { status: 400 })
 
+  // Step 1 — create auth.users record first (required by users_id_fkey → auth.users.id)
+  // Instructors log in via log_token, not Supabase Auth, so no password is set.
+  const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+    email:         body.email.trim(),
+    email_confirm: true,
+  })
+
+  if (authError) {
+    console.error('[crew/POST] auth.admin.createUser failed:', authError.message)
+    return NextResponse.json({ error: authError.message }, { status: 500 })
+  }
+
+  const newId = authData.user.id
+
+  // Step 2 — insert into public.users using the id from auth.users
   const insertPayload = {
-    id:               crypto.randomUUID(),
+    id:               newId,
     school_id:        SCHOOL_ID,
     role:             'instructor',
     active:           true,
@@ -24,7 +39,7 @@ export async function POST(request: Request) {
     certifications:   body.certifications?.length > 0 ? body.certifications : null,
     pix_key:          body.pix_key || null,
   }
-  console.log('[crew/POST] inserting instructor:', insertPayload)
+  console.log('[crew/POST] inserting into public.users, auth_id:', newId, 'payload:', insertPayload)
 
   const { data, error } = await supabase
     .from('users')
@@ -37,7 +52,9 @@ export async function POST(request: Request) {
     .single()
 
   if (error) {
-    console.error('[crew/POST] insert failed:', error.message, '| id:', insertPayload.id)
+    console.error('[crew/POST] public.users insert failed:', error.message, '| auth_id:', newId)
+    // Roll back the auth user so we don't leave an orphan in auth.users
+    await supabase.auth.admin.deleteUser(newId)
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
   return NextResponse.json({ ok: true, instructor: data })
