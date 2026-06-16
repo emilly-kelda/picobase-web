@@ -385,11 +385,20 @@ export default function ScheduledLessons({
         {/* Lessons list */}
         {displayLessons.length === 0 ? (
           <div style={{
-            background: '#fff', border: '0.5px solid var(--border)',
-            borderRadius: 'var(--radius-lg)', padding: '24px',
-            textAlign: 'center', fontSize: '13px', color: 'var(--mist)',
+            background: '#fff', border: '1px solid var(--border)',
+            borderRadius: 'var(--radius-lg)', padding: '40px 24px',
+            textAlign: 'center',
           }}>
-            Nenhuma aula agendada para {activeTab === 'today' ? 'hoje' : 'amanhã'}.
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"
+              style={{ display: 'inline-block', color: 'var(--border-strong)', marginBottom: '10px' }}>
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+              <line x1="16" y1="2" x2="16" y2="6" />
+              <line x1="8" y1="2" x2="8" y2="6" />
+              <line x1="3" y1="10" x2="21" y2="10" />
+            </svg>
+            <div style={{ fontSize: '13px', color: 'var(--mist)' }}>
+              Nenhuma aula agendada para {activeTab === 'today' ? 'hoje' : 'amanhã'}.
+            </div>
           </div>
         ) : (
           <div style={{

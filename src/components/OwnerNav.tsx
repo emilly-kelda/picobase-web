@@ -8,14 +8,13 @@ import Logo from '@/components/Logo'
 type Season = { id: string; label: string }
 
 type Props = {
-  schoolName?: string
   seasons?: Season[]
   activeSeasonId?: string
   activeSeasonLabel?: string
   lang?: Lang
 }
 
-export default function OwnerNav({ schoolName, seasons = [], activeSeasonId, activeSeasonLabel, lang = 'pt' }: Props) {
+export default function OwnerNav({ seasons = [], activeSeasonId, activeSeasonLabel, lang = 'pt' }: Props) {
   const pathname = usePathname()
   const router   = useRouter()
   const t        = getT(lang)
@@ -44,14 +43,14 @@ export default function OwnerNav({ schoolName, seasons = [], activeSeasonId, act
     <>
       <style>{`
         .nav-link {
-          padding: 6px 10px;
-          border-radius: var(--radius-md);
+          padding: 4px 10px;
           font-size: 13px;
           color: var(--mist);
           text-decoration: none;
           white-space: nowrap;
           transition: color 0.15s;
           border-bottom: 2px solid transparent;
+          line-height: 1;
         }
         .nav-link:hover { color: var(--slate); }
         .nav-link.active {
@@ -92,19 +91,19 @@ export default function OwnerNav({ schoolName, seasons = [], activeSeasonId, act
 
       <header style={{
         background: '#fff',
-        borderBottom: '0.5px solid var(--border)',
+        borderBottom: '1px solid var(--border)',
         position: 'sticky',
         top: 0,
         zIndex: 50,
       }}>
         <div style={{
-          maxWidth: '1200px',
+          maxWidth: '1100px',
           margin: '0 auto',
-          padding: '0 40px',
+          padding: '0 32px',
           display: 'flex',
           alignItems: 'center',
           gap: '32px',
-          height: '52px',
+          height: '56px',
         }}>
 
           {/* Logo */}
@@ -125,9 +124,8 @@ export default function OwnerNav({ schoolName, seasons = [], activeSeasonId, act
             ))}
           </nav>
 
-          {/* Right — season selector + school */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
-
+          {/* Right — season selector */}
+          <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
             {seasons.length > 0 && (
               <div className="season-group">
                 <div style={{
@@ -135,17 +133,17 @@ export default function OwnerNav({ schoolName, seasons = [], activeSeasonId, act
                   fontWeight: '500',
                   color: 'var(--mist)',
                   background: 'var(--powder)',
-                  border: '0.5px solid var(--border)',
-                  padding: '4px 10px',
-                  borderRadius: 'var(--radius-md)',
+                  border: '1px solid var(--border)',
+                  padding: '5px 12px',
+                  borderRadius: 'var(--radius-full)',
                   cursor: 'pointer',
                   whiteSpace: 'nowrap' as const,
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '5px',
+                  gap: '6px',
                 }}>
                   {activeSeasonLabel ?? '—'}
-                  <span style={{ fontSize: '10px', opacity: 0.5 }}>▾</span>
+                  <span style={{ fontSize: '9px', opacity: 0.45 }}>▾</span>
                 </div>
                 <div className="season-dropdown">
                   {seasons.map(s => (
@@ -160,16 +158,6 @@ export default function OwnerNav({ schoolName, seasons = [], activeSeasonId, act
                 </div>
               </div>
             )}
-
-            <div style={{
-              fontSize: '11px',
-              fontWeight: '500',
-              color: 'var(--mist)',
-              letterSpacing: '0.08em',
-              textTransform: 'uppercase' as const,
-            }}>
-              {schoolName ?? 'Ventos do Norte'}
-            </div>
           </div>
 
         </div>

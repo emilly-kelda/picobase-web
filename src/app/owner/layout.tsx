@@ -1,4 +1,4 @@
-import OwnerSidebar from '@/components/OwnerSidebar'
+import OwnerNav from '@/components/OwnerNav'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { getPortalLang } from '@/lib/language'
@@ -14,7 +14,7 @@ export default async function OwnerLayout({ children }: { children: React.ReactN
     { cookies: { getAll: () => cookieStore.getAll() } }
   )
 
-  const [{ data: seasons }] = await Promise.all([
+  const [{ data: seasons }, lang] = await Promise.all([
     supabase
       .from('seasons')
       .select('id, label')
@@ -27,10 +27,15 @@ export default async function OwnerLayout({ children }: { children: React.ReactN
   const activeLabel  = seasons?.find(s => s.id === activeSeason)?.label ?? seasons?.[0]?.label ?? '—'
 
   return (
-    <div className="flex min-h-screen bg-[var(--powder)]">
-      <OwnerSidebar schoolName={activeLabel} />
-      <main className="flex-1 min-w-0 overflow-y-auto">
-        <div className="max-w-[1080px] mx-auto px-8 py-8">
+    <div className="min-h-screen bg-[var(--powder)]">
+      <OwnerNav
+        seasons={seasons ?? []}
+        activeSeasonId={activeSeason}
+        activeSeasonLabel={activeLabel}
+        lang={lang}
+      />
+      <main>
+        <div className="max-w-[1100px] mx-auto px-8 py-8">
           {children}
         </div>
       </main>

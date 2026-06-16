@@ -104,19 +104,23 @@ export default async function OwnerPage() {
         {/* ════════════════════════════════════════════════════════════════
             LEFT — main flow
         ════════════════════════════════════════════════════════════════ */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', minWidth: 0 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', minWidth: 0 }}>
 
           {/* Alerts */}
           {alerts.length > 0 && (
             <div style={{
-              background: '#F0EEE9',
-              borderRadius: '12px',
-              padding: '16px 20px',
+              background: '#fff',
+              border: '1px solid var(--border)',
+              borderLeft: '4px solid #D4A017',
+              borderRadius: 'var(--radius-lg)',
+              overflow: 'hidden',
             }}>
               <div style={{
-                fontSize: '10px', fontWeight: '500',
-                letterSpacing: '0.14em', textTransform: 'uppercase',
-                color: '#8A8C98', marginBottom: '12px',
+                padding: '10px 20px',
+                fontSize: '10px', fontWeight: '600',
+                letterSpacing: '0.12em', textTransform: 'uppercase',
+                color: 'var(--amber)',
+                borderBottom: '1px solid var(--border)',
               }}>
                 {lang === 'pt' ? 'Atenção' : 'Alerts'}
               </div>
@@ -125,22 +129,22 @@ export default async function OwnerPage() {
                   key={i}
                   href={alert.link ?? '#'}
                   style={{
-                    display: 'flex', alignItems: 'flex-start',
-                    gap: '10px', textDecoration: 'none',
-                    paddingBottom: i < alerts.length - 1 ? '10px' : '0',
-                    marginBottom: i < alerts.length - 1 ? '10px' : '0',
-                    borderBottom: i < alerts.length - 1 ? '0.5px solid #E4E0D8' : 'none',
+                    display: 'flex', alignItems: 'center',
+                    gap: '12px', textDecoration: 'none',
+                    padding: '12px 20px',
+                    borderBottom: i < alerts.length - 1 ? '1px solid var(--border)' : 'none',
                   }}
                 >
                   <span style={{
                     display: 'inline-block',
-                    width: '5px', height: '5px', borderRadius: '50%',
-                    background: alert.type === 'error' ? '#E8471A' : '#D4A017',
-                    marginTop: '5px', flexShrink: 0,
+                    width: '6px', height: '6px', borderRadius: '50%',
+                    background: alert.type === 'error' ? 'var(--signal)' : '#D4A017',
+                    flexShrink: 0,
                   }} />
-                  <span style={{ fontSize: '13px', color: '#1A1C22', lineHeight: '1.5' }}>
+                  <span style={{ flex: 1, fontSize: '13px', color: 'var(--slate)', lineHeight: '1.5' }}>
                     {alert.message}
                   </span>
+                  <span style={{ fontSize: '14px', color: 'var(--mist)', flexShrink: 0 }}>→</span>
                 </a>
               ))}
             </div>
@@ -158,23 +162,17 @@ export default async function OwnerPage() {
           />
 
           {/* Sessions table */}
-          <div style={{
-            background: '#fff',
-            border: '0.5px solid #E4E0D8',
-            borderRadius: '12px',
-            overflow: 'hidden',
-          }}>
+          <div>
             <div style={{
-              padding: '16px 24px',
-              borderBottom: '0.5px solid #F0EEE9',
               display: 'flex', justifyContent: 'space-between',
               alignItems: 'center',
+              marginBottom: '12px',
             }}>
-              <span style={{ fontSize: '13px', fontWeight: '500', color: '#1A1C22' }}>
+              <span style={{ fontSize: '13px', fontWeight: '500', color: 'var(--slate)' }}>
                 {t.recent_sessions}
               </span>
-              <Link href="/owner/sessions" style={{ fontSize: '12px', color: '#8A8C98', textDecoration: 'none' }}>
-                {t.view_all}
+              <Link href="/owner/sessions" style={{ fontSize: '12px', color: 'var(--mist)', textDecoration: 'none' }}>
+                {t.view_all} →
               </Link>
             </div>
 
@@ -209,7 +207,7 @@ export default async function OwnerPage() {
                   <tr
                     key={s.id}
                     className="tbl-row"
-                    style={{ borderBottom: i < Math.min(sessions.length, 8) - 1 ? '0.5px solid #F0EEE9' : 'none' }}
+                    style={{ borderBottom: i < Math.min(sessions.length, 8) - 1 ? '1px solid var(--border)' : 'none' }}
                   >
                     <td style={{ padding: '20px 24px', fontSize: '12px', color: '#8A8C98', whiteSpace: 'nowrap' }}>
                       {fmtDate(s.session_date)}
@@ -321,34 +319,31 @@ export default async function OwnerPage() {
           {/* Today card */}
           <div style={{
             background: '#fff',
-            border: '0.5px solid #E4E0D8',
-            borderRadius: '16px',
+            border: '1px solid var(--border)',
+            borderRadius: 'var(--radius-xl)',
             padding: '24px',
           }}>
             <div style={{
-              fontSize: '10px', fontWeight: '500',
-              letterSpacing: '0.16em', textTransform: 'uppercase',
-              color: '#8A8C98', marginBottom: '20px',
+              fontSize: '10px', fontWeight: '600',
+              letterSpacing: '0.14em', textTransform: 'uppercase',
+              color: 'var(--mist)', marginBottom: '20px',
             }}>
               {t.today_label}
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
               {[
                 { label: lang === 'pt' ? 'Alunos'    : 'Students',    value: String(today.students) },
                 { label: lang === 'pt' ? 'Aulas'     : 'Sessions',    value: String(today.sessions) },
                 { label: lang === 'pt' ? 'Receita'   : 'Revenue',     value: fmt(today.revenue ?? 0) },
                 { label: lang === 'pt' ? 'Comissões' : 'Commissions', value: fmt(today.commissions ?? 0) },
-              ].map((item, i, arr) => (
-                <div key={item.label} style={{
-                  display: 'flex', justifyContent: 'space-between',
-                  alignItems: 'center',
-                  padding: '12px 0',
-                  borderBottom: i < arr.length - 1 ? '0.5px solid #F0EEE9' : 'none',
-                }}>
-                  <span style={{ fontSize: '13px', color: '#8A8C98' }}>{item.label}</span>
-                  <span style={{ fontSize: '14px', fontWeight: '500', color: '#1A1C22', fontVariantNumeric: 'tabular-nums' }}>
+              ].map((item) => (
+                <div key={item.label}>
+                  <div style={{ fontSize: '11px', color: 'var(--mist)', marginBottom: '6px', fontWeight: '500' }}>
+                    {item.label}
+                  </div>
+                  <div style={{ fontSize: '20px', fontWeight: '600', color: 'var(--slate)', fontVariantNumeric: 'tabular-nums' }}>
                     {item.value}
-                  </span>
+                  </div>
                 </div>
               ))}
             </div>
@@ -357,41 +352,39 @@ export default async function OwnerPage() {
           {/* Season card */}
           <div style={{
             background: '#fff',
-            border: '0.5px solid #E4E0D8',
-            borderRadius: '16px',
+            border: '1px solid var(--border)',
+            borderRadius: 'var(--radius-xl)',
             padding: '24px',
           }}>
             <div style={{
-              fontSize: '10px', fontWeight: '500',
-              letterSpacing: '0.16em', textTransform: 'uppercase',
-              color: '#8A8C98', marginBottom: '16px',
+              fontSize: '10px', fontWeight: '600',
+              letterSpacing: '0.14em', textTransform: 'uppercase',
+              color: 'var(--mist)',
+              marginBottom: runway.current_season ? '4px' : '20px',
             }}>
               {t.season_label}
             </div>
             {runway.current_season && (
               <div style={{
-                fontSize: '14px', fontWeight: '500',
-                color: '#1A1C22', marginBottom: '16px',
+                fontSize: '12px', color: 'var(--mist)',
+                marginBottom: '20px',
               }}>
                 {runway.current_season}
               </div>
             )}
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '16px' }}>
               {[
                 { label: lang === 'pt' ? 'Receita total'  : 'Total revenue',  value: fmt(runway.season_revenue) },
                 { label: lang === 'pt' ? 'Comissões'      : 'Commissions',    value: fmt(runway.crew_commissions) },
                 { label: lang === 'pt' ? 'Lucro líquido'  : 'Net profit',     value: fmt(runway.season_profit) },
-              ].map((row, i, arr) => (
-                <div key={row.label} style={{
-                  display: 'flex', justifyContent: 'space-between',
-                  alignItems: 'center',
-                  padding: '10px 0',
-                  borderBottom: i < arr.length - 1 ? '0.5px solid #F0EEE9' : 'none',
-                }}>
-                  <span style={{ fontSize: '12px', color: '#8A8C98' }}>{row.label}</span>
-                  <span style={{ fontSize: '13px', fontWeight: '500', color: '#1A1C22', fontVariantNumeric: 'tabular-nums' }}>
+              ].map((row) => (
+                <div key={row.label}>
+                  <div style={{ fontSize: '11px', color: 'var(--mist)', marginBottom: '6px', fontWeight: '500' }}>
+                    {row.label}
+                  </div>
+                  <div style={{ fontSize: '16px', fontWeight: '600', color: 'var(--slate)', fontVariantNumeric: 'tabular-nums' }}>
                     {row.value}
-                  </span>
+                  </div>
                 </div>
               ))}
             </div>
