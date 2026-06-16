@@ -187,10 +187,10 @@ export default function PaymentsClient({
             fontSize: '22px', fontWeight: '500',
             color: 'var(--slate)', marginBottom: '4px',
           }}>
-            Repasses
+            Pagamentos
           </h1>
           <p style={{ fontSize: '13px', color: 'var(--mist)' }}>
-            Folha de pagamento da equipe
+            Pagamento de instrutores e parceiros
           </p>
         </div>
         <form method="GET">
@@ -237,7 +237,7 @@ export default function PaymentsClient({
             fontSize: '14px', fontWeight: '500',
             color: 'var(--slate)', marginBottom: '8px',
           }}>
-            Nenhum repasse para {period}
+            Nenhum pagamento para {period}
           </div>
           <div style={{
             fontSize: '13px', color: 'var(--mist)',

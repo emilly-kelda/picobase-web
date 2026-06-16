@@ -166,7 +166,7 @@ export const translations = {
     nav_students:  'Alunos',
     nav_crew:      'Equipe',
     nav_packages:  'Pacotes',
-    nav_payments:  'Repasses',
+    nav_payments:  'Pagamentos',
     nav_reports:   'Relatórios',
     nav_settings:  'Configurações',
     nav_group_ops: 'Operações',

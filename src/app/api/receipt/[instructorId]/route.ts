@@ -46,8 +46,6 @@ export async function GET(
     .gte('session_date', `${period}-01`)
     .lte('session_date', `${period}-31`)
 
-  console.log('Raw sessions:', rawSessions?.length)
-
   const sessionList = (rawSessions || []).map((s: any) => ({
     student:  s.checkins?.student_name || 'Student',
     activity: 'Session',
@@ -55,13 +53,8 @@ export async function GET(
     price:    parseFloat(s.price) || 0,
   }))
 
-import { calculateCommission } from "@/lib/services/commissionService"
-
-const { revenue, commission } = calculateCommission(
-  sessionList,
-  instructor.commission_pct
-)
-  console.log('Sessions:', sessionList.length, 'Revenue:', revenue)
+  const revenue    = sessionList.reduce((sum, s) => sum + s.price, 0)
+  const commission = revenue * (instructor.commission_pct || 0)
 
   const pdf = await renderToBuffer(
     React.createElement(ReceiptPDF, {

@@ -90,11 +90,11 @@ const CONTENT = {
 
     tabs_eyebrow: 'Como o Pico Base responde',
     tabs_h2:     'Da chegada do aluno à reserva de baixa temporada.',
-    tabs:        ['Check-in', 'Aulas', 'Repasses', 'Reserva'],
+    tabs:        ['Check-in', 'Aulas', 'Pagamentos', 'Reserva'],
     tabs_content: [
       { title: 'Check-in em 2 minutos',    body: 'Aluno escaneia o QR code, preenche os dados e assina o waiver digital. Funciona offline. Funciona em 4 idiomas. Nenhum papel.' },
       { title: 'Confirme e calcule',        body: 'Veja os alunos pendentes no painel. Confirme duração, valor e instrutor. A comissão é calculada automaticamente.' },
-      { title: 'Feche o mês em minutos',   body: 'Cada aula atualiza os repasses automaticamente. No fechamento, exporte PIX ou Wise com um clique.' },
+      { title: 'Feche o mês em minutos',   body: 'Cada aula atualiza os pagamentos automaticamente. No fechamento, exporte PIX ou Wise com um clique.' },
       { title: 'Reserva em tempo real',    body: 'Cada aula confirmada atualiza a Reserva de Baixa Temporada. Você sabe em tempo real se esta temporada vai ser suficiente.' },
     ],
 
@@ -106,7 +106,7 @@ const CONTENT = {
       ['Waiver digital',              '✓', '✗', '✗'],
       ['Comissões automáticas',       '✓', 'Manual', '✗'],
       ['Reserva de baixa temporada',  '✓', 'Manual', '✗'],
-      ['Repasses PIX / Wise',         '✓', '✗', '✗'],
+      ['Pagamentos PIX / Wise',        '✓', '✗', '✗'],
       ['Feito para escola sazonal',   '✓', '✗', '✗'],
     ],
 
@@ -947,7 +947,7 @@ export default function HomePage() {
                   border: `0.5px solid ${C.powderBorder}`,
                 }}>
                   <div style={{ fontSize: '10px', fontWeight: '500', letterSpacing: '0.12em', textTransform: 'uppercase', color: C.fog, marginBottom: '16px' }}>
-                    {lang === 'pt' ? 'Repasses · Junho 2026' : 'Payouts · June 2026'}
+                    {lang === 'pt' ? 'Pagamentos · Junho 2026' : 'Payouts · June 2026'}
                   </div>
                   {[
                     { initials: 'MF', name: 'Marco Ferreira', detail: lang === 'pt' ? '6 aulas · 38%' : '6 lessons · 38%', amount: lang === 'pt' ? 'R$ 1.178' : '$ 1.178', status: lang === 'pt' ? 'Pendente' : 'Pending', statusBg: C.amberBg, statusColor: C.amberDark },
