@@ -9,6 +9,7 @@ import { getPackageSales } from '@/repositories/packageRepository'
 import PendingLessons from '@/components/PendingLessons'
 import ScheduledLessons from '@/components/ScheduledLessons'
 import MissedLessons from '@/components/MissedLessons'
+import RunwayCalculator from '@/components/RunwayCalculator'
 import { getPortalLang } from '@/lib/language'
 import { getT } from '@/lib/i18n'
 import Link from 'next/link'
@@ -57,7 +58,7 @@ export default async function OwnerPage() {
 
   const runwayMonths = runway.winter_runway_months ?? 0
   const monthlyBurn  = (runway as any).burn_rate ?? 0
-  const gapToTarget  = Math.max(0, 6 * monthlyBurn - (runway.season_revenue ?? 0))
+  const gapToTarget  = Math.max(0, 6 * monthlyBurn - (runway.season_profit ?? 0))
 
   const instructorList = instructors.map(i => ({
     id: i.id,
@@ -239,6 +240,15 @@ export default async function OwnerPage() {
               </tbody>
             </table>
           </div>
+
+          {/* Runway Calculator */}
+          <RunwayCalculator
+            seasonProfit={runway.season_profit ?? 0}
+            burnRate={monthlyBurn}
+            daysLeft={projection?.daysLeft}
+            projectedRunway={projection?.projectedRunway}
+            gap={projection?.gap}
+          />
         </div>
 
         {/* ════════════════════════════════════════════════════════════════
@@ -284,10 +294,10 @@ export default async function OwnerPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', letterSpacing: '0.06em' }}>
-                  {lang === 'pt' ? 'Receita da temporada' : 'Season revenue'}
+                  {lang === 'pt' ? 'Lucro da temporada' : 'Season profit'}
                 </span>
                 <span style={{ fontSize: '13px', fontWeight: '500', color: '#fff', fontVariantNumeric: 'tabular-nums' }}>
-                  {fmt(runway.season_revenue ?? 0)}
+                  {fmt(runway.season_profit ?? 0)}
                 </span>
               </div>
               {monthlyBurn > 0 && (
