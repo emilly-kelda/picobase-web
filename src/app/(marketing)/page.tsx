@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import Logo from '@/components/Logo'
 
@@ -423,6 +423,31 @@ function RunwayCalc({ t, lang }: { t: typeof CONTENT.pt; lang: Lang }) {
   )
 }
 
+// ─── count-up ────────────────────────────────────────────────────────────────
+function CountUp({ to, decimals = 0, duration = 1200 }: { to: number; decimals?: number; duration?: number }) {
+  const [val, setVal] = useState(0)
+  const ref = useRef<HTMLSpanElement>(null)
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const obs = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting) return
+      obs.disconnect()
+      const start = performance.now()
+      const tick = (now: number) => {
+        const p = Math.min((now - start) / duration, 1)
+        setVal(to * (1 - Math.pow(1 - p, 3)))
+        if (p < 1) requestAnimationFrame(tick)
+        else setVal(to)
+      }
+      requestAnimationFrame(tick)
+    }, { threshold: 0.5 })
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [to, duration])
+  return <span ref={ref}>{val.toFixed(decimals)}</span>
+}
+
 // ─── page ───────────────────────────────────────────────────────────────────
 export default function HomePage() {
   const [lang, setLang]           = useState<Lang>('pt')
@@ -443,6 +468,23 @@ export default function HomePage() {
     document.body.style.overflow = menuOpen ? 'hidden' : ''
     return () => { document.body.style.overflow = '' }
   }, [menuOpen])
+
+  useEffect(() => {
+    document.body.classList.add('ms-js-ready')
+    return () => { document.body.classList.remove('ms-js-ready') }
+  }, [])
+
+  useEffect(() => {
+    const els = document.querySelectorAll<HTMLElement>('.ms-reveal')
+    if (!els.length) return
+    const obs = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        if (e.isIntersecting) { e.target.classList.add('is-visible'); obs.unobserve(e.target) }
+      })
+    }, { threshold: 0.1 })
+    els.forEach(el => obs.observe(el))
+    return () => obs.disconnect()
+  }, [])
 
   return (
     <div className="ms-main">
@@ -531,6 +573,66 @@ export default function HomePage() {
         /* desktop: always hide sticky */
         @media (min-width: 769px) {
           .ms-sticky { display: none !important; }
+        }
+
+        /* ── scroll-reveal ───────────────────────────────────────────── */
+        .ms-js-ready .ms-reveal {
+          opacity: 0;
+          transform: translateY(20px);
+          transition: opacity 0.45s ease, transform 0.45s ease;
+        }
+        .ms-js-ready .ms-reveal.is-visible {
+          opacity: 1;
+          transform: none;
+        }
+
+        /* ── scenario card hover lift ─────────────────────────────────── */
+        .ms-scenario-card {
+          transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .ms-scenario-card:hover {
+          transform: translateY(-4px);
+          box-shadow: 0 12px 32px rgba(0,0,0,0.22);
+        }
+
+        /* ── question card hover ─────────────────────────────────────── */
+        .ms-q-card-h { transition: filter 0.15s ease; }
+        .ms-q-card-h:hover { filter: brightness(0.965); }
+
+        /* ── comparison row hover ────────────────────────────────────── */
+        .ms-cmp-row { transition: background 0.12s ease; }
+        .ms-cmp-row:hover { background: #EBE8E3 !important; }
+
+        /* ── tab crossfade ───────────────────────────────────────────── */
+        @keyframes tabIn {
+          from { opacity: 0; transform: translateY(8px); }
+          to   { opacity: 1; transform: none; }
+        }
+        .ms-tab-in { animation: tabIn 0.22s ease; }
+
+        /* ── live pulse dot ──────────────────────────────────────────── */
+        @keyframes livePulse {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50%       { opacity: 0.3; transform: scale(0.6); }
+        }
+        .ms-live-dot { animation: livePulse 2.2s ease-in-out infinite; }
+
+        /* ── ticker pause on hover ───────────────────────────────────── */
+        .ms-ticker-strip:hover { animation-play-state: paused; }
+
+        /* ── prefers-reduced-motion ──────────────────────────────────── */
+        @media (prefers-reduced-motion: reduce) {
+          .ms-js-ready .ms-reveal,
+          .ms-js-ready .ms-reveal.is-visible {
+            opacity: 1 !important; transform: none !important; transition: none !important;
+          }
+          .ms-scenario-card { transition: none !important; }
+          .ms-scenario-card:hover { transform: none !important; box-shadow: none !important; }
+          .ms-q-card-h { transition: none !important; }
+          .ms-cmp-row { transition: none !important; }
+          .ms-live-dot { animation: none !important; }
+          .ms-tab-in { animation: none !important; }
+          .ms-ticker-strip:hover { animation-play-state: running !important; }
         }
       `}</style>
 
@@ -725,7 +827,7 @@ export default function HomePage() {
 
       {/* ── TICKER ───────────────────────────────────────────────────────── */}
       <div className="ms-ticker" style={{ background: C.slate, overflow: 'hidden', padding: '12px 0' }}>
-        <div style={{
+        <div className="ms-ticker-strip" style={{
           display: 'flex',
           width: 'max-content',
           animation: 'ticker 28s linear infinite',
@@ -755,7 +857,7 @@ export default function HomePage() {
           display: 'grid', gridTemplateColumns: '1fr 1.4fr',
           gap: '64px', alignItems: 'center',
         }} className="ms-g2-calc">
-          <div>
+          <div className="ms-reveal">
             <div style={{
               fontSize: '10px', fontWeight: '500', letterSpacing: '0.18em',
               textTransform: 'uppercase', color: C.fog, marginBottom: '16px',
@@ -785,7 +887,7 @@ export default function HomePage() {
         borderBottom: `0.5px solid ${C.powderBorder}`,
       }}>
         <div style={{ maxWidth: '960px', margin: '0 auto' }}>
-          <div style={{ marginBottom: '56px' }}>
+          <div className="ms-reveal" style={{ marginBottom: '56px' }}>
             <div style={{
               fontSize: '10px', fontWeight: '500', letterSpacing: '0.18em',
               textTransform: 'uppercase', color: C.fog, marginBottom: '14px',
@@ -802,7 +904,7 @@ export default function HomePage() {
 
           <div className="ms-q-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px' }}>
             {t.questions.map((q, i) => (
-              <div key={i} className="ms-q-card" style={{
+              <div key={i} className="ms-q-card ms-q-card-h" style={{
                 padding: '32px 36px',
                 background: i % 2 === 0 ? C.powder : C.white,
                 borderRadius:
@@ -838,7 +940,7 @@ export default function HomePage() {
         background: C.storm, padding: '100px 40px',
       }}>
         <div style={{ maxWidth: '960px', margin: '0 auto' }}>
-          <div style={{ marginBottom: '56px' }}>
+          <div className="ms-reveal" style={{ marginBottom: '56px' }}>
             <div style={{
               fontSize: '10px', fontWeight: '500', letterSpacing: '0.18em',
               textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)', marginBottom: '14px',
@@ -855,7 +957,7 @@ export default function HomePage() {
 
           <div className="ms-g3" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
             {t.without_items.map((item, i) => (
-              <div key={i} style={{
+              <div key={i} className="ms-scenario-card" style={{
                 background: 'rgba(255,255,255,0.06)',
                 border: '0.5px solid rgba(255,255,255,0.1)',
                 borderTop: `2px solid ${C.signal}`,
@@ -887,7 +989,7 @@ export default function HomePage() {
             display: 'grid', gridTemplateColumns: '1fr 1.4fr',
             gap: '72px', alignItems: 'center',
           }}>
-            <div>
+            <div className="ms-reveal">
               <div style={{
                 fontSize: '10px', fontWeight: '500', letterSpacing: '0.18em',
                 textTransform: 'uppercase', color: C.fog, marginBottom: '14px',
@@ -932,7 +1034,7 @@ export default function HomePage() {
                 </div>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px', marginBottom: '12px' }}>
                   <span style={{ fontSize: '52px', fontWeight: '700', color: C.white, lineHeight: '1', fontVariantNumeric: 'tabular-nums' }}>
-                    6.2
+                    <CountUp to={6.2} decimals={1} />
                   </span>
                   <span style={{
                     padding: '4px 10px', borderRadius: '99px', fontSize: '11px', fontWeight: '600',
@@ -951,22 +1053,22 @@ export default function HomePage() {
 
               {/* stats row */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0' }}>
-                {[
-                  { label: t.dash_sessions, value: '14' },
-                  { label: t.dash_revenue,  value: lang === 'pt' ? 'R$ 38k' : '$ 38k' },
-                ].map((stat, i) => (
-                  <div key={i} style={{
-                    padding: '18px 24px',
-                    borderRight: i === 0 ? '0.5px solid rgba(255,255,255,0.06)' : 'none',
-                  }}>
-                    <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.2)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '6px' }}>
-                      {stat.label}
-                    </div>
-                    <div style={{ fontSize: '24px', fontWeight: '700', color: C.white, fontVariantNumeric: 'tabular-nums' }}>
-                      {stat.value}
-                    </div>
+                <div style={{ padding: '18px 24px', borderRight: '0.5px solid rgba(255,255,255,0.06)' }}>
+                  <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.2)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '6px' }}>
+                    {t.dash_sessions}
                   </div>
-                ))}
+                  <div style={{ fontSize: '24px', fontWeight: '700', color: C.white, fontVariantNumeric: 'tabular-nums' }}>
+                    <CountUp to={14} />
+                  </div>
+                </div>
+                <div style={{ padding: '18px 24px' }}>
+                  <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.2)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '6px' }}>
+                    {t.dash_revenue}
+                  </div>
+                  <div style={{ fontSize: '24px', fontWeight: '700', color: C.white, fontVariantNumeric: 'tabular-nums' }}>
+                    {lang === 'pt' ? 'R$ 38k' : '$ 38k'}
+                  </div>
+                </div>
               </div>
 
               {/* updated line */}
@@ -976,7 +1078,7 @@ export default function HomePage() {
                 fontSize: '10px', color: 'rgba(255,255,255,0.15)',
                 display: 'flex', alignItems: 'center', gap: '6px',
               }}>
-                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: C.teal, display: 'inline-block' }} />
+                <span className="ms-live-dot" style={{ width: '6px', height: '6px', borderRadius: '50%', background: C.teal, display: 'inline-block' }} />
                 {t.dash_updated}
               </div>
             </div>
@@ -990,7 +1092,7 @@ export default function HomePage() {
         borderBottom: `0.5px solid ${C.powderBorder}`,
       }}>
         <div style={{ maxWidth: '960px', margin: '0 auto' }}>
-          <div style={{ marginBottom: '48px' }}>
+          <div className="ms-reveal" style={{ marginBottom: '48px' }}>
             <div style={{
               fontSize: '10px', fontWeight: '500', letterSpacing: '0.18em',
               textTransform: 'uppercase', color: C.fog, marginBottom: '14px',
@@ -1028,7 +1130,7 @@ export default function HomePage() {
           </div>
 
           {/* Desktop: tab content */}
-          <div className="ms-tab-content" style={{
+          <div key={activeTab} className="ms-tab-content ms-tab-in" style={{
             display: 'grid', gridTemplateColumns: '1fr 1fr',
             gap: '48px', alignItems: 'center',
           }}>
@@ -1172,7 +1274,7 @@ export default function HomePage() {
                     {t.runway_label}
                   </div>
                   <div style={{ fontSize: '56px', fontWeight: '700', color: C.white, lineHeight: '1', fontVariantNumeric: 'tabular-nums', marginBottom: '4px' }}>
-                    6.2
+                    <CountUp to={6.2} decimals={1} />
                   </div>
                   <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.35)', marginBottom: '20px' }}>
                     {t.runway_sub}
@@ -1241,7 +1343,7 @@ export default function HomePage() {
         borderBottom: `0.5px solid ${C.powderBorder}`,
       }}>
         <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-          <div style={{ marginBottom: '48px' }}>
+          <div className="ms-reveal" style={{ marginBottom: '48px' }}>
             <div style={{
               fontSize: '10px', fontWeight: '500', letterSpacing: '0.18em',
               textTransform: 'uppercase', color: C.fog, marginBottom: '14px',
@@ -1275,7 +1377,7 @@ export default function HomePage() {
               </div>
               {/* data rows */}
               {t.cmp_rows.map((row, ri) => (
-                <div key={ri} style={{
+                <div key={ri} className="ms-cmp-row" style={{
                   display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr',
                   padding: '13px 20px',
                   background: ri % 2 === 0 ? C.white : '#FAFAF8',
@@ -1309,7 +1411,7 @@ export default function HomePage() {
         borderBottom: `0.5px solid ${C.powderBorder}`,
       }}>
         <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-          <div style={{ marginBottom: '48px' }}>
+          <div className="ms-reveal" style={{ marginBottom: '48px' }}>
             <div style={{
               fontSize: '10px', fontWeight: '500', letterSpacing: '0.18em',
               textTransform: 'uppercase', color: C.fog, marginBottom: '14px',

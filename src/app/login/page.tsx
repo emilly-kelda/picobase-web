@@ -76,7 +76,7 @@ function LoginForm() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: '#fff',
+      background: 'var(--powder)',
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
@@ -96,7 +96,7 @@ function LoginForm() {
         </div>
 
         <div style={{
-          background: '#fff',
+          background: 'var(--surface)',
           border: '1px solid var(--border)',
           borderRadius: 'var(--radius-xl)',
           padding: '32px',
@@ -141,7 +141,7 @@ function LoginForm() {
                   color: 'var(--slate)',
                   outline: 'none',
                   width: '100%',
-                  background: '#fff',
+                  background: 'var(--surface)',
                   transition: 'border-color 0.15s',
                 }}
                 onFocus={e => (e.target.style.borderColor = 'var(--glacial)')}
@@ -169,7 +169,7 @@ function LoginForm() {
                   color: 'var(--slate)',
                   outline: 'none',
                   width: '100%',
-                  background: '#fff',
+                  background: 'var(--surface)',
                   transition: 'border-color 0.15s',
                 }}
                 onFocus={e => (e.target.style.borderColor = 'var(--glacial)')}
@@ -180,11 +180,11 @@ function LoginForm() {
             {error && (
               <div style={{
                 padding: '10px 14px',
-                background: 'var(--signal-light)',
-                border: '1px solid rgba(232,71,26,0.2)',
+                background: 'var(--error-light)',
+                border: '1px solid rgba(197,48,48,0.15)',
                 borderRadius: 'var(--radius-md)',
                 fontSize: '13px',
-                color: 'var(--signal-dark)',
+                color: 'var(--error)',
                 lineHeight: '1.5',
               }}>
                 {error}
@@ -196,7 +196,7 @@ function LoginForm() {
               disabled={loading}
               style={{
                 height: '40px',
-                background: loading ? 'var(--mist)' : 'var(--glacial)',
+                background: loading ? 'var(--mist)' : 'var(--slate)',
                 color: '#fff',
                 border: 'none',
                 borderRadius: 'var(--radius-md)',

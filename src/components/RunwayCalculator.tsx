@@ -38,18 +38,18 @@ export default function RunwayCalculator({ seasonProfit, burnRate, currency = 'B
   const barColor = runwayMonths >= 6
     ? 'var(--glacial)'
     : runwayMonths >= 3
-      ? '#D4A017'
-      : 'var(--signal)'
+      ? 'var(--warning)'
+      : 'var(--error)'
 
   const safetyScore = runwayMonths >= 9
-    ? { label: 'Protegido',  color: '#007868', bg: '#E0F8F5' }
+    ? { label: 'Protegido',  color: 'var(--glacial-dark)', bg: 'var(--glacial-light)' }
     : runwayMonths >= 6
-    ? { label: 'Saudável',   color: '#00A896', bg: '#E0F8F5' }
+    ? { label: 'Saudável',   color: 'var(--glacial)',      bg: 'var(--glacial-light)' }
     : runwayMonths >= 3
-    ? { label: 'Vulnerável', color: '#8A5E00', bg: '#FFF8E8' }
+    ? { label: 'Vulnerável', color: 'var(--amber)',        bg: 'var(--amber-light)'   }
     : runwayMonths > 0
-    ? { label: 'Crítico',    color: '#B83010', bg: '#FDF0EC' }
-    : { label: '—',          color: 'var(--mist)', bg: 'var(--powder)' }
+    ? { label: 'Crítico',    color: 'var(--error)',        bg: 'var(--error-light)'   }
+    : { label: '—',          color: 'var(--mist)',         bg: 'var(--powder)'        }
 
   const avgLessonProfit = 250
   const lessonsNeeded   = profitGap > 0 ? Math.ceil(profitGap / avgLessonProfit) : 0
@@ -62,9 +62,10 @@ export default function RunwayCalculator({ seasonProfit, burnRate, currency = 'B
 
   return (
     <div style={{
-      background: '#fff',
+      background: 'var(--surface)',
       border: '0.5px solid var(--border)',
       borderRadius: 'var(--radius-lg)',
+      boxShadow: 'var(--shadow-sm)',
       overflow: 'hidden',
       marginBottom: '32px',
     }}>
@@ -214,8 +215,8 @@ export default function RunwayCalculator({ seasonProfit, burnRate, currency = 'B
                     color: projectedRunway >= 6
                       ? 'var(--glacial-dark)'
                       : projectedRunway >= 3
-                        ? '#D4A017'
-                        : 'var(--signal)',
+                        ? 'var(--warning)'
+                        : 'var(--error)',
                     fontVariantNumeric: 'tabular-nums',
                   }}>
                     {projectedRunway.toFixed(1)} meses
@@ -225,7 +226,7 @@ export default function RunwayCalculator({ seasonProfit, burnRate, currency = 'B
               {gap !== undefined && gap > 0 && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
                   <span style={{ color: 'var(--mist)' }}>Faltam para 6 meses</span>
-                  <span style={{ fontWeight: '600', color: 'var(--signal)', fontVariantNumeric: 'tabular-nums' }}>
+                  <span style={{ fontWeight: '600', color: 'var(--error)', fontVariantNumeric: 'tabular-nums' }}>
                     {fmt(gap)}
                   </span>
                 </div>
@@ -319,23 +320,23 @@ export default function RunwayCalculator({ seasonProfit, burnRate, currency = 'B
           {profitGap > 0 && (
             <div style={{
               width: '100%', padding: '12px 14px',
-              background: '#FFF8E8',
+              background: 'var(--amber-light)',
               borderRadius: 'var(--radius-md)',
             }}>
               <div style={{
-                fontSize: '12px', color: '#8A5E00',
+                fontSize: '12px', color: 'var(--amber)',
                 fontWeight: '500', marginBottom: '4px',
               }}>
                 Para atingir {targetMonths} meses de reserva:
               </div>
               <div style={{
                 fontSize: '18px', fontWeight: '700',
-                color: '#8A5E00', fontVariantNumeric: 'tabular-nums',
+                color: 'var(--amber)', fontVariantNumeric: 'tabular-nums',
                 marginBottom: '3px',
               }}>
                 + {fmt(profitGap)}
               </div>
-              <div style={{ fontSize: '11px', color: '#8A5E00', opacity: 0.7 }}>
+              <div style={{ fontSize: '11px', color: 'var(--amber)', opacity: 0.7 }}>
                 ≈ {lessonsNeeded} aulas a mais
               </div>
             </div>

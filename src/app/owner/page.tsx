@@ -247,8 +247,8 @@ export default async function OwnerPage() {
                       padding: '10px 24px', textAlign: 'left',
                       fontSize: '10px', fontWeight: '500',
                       letterSpacing: '0.12em', textTransform: 'uppercase',
-                      color: '#8A8C98', background: '#FAFAF8',
-                      borderBottom: '0.5px solid #F0EEE9',
+                      color: 'var(--mist)', background: 'var(--powder)',
+                      borderBottom: '0.5px solid var(--border)',
                       whiteSpace: 'nowrap',
                     }}>
                       {h}
@@ -261,7 +261,7 @@ export default async function OwnerPage() {
                   <tr>
                     <td colSpan={6} style={{
                       padding: '40px 24px', textAlign: 'center',
-                      fontSize: '13px', color: '#8A8C98',
+                      fontSize: '13px', color: 'var(--mist)',
                     }}>
                       {t.no_sessions}
                     </td>
@@ -272,10 +272,10 @@ export default async function OwnerPage() {
                     className="tbl-row"
                     style={{ borderBottom: i < Math.min(sessions.length, 8) - 1 ? '1px solid var(--border)' : 'none' }}
                   >
-                    <td style={{ padding: '20px 24px', fontSize: '12px', color: '#8A8C98', whiteSpace: 'nowrap' }}>
+                    <td style={{ padding: '20px 24px', fontSize: '12px', color: 'var(--mist)', whiteSpace: 'nowrap' }}>
                       {fmtDate(s.session_date)}
                     </td>
-                    <td style={{ padding: '20px 24px', fontSize: '13px', fontWeight: '500', color: '#1A1C22' }}>
+                    <td style={{ padding: '20px 24px', fontSize: '13px', fontWeight: '500', color: 'var(--slate)' }}>
                       {(s.checkins as any)?.student_name ? (
                         <a
                           className="tbl-link"
@@ -285,16 +285,16 @@ export default async function OwnerPage() {
                         </a>
                       ) : '—'}
                     </td>
-                    <td style={{ padding: '20px 24px', fontSize: '13px', color: '#1A1C22' }}>
+                    <td style={{ padding: '20px 24px', fontSize: '13px', color: 'var(--slate)' }}>
                       {(s.activities as any)?.name ?? '—'}
                     </td>
-                    <td style={{ padding: '20px 24px', fontSize: '13px', color: '#8A8C98' }}>
+                    <td style={{ padding: '20px 24px', fontSize: '13px', color: 'var(--mist)' }}>
                       {(s as any).instructor?.name ?? '—'}
                     </td>
-                    <td style={{ padding: '20px 24px', fontSize: '13px', color: '#8A8C98', whiteSpace: 'nowrap' }}>
+                    <td style={{ padding: '20px 24px', fontSize: '13px', color: 'var(--mist)', whiteSpace: 'nowrap' }}>
                       {s.duration_min ? `${s.duration_min}min` : '—'}
                     </td>
-                    <td style={{ padding: '20px 24px', fontSize: '13px', fontWeight: '500', color: '#1A1C22', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+                    <td style={{ padding: '20px 24px', fontSize: '13px', fontWeight: '500', color: 'var(--slate)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
                       {fmt(s.price)}
                     </td>
                   </tr>
@@ -366,7 +366,7 @@ export default async function OwnerPage() {
                   marginTop: '4px', padding: '10px 14px',
                   background: 'rgba(255,255,255,0.06)',
                   borderRadius: '8px',
-                  fontSize: '12px', color: '#D4A017',
+                  fontSize: '12px', color: 'var(--warning)',
                   lineHeight: '1.5',
                 }}>
                   {lang === 'pt'
@@ -379,9 +379,10 @@ export default async function OwnerPage() {
 
           {/* Season totals */}
           <div style={{
-            background: '#fff',
-            border: '1px solid var(--border)',
+            background: 'var(--surface)',
+            border: '0.5px solid var(--border)',
             borderRadius: 'var(--radius-xl)',
+            boxShadow: 'var(--shadow-sm)',
             padding: '20px',
           }}>
             <div style={{
@@ -418,14 +419,14 @@ export default async function OwnerPage() {
           {/* Projection */}
           {projection && projection.daysLeft > 0 && (
             <div style={{
-              background: '#F0EEE9',
-              borderRadius: '12px',
+              background: 'var(--powder-dark)',
+              borderRadius: 'var(--radius-lg)',
               padding: '16px 20px',
               fontSize: '12px',
-              color: '#8A8C98',
+              color: 'var(--mist)',
               lineHeight: '1.6',
             }}>
-              <span style={{ fontWeight: '500', color: '#1A1C22' }}>
+              <span style={{ fontWeight: '500', color: 'var(--slate)' }}>
                 {lang === 'pt' ? 'Projeção: ' : 'Projection: '}
               </span>
               {lang === 'pt'
