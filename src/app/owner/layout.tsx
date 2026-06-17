@@ -34,14 +34,8 @@ export default async function OwnerLayout({ children }: { children: React.ReactN
         activeSeasonLabel={activeLabel}
         lang={lang}
       />
-      <main style={{ width: '100%' }}>
-        <div style={{
-          maxWidth: '1200px',
-          margin: '0 auto',
-          padding: '40px 40px',
-        }}>
-          {children}
-        </div>
+      <main style={{ width: '100%', padding: '32px 40px' }}>
+        {children}
       </main>
     </div>
   )

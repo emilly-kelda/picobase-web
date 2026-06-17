@@ -97,8 +97,7 @@ export default function OwnerNav({ seasons = [], activeSeasonId, activeSeasonLab
         zIndex: 50,
       }}>
         <div style={{
-          maxWidth: '1200px',
-          margin: '0 auto',
+          width: '100%',
           padding: '0 40px',
           display: 'flex',
           alignItems: 'center',

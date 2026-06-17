@@ -86,36 +86,117 @@ export default async function OwnerPage() {
         .tbl-row:hover > td { background: #FAFAF8; }
         .tbl-link { color: #1A1C22; text-decoration: none; border-bottom: 1px solid transparent; transition: border-color .15s; }
         .tbl-link:hover { border-bottom-color: #00A896; }
+        .dash-grid {
+          display: grid;
+          grid-template-columns: 1fr 2fr 1fr;
+          gap: 28px;
+          align-items: start;
+        }
+        @media (max-width: 1080px) {
+          .dash-grid { grid-template-columns: 1fr; }
+        }
+        .quick-link {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 11px 16px;
+          font-size: 13px;
+          color: var(--slate);
+          text-decoration: none;
+          transition: background 0.12s;
+        }
+        .quick-link:hover { background: var(--powder); }
       `}</style>
 
-      {/* ── Header ──────────────────────────────────────────────────────── */}
-      <div style={{ marginBottom: '32px' }}>
-        <h1 style={{
-          fontSize: '28px', fontWeight: '600',
-          color: '#1A1C22', letterSpacing: '-0.02em',
-          marginBottom: '4px',
-        }}>
-          Base Camp
-        </h1>
-        <div style={{ fontSize: '13px', color: '#8A8C98' }}>
-          {runway.school_name
-            ? `${runway.school_name}${runway.current_season ? ' · ' + runway.current_season : ''}`
-            : (runway.current_season ?? t.basecamp_season)}
-        </div>
-      </div>
+      <div className="dash-grid">
 
-      {/* ── Grid ────────────────────────────────────────────────────────── */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: '1fr 380px',
-        gap: '32px',
-        alignItems: 'flex-start',
-      }}>
+        {/* ════════════════════════════════════════════════════════════
+            LEFT — identity + today's numbers
+        ════════════════════════════════════════════════════════════ */}
+        <aside style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
 
-        {/* ════════════════════════════════════════════════════════════════
-            LEFT — main flow
-        ════════════════════════════════════════════════════════════════ */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', minWidth: 0 }}>
+          {/* Page title */}
+          <div>
+            <h1 style={{
+              fontSize: '22px', fontWeight: '600',
+              color: '#1A1C22', letterSpacing: '-0.02em',
+              marginBottom: '4px',
+            }}>
+              Base Camp
+            </h1>
+            <div style={{ fontSize: '12px', color: '#8A8C98', lineHeight: '1.5' }}>
+              {runway.school_name
+                ? `${runway.school_name}${runway.current_season ? ' · ' + runway.current_season : ''}`
+                : (runway.current_season ?? t.basecamp_season)}
+            </div>
+          </div>
+
+          {/* Today stats */}
+          <div style={{
+            background: '#fff',
+            border: '1px solid var(--border)',
+            borderRadius: 'var(--radius-xl)',
+            padding: '20px',
+          }}>
+            <div style={{
+              fontSize: '10px', fontWeight: '600',
+              letterSpacing: '0.14em', textTransform: 'uppercase',
+              color: 'var(--mist)', marginBottom: '16px',
+            }}>
+              {t.today_label}
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              {[
+                { label: lang === 'pt' ? 'Alunos'    : 'Students',    value: String(today.students) },
+                { label: lang === 'pt' ? 'Aulas'     : 'Sessions',    value: String(today.sessions) },
+                { label: lang === 'pt' ? 'Receita'   : 'Revenue',     value: fmt(today.revenue ?? 0) },
+                { label: lang === 'pt' ? 'Comissões' : 'Commissions', value: fmt(today.commissions ?? 0) },
+              ].map((item) => (
+                <div key={item.label}>
+                  <div style={{ fontSize: '11px', color: 'var(--mist)', marginBottom: '4px', fontWeight: '500' }}>
+                    {item.label}
+                  </div>
+                  <div style={{ fontSize: '18px', fontWeight: '600', color: 'var(--slate)', fontVariantNumeric: 'tabular-nums' }}>
+                    {item.value}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Quick links */}
+          <div style={{
+            background: '#fff',
+            border: '1px solid var(--border)',
+            borderRadius: 'var(--radius-xl)',
+            overflow: 'hidden',
+          }}>
+            {[
+              { href: '/owner/sessions',  label: lang === 'pt' ? 'Sessões'    : 'Sessions'  },
+              { href: '/owner/students',  label: lang === 'pt' ? 'Alunos'     : 'Students'  },
+              { href: '/owner/crew',      label: lang === 'pt' ? 'Equipe'     : 'Crew'      },
+              { href: '/owner/packages',  label: lang === 'pt' ? 'Pacotes'    : 'Packages'  },
+              { href: '/owner/payments',  label: lang === 'pt' ? 'Pagamentos' : 'Payments'  },
+              { href: '/owner/settings',  label: lang === 'pt' ? 'Ajustes'    : 'Settings'  },
+            ].map((item, i, arr) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="quick-link"
+                style={{ borderBottom: i < arr.length - 1 ? '1px solid var(--border)' : 'none' }}
+              >
+                {item.label}
+                <span style={{ color: 'var(--mist)', fontSize: '12px' }}>→</span>
+              </Link>
+            ))}
+          </div>
+
+        </aside>
+
+        {/* ════════════════════════════════════════════════════════════
+            CENTER — activity feed
+        ════════════════════════════════════════════════════════════ */}
+        <main style={{ display: 'flex', flexDirection: 'column', gap: '28px', minWidth: 0 }}>
 
           {/* Alerts */}
           {alerts.length > 0 && (
@@ -172,21 +253,11 @@ export default async function OwnerPage() {
             activePackages={(activePackages as any).filter((p: any) => p.status === 'active')}
           />
 
-          {/* Runway Calculator */}
-          <RunwayCalculator
-            seasonProfit={runway.season_profit ?? 0}
-            burnRate={monthlyBurn}
-            daysLeft={projection?.daysLeft}
-            projectedRunway={projection?.projectedRunway}
-            gap={projection?.gap}
-          />
-
           {/* Sessions table */}
           <div>
             <div style={{
               display: 'flex', justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: '12px',
+              alignItems: 'center', marginBottom: '12px',
             }}>
               <span style={{ fontSize: '13px', fontWeight: '500', color: 'var(--slate)' }}>
                 {t.recent_sessions}
@@ -260,14 +331,14 @@ export default async function OwnerPage() {
             </table>
           </div>
 
-        </div>
+        </main>
 
-        {/* ════════════════════════════════════════════════════════════════
-            RIGHT — metrics sidebar
-        ════════════════════════════════════════════════════════════════ */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        {/* ════════════════════════════════════════════════════════════
+            RIGHT — financial metrics + runway
+        ════════════════════════════════════════════════════════════ */}
+        <section style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
-          {/* Runway card */}
+          {/* Off-Season Runway */}
           <div style={{
             background: '#1B4B5A',
             borderRadius: '16px',
@@ -282,7 +353,7 @@ export default async function OwnerPage() {
             </div>
 
             <div style={{
-              fontSize: '72px', fontWeight: '700',
+              fontSize: '64px', fontWeight: '700',
               color: '#fff', lineHeight: '1',
               fontVariantNumeric: 'tabular-nums',
               letterSpacing: '-0.03em', marginBottom: '6px',
@@ -297,10 +368,7 @@ export default async function OwnerPage() {
               {lang === 'pt' ? 'meses cobertos' : 'months covered'}
             </div>
 
-            <div style={{
-              height: '1px', background: 'rgba(255,255,255,0.1)',
-              marginBottom: '20px',
-            }} />
+            <div style={{ height: '1px', background: 'rgba(255,255,255,0.1)', marginBottom: '20px' }} />
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -337,81 +405,45 @@ export default async function OwnerPage() {
             </div>
           </div>
 
-          {/* Today card */}
+          {/* Season totals */}
           <div style={{
             background: '#fff',
             border: '1px solid var(--border)',
             borderRadius: 'var(--radius-xl)',
-            padding: '24px',
-          }}>
-            <div style={{
-              fontSize: '10px', fontWeight: '600',
-              letterSpacing: '0.14em', textTransform: 'uppercase',
-              color: 'var(--mist)', marginBottom: '20px',
-            }}>
-              {t.today_label}
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-              {[
-                { label: lang === 'pt' ? 'Alunos'    : 'Students',    value: String(today.students) },
-                { label: lang === 'pt' ? 'Aulas'     : 'Sessions',    value: String(today.sessions) },
-                { label: lang === 'pt' ? 'Receita'   : 'Revenue',     value: fmt(today.revenue ?? 0) },
-                { label: lang === 'pt' ? 'Comissões' : 'Commissions', value: fmt(today.commissions ?? 0) },
-              ].map((item) => (
-                <div key={item.label}>
-                  <div style={{ fontSize: '11px', color: 'var(--mist)', marginBottom: '6px', fontWeight: '500' }}>
-                    {item.label}
-                  </div>
-                  <div style={{ fontSize: '20px', fontWeight: '600', color: 'var(--slate)', fontVariantNumeric: 'tabular-nums' }}>
-                    {item.value}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Season card */}
-          <div style={{
-            background: '#fff',
-            border: '1px solid var(--border)',
-            borderRadius: 'var(--radius-xl)',
-            padding: '24px',
+            padding: '20px',
           }}>
             <div style={{
               fontSize: '10px', fontWeight: '600',
               letterSpacing: '0.14em', textTransform: 'uppercase',
               color: 'var(--mist)',
-              marginBottom: runway.current_season ? '4px' : '20px',
+              marginBottom: runway.current_season ? '4px' : '16px',
             }}>
               {t.season_label}
             </div>
             {runway.current_season && (
-              <div style={{
-                fontSize: '12px', color: 'var(--mist)',
-                marginBottom: '20px',
-              }}>
+              <div style={{ fontSize: '12px', color: 'var(--mist)', marginBottom: '16px' }}>
                 {runway.current_season}
               </div>
             )}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '16px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {[
                 { label: lang === 'pt' ? 'Receita total'  : 'Total revenue',  value: fmt(runway.season_revenue) },
                 { label: lang === 'pt' ? 'Comissões'      : 'Commissions',    value: fmt(runway.crew_commissions) },
                 { label: lang === 'pt' ? 'Lucro líquido'  : 'Net profit',     value: fmt(runway.season_profit) },
               ].map((row) => (
-                <div key={row.label}>
-                  <div style={{ fontSize: '11px', color: 'var(--mist)', marginBottom: '6px', fontWeight: '500' }}>
+                <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                  <span style={{ fontSize: '11px', color: 'var(--mist)', fontWeight: '500' }}>
                     {row.label}
-                  </div>
-                  <div style={{ fontSize: '16px', fontWeight: '600', color: 'var(--slate)', fontVariantNumeric: 'tabular-nums' }}>
+                  </span>
+                  <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--slate)', fontVariantNumeric: 'tabular-nums' }}>
                     {row.value}
-                  </div>
+                  </span>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Projection note */}
+          {/* Projection */}
           {projection && projection.daysLeft > 0 && (
             <div style={{
               background: '#F0EEE9',
@@ -429,7 +461,18 @@ export default async function OwnerPage() {
                 : `${projection.projectedRunway.toFixed(1)} months at season end · ${projection.daysLeft} days left`}
             </div>
           )}
-        </div>
+
+          {/* Runway Calculator */}
+          <RunwayCalculator
+            seasonProfit={runway.season_profit ?? 0}
+            burnRate={monthlyBurn}
+            daysLeft={projection?.daysLeft}
+            projectedRunway={projection?.projectedRunway}
+            gap={projection?.gap}
+          />
+
+        </section>
+
       </div>
     </div>
   )
