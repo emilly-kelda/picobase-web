@@ -4,6 +4,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { getT } from '@/lib/i18n'
 import type { Lang } from '@/lib/i18n'
 import Logo from '@/components/Logo'
+import { createClient } from '@/utils/supabase/client'
 
 type Season = { id: string; label: string }
 
@@ -36,6 +37,18 @@ export default function OwnerNav({ seasons = [], activeSeasonId, activeSeasonLab
 
   function selectSeason(id: string) {
     document.cookie = `active_season_id=${id}; path=/; max-age=${60 * 60 * 24 * 365}`
+    router.refresh()
+  }
+
+  // Sign-out: clears the Supabase session cookie, then navigates to /login.
+  // router.refresh() invalidates Next.js's server-component cache so that
+  // if the user hits the back button, the middleware re-evaluates the (now
+  // absent) session and redirects them back to /login instead of serving
+  // stale /owner content.
+  async function signOut() {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    router.push('/login')
     router.refresh()
   }
 
@@ -123,8 +136,8 @@ export default function OwnerNav({ seasons = [], activeSeasonId, activeSeasonLab
             ))}
           </nav>
 
-          {/* Right — season selector */}
-          <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+          {/* Right — season selector + sign-out */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
             {seasons.length > 0 && (
               <div className="season-group">
                 <div style={{
@@ -157,6 +170,26 @@ export default function OwnerNav({ seasons = [], activeSeasonId, activeSeasonLab
                 </div>
               </div>
             )}
+
+            <button
+              onClick={signOut}
+              style={{
+                fontSize: '12px',
+                fontWeight: '500',
+                color: 'var(--mist)',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '4px 8px',
+                borderRadius: 'var(--radius-md)',
+                fontFamily: 'var(--font-sans)',
+                transition: 'color 0.15s',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.color = 'var(--slate)')}
+              onMouseLeave={e => (e.currentTarget.style.color = 'var(--mist)')}
+            >
+              Sair
+            </button>
           </div>
 
         </div>
