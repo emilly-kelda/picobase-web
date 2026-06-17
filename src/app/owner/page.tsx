@@ -95,17 +95,6 @@ export default async function OwnerPage() {
         @media (max-width: 1080px) {
           .dash-grid { grid-template-columns: 1fr; }
         }
-        .quick-link {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 11px 16px;
-          font-size: 13px;
-          color: var(--slate);
-          text-decoration: none;
-          transition: background 0.12s;
-        }
-        .quick-link:hover { background: var(--powder); }
       `}</style>
 
       <div className="dash-grid">
@@ -164,32 +153,14 @@ export default async function OwnerPage() {
             </div>
           </div>
 
-          {/* Quick links */}
-          <div style={{
-            background: '#fff',
-            border: '1px solid var(--border)',
-            borderRadius: 'var(--radius-xl)',
-            overflow: 'hidden',
-          }}>
-            {[
-              { href: '/owner/sessions',  label: lang === 'pt' ? 'Sessões'    : 'Sessions'  },
-              { href: '/owner/students',  label: lang === 'pt' ? 'Alunos'     : 'Students'  },
-              { href: '/owner/crew',      label: lang === 'pt' ? 'Equipe'     : 'Crew'      },
-              { href: '/owner/packages',  label: lang === 'pt' ? 'Pacotes'    : 'Packages'  },
-              { href: '/owner/payments',  label: lang === 'pt' ? 'Pagamentos' : 'Payments'  },
-              { href: '/owner/settings',  label: lang === 'pt' ? 'Ajustes'    : 'Settings'  },
-            ].map((item, i, arr) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="quick-link"
-                style={{ borderBottom: i < arr.length - 1 ? '1px solid var(--border)' : 'none' }}
-              >
-                {item.label}
-                <span style={{ color: 'var(--mist)', fontSize: '12px' }}>→</span>
-              </Link>
-            ))}
-          </div>
+          {/* Runway Calculator — interactive slider widget, left column */}
+          <RunwayCalculator
+            seasonProfit={runway.season_profit ?? 0}
+            burnRate={monthlyBurn}
+            daysLeft={projection?.daysLeft}
+            projectedRunway={projection?.projectedRunway}
+            gap={projection?.gap}
+          />
 
         </aside>
 
@@ -461,15 +432,6 @@ export default async function OwnerPage() {
                 : `${projection.projectedRunway.toFixed(1)} months at season end · ${projection.daysLeft} days left`}
             </div>
           )}
-
-          {/* Runway Calculator */}
-          <RunwayCalculator
-            seasonProfit={runway.season_profit ?? 0}
-            burnRate={monthlyBurn}
-            daysLeft={projection?.daysLeft}
-            projectedRunway={projection?.projectedRunway}
-            gap={projection?.gap}
-          />
 
         </section>
 
