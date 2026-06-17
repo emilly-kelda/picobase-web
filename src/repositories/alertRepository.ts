@@ -1,4 +1,4 @@
-﻿import { createServiceClient } from '@/lib/supabase-server'
+import { createServiceClient } from '@/lib/supabase-server'
 
 export type Alert = {
   type: 'warning' | 'info' | 'error'
@@ -11,9 +11,11 @@ export async function getAlerts(schoolId: string): Promise<Alert[]> {
   const alerts: Alert[] = []
 
   // 1. Pending instructor payments
+  // Select instructor_id to count distinct instructors, not payment rows.
+  // One instructor can have multiple pending rows across different periods.
   const { data: pendingPayments } = await supabase
     .from('payments')
-    .select('id, total_to_pay, users!payments_instructor_id_fkey(name)')
+    .select('id, total_to_pay, instructor_id')
     .eq('school_id', schoolId)
     .eq('status', 'pending')
 
@@ -23,9 +25,10 @@ export async function getAlerts(schoolId: string): Promise<Alert[]> {
       style: 'currency', currency: 'BRL',
       minimumFractionDigits: 0, maximumFractionDigits: 0,
     }).format(total)
+    const instructorCount = new Set(pendingPayments.map(p => p.instructor_id)).size
     alerts.push({
       type: 'warning',
-      message: `${pendingPayments.length} instructor payment${pendingPayments.length > 1 ? 's' : ''} pending approval � ${fmt} total`,
+      message: `${instructorCount} instructor${instructorCount > 1 ? 's' : ''} with pending payments — ${fmt} total`,
       link: '/owner/payments',
     })
   }
@@ -69,7 +72,7 @@ export async function getAlerts(schoolId: string): Promise<Alert[]> {
     for (const c of healthAlerts) {
       alerts.push({
         type: 'error',
-        message: `Medical alert � ${c.student_name}: ${c.health_condition}`,
+        message: `Medical alert — ${c.student_name}: ${c.health_condition}`,
         link: '/owner/students',
       })
     }
@@ -114,5 +117,3 @@ export async function getAlerts(schoolId: string): Promise<Alert[]> {
 
   return alerts
 }
-
-

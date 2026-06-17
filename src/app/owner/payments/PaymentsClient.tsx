@@ -193,25 +193,49 @@ export default function PaymentsClient({
             Pagamento de instrutores e parceiros
           </p>
         </div>
-        <form method="GET">
-          <select
-            name="period"
-            defaultValue={period}
-            onChange={e => (e.target.closest('form') as HTMLFormElement)?.submit()}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          {/* Re-run button: always visible so newly-added instructors are picked up
+              even after close_month was already run for this period. Safe because
+              the underlying close_month SQL function uses UPSERT — see migration
+              20260617000001_fix_close_month_idempotent.sql. */}
+          <button
+            onClick={closeMonth}
+            disabled={closing}
+            title="Recalculate commissions from all confirmed sessions in this period"
             style={{
               padding: '8px 14px',
+              background: 'var(--powder)',
               border: '0.5px solid var(--border-strong)',
               borderRadius: 'var(--radius-md)',
               fontSize: '13px', color: 'var(--slate)',
-              background: '#fff', cursor: 'pointer',
-              fontFamily: 'var(--font-sans)', outline: 'none',
+              cursor: closing ? 'not-allowed' : 'pointer',
+              fontFamily: 'var(--font-sans)',
+              opacity: closing ? 0.6 : 1,
+              whiteSpace: 'nowrap' as const,
             }}
           >
-            {monthOptions.map(o => (
-              <option key={o.value} value={o.value}>{o.label}</option>
-            ))}
-          </select>
-        </form>
+            {closing ? 'Calculando...' : '↻ Recalcular período'}
+          </button>
+          <form method="GET">
+            <select
+              name="period"
+              defaultValue={period}
+              onChange={e => (e.target.closest('form') as HTMLFormElement)?.submit()}
+              style={{
+                padding: '8px 14px',
+                border: '0.5px solid var(--border-strong)',
+                borderRadius: 'var(--radius-md)',
+                fontSize: '13px', color: 'var(--slate)',
+                background: '#fff', cursor: 'pointer',
+                fontFamily: 'var(--font-sans)', outline: 'none',
+              }}
+            >
+              {monthOptions.map(o => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+          </form>
+        </div>
       </div>
 
       {/* Message */}
