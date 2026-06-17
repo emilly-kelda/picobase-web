@@ -83,9 +83,9 @@ export default async function OwnerPage() {
   return (
     <div>
       <style>{`
-        .tbl-row:hover > td { background: #FAFAF8; }
-        .tbl-link { color: #1A1C22; text-decoration: none; border-bottom: 1px solid transparent; transition: border-color .15s; }
-        .tbl-link:hover { border-bottom-color: #00A896; }
+        .tbl-row:hover > td { background: var(--powder); }
+        .tbl-link { color: var(--slate); text-decoration: none; border-bottom: 1px solid transparent; transition: border-color .15s; }
+        .tbl-link:hover { border-bottom-color: var(--glacial); }
         .dash-grid {
           display: grid;
           grid-template-columns: 1fr 2fr 1fr;
@@ -108,12 +108,12 @@ export default async function OwnerPage() {
           <div>
             <h1 style={{
               fontSize: '22px', fontWeight: '600',
-              color: '#1A1C22', letterSpacing: '-0.02em',
+              color: 'var(--slate)', letterSpacing: '-0.02em',
               marginBottom: '4px',
             }}>
               Base Camp
             </h1>
-            <div style={{ fontSize: '12px', color: '#8A8C98', lineHeight: '1.5' }}>
+            <div style={{ fontSize: '12px', color: 'var(--mist)', lineHeight: '1.5' }}>
               {runway.school_name
                 ? `${runway.school_name}${runway.current_season ? ' · ' + runway.current_season : ''}`
                 : (runway.current_season ?? t.basecamp_season)}
@@ -122,9 +122,10 @@ export default async function OwnerPage() {
 
           {/* Today stats */}
           <div style={{
-            background: '#fff',
-            border: '1px solid var(--border)',
+            background: 'var(--surface)',
+            border: '0.5px solid var(--border)',
             borderRadius: 'var(--radius-xl)',
+            boxShadow: 'var(--shadow-sm)',
             padding: '20px',
           }}>
             <div style={{
@@ -172,9 +173,9 @@ export default async function OwnerPage() {
           {/* Alerts */}
           {alerts.length > 0 && (
             <div style={{
-              background: '#fff',
-              border: '1px solid var(--border)',
-              borderLeft: '4px solid #D4A017',
+              background: 'var(--surface)',
+              border: '0.5px solid var(--border)',
+              borderLeft: '4px solid var(--warning)',
               borderRadius: 'var(--radius-lg)',
               overflow: 'hidden',
             }}>
@@ -201,7 +202,7 @@ export default async function OwnerPage() {
                   <span style={{
                     display: 'inline-block',
                     width: '6px', height: '6px', borderRadius: '50%',
-                    background: alert.type === 'error' ? 'var(--signal)' : '#D4A017',
+                    background: alert.type === 'error' ? 'var(--error)' : 'var(--warning)',
                     flexShrink: 0,
                   }} />
                   <span style={{ flex: 1, fontSize: '13px', color: 'var(--slate)', lineHeight: '1.5' }}>
@@ -311,7 +312,7 @@ export default async function OwnerPage() {
 
           {/* Off-Season Runway */}
           <div style={{
-            background: '#1B4B5A',
+            background: 'var(--ocean-deep)',
             borderRadius: '16px',
             padding: '28px',
           }}>

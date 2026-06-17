@@ -13,9 +13,10 @@ type Props = {
   activeSeasonId?: string
   activeSeasonLabel?: string
   lang?: Lang
+  isMaster?: boolean
 }
 
-export default function OwnerNav({ seasons = [], activeSeasonId, activeSeasonLabel, lang = 'pt' }: Props) {
+export default function OwnerNav({ seasons = [], activeSeasonId, activeSeasonLabel, lang = 'pt', isMaster = false }: Props) {
   const pathname = usePathname()
   const router   = useRouter()
   const t        = getT(lang)
@@ -28,6 +29,9 @@ export default function OwnerNav({ seasons = [], activeSeasonId, activeSeasonLab
     { href: '/owner/packages',  label: t.nav_packages  },
     { href: '/owner/payments',  label: t.nav_payments  },
     { href: '/owner/settings',  label: t.nav_settings  },
+    // Convenience link for master only — NOT a security boundary.
+    // The destination page enforces its own server-side redirect for non-master users.
+    ...(isMaster ? [{ href: '/owner/admin/schools/new', label: '+ Nova Escola' }] : []),
   ]
 
   function isActive(href: string) {

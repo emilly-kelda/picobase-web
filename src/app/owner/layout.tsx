@@ -57,6 +57,7 @@ export default async function OwnerLayout({ children }: { children: React.ReactN
         activeSeasonId={activeSeason}
         activeSeasonLabel={activeLabel}
         lang={lang}
+        isMaster={auth.isMaster}
       />
       <main style={{ width: '100%', padding: '32px 40px' }}>
         {children}

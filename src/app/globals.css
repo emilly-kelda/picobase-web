@@ -1,23 +1,52 @@
-﻿@import "tailwindcss";
+@import "tailwindcss";
 
 :root {
-  --slate:         #1A1C22;
-  --storm:         #2B3340;
-  --glacial:       #00A896;
-  --glacial-light: #E0F8F5;
-  --glacial-dark:  #007868;
+  /* ── Neutrals ─────────────────────────────────────────────────────── */
+  --slate:         #0D0F14;   /* primary text, headings, primary buttons */
+  --storm:         #1E2430;   /* secondary dark */
+  --mist:          #6E7180;   /* secondary text, labels, metadata */
+
+  /* ── Surface & background ─────────────────────────────────────────── */
+  --surface:       #FFFFFF;   /* card / panel backgrounds */
+  --powder:        #F8F8F6;   /* page background (warm off-white) */
+  --powder-dark:   #EDECEA;   /* inset sections, table heads, projection cards */
+
+  /* ── Primary accent — ocean teal ──────────────────────────────────── */
+  /* active nav, CTA buttons, focus rings, key metrics, chart lines      */
+  --glacial:       #1A6B7A;
+  --glacial-light: #E4F3F6;
+  --glacial-dark:  #0D4A58;
+  --ocean-deep:    #1A4855;   /* dark card backgrounds (off-season runway) */
+
+  /* ── Brand coral — logo / wordmark only ───────────────────────────── */
+  /* do NOT use for functional UI states — use --error for that          */
   --signal:        #E8471A;
   --signal-light:  #FDF0EC;
   --signal-dark:   #B83010;
-  --powder:        #F5F5F5;
-  --powder-dark:   #EBEBEB;
-  --mist:          #8A8C98;
-  --border:        #E8E8E8;
+
+  /* ── Status: error ────────────────────────────────────────────────── */
+  --error:         #C53030;
+  --error-light:   #FEF2F2;
+
+  /* ── Status: warning ──────────────────────────────────────────────── */
+  --warning:       #C49A0A;   /* warning indicator dots, bars, accents */
+  --amber-light:   #FFF8E8;   /* warning background tint */
+  --amber:         #8A5E00;   /* warning text (high contrast on amber-light) */
+
+  /* ── Borders ──────────────────────────────────────────────────────── */
+  --border:        #E6E5E2;
   --border-strong: #C8C6C0;
-  --amber-light:   #FFF8E8;
-  --amber:         #8A5E00;
+
+  /* ── Elevation ────────────────────────────────────────────────────── */
+  --shadow-sm:  0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md:  0 4px 12px rgba(0,0,0,0.07), 0 2px 4px rgba(0,0,0,0.04);
+  --shadow-lg:  0 8px 24px rgba(0,0,0,0.08), 0 4px 8px rgba(0,0,0,0.04);
+
+  /* ── Typography ───────────────────────────────────────────────────── */
   --font-sans: var(--font-geist-sans), system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), monospace;
+
+  /* ── Radii ────────────────────────────────────────────────────────── */
   --radius-sm:   4px;
   --radius-md:   8px;
   --radius-lg:   12px;
@@ -27,4 +56,4 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html { font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
-body { background: #ffffff; color: var(--slate); }
+body { background: var(--powder); color: var(--slate); }
