@@ -1,9 +1,19 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
+// Login page — client component using supabase.auth.signInWithPassword.
+// After login, validates role from public.users:
+//   - owner / master → redirect to /owner
+//   - anything else  → sign out immediately and show an error
+//     (instructor/partner/accountant never have sessions by design, so this
+//      branch is a belt-and-suspenders guard, not an expected flow)
+
+import { useState, Suspense } from 'react'
+// (useEffect removed — not needed; auth redirect handled server-side by middleware)
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import Logo from '@/components/Logo'
+
+const ALLOWED_ROLES = ['owner', 'master'] as const
 
 function LoginForm() {
   const router       = useRouter()
@@ -13,27 +23,52 @@ function LoginForm() {
   const [error,    setError]    = useState<string | null>(null)
   const [loading,  setLoading]  = useState(false)
 
-  // Derive the post-login destination from ?next= (internal paths only to prevent open redirect).
-  const nextPath = searchParams.get('next')
-  const destination = nextPath?.startsWith('/') ? nextPath : '/owner'
+  // Validate ?next= — accept internal paths only to prevent open redirect.
+  const nextParam   = searchParams.get('next')
+  const destination = nextParam?.startsWith('/') ? nextParam : '/owner'
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: { preventDefault(): void }) {
     e.preventDefault()
     setLoading(true)
     setError(null)
 
     const supabase = createClient()
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
 
-    if (error) {
-      setError(error.message)
+    // ── Step 1: authenticate ────────────────────────────────────────────────
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    })
+
+    if (authError || !authData.user) {
+      setError(authError?.message ?? 'Authentication failed.')
       setLoading(false)
       return
     }
 
-    // Session cookie is now set by @supabase/ssr in the browser.
-    // router.push triggers a server-side navigation, so the middleware
-    // will read the new cookie and allow access to /owner.
+    // ── Step 2: verify role ─────────────────────────────────────────────────
+    // Only owner and master should ever reach a successful login.
+    // instructor/partner/accountant have no auth.users record and therefore
+    // cannot reach this point — this check is a structural safety net.
+    const { data: profile, error: profileError } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', authData.user.id)
+      .single()
+
+    const role = profile?.role
+
+    if (profileError || !role || !ALLOWED_ROLES.includes(role as typeof ALLOWED_ROLES[number])) {
+      // Not owner/master — revoke the session immediately so no auth cookie persists.
+      await supabase.auth.signOut()
+      setError('Acesso não permitido. Este login é exclusivo para gestores de escola.')
+      setLoading(false)
+      return
+    }
+
+    // ── Step 3: navigate ────────────────────────────────────────────────────
+    // router.refresh() forces the Next.js cache to re-read cookies so the
+    // new session is visible to the middleware and server components on the next request.
     router.push(destination)
     router.refresh()
   }
@@ -56,12 +91,10 @@ function LoginForm() {
         gap: '32px',
       }}>
 
-        {/* Logo */}
         <div style={{ display: 'flex', justifyContent: 'center' }}>
           <Logo size={22} variant="full" />
         </div>
 
-        {/* Card */}
         <div style={{
           background: '#fff',
           border: '1px solid var(--border)',
@@ -152,6 +185,7 @@ function LoginForm() {
                 borderRadius: 'var(--radius-md)',
                 fontSize: '13px',
                 color: 'var(--signal-dark)',
+                lineHeight: '1.5',
               }}>
                 {error}
               </div>
@@ -183,7 +217,7 @@ function LoginForm() {
   )
 }
 
-// Wrapped in Suspense because useSearchParams() requires it.
+// Wrapped in Suspense because useSearchParams() requires it in App Router.
 export default function LoginPage() {
   return (
     <Suspense>

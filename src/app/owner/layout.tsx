@@ -1,15 +1,28 @@
-// LAYER 2 — Server Component auth guard (secondary defense-in-depth).
-// Runs after middleware passes but before any page content renders.
-// Protects the entire /owner/** subtree even if the middleware matcher is ever misconfigured.
+// LAYER 2 — Server Component authorization guard (secondary defense; the real authorization boundary).
+//
+// Middleware (layer 1) already verified that a valid Supabase session exists.
+// This layer goes further: it reads public.users to confirm the role and school scope.
+// No /owner content ever renders before both checks complete.
+
 import OwnerNav from '@/components/OwnerNav'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { getPortalLang } from '@/lib/language'
-
-const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
+import { getAuthContext } from '@/lib/auth'
 
 export default async function OwnerLayout({ children }: { children: React.ReactNode }) {
+  // ── Authorization check ───────────────────────────────────────────────────
+  // getAuthContext() validates JWT + queries public.users for role/school_id.
+  // Returns null if: no session, no matching public.users row, or role not in (owner, master).
+  const auth = await getAuthContext()
+  if (!auth) redirect('/login')
+
+  // auth is now narrowed:
+  //   { role: 'owner', isMaster: false, schoolId: string } — scoped to one school
+  //   { role: 'master', isMaster: true,  schoolId: null  } — all schools, placeholder school_id ignored
+
+  // ── Season data for the nav ───────────────────────────────────────────────
   const cookieStore = await cookies()
 
   const supabase = createServerClient(
@@ -18,17 +31,20 @@ export default async function OwnerLayout({ children }: { children: React.ReactN
     { cookies: { getAll: () => cookieStore.getAll() } }
   )
 
-  // getUser() validates JWT server-side; more secure than getSession() which only reads cookies.
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
-
-  const [{ data: seasons }, lang] = await Promise.all([
-    supabase
-      .from('seasons')
-      .select('id, label')
-      .eq('school_id', SCHOOL_ID)
-      .order('start_date', { ascending: false }),
+  const [lang, { data: seasons }] = await Promise.all([
     getPortalLang(),
+    // owner: seasons for their school only.
+    // master: all seasons across all schools (school switcher is a future concern).
+    auth.isMaster
+      ? supabase
+          .from('seasons')
+          .select('id, label')
+          .order('start_date', { ascending: false })
+      : supabase
+          .from('seasons')
+          .select('id, label')
+          .eq('school_id', auth.schoolId)
+          .order('start_date', { ascending: false }),
   ])
 
   const activeSeason = cookieStore.get('active_season_id')?.value ?? seasons?.[0]?.id ?? ''
@@ -48,3 +64,19 @@ export default async function OwnerLayout({ children }: { children: React.ReactN
     </div>
   )
 }
+
+// ── How child pages consume the auth context ─────────────────────────────────
+//
+// React's cache() in getAuthContext() means child pages call it for free (zero
+// extra DB queries — the result is reused from the layout's call):
+//
+//   import { getAuthContext } from '@/lib/auth'
+//   const auth = await getAuthContext()   // cached — no second DB hit
+//   if (!auth) redirect('/login')
+//
+//   const SCHOOL_ID = auth.isMaster
+//     ? undefined                         // master: no filter, query all schools
+//     : auth.schoolId                     // owner: filter to their school
+//
+// Never read school_id from cookies, query params, or the request body.
+// The authoritative value is always auth.schoolId from getAuthContext().
