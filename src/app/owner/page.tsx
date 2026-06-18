@@ -5,7 +5,7 @@ import { getAlerts } from '@/repositories/alertRepository'
 import { getInstructors } from '@/repositories/studentRepository'
 import { getActivitiesForCheckin } from '@/repositories/checkinRepository'
 import { getScheduledLessons, getMissedLessons } from '@/repositories/scheduledLessonRepository'
-import { getPackageSales } from '@/repositories/packageRepository'
+import { getPackageSales, getPackageBalancesForCheckins } from '@/repositories/packageRepository'
 import PendingLessons from '@/components/PendingLessons'
 import ScheduledLessons from '@/components/ScheduledLessons'
 import MissedLessons from '@/components/MissedLessons'
@@ -37,7 +37,7 @@ export default async function OwnerPage() {
   const [
     runway, sessions, alerts, today, lang, projection,
     pending, instructors, todayLessons, tomorrowLessons,
-    activities, activePackages, missedLessons,
+    activities, activePackages, missedLessons, packageBalances,
   ] = await Promise.all([
     getRunwayData(SCHOOL_ID, seasonId),
     getRecentSessions(SCHOOL_ID),
@@ -52,6 +52,7 @@ export default async function OwnerPage() {
     getActivitiesForCheckin(SCHOOL_ID),
     getPackageSales(SCHOOL_ID, 50),
     getMissedLessons(SCHOOL_ID),
+    getPackageBalancesForCheckins(SCHOOL_ID),
   ])
 
   const t = getT(lang)
@@ -218,7 +219,12 @@ export default async function OwnerPage() {
 
           {/* Missed / Pending / Scheduled */}
           <MissedLessons lessons={missedLessons as any} lang={lang} />
-          <PendingLessons checkins={pending as any} instructors={instructorList} />
+          <PendingLessons
+            checkins={pending as any}
+            instructors={instructorList}
+            packageBalances={packageBalances}
+            lang={lang}
+          />
           <ScheduledLessons
             todayLessons={todayLessons as any}
             tomorrowLessons={tomorrowLessons as any}

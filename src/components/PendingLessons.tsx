@@ -57,12 +57,24 @@ function unwrapInstructor(raw: Checkin['instructor']): { id: string; name: strin
   return Array.isArray(raw) ? raw[0] ?? null : raw
 }
 
+function fmtMinutes(min: number) {
+  const h = Math.floor(min / 60)
+  const m = min % 60
+  if (h === 0) return `${m}min`
+  if (m === 0) return `${h}h`
+  return `${h}h${m}min`
+}
+
 export default function PendingLessons({
   checkins: initialCheckins,
   instructors,
+  packageBalances = {},
+  lang = 'pt',
 }: {
   checkins: Checkin[]
   instructors: Instructor[]
+  packageBalances?: Record<string, { minutesRemaining: number; hasPackage: boolean }>
+  lang?: string
 }) {
   const router = useRouter()
   const [checkins, setCheckins]         = useState(initialCheckins)
@@ -197,6 +209,59 @@ export default function PendingLessons({
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {checkins.map(checkin => {
             const instructor = unwrapInstructor(checkin.instructor)
+            const balanceKey = checkin.student_name.trim().toLowerCase()
+            const balance    = packageBalances[balanceKey]
+            const exhausted  = balance?.hasPackage && balance.minutesRemaining <= 0
+            const lastLesson = balance?.hasPackage && balance.minutesRemaining > 0 && balance.minutesRemaining <= 60
+
+            let packageBadge: React.ReactNode = null
+            if (!balance) {
+              packageBadge = (
+                <span style={{
+                  fontSize: '10px', fontWeight: '500',
+                  color: 'var(--mist)',
+                  padding: '2px 8px', borderRadius: '99px',
+                  background: 'var(--powder)',
+                }}>
+                  {lang === 'pt' ? 'Sem pacote' : 'No package'}
+                </span>
+              )
+            } else if (exhausted) {
+              packageBadge = (
+                <span style={{
+                  fontSize: '11px', fontWeight: '700',
+                  color: '#fff',
+                  padding: '3px 10px', borderRadius: '99px',
+                  background: '#DC2626',
+                  letterSpacing: '0.01em',
+                }}>
+                  ⚠ {lang === 'pt' ? 'Pacote esgotado — cobrar avulsa' : 'Package exhausted — charge separately'}
+                </span>
+              )
+            } else if (lastLesson) {
+              packageBadge = (
+                <span style={{
+                  fontSize: '11px', fontWeight: '600',
+                  color: '#92400E',
+                  padding: '3px 10px', borderRadius: '99px',
+                  background: '#FEF3C7',
+                }}>
+                  ⚠ {lang === 'pt' ? `Última aula · ${fmtMinutes(balance.minutesRemaining)}` : `Last lesson · ${fmtMinutes(balance.minutesRemaining)}`}
+                </span>
+              )
+            } else {
+              packageBadge = (
+                <span style={{
+                  fontSize: '11px', fontWeight: '500',
+                  color: '#007868',
+                  padding: '3px 10px', borderRadius: '99px',
+                  background: '#E0F8F5',
+                }}>
+                  ✓ {lang === 'pt' ? `${fmtMinutes(balance.minutesRemaining)} restantes` : `${fmtMinutes(balance.minutesRemaining)} remaining`}
+                </span>
+              )
+            }
+
             return (
               <div
                 key={checkin.id}
@@ -204,6 +269,8 @@ export default function PendingLessons({
                   background: '#fff',
                   border: checkin.health_condition
                     ? '0.5px solid var(--signal)'
+                    : exhausted
+                    ? '1.5px solid #DC2626'
                     : '0.5px solid var(--border)',
                   borderRadius: 'var(--radius-lg)',
                   padding: '16px 20px',
@@ -266,6 +333,9 @@ export default function PendingLessons({
                     {instructor?.name ?? 'Sem instrutor'}
                     {' · '}
                     {fmtTime(checkin.checkin_at)}
+                  </div>
+                  <div style={{ marginTop: '6px' }}>
+                    {packageBadge}
                   </div>
                 </div>
 

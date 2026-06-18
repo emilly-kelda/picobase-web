@@ -89,6 +89,35 @@ export async function getPackageDashboard(schoolId: string) {
   }
 }
 
+/** One-shot balance map for all students with any package at this school.
+ *  Keyed by lower-cased trimmed student_name.
+ *  For students with multiple sales, prefers the most-recent unexhausted one. */
+export async function getPackageBalancesForCheckins(
+  schoolId: string
+): Promise<Record<string, { minutesRemaining: number; hasPackage: boolean }>> {
+  const supabase = createServiceClient()
+  const { data } = await supabase
+    .from('package_sales')
+    .select('student_name, minutes_purchased, minutes_used, sold_at')
+    .eq('school_id', schoolId)
+    .order('sold_at', { ascending: false })
+
+  const map: Record<string, { minutesRemaining: number; hasPackage: boolean }> = {}
+  for (const sale of data ?? []) {
+    const key = (sale.student_name ?? '').trim().toLowerCase()
+    if (!key) continue
+    const minutesRemaining = (sale.minutes_purchased ?? 0) - (sale.minutes_used ?? 0)
+    const existing = map[key]
+    if (!existing) {
+      map[key] = { minutesRemaining, hasPackage: true }
+    } else if (existing.minutesRemaining <= 0 && minutesRemaining > 0) {
+      // Replace exhausted entry with a fresh unexhausted one
+      map[key] = { minutesRemaining, hasPackage: true }
+    }
+  }
+  return map
+}
+
 export async function getPackages(schoolId: string) {
   const supabase = createServiceClient()
   const { data, error } = await supabase
