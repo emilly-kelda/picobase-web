@@ -103,6 +103,16 @@ export default function PaymentsClient({
   const [breakdown,   setBreakdown]   = useState<any[]>([])
   const [breakdownFor, setBreakdownFor] = useState<string | null>(null)
   const [loadingBreakdown, setLoadingBreakdown] = useState(false)
+  const [referralSheet, setReferralSheet] = useState<{
+    partnerName: string
+    referrals: Array<{
+      student_name: string
+      session_date: string
+      revenue: number
+      commission_amount: number
+      status: string
+    }>
+  } | null>(null)
 
   const pending = payments.filter(p => p.status === 'pending')
 
@@ -163,6 +173,13 @@ export default function PaymentsClient({
         : p
     ))
     setLoading(null)
+  }
+
+  async function fetchReferrals(partnerId: string, partnerName: string) {
+    setReferralSheet({ partnerName, referrals: [] })
+    const res  = await fetch(`/api/owner/partner-referrals?partner_id=${partnerId}&period=${period}`)
+    const data = await res.json()
+    setReferralSheet({ partnerName, referrals: data.referrals ?? [] })
   }
 
   async function fetchBreakdown(instructorId: string) {
@@ -629,10 +646,23 @@ export default function PaymentsClient({
                             {p.partner.name}
                           </div>
                           <div style={{ fontSize: '12px', color: 'var(--mist)' }}>
-                            {p.sessions} {p.sessions === 1 ? 'indicação' : 'indicações'}
-                            {p.partner.commission_pct && ` · ${Math.round(p.partner.commission_pct * 100)}% comissão`}
-                            {p.partner.pix_key && ` · PIX ${p.partner.pix_key}`}
-                            {!p.partner.pix_key && p.partner.wise_email && ` · Wise ${p.partner.wise_email}`}
+                            <button
+                              onClick={() => fetchReferrals(p.partner.id, p.partner.name)}
+                              style={{
+                                background: 'none', border: 'none', padding: '0',
+                                cursor: 'pointer', fontFamily: 'inherit', fontSize: '12px',
+                                color: 'var(--glacial)', fontWeight: '600',
+                                textDecoration: 'underline dotted',
+                                textUnderlineOffset: '3px',
+                              }}
+                            >
+                              {p.sessions} {p.sessions === 1 ? 'indicação' : 'indicações'}
+                            </button>
+                            <span>
+                              {p.partner.commission_pct ? ` · ${Math.round(p.partner.commission_pct * 100)}% comissão` : ''}
+                              {p.partner.pix_key ? ` · PIX ${p.partner.pix_key}` : ''}
+                              {!p.partner.pix_key && p.partner.wise_email ? ` · Wise ${p.partner.wise_email}` : ''}
+                            </span>
                             {!p.partner.pix_key && !p.partner.wise_email && !p.partner.finance_email && (
                               <span style={{ color: 'var(--signal)' }}>{' · '}Dados de pagamento em falta</span>
                             )}
@@ -734,6 +764,113 @@ export default function PaymentsClient({
             )}
           </div>
         </>
+      )}
+
+      {/* Referral detail bottom sheet */}
+      {referralSheet && (
+        <div
+          style={{
+            position: 'fixed', inset: 0,
+            background: 'rgba(0,0,0,0.4)',
+            zIndex: 100,
+            display: 'flex', alignItems: 'flex-end',
+          }}
+          onClick={e => { if (e.target === e.currentTarget) setReferralSheet(null) }}
+        >
+          <div style={{
+            background: '#fff', width: '100%', maxHeight: '70vh',
+            borderRadius: '20px 20px 0 0', overflow: 'hidden',
+            display: 'flex', flexDirection: 'column',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '12px' }}>
+              <div style={{ width: '40px', height: '4px', background: 'var(--border)', borderRadius: '99px' }} />
+            </div>
+            <div style={{
+              padding: '0 24px 16px',
+              borderBottom: '0.5px solid var(--border)',
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            }}>
+              <div>
+                <div style={{ fontSize: '16px', fontWeight: '600', color: 'var(--slate)', marginBottom: '3px' }}>
+                  {referralSheet.partnerName}
+                </div>
+                <div style={{ fontSize: '12px', color: 'var(--mist)' }}>
+                  {referralSheet.referrals.length} indicaç{referralSheet.referrals.length === 1 ? 'ão' : 'ões'} · {period}
+                </div>
+              </div>
+              <button
+                onClick={() => setReferralSheet(null)}
+                style={{
+                  background: 'var(--powder)', border: 'none', borderRadius: '99px',
+                  width: '32px', height: '32px', cursor: 'pointer',
+                  fontSize: '16px', color: 'var(--mist)',
+                }}
+              >×</button>
+            </div>
+
+            <div style={{ overflowY: 'auto', flex: 1 }}>
+              {referralSheet.referrals.length === 0 ? (
+                <div style={{ padding: '40px', textAlign: 'center', fontSize: '14px', color: 'var(--mist)' }}>
+                  Nenhuma indicação encontrada para este período.
+                </div>
+              ) : (
+                <>
+                  <div style={{
+                    display: 'grid', gridTemplateColumns: '1fr 100px 100px 80px',
+                    padding: '10px 24px', background: 'var(--powder)',
+                    borderBottom: '0.5px solid var(--border)',
+                  }}>
+                    {['Aluno', 'Data', 'Receita', 'Comissão'].map((h, i) => (
+                      <div key={h} style={{
+                        fontSize: '10px', fontWeight: '600',
+                        letterSpacing: '0.08em', textTransform: 'uppercase',
+                        color: 'var(--mist)', textAlign: i > 0 ? 'right' : 'left',
+                      }}>{h}</div>
+                    ))}
+                  </div>
+
+                  {referralSheet.referrals.map((r, i) => (
+                    <div key={i} style={{
+                      display: 'grid', gridTemplateColumns: '1fr 100px 100px 80px',
+                      padding: '13px 24px', alignItems: 'center',
+                      borderBottom: i < referralSheet.referrals.length - 1 ? '0.5px solid var(--border)' : 'none',
+                    }}>
+                      <div style={{ fontSize: '14px', fontWeight: '500', color: 'var(--slate)' }}>
+                        {r.student_name}
+                      </div>
+                      <div style={{ fontSize: '13px', color: 'var(--mist)', textAlign: 'right' }}>
+                        {r.session_date !== '—'
+                          ? new Date(r.session_date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
+                          : '—'}
+                      </div>
+                      <div style={{ fontSize: '13px', fontWeight: '500', color: 'var(--slate)', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                        {fmt(r.revenue)}
+                      </div>
+                      <div style={{ fontSize: '13px', fontWeight: '500', color: 'var(--glacial-dark)', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                        {fmt(r.commission_amount)}
+                      </div>
+                    </div>
+                  ))}
+
+                  <div style={{
+                    display: 'grid', gridTemplateColumns: '1fr 100px 100px 80px',
+                    padding: '13px 24px', background: 'var(--powder)',
+                    borderTop: '0.5px solid var(--border)',
+                  }}>
+                    <div style={{ fontSize: '12px', fontWeight: '600', color: 'var(--mist)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Total</div>
+                    <div />
+                    <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--slate)', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                      {fmt(referralSheet.referrals.reduce((s, r) => s + r.revenue, 0))}
+                    </div>
+                    <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--glacial-dark)', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                      {fmt(referralSheet.referrals.reduce((s, r) => s + r.commission_amount, 0))}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Breakdown bottom sheet */}
