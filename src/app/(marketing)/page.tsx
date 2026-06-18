@@ -782,9 +782,10 @@ export default function HomePage() {
           </div>
 
           <h1 style={{
-            fontSize: 'clamp(36px, 5.5vw, 72px)',
-            fontWeight: '700', color: C.slate,
-            lineHeight: '1.05', letterSpacing: '-0.03em',
+            fontFamily: 'var(--font-display)',
+            fontSize: 'clamp(40px, 6vw, 80px)',
+            fontWeight: '800', color: C.slate,
+            lineHeight: '1.04', letterSpacing: '-0.03em',
             margin: '0 0 28px',
           }}>
             {t.hero_h1a}<br />
@@ -865,7 +866,8 @@ export default function HomePage() {
               {t.calc_eyebrow}
             </div>
             <h2 style={{
-              fontSize: 'clamp(24px, 3vw, 38px)', fontWeight: '700', color: C.slate,
+              fontFamily: 'var(--font-display)',
+              fontSize: 'clamp(26px, 3vw, 40px)', fontWeight: '800', color: C.slate,
               lineHeight: '1.1', margin: '0 0 16px', letterSpacing: '-0.03em',
             }}>
               {t.calc_h2}
@@ -895,8 +897,9 @@ export default function HomePage() {
               {t.q_eyebrow}
             </div>
             <h2 style={{
-              fontSize: 'clamp(22px, 2.8vw, 36px)', fontWeight: '700', color: C.slate,
-              lineHeight: '1.2', margin: '0', letterSpacing: '-0.03em', maxWidth: '480px',
+              fontFamily: 'var(--font-display)',
+              fontSize: 'clamp(24px, 2.8vw, 40px)', fontWeight: '800', color: C.slate,
+              lineHeight: '1.15', margin: '0', letterSpacing: '-0.03em', maxWidth: '480px',
             }}>
               {t.q_h2}
             </h2>
@@ -921,8 +924,9 @@ export default function HomePage() {
                   {q.n}
                 </div>
                 <div style={{
-                  fontSize: '16px', fontWeight: '600', color: C.slate,
-                  lineHeight: '1.3', marginBottom: '10px', letterSpacing: '-0.01em',
+                  fontFamily: 'var(--font-display)',
+                  fontSize: '17px', fontWeight: '700', color: C.slate,
+                  lineHeight: '1.25', marginBottom: '10px', letterSpacing: '-0.02em',
                 }}>
                   {q.q}
                 </div>
@@ -948,8 +952,9 @@ export default function HomePage() {
               {t.without_eyebrow}
             </div>
             <h2 style={{
-              fontSize: 'clamp(22px, 2.8vw, 36px)', fontWeight: '700', color: C.white,
-              lineHeight: '1.2', margin: '0', letterSpacing: '-0.03em',
+              fontFamily: 'var(--font-display)',
+              fontSize: 'clamp(24px, 2.8vw, 40px)', fontWeight: '800', color: C.white,
+              lineHeight: '1.15', margin: '0', letterSpacing: '-0.03em',
             }}>
               {t.without_h2}
             </h2>
@@ -965,8 +970,9 @@ export default function HomePage() {
               }}>
                 <div style={{ fontSize: '28px', marginBottom: '16px' }}>{item.icon}</div>
                 <div style={{
-                  fontSize: '15px', fontWeight: '600', color: C.white,
-                  marginBottom: '10px', lineHeight: '1.3',
+                  fontFamily: 'var(--font-display)',
+                  fontSize: '16px', fontWeight: '700', color: C.white,
+                  marginBottom: '10px', lineHeight: '1.25', letterSpacing: '-0.01em',
                 }}>
                   {item.title}
                 </div>
@@ -997,8 +1003,9 @@ export default function HomePage() {
                 {t.dash_eyebrow}
               </div>
               <h2 style={{
-                fontSize: 'clamp(22px, 2.8vw, 36px)', fontWeight: '700', color: C.slate,
-                lineHeight: '1.2', margin: '0 0 16px', letterSpacing: '-0.03em',
+                fontFamily: 'var(--font-display)',
+                fontSize: 'clamp(24px, 2.8vw, 40px)', fontWeight: '800', color: C.slate,
+                lineHeight: '1.15', margin: '0 0 16px', letterSpacing: '-0.03em',
               }}>
                 {t.dash_h2}
               </h2>
@@ -1100,8 +1107,9 @@ export default function HomePage() {
               {t.tabs_eyebrow}
             </div>
             <h2 style={{
-              fontSize: 'clamp(22px, 2.8vw, 36px)', fontWeight: '700', color: C.slate,
-              lineHeight: '1.2', margin: '0', letterSpacing: '-0.03em',
+              fontFamily: 'var(--font-display)',
+              fontSize: 'clamp(24px, 2.8vw, 40px)', fontWeight: '800', color: C.slate,
+              lineHeight: '1.15', margin: '0', letterSpacing: '-0.03em',
             }}>
               {t.tabs_h2}
             </h2>
@@ -1136,8 +1144,9 @@ export default function HomePage() {
           }}>
             <div>
               <h3 style={{
-                fontSize: '22px', fontWeight: '700', color: C.slate,
-                margin: '0 0 14px', letterSpacing: '-0.02em',
+                fontFamily: 'var(--font-display)',
+                fontSize: '24px', fontWeight: '800', color: C.slate,
+                margin: '0 0 14px', letterSpacing: '-0.03em',
               }}>
                 {t.tabs_content[activeTab].title}
               </h3>
@@ -1321,8 +1330,9 @@ export default function HomePage() {
                 {openAccordion === i && (
                   <div style={{ paddingBottom: '24px' }}>
                     <h3 style={{
-                      fontSize: '18px', fontWeight: '700', color: C.slate,
-                      margin: '0 0 10px', letterSpacing: '-0.02em',
+                      fontFamily: 'var(--font-display)',
+                      fontSize: '20px', fontWeight: '800', color: C.slate,
+                      margin: '0 0 10px', letterSpacing: '-0.03em',
                     }}>
                       {t.tabs_content[i].title}
                     </h3>
@@ -1351,8 +1361,9 @@ export default function HomePage() {
               {t.cmp_eyebrow}
             </div>
             <h2 style={{
-              fontSize: 'clamp(22px, 2.8vw, 36px)', fontWeight: '700', color: C.slate,
-              lineHeight: '1.2', margin: '0', letterSpacing: '-0.03em',
+              fontFamily: 'var(--font-display)',
+              fontSize: 'clamp(24px, 2.8vw, 40px)', fontWeight: '800', color: C.slate,
+              lineHeight: '1.15', margin: '0', letterSpacing: '-0.03em',
             }}>
               {t.cmp_h2}
             </h2>
@@ -1419,8 +1430,9 @@ export default function HomePage() {
               {t.who_eyebrow}
             </div>
             <h2 style={{
-              fontSize: 'clamp(22px, 2.8vw, 36px)', fontWeight: '700', color: C.slate,
-              lineHeight: '1.2', margin: '0', letterSpacing: '-0.03em',
+              fontFamily: 'var(--font-display)',
+              fontSize: 'clamp(24px, 2.8vw, 40px)', fontWeight: '800', color: C.slate,
+              lineHeight: '1.15', margin: '0', letterSpacing: '-0.03em',
             }}>
               {t.who_h2}
             </h2>
@@ -1477,6 +1489,52 @@ export default function HomePage() {
                   </div>
                 ))}
               </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── CTA ──────────────────────────────────────────────────────────── */}
+      <section className="ms-section" style={{
+        background: '#1B4B5A', padding: '120px 40px',
+      }}>
+        <div style={{ maxWidth: '640px', margin: '0 auto', textAlign: 'center' }}>
+          <div className="ms-reveal">
+            <h2 style={{
+              fontFamily: 'var(--font-display)',
+              fontSize: 'clamp(28px, 4vw, 52px)', fontWeight: '800',
+              color: '#fff', letterSpacing: '-0.03em',
+              lineHeight: '1.1', margin: '0 0 20px',
+            }}>
+              {t.cta_h2}
+            </h2>
+            <p style={{
+              fontSize: '16px', color: 'rgba(255,255,255,0.45)',
+              lineHeight: '1.7', margin: '0 0 44px',
+              maxWidth: '440px', marginLeft: 'auto', marginRight: 'auto',
+            }}>
+              {t.cta_sub}
+            </p>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
+              <Link href="/demo" style={{
+                display: 'inline-flex', alignItems: 'center',
+                background: C.signal, color: C.white,
+                padding: '16px 32px', borderRadius: '10px',
+                fontSize: '15px', fontWeight: '500', textDecoration: 'none',
+                minHeight: '52px',
+              }}>
+                {t.cta_demo}
+              </Link>
+              <Link href="/calculadora" style={{
+                display: 'inline-flex', alignItems: 'center',
+                background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.75)',
+                border: '0.5px solid rgba(255,255,255,0.15)',
+                padding: '16px 32px', borderRadius: '10px',
+                fontSize: '15px', fontWeight: '500', textDecoration: 'none',
+                minHeight: '52px',
+              }}>
+                {t.cta_calc}
+              </Link>
             </div>
           </div>
         </div>
