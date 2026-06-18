@@ -52,25 +52,42 @@ export async function getRunwayProjection(schoolId: string) {
   const burnRate       = season.burn_rate || (runway as any).burn_rate || 5000
   const currentProfit  = (runway as any).season_profit ?? 0
   const currentRevenue = (runway as any).season_revenue ?? 0
-  const currentRunway  = burnRate > 0 ? currentProfit / burnRate : 0
+
+  const seasonStartPeriod = season.start_date.slice(0, 7)
+  const seasonEndPeriod   = season.end_date.slice(0, 7)
+
+  const { data: partnerReferrals } = await supabase
+    .from('referrals')
+    .select('commission_amount')
+    .eq('school_id', schoolId)
+    .gte('period', seasonStartPeriod)
+    .lte('period', seasonEndPeriod)
+
+  const totalPartnerCommissions = (partnerReferrals ?? [])
+    .reduce((sum, r) => sum + (r.commission_amount ?? 0), 0)
+
+  const adjustedNetProfit = Math.max(0, currentProfit - totalPartnerCommissions)
+  const currentRunway     = burnRate > 0 ? adjustedNetProfit / burnRate : 0
 
   const dailyRevenue    = daysElapsed > 0 ? currentRevenue / daysElapsed : 0
   const projectedExtra  = dailyRevenue * daysLeft
-  const projectedProfit = currentProfit + projectedExtra * 0.62
+  const projectedProfit = adjustedNetProfit + projectedExtra * 0.62
   const projectedRunway = burnRate > 0 ? projectedProfit / burnRate : 0
 
   const targetMonths  = 6
   const targetProfit  = targetMonths * burnRate
-  const gap           = Math.max(0, targetProfit - currentProfit)
+  const gap           = Math.max(0, targetProfit - adjustedNetProfit)
   const projectedGap  = Math.max(0, targetProfit - projectedProfit)
 
   return {
-    currentRunway:   Math.max(0, currentRunway),
-    projectedRunway: Math.max(0, projectedRunway),
+    currentRunway:          Math.max(0, currentRunway),
+    projectedRunway:        Math.max(0, projectedRunway),
     daysLeft,
     seasonProgress,
     burnRate,
     currentProfit,
+    adjustedNetProfit,
+    totalPartnerCommissions,
     projectedProfit,
     gap,
     projectedGap,

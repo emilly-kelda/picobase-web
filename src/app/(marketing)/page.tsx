@@ -414,8 +414,8 @@ function RunwayCalc({ t, lang }: { t: typeof CONTENT.pt; lang: Lang }) {
           borderRadius: '10px', fontSize: '12px', color: C.mist, lineHeight: '1.5',
         }}>
           {lang === 'pt'
-            ? 'Lucro da temporada ÷ custos mensais = meses de reserva'
-            : 'Season profit ÷ monthly costs = months of runway'
+            ? 'Lucro líquido da temporada ÷ custos mensais = meses de reserva'
+            : 'Net season profit ÷ monthly costs = months of runway'
           }
         </div>
       </div>

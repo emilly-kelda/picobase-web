@@ -56,11 +56,13 @@ export default async function OwnerPage() {
 
   const t = getT(lang)
 
-  const monthlyBurn  = (runway as any).burn_rate ?? 0
-  const runwayMonths = monthlyBurn > 0
-    ? (runway.season_profit ?? 0) / monthlyBurn
+  const monthlyBurn             = (runway as any).burn_rate ?? 0
+  const totalPartnerCommissions = projection?.totalPartnerCommissions ?? 0
+  const adjustedNetProfit       = Math.max(0, (runway.season_profit ?? 0) - totalPartnerCommissions)
+  const runwayMonths            = monthlyBurn > 0
+    ? adjustedNetProfit / monthlyBurn
     : (runway.winter_runway_months ?? 0)
-  const gapToTarget  = Math.max(0, 6 * monthlyBurn - (runway.season_profit ?? 0))
+  const gapToTarget             = Math.max(0, 6 * monthlyBurn - adjustedNetProfit)
 
   console.log(
     '[runway] season_profit=%s  burn_rate=%s  → computed=%s months  (db.winter_runway_months=%s)',
@@ -156,7 +158,7 @@ export default async function OwnerPage() {
 
           {/* Runway Calculator — interactive slider widget, left column */}
           <RunwayCalculator
-            seasonProfit={runway.season_profit ?? 0}
+            seasonProfit={adjustedNetProfit}
             burnRate={monthlyBurn}
             daysLeft={projection?.daysLeft}
             projectedRunway={projection?.projectedRunway}
@@ -345,10 +347,26 @@ export default async function OwnerPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', letterSpacing: '0.06em' }}>
-                  {lang === 'pt' ? 'Lucro da temporada' : 'Season profit'}
+                  {lang === 'pt' ? 'Receita da temporada' : 'Season revenue'}
                 </span>
-                <span style={{ fontSize: '13px', fontWeight: '500', color: '#fff', fontVariantNumeric: 'tabular-nums' }}>
-                  {fmt(runway.season_profit ?? 0)}
+                <span style={{ fontSize: '13px', fontWeight: '500', color: 'rgba(255,255,255,0.7)', fontVariantNumeric: 'tabular-nums' }}>
+                  {fmt(runway.season_revenue ?? 0)}
+                </span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', letterSpacing: '0.06em' }}>
+                  {lang === 'pt' ? 'Comissões pagas' : 'Commissions paid'}
+                </span>
+                <span style={{ fontSize: '13px', fontWeight: '500', color: 'rgba(220,100,100,0.8)', fontVariantNumeric: 'tabular-nums' }}>
+                  − {fmt((runway.crew_commissions ?? 0) + totalPartnerCommissions)}
+                </span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '8px', borderTop: '0.5px solid rgba(255,255,255,0.08)' }}>
+                <span style={{ fontSize: '12px', fontWeight: '600', color: 'rgba(255,255,255,0.7)', letterSpacing: '0.06em' }}>
+                  {lang === 'pt' ? 'Lucro líquido' : 'Net profit'}
+                </span>
+                <span style={{ fontSize: '14px', fontWeight: '700', color: '#fff', fontVariantNumeric: 'tabular-nums' }}>
+                  {fmt(adjustedNetProfit)}
                 </span>
               </div>
               {monthlyBurn > 0 && (
@@ -401,8 +419,8 @@ export default async function OwnerPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {[
                 { label: lang === 'pt' ? 'Receita total'  : 'Total revenue',  value: fmt(runway.season_revenue) },
-                { label: lang === 'pt' ? 'Comissões'      : 'Commissions',    value: fmt(runway.crew_commissions) },
-                { label: lang === 'pt' ? 'Lucro líquido'  : 'Net profit',     value: fmt(runway.season_profit) },
+                { label: lang === 'pt' ? 'Comissões'      : 'Commissions',    value: fmt((runway.crew_commissions ?? 0) + totalPartnerCommissions) },
+                { label: lang === 'pt' ? 'Lucro líquido'  : 'Net profit',     value: fmt(adjustedNetProfit) },
               ].map((row) => (
                 <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
                   <span style={{ fontSize: '11px', color: 'var(--mist)', fontWeight: '500' }}>

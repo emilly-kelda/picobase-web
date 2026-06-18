@@ -154,7 +154,7 @@ export default function CalculadoraPage() {
                 <span>R$ 0</span><span>R$ 300k</span>
               </div>
               <div style={{ fontSize: '12px', color: '#8A8C98', marginTop: '8px' }}>
-                Receita total menos comissões e custos variáveis da temporada.
+                Receita total menos comissões de instrutores e parceiros.
               </div>
             </div>
             <div>
