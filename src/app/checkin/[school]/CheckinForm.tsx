@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useRef, useState, useEffect } from 'react'
 
 const LANGS = {
   en: {
@@ -185,6 +185,16 @@ type Partner = {
   type: string
 }
 
+type ScheduledStudent = {
+  id: string
+  student_name: string
+  activity_id: string | null
+  activity_name: string | null
+  instructor_id: string | null
+  instructor_name: string | null
+  scheduled_at: string
+}
+
 const inputStyle: React.CSSProperties = {
   width: '100%',
   padding: '14px 16px',
@@ -312,6 +322,17 @@ export default function CheckinForm({
   const [source, setSource]       = useState<Source | null>(null)
   const [partnerId, setPartnerId] = useState<string | null>(null)
   const [stepError, setStepError] = useState<string | null>(null)
+
+  const [scheduledStudents, setScheduledStudents] = useState<ScheduledStudent[]>([])
+  const [showDropdown, setShowDropdown]           = useState(false)
+  const [filteredStudents, setFilteredStudents]   = useState<ScheduledStudent[]>([])
+
+  useEffect(() => {
+    fetch(`/api/checkin/scheduled-today?school=${encodeURIComponent(school.slug)}`)
+      .then(r => r.json())
+      .then(data => setScheduledStudents(data.students ?? []))
+      .catch(() => {})
+  }, [school.slug])
 
   const [isMinor,         setIsMinor]         = useState(false)
   const [guardianName,    setGuardianName]    = useState('')
@@ -579,9 +600,164 @@ export default function CheckinForm({
 
             <div>
               <label style={labelStyle}>{t!.name} *</label>
-              <input style={inputStyle} type="text" value={form.student_name}
-                onChange={e => setForm(f => ({ ...f, student_name: e.target.value }))}
-                placeholder="João Silva" autoComplete="name" />
+
+              {scheduledStudents.length > 0 && (
+                <div style={{
+                  fontSize: '12px',
+                  color: '#0B5E75',
+                  background: '#E8F8F7',
+                  padding: '6px 12px',
+                  borderRadius: '8px',
+                  marginBottom: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}>
+                  <span>📋</span>
+                  <span>
+                    {lang === 'pt'
+                      ? `${scheduledStudents.length} aluno${scheduledStudents.length !== 1 ? 's' : ''} agendado${scheduledStudents.length !== 1 ? 's' : ''} para hoje`
+                      : `${scheduledStudents.length} student${scheduledStudents.length !== 1 ? 's' : ''} scheduled for today`
+                    }
+                  </span>
+                </div>
+              )}
+
+              <div style={{ position: 'relative' }}>
+                <input
+                  type="text"
+                  value={form.student_name}
+                  onChange={e => {
+                    const val = e.target.value
+                    setForm(f => ({ ...f, student_name: val }))
+                    const needle = val.toLowerCase()
+                    if (needle.length >= 1) {
+                      const matches = scheduledStudents.filter(s =>
+                        s.student_name.toLowerCase().includes(needle)
+                      )
+                      setFilteredStudents(matches)
+                      setShowDropdown(matches.length > 0)
+                    } else {
+                      // show all scheduled when field is empty
+                      setFilteredStudents(scheduledStudents)
+                      setShowDropdown(scheduledStudents.length > 0)
+                    }
+                  }}
+                  onFocus={() => {
+                    if (scheduledStudents.length > 0) {
+                      const needle = form.student_name.toLowerCase()
+                      const matches = needle
+                        ? scheduledStudents.filter(s =>
+                            s.student_name.toLowerCase().includes(needle)
+                          )
+                        : scheduledStudents
+                      setFilteredStudents(matches)
+                      setShowDropdown(matches.length > 0)
+                    }
+                  }}
+                  onBlur={() => {
+                    // delay so click on dropdown item registers
+                    setTimeout(() => setShowDropdown(false), 200)
+                  }}
+                  placeholder="João Silva"
+                  autoComplete="name"
+                  style={inputStyle}
+                />
+
+                {/* Dropdown */}
+                {showDropdown && filteredStudents.length > 0 && (
+                  <div style={{
+                    position: 'absolute',
+                    top: 'calc(100% + 4px)',
+                    left: 0, right: 0,
+                    background: '#fff',
+                    border: '1.5px solid #2EC4B6',
+                    borderRadius: '12px',
+                    zIndex: 50,
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.1)',
+                    overflow: 'hidden',
+                    maxHeight: '280px',
+                    overflowY: 'auto',
+                  }}>
+                    <div style={{
+                      padding: '8px 14px',
+                      background: '#E8F8F7',
+                      fontSize: '10px',
+                      fontWeight: '600',
+                      letterSpacing: '0.1em',
+                      textTransform: 'uppercase',
+                      color: '#0B5E75',
+                      borderBottom: '0.5px solid #DDD8CF',
+                    }}>
+                      {lang === 'pt' ? 'Agendados hoje' : 'Scheduled today'}
+                    </div>
+
+                    {filteredStudents.map((student, i) => {
+                      const time = new Date(student.scheduled_at)
+                        .toLocaleTimeString(lang === 'pt' ? 'pt-BR' : 'en-US', {
+                          hour: '2-digit', minute: '2-digit',
+                        })
+                      return (
+                        <button
+                          key={student.id}
+                          type="button"
+                          onMouseDown={() => {
+                            // use onMouseDown so it fires before onBlur
+                            setForm(f => ({
+                              ...f,
+                              student_name:  student.student_name,
+                              activity_id:   student.activity_id   ?? f.activity_id,
+                              instructor_id: student.instructor_id ?? f.instructor_id,
+                            }))
+                            setShowDropdown(false)
+                          }}
+                          style={{
+                            width: '100%',
+                            padding: '12px 14px',
+                            background: 'transparent',
+                            border: 'none',
+                            borderBottom: i < filteredStudents.length - 1
+                              ? '0.5px solid #F0EEE8' : 'none',
+                            cursor: 'pointer',
+                            fontFamily: 'inherit',
+                            textAlign: 'left',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            gap: '12px',
+                          }}
+                        >
+                          <div>
+                            <div style={{
+                              fontSize: '14px',
+                              fontWeight: '500',
+                              color: '#0B1F2E',
+                              marginBottom: '2px',
+                            }}>
+                              {student.student_name}
+                            </div>
+                            <div style={{
+                              fontSize: '12px',
+                              color: '#8A8C98',
+                            }}>
+                              {student.activity_name ?? '—'}
+                              {student.instructor_name && ` · ${student.instructor_name}`}
+                            </div>
+                          </div>
+                          <div style={{
+                            fontSize: '12px',
+                            fontWeight: '600',
+                            color: '#2EC4B6',
+                            flexShrink: 0,
+                          }}>
+                            {time}
+                          </div>
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
             <div>
               <label style={labelStyle}>{t!.nationality}</label>
