@@ -1,4 +1,4 @@
-﻿import { getSchoolBySlug, getActivitiesForCheckin, getInstructorsForCheckin } from '@/repositories/checkinRepository'
+﻿import { getSchoolBySlug, getActivitiesForCheckin, getInstructorsForCheckin, getPartnersForCheckin } from '@/repositories/checkinRepository'
 import { notFound } from 'next/navigation'
 import CheckinForm from './CheckinForm'
 
@@ -11,9 +11,10 @@ export default async function CheckinPage({
   const school = await getSchoolBySlug(slug)
   if (!school) notFound()
 
-  const [activities, instructors] = await Promise.all([
+  const [activities, instructors, partners] = await Promise.all([
     getActivitiesForCheckin(school.id),
     getInstructorsForCheckin(school.id),
+    getPartnersForCheckin(school.id),
   ])
 
   return (
@@ -21,6 +22,7 @@ export default async function CheckinPage({
       school={school}
       activities={activities}
       instructors={instructors}
+      partners={partners}
     />
   )
 }

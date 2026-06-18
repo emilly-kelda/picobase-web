@@ -20,6 +20,7 @@ export async function POST(request: Request) {
       student_nationality: body.student_nationality || null,
       activity_id:         body.activity_id || null,
       instructor_id:       body.instructor_id || null,
+      partner_id:          body.partner_id ?? null,
       health_condition:    body.health_condition || null,
       emergency_name:      body.emergency_name || null,
       emergency_phone:     body.emergency_phone || null,

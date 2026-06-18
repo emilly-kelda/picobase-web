@@ -34,4 +34,15 @@ export async function getInstructorsForCheckin(schoolId: string) {
   return data ?? []
 }
 
+export async function getPartnersForCheckin(schoolId: string) {
+  const supabase = createServiceClient()
+  const { data } = await supabase
+    .from('partners')
+    .select('id, name, type')
+    .eq('school_id', schoolId)
+    .eq('active', true)
+    .order('name')
+  return data ?? []
+}
+
 

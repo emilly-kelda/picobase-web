@@ -14,8 +14,10 @@ export async function getPendingLessons(schoolId: string) {
       checkin_at,
       activity_id,
       instructor_id,
+      partner_id,
       activities ( id, name, default_price, default_duration_min ),
-      instructor:users!checkins_instructor_id_fkey ( id, name )
+      instructor:users!checkins_instructor_id_fkey ( id, name ),
+      partner:partners!checkins_partner_id_fkey ( id, name, type )
     `)
     .eq('school_id', schoolId)
     .eq('status', 'checked_in')

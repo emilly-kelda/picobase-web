@@ -179,6 +179,12 @@ type Instructor = {
   name: string
 }
 
+type Partner = {
+  id: string
+  name: string
+  type: string
+}
+
 const inputStyle: React.CSSProperties = {
   width: '100%',
   padding: '14px 16px',
@@ -207,10 +213,12 @@ export default function CheckinForm({
   school,
   activities,
   instructors,
+  partners = [],
 }: {
   school: School
   activities: Activity[]
   instructors: Instructor[]
+  partners?: Partner[]
 }) {
   const defaultLang = (school.language === 'pt' ? 'pt'
     : school.language === 'fr' ? 'fr'
@@ -240,6 +248,8 @@ export default function CheckinForm({
     emergency_phone:     '',
     signature_data:      '',
   })
+
+  const [partnerId, setPartnerId] = useState<string | null>(null)
 
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const drawing   = useRef(false)
@@ -305,7 +315,7 @@ export default function CheckinForm({
     const res = await fetch('/api/checkin', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...form, school_id: school.id }),
+      body: JSON.stringify({ ...form, school_id: school.id, partner_id: partnerId ?? null }),
     })
     const data = await res.json()
     setSubmitting(false)
@@ -580,6 +590,45 @@ export default function CheckinForm({
                 ))}
               </select>
             </div>
+
+            {partners.length > 0 && (
+              <div>
+                <label style={labelStyle}>
+                  {lang === 'pt' ? 'Indicado por (opcional)' : lang === 'fr' ? 'Référent (optionnel)' : lang === 'es' ? 'Referido por (opcional)' : 'Referred by (optional)'}
+                </label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setPartnerId(null)}
+                    style={{
+                      padding: '8px 16px', borderRadius: '999px', fontFamily: 'inherit',
+                      border: `1.5px solid ${partnerId === null ? '#00A896' : '#E4E0D8'}`,
+                      background: partnerId === null ? '#E0F8F5' : '#fff',
+                      color: partnerId === null ? '#007868' : '#8A8C98',
+                      fontSize: '13px', fontWeight: '500', cursor: 'pointer',
+                    }}
+                  >
+                    {lang === 'pt' ? 'Nenhum' : lang === 'fr' ? 'Aucun' : lang === 'es' ? 'Ninguno' : 'None'}
+                  </button>
+                  {partners.map(p => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => setPartnerId(p.id)}
+                      style={{
+                        padding: '8px 16px', borderRadius: '999px', fontFamily: 'inherit',
+                        border: `1.5px solid ${partnerId === p.id ? '#00A896' : '#E4E0D8'}`,
+                        background: partnerId === p.id ? '#E0F8F5' : '#fff',
+                        color: partnerId === p.id ? '#007868' : '#1A1C22',
+                        fontSize: '13px', fontWeight: '500', cursor: 'pointer',
+                      }}
+                    >
+                      {p.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div>
               <label style={labelStyle}>{t!.instructor}</label>
