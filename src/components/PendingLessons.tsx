@@ -10,9 +10,6 @@ type ActivityRef = {
   name: string
   default_price: number
   default_duration_min: number
-  price_brl?: number | null
-  price_eur?: number | null
-  price_usd?: number | null
 }
 
 type Currency = 'BRL' | 'EUR' | 'USD'
@@ -72,9 +69,9 @@ const SOURCE_ICON: Record<string, string> = {
   outro:     '💡',
 }
 
-function fmt(n: number) {
+function fmt(n: number, currency: Currency = 'BRL') {
   return new Intl.NumberFormat('pt-BR', {
-    style: 'currency', currency: 'BRL',
+    style: 'currency', currency,
     minimumFractionDigits: 0, maximumFractionDigits: 0,
   }).format(n)
 }
@@ -138,7 +135,6 @@ export default function PendingLessons({
   const [level, setLevel]                     = useState<Level>('experimental')
   const [experimentalDisabled, setExperimentalDisabled] = useState(false)
   const [currency, setCurrency]               = useState<Currency>('BRL')
-  const [priceBrlEquivalent, setPriceBrlEquivalent] = useState<number | null>(null)
 
   function open(checkin: Checkin) {
     const sched = checkin.scheduled_lesson
@@ -148,7 +144,7 @@ export default function PendingLessons({
     setSelected(checkin)
     setActivityId(sched?.activities?.id ?? checkin.activity_id ?? '')
     setDuration(sched?.duration_min ?? fallbackActivity?.default_duration_min ?? 60)
-    setPrice(fallbackActivity?.price_brl ?? fallbackActivity?.default_price ?? 0)
+    setPrice(fallbackActivity?.default_price ?? 0)
     setInstructorId(schedInstructor?.id ?? checkin.instructor_id ?? '')
     setUseCustom(false)
     setCustom('')
@@ -162,7 +158,6 @@ export default function PendingLessons({
     setSessionDate(new Date().toISOString().slice(0, 10))
     setPaymentMethod(null)
     setCurrency('BRL')
-    setPriceBrlEquivalent(null)
 
     if (isLevel(sched?.level)) {
       setLevel(sched!.level as Level)
@@ -200,11 +195,7 @@ export default function PendingLessons({
   const totalPrice         = priceMode === 'per_hour'
     ? Math.round(pricePerHour * (finalDuration / 60))
     : price
-  // totalPrice is the amount in `currency` (price_original). For runway/commission
-  // purposes everything is tracked in BRL — when currency isn't BRL, the owner
-  // types that BRL-equivalent manually (no live FX conversion yet).
-  const brlPrice = currency === 'BRL' ? totalPrice : (priceBrlEquivalent ?? 0)
-  const cantConfirm = confirming || !instructorId || brlPrice <= 0 || finalDuration <= 0 || !paymentMethod
+  const cantConfirm = confirming || !instructorId || totalPrice <= 0 || finalDuration <= 0 || !paymentMethod
 
   async function confirm() {
     if (!selected || !instructorId) return
@@ -218,7 +209,7 @@ export default function PendingLessons({
         instructor_id:  instructorId,
         activity_id:    activityId || null,
         duration_min:   finalDuration,
-        price:          brlPrice,
+        price:          totalPrice,
         price_original: totalPrice,
         currency,
         notes,
@@ -718,27 +709,14 @@ export default function PendingLessons({
                 letterSpacing: '0.08em', textTransform: 'uppercase',
                 color: 'var(--mist)', marginBottom: '8px',
               }}>
-                Moeda
+                {lang === 'pt' ? 'Moeda cobrada' : 'Currency charged'}
               </div>
               <div style={{ display: 'flex', gap: '8px' }}>
                 {CURRENCY_OPTIONS.map(c => (
                   <button
                     key={c.value}
                     type="button"
-                    onClick={() => {
-                      setCurrency(c.value)
-                      setPriceBrlEquivalent(null)
-                      const activity = activities.find(a => a.id === activityId)
-                      if (activity) {
-                        const priceKey = c.value === 'BRL'
-                          ? 'price_brl'
-                          : c.value === 'EUR'
-                          ? 'price_eur'
-                          : 'price_usd'
-                        const autoPrice = activity[priceKey]
-                        if (autoPrice) setPrice(Number(autoPrice))
-                      }
-                    }}
+                    onClick={() => setCurrency(c.value)}
                     style={{
                       flex: 1, padding: '8px',
                       borderRadius: 'var(--radius-md)',
@@ -770,7 +748,12 @@ export default function PendingLessons({
                 display: 'flex', justifyContent: 'space-between',
                 alignItems: 'center',
               }}>
-                <span>Valor ({CURRENCY_SYMBOL[currency]})</span>
+                <span>
+                  {lang === 'pt'
+                    ? `Valor cobrado (${CURRENCY_SYMBOL[currency]})`
+                    : `Amount charged (${CURRENCY_SYMBOL[currency]})`
+                  }
+                </span>
                 <div style={{
                   display: 'flex', gap: '2px',
                   background: 'var(--powder)',
@@ -817,7 +800,7 @@ export default function PendingLessons({
                     }}
                   />
                   <div style={{ fontSize: '13px', color: 'var(--mist)' }}>
-                    → comissão {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 }).format(brlPrice * commissionPct)}
+                    → comissão {fmt(totalPrice * commissionPct, currency)}
                   </div>
                 </div>
               ) : (
@@ -855,35 +838,6 @@ export default function PendingLessons({
                       </span>
                     </div>
                   )}
-                </div>
-              )}
-
-              {currency !== 'BRL' && (
-                <div style={{ marginTop: '12px' }}>
-                  <div style={{
-                    fontSize: '11px', fontWeight: '500',
-                    letterSpacing: '0.06em', textTransform: 'uppercase',
-                    color: 'var(--mist)', marginBottom: '6px',
-                  }}>
-                    Valor em R$ (equivalente) *
-                  </div>
-                  <input
-                    type="number"
-                    value={priceBrlEquivalent ?? ''}
-                    onChange={e => setPriceBrlEquivalent(e.target.value ? Number(e.target.value) : null)}
-                    placeholder="0"
-                    style={{
-                      width: '140px', padding: '10px 14px',
-                      border: `0.5px solid ${priceBrlEquivalent ? 'var(--border-strong)' : '#F4A89A'}`,
-                      borderRadius: 'var(--radius-md)',
-                      fontSize: '20px', fontWeight: '600',
-                      color: 'var(--slate)', fontFamily: 'var(--font-sans)',
-                      outline: 'none',
-                    }}
-                  />
-                  <div style={{ fontSize: '11px', color: 'var(--mist)', marginTop: '4px' }}>
-                    Sem conversão automática — informe o valor recebido em reais para o cálculo de comissão e faturamento.
-                  </div>
                 </div>
               )}
             </div>
@@ -1062,7 +1016,7 @@ export default function PendingLessons({
                   fontFamily: 'var(--font-sans)',
                 }}
               >
-                {confirming ? 'Confirmando...' : `Confirmar aula · ${fmt(brlPrice)}`}
+                {confirming ? 'Confirmando...' : `Confirmar aula · ${fmt(totalPrice, currency)}`}
               </button>
             </div>
 
