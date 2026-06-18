@@ -252,6 +252,10 @@ export default function CheckinForm({
 
   const [partnerId, setPartnerId] = useState<string | null>(null)
 
+  const [isMinor,         setIsMinor]         = useState(false)
+  const [guardianName,    setGuardianName]    = useState('')
+  const [guardianConsent, setGuardianConsent] = useState(false)
+
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const drawing   = useRef(false)
   const t = lang ? LANGS[lang] : null
@@ -319,7 +323,14 @@ export default function CheckinForm({
       const res = await fetch('/api/checkin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, school_id: school.id, partner_id: partnerId ?? null }),
+        body: JSON.stringify({
+          ...form,
+          school_id:        school.id,
+          partner_id:       partnerId ?? null,
+          is_minor:         isMinor,
+          guardian_name:    isMinor ? guardianName.trim() : null,
+          guardian_consent: isMinor ? guardianConsent : false,
+        }),
       })
       const data = await res.json()
       console.log('[checkin] response:', data)
@@ -465,6 +476,7 @@ export default function CheckinForm({
   }
 
   const canSubmit = agreed && gdpr && form.signature_data !== '' && !submitting
+    && (!isMinor || (guardianName.trim().length > 2 && guardianConsent))
 
   return (
     <div style={{ minHeight: '100vh', background: '#F0EEE9', fontFamily: 'system-ui, sans-serif', paddingBottom: '40px' }}>
@@ -550,10 +562,59 @@ export default function CheckinForm({
                 style={inputStyle}
                 type="date"
                 value={form.date_of_birth}
-                onChange={e => setForm(f => ({ ...f, date_of_birth: e.target.value }))}
                 max={new Date().toISOString().slice(0, 10)}
+                onChange={e => {
+                  const val = e.target.value
+                  setForm(f => ({ ...f, date_of_birth: val }))
+                  if (val) {
+                    const age = Math.floor(
+                      (Date.now() - new Date(val).getTime())
+                      / (1000 * 60 * 60 * 24 * 365.25)
+                    )
+                    setIsMinor(age < 18)
+                  } else {
+                    setIsMinor(false)
+                  }
+                }}
               />
             </div>
+
+            {isMinor && (
+              <div style={{
+                padding: '16px',
+                background: '#FEF3C7',
+                border: '1.5px solid #F59E0B',
+                borderRadius: '12px',
+              }}>
+                <div style={{
+                  fontSize: '14px', fontWeight: '700',
+                  color: '#92400E', marginBottom: '8px',
+                  display: 'flex', alignItems: 'center', gap: '8px',
+                }}>
+                  <span>⚠</span>
+                  <span>
+                    {lang === 'pt' ? 'Aluno menor de idade'
+                      : lang === 'fr' ? 'Élève mineur'
+                      : lang === 'es' ? 'Estudiante menor de edad'
+                      : 'Minor student'}
+                  </span>
+                </div>
+                <div style={{
+                  fontSize: '13px', color: '#92400E',
+                  lineHeight: '1.6',
+                }}>
+                  {lang === 'pt'
+                    ? 'É necessária a autorização de um responsável legal para que menores de 18 anos participem das atividades.'
+                    : lang === 'fr'
+                    ? "L'autorisation d'un tuteur légal est requise pour les moins de 18 ans."
+                    : lang === 'es'
+                    ? 'Se requiere la autorización de un tutor legal para menores de 18 años.'
+                    : 'A legal guardian must authorize participation for students under 18 years of age.'
+                  }
+                </div>
+              </div>
+            )}
+
             <div>
               <label style={labelStyle}>{t!.email}</label>
               <input style={inputStyle} type="email" value={form.student_email}
@@ -798,6 +859,80 @@ export default function CheckinForm({
                 </button>
               </div>
             </div>
+
+            {isMinor && (
+              <div style={{
+                padding: '20px',
+                background: '#fff',
+                border: '1.5px solid #F59E0B',
+                borderRadius: '14px',
+              }}>
+                <div style={{
+                  fontSize: '11px', fontWeight: '700',
+                  color: '#0B1F2E',
+                  textTransform: 'uppercase' as const,
+                  letterSpacing: '0.06em',
+                  marginBottom: '16px',
+                }}>
+                  {lang === 'pt' ? 'Autorização do responsável legal'
+                    : lang === 'fr' ? 'Autorisation du tuteur légal'
+                    : lang === 'es' ? 'Autorización del tutor legal'
+                    : 'Legal guardian authorization'}
+                </div>
+
+                <div style={{ marginBottom: '14px' }}>
+                  <label style={{
+                    display: 'block', fontSize: '13px',
+                    fontWeight: '500', color: '#0B1F2E',
+                    marginBottom: '6px',
+                  }}>
+                    {lang === 'pt' ? 'Nome do responsável *'
+                      : lang === 'fr' ? 'Nom du tuteur *'
+                      : lang === 'es' ? 'Nombre del tutor *'
+                      : 'Guardian full name *'}
+                  </label>
+                  <input
+                    type="text"
+                    value={guardianName}
+                    onChange={e => setGuardianName(e.target.value)}
+                    placeholder={lang === 'pt' ? 'Nome completo' : 'Full name'}
+                    style={{
+                      ...inputStyle,
+                      border: '1px solid #DDD8CF',
+                    }}
+                  />
+                </div>
+
+                <label style={{
+                  display: 'flex', alignItems: 'flex-start',
+                  gap: '12px', cursor: 'pointer',
+                }}>
+                  <input
+                    type="checkbox"
+                    checked={guardianConsent}
+                    onChange={e => setGuardianConsent(e.target.checked)}
+                    style={{
+                      width: '20px', height: '20px',
+                      marginTop: '2px', flexShrink: 0,
+                      accentColor: '#F59E0B', cursor: 'pointer',
+                    }}
+                  />
+                  <span style={{
+                    fontSize: '13px', color: '#0B1F2E',
+                    lineHeight: '1.6',
+                  }}>
+                    {lang === 'pt'
+                      ? 'Eu, responsável legal pelo menor acima identificado, autorizo sua participação nas atividades e declaro estar ciente dos riscos envolvidos.'
+                      : lang === 'fr'
+                      ? "En tant que tuteur légal du mineur identifié ci-dessus, j'autorise sa participation aux activités et reconnais les risques impliqués."
+                      : lang === 'es'
+                      ? 'Yo, tutor legal del menor identificado arriba, autorizo su participación en las actividades y reconozco los riesgos involucrados.'
+                      : 'I, as the legal guardian of the minor identified above, authorize their participation in the activities and acknowledge the risks involved.'
+                    }
+                  </span>
+                </label>
+              </div>
+            )}
 
             <label style={{
               display: 'flex', gap: '12px', alignItems: 'flex-start', cursor: 'pointer',

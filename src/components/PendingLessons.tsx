@@ -11,6 +11,8 @@ type Checkin = {
   checkin_at: string
   activity_id: string | null
   instructor_id: string | null
+  is_minor: boolean | null
+  guardian_name: string | null
   activities: {
     id: string
     name: string
@@ -234,6 +236,18 @@ export default function PendingLessons({
                     display: 'flex', alignItems: 'center', gap: '8px',
                   }}>
                     {checkin.student_name}
+                    {checkin.is_minor && (
+                      <span style={{
+                        display: 'inline-flex', alignItems: 'center', gap: '4px',
+                        padding: '2px 8px',
+                        borderRadius: 'var(--radius-full)',
+                        background: '#FEF3C7',
+                        color: '#92400E',
+                        fontSize: '11px', fontWeight: '600',
+                      }}>
+                        ⚠ Menor
+                      </span>
+                    )}
                     {checkin.health_condition && (
                       <span style={{
                         fontSize: '10px', fontWeight: '500',

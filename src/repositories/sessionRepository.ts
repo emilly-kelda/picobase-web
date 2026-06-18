@@ -14,6 +14,8 @@ export async function getPendingLessons(schoolId: string) {
       checkin_at,
       activity_id,
       instructor_id,
+      is_minor,
+      guardian_name,
       activities ( id, name, default_price, default_duration_min ),
       instructor:users!checkins_instructor_id_fkey ( id, name )
     `)
