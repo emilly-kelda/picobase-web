@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
 type Payment = {
@@ -113,6 +113,14 @@ export default function PaymentsClient({
       status: string
     }>
   } | null>(null)
+  const [paymentSummary, setPaymentSummary] = useState<Record<string, { count: number; revenue: number }>>({})
+
+  useEffect(() => {
+    fetch(`/api/owner/payment-method-summary?period=${period}`)
+      .then(r => r.json())
+      .then(d => setPaymentSummary(d))
+      .catch(() => {})
+  }, [period])
 
   const pending = payments.filter(p => p.status === 'pending')
 
@@ -374,6 +382,63 @@ export default function PaymentsClient({
               ))}
             </div>
           )}
+
+          {/* Payment method breakdown */}
+          {Object.keys(paymentSummary).length > 0 && (() => {
+            const PM_LABELS: Record<string, { label: string; icon: string }> = {
+              pix:       { label: 'PIX',        icon: '⚡' },
+              dinheiro:  { label: 'Dinheiro',   icon: '💵' },
+              cartao:    { label: 'Cartão',     icon: '💳' },
+              a_receber: { label: 'A receber',  icon: '⏳' },
+              unknown:   { label: 'Sem registro', icon: '—' },
+            }
+            return (
+              <div style={{ marginBottom: '20px' }}>
+                <div style={{
+                  fontSize: '10px', fontWeight: '500',
+                  letterSpacing: '0.1em', textTransform: 'uppercase',
+                  color: 'var(--mist)', marginBottom: '8px',
+                }}>
+                  Por forma de pagamento
+                </div>
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: `repeat(${Object.keys(paymentSummary).length}, 1fr)`,
+                  gap: '10px',
+                }}>
+                  {Object.entries(paymentSummary).map(([method, { count, revenue }]) => {
+                    const pm = PM_LABELS[method] ?? { label: method, icon: '—' }
+                    const isPending = method === 'a_receber'
+                    return (
+                      <div key={method} style={{
+                        background: isPending ? '#FEF3C7' : '#E0F8F5',
+                        border: `0.5px solid ${isPending ? '#FDE68A' : 'var(--border)'}`,
+                        borderRadius: 'var(--radius-md)', padding: '14px 16px',
+                      }}>
+                        <div style={{
+                          fontSize: '10px', fontWeight: '500',
+                          letterSpacing: '0.08em', textTransform: 'uppercase',
+                          color: isPending ? '#92400E' : 'var(--glacial-dark)', marginBottom: '6px',
+                        }}>
+                          {pm.icon} {pm.label}
+                        </div>
+                        <div style={{
+                          fontSize: '18px', fontWeight: '600',
+                          color: isPending ? '#92400E' : 'var(--slate)',
+                          fontVariantNumeric: 'tabular-nums',
+                        }}>
+                          {fmt(revenue)}
+                        </div>
+                        <div style={{ fontSize: '11px', color: isPending ? '#92400E' : 'var(--mist)', marginTop: '2px' }}>
+                          {count} {count === 1 ? 'aula' : 'aulas'}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          })()}
 
           {/* Action buttons */}
           <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>

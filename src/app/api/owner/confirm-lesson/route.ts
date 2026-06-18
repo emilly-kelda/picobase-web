@@ -14,6 +14,7 @@ export async function POST(request: Request) {
     notes,
     commission_pct,
     session_date,
+    payment_method,
   } = body
 
   const supabase = createServiceClient()
@@ -41,6 +42,7 @@ export async function POST(request: Request) {
       session_type:     'lesson',
       notes:            notes || null,
       partner_id:       checkin?.partner_id ?? null,
+      payment_method:   payment_method ?? null,
     })
     .select('id')
     .single()

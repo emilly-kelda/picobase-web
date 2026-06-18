@@ -66,6 +66,7 @@ export async function getSessions(
       commission_pct,
       origin,
       session_type,
+      payment_method,
       instructor:users!sessions_instructor_id_fkey ( id, name ),
       checkins ( student_name ),
       activities ( name ),

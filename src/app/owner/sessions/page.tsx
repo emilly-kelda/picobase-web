@@ -23,6 +23,13 @@ function fmtPct(n: number) {
   return `${Math.round(n * 100)}%`
 }
 
+const PAYMENT_LABELS: Record<string, { label: string; icon: string }> = {
+  pix:       { label: 'PIX',       icon: '⚡' },
+  dinheiro:  { label: 'Dinheiro',  icon: '💵' },
+  cartao:    { label: 'Cartão',    icon: '💳' },
+  a_receber: { label: 'A receber', icon: '⏳' },
+}
+
 const ORIGIN_LABELS: Record<string, string> = {
   direct:   'Direct',
   partner:  'Partner',
@@ -194,7 +201,7 @@ export default async function SessionsPage({
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr>
-              {[t.th_date, t.th_student, t.th_activity, t.th_instructor, t.th_duration, t.th_origin, t.th_price, t.th_comm_pct, t.th_commission].map(h => (
+              {[t.th_date, t.th_student, t.th_activity, t.th_instructor, t.th_duration, t.th_origin, 'Pagamento', t.th_price, t.th_comm_pct, t.th_commission].map(h => (
                 <th key={h} style={{
                   padding: '10px 20px',
                   textAlign: 'left',
@@ -213,7 +220,7 @@ export default async function SessionsPage({
           <tbody>
             {sessions.length === 0 ? (
               <tr>
-                <td colSpan={9} style={{
+                <td colSpan={10} style={{
                   padding: '48px 20px',
                   textAlign: 'center',
                   fontSize: '13px', color: 'var(--mist)',
@@ -275,6 +282,21 @@ export default async function SessionsPage({
                       }}>
                         {ORIGIN_LABELS[origin] ?? origin}
                       </span>
+                    </td>
+                    <td style={{ padding: '13px 20px' }}>
+                      {s.payment_method ? (
+                        <span style={{
+                          display: 'inline-flex', alignItems: 'center', gap: '4px',
+                          padding: '2px 8px', borderRadius: '99px',
+                          background: s.payment_method === 'a_receber' ? '#FEF3C7' : '#E0F8F5',
+                          color: s.payment_method === 'a_receber' ? '#92400E' : '#007868',
+                          fontSize: '11px', fontWeight: '500',
+                        }}>
+                          {PAYMENT_LABELS[s.payment_method]?.icon}{' '}{PAYMENT_LABELS[s.payment_method]?.label}
+                        </span>
+                      ) : (
+                        <span style={{ fontSize: '12px', color: 'var(--mist)' }}>—</span>
+                      )}
                     </td>
                     <td style={{ padding: '13px 20px', fontSize: '13px', color: 'var(--slate)', fontVariantNumeric: 'tabular-nums' }}>
                       {fmt(s.price)}

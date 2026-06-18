@@ -80,6 +80,7 @@ export default function PendingLessons({
   const [priceMode, setPriceMode]             = useState<'total' | 'per_hour'>('total')
   const [pricePerHour, setPricePerHour]       = useState(0)
   const [sessionDate, setSessionDate]         = useState(new Date().toISOString().slice(0, 10))
+  const [paymentMethod, setPaymentMethod]     = useState<'pix' | 'dinheiro' | 'cartao' | 'a_receber' | null>(null)
 
   function open(checkin: Checkin) {
     setSelected(checkin)
@@ -96,6 +97,7 @@ export default function PendingLessons({
     setPriceMode('total')
     setPricePerHour(0)
     setSessionDate(new Date().toISOString().slice(0, 10))
+    setPaymentMethod(null)
   }
 
   function close() { setSelected(null) }
@@ -123,6 +125,7 @@ export default function PendingLessons({
         notes,
         commission_pct: commissionPct,
         session_date:   sessionDate,
+        payment_method: paymentMethod,
       }),
     })
 
@@ -659,6 +662,52 @@ export default function PendingLessons({
               )}
             </div>
 
+            {/* Payment method */}
+            <div style={{ marginBottom: '20px' }}>
+              <div style={{
+                fontSize: '11px', fontWeight: '500',
+                letterSpacing: '0.08em', textTransform: 'uppercase',
+                color: 'var(--mist)', marginBottom: '10px',
+              }}>
+                Forma de pagamento *
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                {([
+                  { value: 'pix',       label: 'PIX',        icon: '⚡' },
+                  { value: 'dinheiro',  label: 'Dinheiro',   icon: '💵' },
+                  { value: 'cartao',    label: 'Cartão',     icon: '💳' },
+                  { value: 'a_receber', label: 'A receber',  icon: '⏳' },
+                ] as const).map(opt => {
+                  const active = paymentMethod === opt.value
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setPaymentMethod(opt.value)}
+                      style={{
+                        padding: '10px 14px',
+                        borderRadius: 'var(--radius-md)',
+                        border: `1.5px solid ${active ? 'var(--glacial)' : 'var(--border)'}`,
+                        background: active ? 'var(--glacial-light, #E0F8F5)' : '#fff',
+                        color: active ? 'var(--glacial-dark, #007868)' : 'var(--mist)',
+                        fontSize: '13px', fontWeight: active ? '600' : '400',
+                        cursor: 'pointer', fontFamily: 'var(--font-sans)',
+                        display: 'flex', alignItems: 'center', gap: '8px',
+                      }}
+                    >
+                      <span>{opt.icon}</span>
+                      <span>{opt.label}</span>
+                    </button>
+                  )
+                })}
+              </div>
+              {!paymentMethod && (
+                <div style={{ fontSize: '11px', color: 'var(--mist)', marginTop: '6px' }}>
+                  Selecione a forma de pagamento para confirmar
+                </div>
+              )}
+            </div>
+
             <div style={{ display: 'flex', gap: '10px' }}>
               <button
                 onClick={close}
@@ -675,17 +724,17 @@ export default function PendingLessons({
               </button>
               <button
                 onClick={confirm}
-                disabled={confirming || !instructorId || totalPrice <= 0 || finalDuration <= 0}
+                disabled={confirming || !instructorId || totalPrice <= 0 || finalDuration <= 0 || !paymentMethod}
                 style={{
                   flex: 2, padding: '12px',
-                  background: confirming || !instructorId || totalPrice <= 0 || finalDuration <= 0
+                  background: confirming || !instructorId || totalPrice <= 0 || finalDuration <= 0 || !paymentMethod
                     ? 'var(--border)' : 'var(--glacial)',
-                  color: confirming || !instructorId || totalPrice <= 0 || finalDuration <= 0
+                  color: confirming || !instructorId || totalPrice <= 0 || finalDuration <= 0 || !paymentMethod
                     ? 'var(--mist)' : '#fff',
                   border: 'none',
                   borderRadius: 'var(--radius-md)',
                   fontSize: '14px', fontWeight: '500',
-                  cursor: confirming || !instructorId || totalPrice <= 0 || finalDuration <= 0
+                  cursor: confirming || !instructorId || totalPrice <= 0 || finalDuration <= 0 || !paymentMethod
                     ? 'not-allowed' : 'pointer',
                   fontFamily: 'var(--font-sans)',
                 }}
