@@ -11,7 +11,6 @@ type Checkin = {
   checkin_at: string
   activity_id: string | null
   instructor_id: string | null
-  partner_id: string | null
   activities: {
     id: string
     name: string
@@ -19,7 +18,6 @@ type Checkin = {
     default_duration_min: number
   } | null
   instructor: { id: string; name: string } | { id: string; name: string }[] | null
-  partner: { id: string; name: string; type: string } | null
 }
 
 type Instructor = {
@@ -245,31 +243,12 @@ export default function PendingLessons({
                       </span>
                     )}
                   </div>
-                  <div style={{ fontSize: '12px', color: 'var(--mist)', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '2px' }}>
+                  <div style={{ fontSize: '12px', color: 'var(--mist)' }}>
                     {checkin.activities?.name ?? 'Atividade não selecionada'}
                     {' · '}
                     {instructor?.name ?? 'Sem instrutor'}
                     {' · '}
                     {fmtTime(checkin.checkin_at)}
-                    {checkin.partner?.name && (
-                      <span style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                        padding: '2px 8px',
-                        borderRadius: '99px',
-                        background: '#E8F8F7',
-                        color: '#0B5E75',
-                        fontSize: '11px',
-                        fontWeight: '500',
-                        marginLeft: '6px',
-                      }}>
-                        {checkin.partner.type === 'hotel' ? '🏨'
-                          : checkin.partner.type === 'agency' ? '✈️'
-                          : '🤝'}
-                        {' '}{checkin.partner.name}
-                      </span>
-                    )}
                   </div>
                 </div>
 
