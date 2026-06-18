@@ -209,6 +209,65 @@ const labelStyle: React.CSSProperties = {
   display: 'block',
 }
 
+type Source = 'walk_in' | 'whatsapp' | 'instagram' | 'hotel' | 'agencia' | 'outro'
+
+const SOURCE_OPTIONS: Array<{ value: Source; labelPt: string; labelEn: string; icon: string }> = [
+  { value: 'walk_in',   labelPt: 'Passei por aqui',   labelEn: 'Walked in',     icon: '🚶' },
+  { value: 'whatsapp',  labelPt: 'WhatsApp',          labelEn: 'WhatsApp',      icon: '💬' },
+  { value: 'instagram', labelPt: 'Instagram',         labelEn: 'Instagram',    icon: '📸' },
+  { value: 'hotel',     labelPt: 'Hotel / Pousada',   labelEn: 'Hotel / Lodge', icon: '🏨' },
+  { value: 'agencia',   labelPt: 'Agência de viagem', labelEn: 'Travel agency', icon: '✈' },
+  { value: 'outro',     labelPt: 'Outro',             labelEn: 'Other',        icon: '💡' },
+]
+
+function PartnerButton({
+  partner,
+  active,
+  onSelect,
+}: {
+  partner: { id: string; name: string; type: string }
+  active: boolean
+  onSelect: () => void
+}) {
+  const icon = partner.type === 'hotel' ? '🏨'
+    : partner.type === 'agency' ? '✈'
+    : '🤝'
+
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      style={{
+        padding: '11px 14px',
+        borderRadius: '8px',
+        border: `1.5px solid ${active ? '#2EC4B6' : 'transparent'}`,
+        background: active ? '#E8F8F7' : 'rgba(255,255,255,0.6)',
+        color: active ? '#0B5E75' : '#0B1F2E',
+        fontSize: '14px',
+        fontWeight: active ? '600' : '400',
+        cursor: 'pointer',
+        fontFamily: 'inherit',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '10px',
+        width: '100%',
+        textAlign: 'left',
+        transition: 'all 0.15s',
+      }}
+    >
+      <span>{icon}</span>
+      <span>{partner.name}</span>
+      {active && (
+        <span style={{
+          marginLeft: 'auto',
+          color: '#2EC4B6',
+          fontSize: '14px',
+        }}>✓</span>
+      )}
+    </button>
+  )
+}
+
 export default function CheckinForm({
   school,
   activities,
@@ -250,7 +309,9 @@ export default function CheckinForm({
     signature_data:      '',
   })
 
+  const [source, setSource]       = useState<Source | null>(null)
   const [partnerId, setPartnerId] = useState<string | null>(null)
+  const [stepError, setStepError] = useState<string | null>(null)
 
   const [isMinor,         setIsMinor]         = useState(false)
   const [guardianName,    setGuardianName]    = useState('')
@@ -326,7 +387,8 @@ export default function CheckinForm({
         body: JSON.stringify({
           ...form,
           school_id:        school.id,
-          partner_id:       partnerId ?? null,
+          partner_id:       (source === 'hotel' || source === 'agencia') ? partnerId : null,
+          source:           source ?? null,
           is_minor:         isMinor,
           guardian_name:    isMinor ? guardianName.trim() : null,
           guardian_consent: isMinor ? guardianConsent : false,
@@ -666,44 +728,131 @@ export default function CheckinForm({
               </select>
             </div>
 
-            {partners.length > 0 && (
-              <div>
-                <label style={labelStyle}>
-                  {lang === 'pt' ? 'Indicado por (opcional)' : lang === 'fr' ? 'Référent (optionnel)' : lang === 'es' ? 'Referido por (opcional)' : 'Referred by (optional)'}
-                </label>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                  <button
-                    type="button"
-                    onClick={() => setPartnerId(null)}
-                    style={{
-                      padding: '8px 16px', borderRadius: '999px', fontFamily: 'inherit',
-                      border: `1.5px solid ${partnerId === null ? '#00A896' : '#E4E0D8'}`,
-                      background: partnerId === null ? '#E0F8F5' : '#fff',
-                      color: partnerId === null ? '#007868' : '#8A8C98',
-                      fontSize: '13px', fontWeight: '500', cursor: 'pointer',
-                    }}
-                  >
-                    {lang === 'pt' ? 'Nenhum' : lang === 'fr' ? 'Aucun' : lang === 'es' ? 'Ninguno' : 'None'}
-                  </button>
-                  {partners.map(p => (
-                    <button
-                      key={p.id}
-                      type="button"
-                      onClick={() => setPartnerId(p.id)}
-                      style={{
-                        padding: '8px 16px', borderRadius: '999px', fontFamily: 'inherit',
-                        border: `1.5px solid ${partnerId === p.id ? '#00A896' : '#E4E0D8'}`,
-                        background: partnerId === p.id ? '#E0F8F5' : '#fff',
-                        color: partnerId === p.id ? '#007868' : '#1A1C22',
-                        fontSize: '13px', fontWeight: '500', cursor: 'pointer',
-                      }}
-                    >
-                      {p.name}
-                    </button>
-                  ))}
-                </div>
+            <div style={{ marginBottom: '24px' }}>
+              <div style={{
+                fontSize: '15px',
+                fontWeight: '500',
+                color: '#0B1F2E',
+                marginBottom: '14px',
+              }}>
+                {lang === 'pt'
+                  ? 'Como você chegou até nós?'
+                  : 'How did you find us?'
+                }
               </div>
-            )}
+
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px',
+              }}>
+                {SOURCE_OPTIONS.map(opt => {
+                  const active = source === opt.value
+                  const showPartners = active &&
+                    (opt.value === 'hotel' || opt.value === 'agencia') &&
+                    partners.length > 0
+
+                  const filteredPartners = partners.filter(p =>
+                    opt.value === 'hotel'
+                      ? p.type === 'hotel'
+                      : p.type === 'agency' || p.type === 'operator'
+                  )
+                  const partnersToShow = filteredPartners.length === 0 ? partners : filteredPartners
+
+                  return (
+                    <div key={opt.value}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSource(opt.value)
+                          setStepError(null)
+                          // clear partner if switching away from hotel/agency
+                          if (opt.value !== 'hotel' && opt.value !== 'agencia') {
+                            setPartnerId(null)
+                          }
+                        }}
+                        style={{
+                          padding: '13px 16px',
+                          borderRadius: showPartners ? '12px 12px 0 0' : '12px',
+                          border: `1.5px solid ${active ? '#2EC4B6' : '#DDD8CF'}`,
+                          borderBottom: showPartners
+                            ? '0.5px solid #DDD8CF'
+                            : `1.5px solid ${active ? '#2EC4B6' : '#DDD8CF'}`,
+                          background: active ? '#E8F8F7' : '#fff',
+                          color: active ? '#0B5E75' : '#0B1F2E',
+                          fontSize: '14px',
+                          fontWeight: active ? '600' : '400',
+                          cursor: 'pointer',
+                          fontFamily: 'inherit',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '10px',
+                          width: '100%',
+                          textAlign: 'left',
+                          transition: 'all 0.15s',
+                        }}
+                      >
+                        <span style={{ fontSize: '20px' }}>{opt.icon}</span>
+                        <span>{lang === 'pt' ? opt.labelPt : opt.labelEn}</span>
+                        {active && !showPartners && (
+                          <span style={{
+                            marginLeft: 'auto',
+                            color: '#2EC4B6',
+                            fontSize: '16px',
+                          }}>✓</span>
+                        )}
+                        {(opt.value === 'hotel' || opt.value === 'agencia') && (
+                          <span style={{
+                            marginLeft: 'auto',
+                            color: active ? '#2EC4B6' : '#DDD8CF',
+                            fontSize: '12px',
+                          }}>
+                            {active ? '▲' : '▼'}
+                          </span>
+                        )}
+                      </button>
+
+                      {/* Partner list — expands below hotel/agency */}
+                      {showPartners && (
+                        <div style={{
+                          border: '1.5px solid #2EC4B6',
+                          borderTop: 'none',
+                          borderRadius: '0 0 12px 12px',
+                          background: '#F8FFFE',
+                          padding: '8px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '6px',
+                        }}>
+                          {partnersToShow.map(partner => (
+                            <PartnerButton
+                              key={partner.id}
+                              partner={partner}
+                              active={partnerId === partner.id}
+                              onSelect={() => { setPartnerId(partner.id); setStepError(null) }}
+                            />
+                          ))}
+
+                          {/* Nudge if no partner selected */}
+                          {!partnerId && (
+                            <div style={{
+                              padding: '6px 8px',
+                              fontSize: '12px',
+                              color: '#D97706',
+                            }}>
+                              {lang === 'pt'
+                                ? 'Selecione o parceiro acima'
+                                : 'Select the partner above'
+                              }
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
 
             <div>
               <label style={labelStyle}>{t!.instructor}</label>
@@ -714,13 +863,41 @@ export default function CheckinForm({
               </select>
             </div>
 
+            {stepError && (
+              <div style={{
+                padding: '12px 16px',
+                background: '#FFF0EE',
+                border: '0.5px solid #F4A89A',
+                borderRadius: '12px',
+                fontSize: '13px',
+                color: '#C0392B',
+              }}>
+                {stepError}
+              </div>
+            )}
+
             <div style={{ display: 'flex', gap: '10px', marginTop: '8px' }}>
               <button onClick={() => setStep(1)} style={{
                 flex: 1, padding: '16px', background: '#fff', color: '#1A1C22',
                 border: '0.5px solid #D8D2C8', borderRadius: '14px',
                 fontSize: '16px', fontWeight: '500', cursor: 'pointer', fontFamily: 'inherit',
               }}>← {t!.back}</button>
-              <button onClick={() => setStep(3)} style={{
+              <button onClick={() => {
+                if (!source) {
+                  setStepError(lang === 'pt'
+                    ? 'Por favor selecione como você chegou até nós'
+                    : 'Please select how you found us')
+                  return
+                }
+                if ((source === 'hotel' || source === 'agencia') && !partnerId) {
+                  setStepError(lang === 'pt'
+                    ? 'Por favor selecione o parceiro que te indicou'
+                    : 'Please select the partner that referred you')
+                  return
+                }
+                setStepError(null)
+                setStep(3)
+              }} style={{
                 flex: 2, padding: '16px', background: '#1A1C22', color: '#fff',
                 border: 'none', borderRadius: '14px', fontSize: '16px',
                 fontWeight: '500', cursor: 'pointer', fontFamily: 'inherit',

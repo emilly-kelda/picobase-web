@@ -75,6 +75,7 @@ export async function POST(request: Request) {
       user_agent:          ua,
       status:              'checked_in',
       scheduled_lesson_id: scheduledLesson?.id ?? null,
+      source:              body.source ?? null,
     })
     .select('id')
     .single()

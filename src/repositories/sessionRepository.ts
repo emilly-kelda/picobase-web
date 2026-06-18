@@ -19,8 +19,11 @@ export async function getPendingLessons(schoolId: string) {
       is_minor,
       guardian_name,
       scheduled_lesson_id,
+      source,
+      partner_id,
       activities ( id, name, default_price, default_duration_min ),
       instructor:users!checkins_instructor_id_fkey ( id, name ),
+      partner:partners!checkins_partner_id_fkey ( id, name, type ),
       scheduled_lesson:scheduled_lessons!checkins_scheduled_lesson_id_fkey (
         id, scheduled_at, duration_min, level,
         activities ( id, name, default_price, default_duration_min ),

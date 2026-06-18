@@ -22,8 +22,11 @@ type Checkin = {
   instructor_id: string | null
   is_minor: boolean | null
   guardian_name: string | null
+  source: string | null
+  partner_id: string | null
   activities: ActivityRef | null
   instructor: { id: string; name: string } | { id: string; name: string }[] | null
+  partner: { id: string; name: string; type: string } | { id: string; name: string; type: string }[] | null
   scheduled_lesson: {
     id: string
     scheduled_at: string
@@ -46,6 +49,15 @@ const DURATIONS = [
   { label: '2h',   value: 120 },
   { label: '3h',   value: 180 },
 ]
+
+const SOURCE_ICON: Record<string, string> = {
+  walk_in:   '🚶',
+  whatsapp:  '💬',
+  instagram: '📸',
+  hotel:     '🏨',
+  agencia:   '✈',
+  outro:     '💡',
+}
 
 function fmt(n: number) {
   return new Intl.NumberFormat('pt-BR', {
@@ -353,6 +365,14 @@ export default function PendingLessons({
                     display: 'flex', alignItems: 'center', gap: '8px',
                   }}>
                     {checkin.student_name}
+                    {checkin.source && (
+                      <span
+                        title={checkin.source}
+                        style={{ fontSize: '14px' }}
+                      >
+                        {SOURCE_ICON[checkin.source] ?? ''}
+                      </span>
+                    )}
                     {checkin.is_minor && (
                       <span style={{
                         display: 'inline-flex', alignItems: 'center', gap: '4px',
