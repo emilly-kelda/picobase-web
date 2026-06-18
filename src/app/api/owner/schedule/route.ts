@@ -17,6 +17,7 @@ export async function POST(request: Request) {
       scheduled_at: body.scheduled_at,
       duration_min: body.duration_min || 60,
       notes:        body.notes || null,
+      level:        body.level || null,
       status:       'scheduled',
     })
     .select('id')

@@ -1,7 +1,16 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { isLevel, LEVEL_LABELS, type Level } from '@/lib/levels'
+import LevelPicker from '@/components/LevelPicker'
+
+type ActivityRef = {
+  id: string
+  name: string
+  default_price: number
+  default_duration_min: number
+}
 
 type Checkin = {
   id: string
@@ -13,13 +22,16 @@ type Checkin = {
   instructor_id: string | null
   is_minor: boolean | null
   guardian_name: string | null
-  activities: {
-    id: string
-    name: string
-    default_price: number
-    default_duration_min: number
-  } | null
+  activities: ActivityRef | null
   instructor: { id: string; name: string } | { id: string; name: string }[] | null
+  scheduled_lesson: {
+    id: string
+    scheduled_at: string
+    duration_min: number | null
+    level: string | null
+    activities: ActivityRef | null
+    instructor: { id: string; name: string } | { id: string; name: string }[] | null
+  } | null
 }
 
 type Instructor = {
@@ -68,17 +80,20 @@ function fmtMinutes(min: number) {
 export default function PendingLessons({
   checkins: initialCheckins,
   instructors,
+  activities = [],
   packageBalances = {},
   lang = 'pt',
 }: {
   checkins: Checkin[]
   instructors: Instructor[]
+  activities?: ActivityRef[]
   packageBalances?: Record<string, { minutesRemaining: number; hasPackage: boolean }>
   lang?: string
 }) {
   const router = useRouter()
   const [checkins, setCheckins]         = useState(initialCheckins)
   const [selected, setSelected]         = useState<Checkin | null>(null)
+  const [activityId, setActivityId]     = useState('')
   const [duration, setDuration]         = useState(60)
   const [useCustom, setUseCustom]       = useState(false)
   const [custom, setCustom]             = useState('')
@@ -95,12 +110,19 @@ export default function PendingLessons({
   const [pricePerHour, setPricePerHour]       = useState(0)
   const [sessionDate, setSessionDate]         = useState(new Date().toISOString().slice(0, 10))
   const [paymentMethod, setPaymentMethod]     = useState<'pix' | 'dinheiro' | 'cartao' | 'a_receber' | null>(null)
+  const [level, setLevel]                     = useState<Level>('experimental')
+  const [experimentalDisabled, setExperimentalDisabled] = useState(false)
 
   function open(checkin: Checkin) {
+    const sched = checkin.scheduled_lesson
+    const fallbackActivity = sched?.activities ?? checkin.activities
+    const schedInstructor = unwrapInstructor(sched?.instructor ?? null)
+
     setSelected(checkin)
-    setDuration(checkin.activities?.default_duration_min ?? 60)
-    setPrice(checkin.activities?.default_price ?? 0)
-    setInstructorId(checkin.instructor_id ?? '')
+    setActivityId(sched?.activities?.id ?? checkin.activity_id ?? '')
+    setDuration(sched?.duration_min ?? fallbackActivity?.default_duration_min ?? 60)
+    setPrice(fallbackActivity?.default_price ?? 0)
+    setInstructorId(schedInstructor?.id ?? checkin.instructor_id ?? '')
     setUseCustom(false)
     setCustom('')
     setNotes('')
@@ -112,9 +134,36 @@ export default function PendingLessons({
     setPricePerHour(0)
     setSessionDate(new Date().toISOString().slice(0, 10))
     setPaymentMethod(null)
+
+    if (isLevel(sched?.level)) {
+      setLevel(sched!.level as Level)
+    } else {
+      setLevel('experimental')
+    }
+    setExperimentalDisabled(false)
   }
 
   function close() { setSelected(null) }
+
+  // Recompute the level default whenever the activity is known — fires on open()
+  // and again if the owner manually switches Atividade in the modal. The level
+  // carried from a matched agendamento stays authoritative only while the
+  // activity hasn't been changed away from what was actually booked.
+  useEffect(() => {
+    if (!selected || !activityId) return
+    const sched = selected.scheduled_lesson
+    const bookedActivityId = sched?.activities?.id ?? selected.activity_id
+    const keepScheduledLevel = isLevel(sched?.level) && activityId === bookedActivityId
+
+    fetch(`/api/owner/default-level?student_name=${encodeURIComponent(selected.student_name)}&activity_id=${activityId}`)
+      .then(r => r.json())
+      .then(data => {
+        if (!data?.level) return
+        setExperimentalDisabled(!!data.experimentalDisabled)
+        if (!keepScheduledLevel) setLevel(data.level)
+      })
+      .catch(() => {})
+  }, [selected, activityId])
 
   const selectedInstructor = instructors.find(i => i.id === instructorId)
   const commissionPct      = selectedInstructor?.commission_pct ?? 0.38
@@ -133,13 +182,14 @@ export default function PendingLessons({
       body: JSON.stringify({
         checkin_id:     selected.id,
         instructor_id:  instructorId,
-        activity_id:    selected.activity_id,
+        activity_id:    activityId || null,
         duration_min:   finalDuration,
         price:          totalPrice,
         notes,
         commission_pct: commissionPct,
         session_date:   sessionDate,
         payment_method: paymentMethod,
+        level,
       }),
     })
 
@@ -334,8 +384,29 @@ export default function PendingLessons({
                     {' · '}
                     {fmtTime(checkin.checkin_at)}
                   </div>
-                  <div style={{ marginTop: '6px' }}>
+                  <div style={{ marginTop: '6px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                     {packageBadge}
+                    {checkin.scheduled_lesson && (() => {
+                      const sched = checkin.scheduled_lesson
+                      const schedInstructor = unwrapInstructor(sched.instructor)
+                      const parts = [
+                        sched.activities?.name,
+                        isLevel(sched.level) ? LEVEL_LABELS[sched.level].pt : null,
+                        schedInstructor?.name,
+                        sched.duration_min ? fmtMinutes(sched.duration_min) : null,
+                        fmtTime(sched.scheduled_at),
+                      ].filter(Boolean)
+                      return (
+                        <span style={{
+                          fontSize: '11px', fontWeight: '500',
+                          color: 'var(--glacial-dark)',
+                          padding: '3px 10px', borderRadius: '99px',
+                          background: 'var(--glacial-light)',
+                        }}>
+                          📅 Agendado · {parts.join(' · ')}
+                        </span>
+                      )
+                    })()}
                   </div>
                 </div>
 
@@ -420,7 +491,54 @@ export default function PendingLessons({
                 Check-in às {fmtTime(selected.checkin_at)}
                 {selected.activities?.name && ` · ${selected.activities.name}`}
               </div>
+              {selected.scheduled_lesson && (
+                <div style={{
+                  marginTop: '8px', padding: '8px 12px',
+                  background: 'var(--glacial-light)',
+                  borderRadius: 'var(--radius-md)',
+                  fontSize: '12px', color: 'var(--glacial-dark)',
+                }}>
+                  📅 Aula agendada para {fmtTime(selected.scheduled_lesson.scheduled_at)} — confirmação pré-preenchida a partir do agendamento.
+                </div>
+              )}
             </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <div style={{
+                fontSize: '11px', fontWeight: '500',
+                letterSpacing: '0.1em', textTransform: 'uppercase',
+                color: 'var(--mist)', marginBottom: '8px',
+              }}>
+                Atividade
+              </div>
+              <select
+                value={activityId}
+                onChange={e => setActivityId(e.target.value)}
+                style={{
+                  width: '100%', padding: '10px 14px',
+                  border: '0.5px solid var(--border-strong)',
+                  borderRadius: 'var(--radius-md)',
+                  fontSize: '14px', color: 'var(--slate)',
+                  background: '#fff', fontFamily: 'var(--font-sans)',
+                  outline: 'none', cursor: 'pointer',
+                }}
+              >
+                <option value="">Selecionar atividade</option>
+                {activities.map(a => (
+                  <option key={a.id} value={a.id}>{a.name}</option>
+                ))}
+              </select>
+            </div>
+
+            {activityId && (
+              <div style={{ marginBottom: '20px' }}>
+                <LevelPicker
+                  value={level}
+                  experimentalDisabled={experimentalDisabled}
+                  onChange={setLevel}
+                />
+              </div>
+            )}
 
             <div style={{ marginBottom: '20px' }}>
               <div style={{

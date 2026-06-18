@@ -27,8 +27,10 @@ export async function getScheduledLessons(
       student_name,
       student_id,
       scheduled_at,
+      duration_min,
       status,
       notes,
+      level,
       activities ( id, name, default_price, default_duration_min ),
       instructor:users!scheduled_lessons_instructor_id_fkey ( id, name )
     `)

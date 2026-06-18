@@ -15,6 +15,7 @@ export async function POST(request: Request) {
     commission_pct,
     session_date,
     payment_method,
+    level,
   } = body
 
   const supabase = createServiceClient()
@@ -22,7 +23,7 @@ export async function POST(request: Request) {
 
   const { data: checkin } = await supabase
     .from('checkins')
-    .select('partner_id')
+    .select('partner_id, scheduled_lesson_id')
     .eq('id', checkin_id)
     .single()
 
@@ -43,6 +44,7 @@ export async function POST(request: Request) {
       notes:            notes || null,
       partner_id:       checkin?.partner_id ?? null,
       payment_method:   payment_method ?? null,
+      level:            level || null,
     })
     .select('id')
     .single()
@@ -58,6 +60,13 @@ export async function POST(request: Request) {
 
   if (checkinError) {
     return NextResponse.json({ error: checkinError.message }, { status: 500 })
+  }
+
+  if (checkin?.scheduled_lesson_id) {
+    await supabase
+      .from('scheduled_lessons')
+      .update({ status: 'confirmed' })
+      .eq('id', checkin.scheduled_lesson_id)
   }
 
   if (checkin?.partner_id) {

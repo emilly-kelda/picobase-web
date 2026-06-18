@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { LEVEL_LABELS, isLevel } from '@/lib/levels'
+import LevelPicker from '@/components/LevelPicker'
 
 type Lesson = {
   id: string
@@ -10,6 +12,7 @@ type Lesson = {
   duration_min: number
   status: string
   notes: string | null
+  level: string | null
   activities: { id: string; name: string; default_price: number; default_duration_min: number } | null
   instructor: { id: string; name: string } | null
 }
@@ -135,8 +138,9 @@ export default function ScheduledLessons({
   const [editLesson,       setEditLesson]            = useState<Lesson | null>(null)
   const [editForm,         setEditForm]              = useState({
     student_name: '', activity_id: '', instructor_id: '',
-    date: '', time: '', duration_min: 60, notes: '',
+    date: '', time: '', duration_min: 60, notes: '', level: '' as string,
   })
+  const [editExperimentalDisabled, setEditExperimentalDisabled] = useState(false)
   const [editCustomDuration, setEditCustomDuration] = useState(false)
   const [editCustomMinutes,  setEditCustomMinutes]  = useState(45)
   const [editSaving,         setEditSaving]         = useState(false)
@@ -150,7 +154,9 @@ export default function ScheduledLessons({
     count:         1,
     duration_min:  60,
     notes:         '',
+    level:         '' as string,
   })
+  const [experimentalDisabled, setExperimentalDisabled] = useState(false)
 
   useEffect(() => {
     fetch('/api/owner/students-with-packages')
@@ -175,6 +181,26 @@ export default function ScheduledLessons({
       time: form.time,
     })))
   }, [form.date, form.time, form.count, mode, weekdays])
+
+  // Default level for this (student, activity) — same trigger as the balance pill
+  // (student name + activity known), debounced since it's a network lookup. Re-fires
+  // whenever name or activity changes, but never fights a level the owner already
+  // clicked for the *current* (name, activity) pair since this only re-runs on those
+  // two inputs, not on form.level itself.
+  useEffect(() => {
+    if (form.student_name.trim().length <= 2 || !form.activity_id) return
+    const handle = setTimeout(() => {
+      fetch(`/api/owner/default-level?student_name=${encodeURIComponent(form.student_name)}&activity_id=${form.activity_id}`)
+        .then(r => r.json())
+        .then(data => {
+          if (!data?.level) return
+          setExperimentalDisabled(!!data.experimentalDisabled)
+          setForm(f => ({ ...f, level: data.level }))
+        })
+        .catch(() => {})
+    }, 300)
+    return () => clearTimeout(handle)
+  }, [form.student_name, form.activity_id])
 
   const matchedPackage = form.student_name.length > 2
     ? activePackages.find(p =>
@@ -238,6 +264,7 @@ export default function ScheduledLessons({
             scheduled_at,
             duration_min:  finalDuration,
             notes:         form.notes || null,
+            level:         form.level || null,
           }),
         })
       )
@@ -255,8 +282,9 @@ export default function ScheduledLessons({
     setForm({
       student_name: '', activity_id: '', instructor_id: '',
       date: new Date(Date.now() + 86400000).toISOString().slice(0, 10),
-      time: '09:00', count: 1, duration_min: 60, notes: '',
+      time: '09:00', count: 1, duration_min: 60, notes: '', level: '',
     })
+    setExperimentalDisabled(false)
     setMode('single')
     setWeekdays([1, 3, 5])
     setEditableDates([])
@@ -286,9 +314,17 @@ export default function ScheduledLessons({
       time:          lesson.scheduled_at.slice(11, 16),
       duration_min:  lesson.duration_min || 60,
       notes:         lesson.notes ?? '',
+      level:         lesson.level ?? '',
     })
     setEditCustomDuration(false)
     setEditCustomMinutes(45)
+    setEditExperimentalDisabled(false)
+    if (lesson.student_name && lesson.activities?.id) {
+      fetch(`/api/owner/default-level?student_name=${encodeURIComponent(lesson.student_name)}&activity_id=${lesson.activities.id}`)
+        .then(r => r.json())
+        .then(data => setEditExperimentalDisabled(!!data?.experimentalDisabled))
+        .catch(() => {})
+    }
   }
 
   async function saveEdit() {
@@ -306,6 +342,7 @@ export default function ScheduledLessons({
         scheduled_at:  `${editForm.date}T${editForm.time}:00`,
         duration_min:  finalEditDuration,
         notes:         editForm.notes || null,
+        level:         editForm.level || null,
       }),
     })
     setEditSaving(false)
@@ -433,6 +470,7 @@ export default function ScheduledLessons({
                   </div>
                   <div style={{ fontSize: '12px', color: 'var(--mist)' }}>
                     {lesson.activities?.name ?? 'Atividade não definida'}
+                    {isLevel(lesson.level) && <> · {LEVEL_LABELS[lesson.level].pt}</>}
                     {lesson.instructor && (
                       <> · {(lesson.instructor as any).name}</>
                     )}
@@ -551,6 +589,14 @@ export default function ScheduledLessons({
                   </select>
                 </div>
               </div>
+
+              {editForm.activity_id && (
+                <LevelPicker
+                  value={editForm.level}
+                  experimentalDisabled={editExperimentalDisabled}
+                  onChange={level => setEditForm(f => ({ ...f, level }))}
+                />
+              )}
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div>
@@ -821,6 +867,15 @@ export default function ScheduledLessons({
                   </select>
                 </div>
               </div>
+
+              {/* Level — pre-filled from progression once aluno + atividade are known */}
+              {form.activity_id && (
+                <LevelPicker
+                  value={form.level}
+                  experimentalDisabled={experimentalDisabled}
+                  onChange={level => setForm(f => ({ ...f, level }))}
+                />
+              )}
 
               {/* Start date + time */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>

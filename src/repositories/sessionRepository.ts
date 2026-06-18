@@ -1,4 +1,6 @@
 ﻿import { createServiceClient } from '@/lib/supabase-server'
+import { normalizeStudentName } from '@/lib/text'
+import { resolveDefaultLevel, type Level } from '@/lib/levels'
 
 export async function getPendingLessons(schoolId: string) {
   const supabase = createServiceClient()
@@ -16,8 +18,14 @@ export async function getPendingLessons(schoolId: string) {
       instructor_id,
       is_minor,
       guardian_name,
+      scheduled_lesson_id,
       activities ( id, name, default_price, default_duration_min ),
-      instructor:users!checkins_instructor_id_fkey ( id, name )
+      instructor:users!checkins_instructor_id_fkey ( id, name ),
+      scheduled_lesson:scheduled_lessons!checkins_scheduled_lesson_id_fkey (
+        id, scheduled_at, duration_min, level,
+        activities ( id, name, default_price, default_duration_min ),
+        instructor:users!scheduled_lessons_instructor_id_fkey ( id, name )
+      )
     `)
     .eq('school_id', schoolId)
     .eq('status', 'checked_in')
@@ -26,6 +34,37 @@ export async function getPendingLessons(schoolId: string) {
 
   if (error) throw error
   return data ?? []
+}
+
+/** Default level for (studentName, activityId): most recent CONFIRMED session's
+ *  level in that activity, per the rules in lib/levels.ts. Bounded to the 300
+ *  most recent confirmed sessions in the activity — plenty for a single school's
+ *  season, and avoids scanning unbounded history. */
+export async function getDefaultLevelForStudent(
+  schoolId: string,
+  studentName: string,
+  activityId: string | null | undefined
+): Promise<{ level: Level; experimentalDisabled: boolean }> {
+  if (!activityId) return resolveDefaultLevel(null, false)
+
+  const supabase = createServiceClient()
+  const { data, error } = await supabase
+    .from('sessions')
+    .select('level, session_date, confirmed_at, checkins ( student_name )')
+    .eq('school_id', schoolId)
+    .eq('activity_id', activityId)
+    .order('session_date', { ascending: false })
+    .order('confirmed_at', { ascending: false })
+    .limit(300)
+
+  if (error) throw error
+
+  const target = normalizeStudentName(studentName)
+  const match = (data ?? []).find(
+    s => normalizeStudentName((s.checkins as { student_name?: string } | null)?.student_name) === target
+  )
+
+  return resolveDefaultLevel(match?.level ?? null, !!match)
 }
 
 export async function getRecentSessions(schoolId: string, limit = 8) {

@@ -222,6 +222,7 @@ export default async function OwnerPage() {
           <PendingLessons
             checkins={pending as any}
             instructors={instructorList}
+            activities={activities}
             packageBalances={packageBalances}
             lang={lang}
           />
