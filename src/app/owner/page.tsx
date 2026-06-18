@@ -287,7 +287,7 @@ export default async function OwnerPage() {
                       {(s.checkins as any)?.student_name ? (
                         <a
                           className="tbl-link"
-                          href={`/owner/students?search=${encodeURIComponent((s.checkins as any).student_name)}`}
+                          href={`/owner/students/name/${encodeURIComponent((s.checkins as any).student_name)}`}
                         >
                           {(s.checkins as any).student_name}
                         </a>

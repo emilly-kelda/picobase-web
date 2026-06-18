@@ -245,7 +245,7 @@ export default async function SessionsPage({
                         <a
                           className="tbl-name-link"
                           style={{ fontWeight: '500' }}
-                          href={`/owner/students?search=${encodeURIComponent((s.checkins as any).student_name)}`}
+                          href={`/owner/students/name/${encodeURIComponent((s.checkins as any).student_name)}`}
                         >
                           {(s.checkins as any).student_name}
                         </a>

@@ -1,4 +1,4 @@
-﻿import { getStudents, getStudentCount, getActivePackagesByStudent } from '@/repositories/studentRepository'
+﻿import { getStudents, getStudentCount, getActivePackagesByStudent, getCheckinOnlyStudents } from '@/repositories/studentRepository'
 import Link from 'next/link'
 import { getPortalLang } from '@/lib/language'
 import { getT } from '@/lib/i18n'
@@ -34,10 +34,11 @@ export default async function StudentsPage({
   searchParams: Promise<{ search?: string }>
 }) {
   const { search } = await searchParams
-  const [students, total, packageMap, lang] = await Promise.all([
+  const [students, total, packageMap, checkinOnly, lang] = await Promise.all([
     getStudents(SCHOOL_ID, search),
     getStudentCount(SCHOOL_ID),
     getActivePackagesByStudent(SCHOOL_ID),
+    getCheckinOnlyStudents(SCHOOL_ID, search),
     getPortalLang(),
   ])
   const t = getT(lang)
@@ -163,7 +164,7 @@ export default async function StudentsPage({
             </tr>
           </thead>
           <tbody>
-            {students.length === 0 ? (
+            {students.length === 0 && checkinOnly.length === 0 ? (
               <tr>
                 <td colSpan={7} style={{
                   padding: '48px 24px',
@@ -177,147 +178,186 @@ export default async function StudentsPage({
                 </td>
               </tr>
             ) : (
-              students.map((s, i) => {
-                const skill = SKILL_COLORS[s.skill_level ?? '']
-                return (
+              <>
+                {students.map((s, i) => {
+                  const skill = SKILL_COLORS[s.skill_level ?? '']
+                  const isLast = i === students.length - 1 && checkinOnly.length === 0
+                  return (
+                    <tr
+                      key={s.id}
+                      style={{
+                        borderBottom: isLast ? 'none' : '0.5px solid var(--border)',
+                      }}
+                    >
+                      {/* Name + initials */}
+                      <td style={{ padding: '14px 24px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <div style={{
+                            width: '32px', height: '32px',
+                            borderRadius: 'var(--radius-full)',
+                            background: 'var(--glacial-light)',
+                            color: 'var(--glacial-dark)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: '11px', fontWeight: '600', flexShrink: 0,
+                          }}>
+                            {getInitials(s.name)}
+                          </div>
+                          <Link href={`/owner/students/${s.id}`} style={{
+                            fontSize: '13px', fontWeight: '500',
+                            color: 'var(--slate)', textDecoration: 'none',
+                          }}>
+                            {s.name}
+                          </Link>
+                        </div>
+                      </td>
+                      <td style={{ padding: '14px 24px', fontSize: '13px', color: 'var(--mist)' }}>
+                        {s.nationality ?? '—'}
+                      </td>
+                      <td style={{ padding: '14px 24px' }}>
+                        <div style={{ fontSize: '13px', color: 'var(--slate)' }}>{s.email ?? '—'}</div>
+                        {s.whatsapp && (
+                          <div style={{ fontSize: '11px', color: 'var(--mist)', marginTop: '2px' }}>{s.whatsapp}</div>
+                        )}
+                      </td>
+                      <td style={{ padding: '14px 24px' }}>
+                        {s.skill_level ? (
+                          <span style={{
+                            display: 'inline-block', padding: '3px 10px',
+                            borderRadius: 'var(--radius-full)', fontSize: '11px', fontWeight: '500',
+                            background: skill?.bg ?? 'var(--powder)', color: skill?.color ?? 'var(--mist)',
+                          }}>
+                            {SKILL_LABELS[s.skill_level]}
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: '13px', color: 'var(--mist)' }}>—</span>
+                        )}
+                      </td>
+                      <td style={{ padding: '14px 24px', minWidth: '160px' }}>
+                        {(() => {
+                          const pkg = packageMap.get(s.name)
+                          if (!pkg) return <span style={{ fontSize: '13px', color: 'var(--mist)' }}>—</span>
+                          const pct = pkg.minutes_purchased > 0
+                            ? Math.round((pkg.minutes_used / pkg.minutes_purchased) * 100) : 0
+                          const fmtMin = (m: number) => m >= 60
+                            ? `${Math.floor(m / 60)}h${m % 60 > 0 ? ` ${m % 60}min` : ''}` : `${m}min`
+                          return (
+                            <div>
+                              <div style={{ fontSize: '11px', color: 'var(--mist)', marginBottom: '5px', whiteSpace: 'nowrap' }}>
+                                {pkg.package_name}
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <div style={{
+                                  flex: 1, height: '4px', background: 'var(--powder)',
+                                  borderRadius: 'var(--radius-full)', overflow: 'hidden', minWidth: '80px',
+                                }}>
+                                  <div style={{
+                                    height: '100%', width: `${pct}%`,
+                                    background: pct >= 80 ? 'var(--signal)' : pct >= 50 ? '#D4A017' : 'var(--glacial)',
+                                    borderRadius: 'var(--radius-full)',
+                                  }} />
+                                </div>
+                                <span style={{ fontSize: '11px', color: 'var(--mist)', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                                  {fmtMin(pkg.minutes_used)} / {fmtMin(pkg.minutes_purchased)}
+                                </span>
+                              </div>
+                            </div>
+                          )
+                        })()}
+                      </td>
+                      <td style={{ padding: '14px 24px' }}>
+                        {s.health_conditions ? (
+                          <span style={{
+                            display: 'inline-block', padding: '3px 10px',
+                            borderRadius: 'var(--radius-full)', fontSize: '11px', fontWeight: '500',
+                            background: 'var(--signal-light)', color: 'var(--signal-dark)',
+                          }}>
+                            Alert
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: '13px', color: 'var(--mist)' }}>—</span>
+                        )}
+                      </td>
+                      <td style={{ padding: '14px 24px', fontSize: '13px', color: 'var(--mist)', whiteSpace: 'nowrap' }}>
+                        {fmtDate(s.created_at)}
+                      </td>
+                    </tr>
+                  )
+                })}
+
+                {/* Separator between registered and check-in-only */}
+                {checkinOnly.length > 0 && students.length > 0 && (
+                  <tr>
+                    <td colSpan={7} style={{
+                      padding: '6px 24px',
+                      fontSize: '10px', fontWeight: '500',
+                      letterSpacing: '0.1em', textTransform: 'uppercase',
+                      color: 'var(--mist)', background: 'var(--powder)',
+                      borderTop: '0.5px solid var(--border)',
+                      borderBottom: '0.5px solid var(--border)',
+                    }}>
+                      {lang === 'pt' ? 'Só via check-in' : 'Check-in only'}
+                    </td>
+                  </tr>
+                )}
+
+                {checkinOnly.map((s, i) => (
                   <tr
-                    key={s.id}
+                    key={`co-${s.name}`}
                     style={{
-                      borderBottom: i < students.length - 1
-                        ? '0.5px solid var(--border)'
-                        : 'none',
+                      borderBottom: i < checkinOnly.length - 1 ? '0.5px solid var(--border)' : 'none',
                     }}
                   >
-                    {/* Name + initials */}
                     <td style={{ padding: '14px 24px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                         <div style={{
-                          width: '32px',
-                          height: '32px',
+                          width: '32px', height: '32px',
                           borderRadius: 'var(--radius-full)',
-                          background: 'var(--glacial-light)',
-                          color: 'var(--glacial-dark)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: '11px',
-                          fontWeight: '600',
-                          flexShrink: 0,
+                          background: 'var(--powder)',
+                          color: 'var(--mist)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: '11px', fontWeight: '600', flexShrink: 0,
                         }}>
                           {getInitials(s.name)}
                         </div>
-                        <Link href={`/owner/students/${s.id}`} style={{
-                          fontSize: '13px',
-                          fontWeight: '500',
-                          color: 'var(--slate)',
-                          textDecoration: 'none',
-                        }}>
-                          {s.name}
-                        </Link>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <Link href={`/owner/students/name/${encodeURIComponent(s.name)}`} style={{
+                            fontSize: '13px', fontWeight: '500',
+                            color: 'var(--slate)', textDecoration: 'none',
+                          }}>
+                            {s.name}
+                          </Link>
+                          <span style={{
+                            fontSize: '9px', fontWeight: '500',
+                            padding: '1px 6px', borderRadius: 'var(--radius-full)',
+                            background: 'var(--powder)', color: 'var(--mist)',
+                            letterSpacing: '0.06em', textTransform: 'uppercase',
+                          }}>
+                            {lang === 'pt' ? 'check-in' : 'check-in'}
+                          </span>
+                        </div>
                       </div>
                     </td>
-
-                    {/* Nationality */}
-                    <td style={{
-                      padding: '14px 24px',
-                      fontSize: '13px',
-                      color: 'var(--mist)',
-                    }}>
+                    <td style={{ padding: '14px 24px', fontSize: '13px', color: 'var(--mist)' }}>
                       {s.nationality ?? '—'}
                     </td>
-
-                    {/* Contact */}
                     <td style={{ padding: '14px 24px' }}>
-                      <div style={{ fontSize: '13px', color: 'var(--slate)' }}>
-                        {s.email ?? '—'}
-                      </div>
+                      <div style={{ fontSize: '13px', color: 'var(--slate)' }}>{s.email ?? '—'}</div>
                       {s.whatsapp && (
-                        <div style={{ fontSize: '11px', color: 'var(--mist)', marginTop: '2px' }}>
-                          {s.whatsapp}
-                        </div>
+                        <div style={{ fontSize: '11px', color: 'var(--mist)', marginTop: '2px' }}>{s.whatsapp}</div>
                       )}
                     </td>
-
-                    {/* Skill level */}
                     <td style={{ padding: '14px 24px' }}>
-                      {s.skill_level ? (
-                        <span style={{
-                          display: 'inline-block',
-                          padding: '3px 10px',
-                          borderRadius: 'var(--radius-full)',
-                          fontSize: '11px',
-                          fontWeight: '500',
-                          background: skill?.bg ?? 'var(--powder)',
-                          color: skill?.color ?? 'var(--mist)',
-                        }}>
-                          {SKILL_LABELS[s.skill_level]}
-                        </span>
-                      ) : (
-                        <span style={{ fontSize: '13px', color: 'var(--mist)' }}>—</span>
-                      )}
+                      <span style={{ fontSize: '13px', color: 'var(--mist)' }}>—</span>
                     </td>
-
-                    {/* Package */}
-                    <td style={{ padding: '14px 24px', minWidth: '160px' }}>
-                      {(() => {
-                        const pkg = packageMap.get(s.name)
-                        if (!pkg) return <span style={{ fontSize: '13px', color: 'var(--mist)' }}>—</span>
-                        const pct = pkg.minutes_purchased > 0
-                          ? Math.round((pkg.minutes_used / pkg.minutes_purchased) * 100)
-                          : 0
-                        const fmtMin = (m: number) => m >= 60
-                          ? `${Math.floor(m / 60)}h${m % 60 > 0 ? ` ${m % 60}min` : ''}`
-                          : `${m}min`
-                        return (
-                          <div>
-                            <div style={{
-                              fontSize: '11px', color: 'var(--mist)',
-                              marginBottom: '5px', whiteSpace: 'nowrap',
-                            }}>
-                              {pkg.package_name}
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              <div style={{
-                                flex: 1, height: '4px',
-                                background: 'var(--powder)',
-                                borderRadius: 'var(--radius-full)',
-                                overflow: 'hidden',
-                                minWidth: '80px',
-                              }}>
-                                <div style={{
-                                  height: '100%',
-                                  width: `${pct}%`,
-                                  background: pct >= 80
-                                    ? 'var(--signal)'
-                                    : pct >= 50
-                                      ? '#D4A017'
-                                      : 'var(--glacial)',
-                                  borderRadius: 'var(--radius-full)',
-                                }} />
-                              </div>
-                              <span style={{
-                                fontSize: '11px', color: 'var(--mist)',
-                                whiteSpace: 'nowrap', flexShrink: 0,
-                              }}>
-                                {fmtMin(pkg.minutes_used)} / {fmtMin(pkg.minutes_purchased)}
-                              </span>
-                            </div>
-                          </div>
-                        )
-                      })()}
-                    </td>
-
-                    {/* Health */}
                     <td style={{ padding: '14px 24px' }}>
-                      {s.health_conditions ? (
+                      <span style={{ fontSize: '13px', color: 'var(--mist)' }}>—</span>
+                    </td>
+                    <td style={{ padding: '14px 24px' }}>
+                      {s.health_condition ? (
                         <span style={{
-                          display: 'inline-block',
-                          padding: '3px 10px',
-                          borderRadius: 'var(--radius-full)',
-                          fontSize: '11px',
-                          fontWeight: '500',
-                          background: 'var(--signal-light)',
-                          color: 'var(--signal-dark)',
+                          display: 'inline-block', padding: '3px 10px',
+                          borderRadius: 'var(--radius-full)', fontSize: '11px', fontWeight: '500',
+                          background: 'var(--signal-light)', color: 'var(--signal-dark)',
                         }}>
                           Alert
                         </span>
@@ -325,19 +365,12 @@ export default async function StudentsPage({
                         <span style={{ fontSize: '13px', color: 'var(--mist)' }}>—</span>
                       )}
                     </td>
-
-                    {/* Since */}
-                    <td style={{
-                      padding: '14px 24px',
-                      fontSize: '13px',
-                      color: 'var(--mist)',
-                      whiteSpace: 'nowrap',
-                    }}>
-                      {fmtDate(s.created_at)}
+                    <td style={{ padding: '14px 24px', fontSize: '13px', color: 'var(--mist)', whiteSpace: 'nowrap' }}>
+                      {fmtDate(s.first_seen)}
                     </td>
                   </tr>
-                )
-              })
+                ))}
+              </>
             )}
           </tbody>
         </table>

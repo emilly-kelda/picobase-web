@@ -40,6 +40,28 @@ export async function POST(request: Request) {
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // Find-or-create student row so every checked-in person is searchable
+  const normalizedName = (body.student_name as string).trim()
+  const { data: existing } = await supabase
+    .from('students')
+    .select('id')
+    .eq('school_id', body.school_id)
+    .ilike('name', normalizedName)
+    .limit(1)
+    .maybeSingle()
+
+  if (!existing) {
+    await supabase.from('students').insert({
+      school_id:         body.school_id,
+      name:              normalizedName,
+      email:             body.student_email    || null,
+      whatsapp:          body.student_whatsapp || null,
+      nationality:       body.student_nationality || null,
+      health_conditions: body.health_condition || null,
+    })
+  }
+
   return NextResponse.json({ ok: true, id: data.id })
 }
 
