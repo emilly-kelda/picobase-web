@@ -231,6 +231,7 @@ export default function CheckinForm({
   const [step, setStep]             = useState(1)
   const [submitting, setSubmitting] = useState(false)
   const [done, setDone]             = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
   const [agreed, setAgreed]         = useState(false)
   const [gdpr, setGdpr]             = useState(false)
   const [hasHealth, setHasHealth]   = useState(false)
@@ -312,14 +313,27 @@ export default function CheckinForm({
 
   async function submit() {
     setSubmitting(true)
-    const res = await fetch('/api/checkin', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...form, school_id: school.id, partner_id: partnerId ?? null }),
-    })
-    const data = await res.json()
-    setSubmitting(false)
-    if (data.ok) setDone(true)
+    setSubmitError(null)
+    console.log('[checkin] submitting with partner_id:', partnerId)
+    try {
+      const res = await fetch('/api/checkin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...form, school_id: school.id, partner_id: partnerId ?? null }),
+      })
+      const data = await res.json()
+      console.log('[checkin] response:', data)
+      if (data.ok) {
+        setDone(true)
+      } else {
+        setSubmitError(data.error ?? 'Submission failed. Please try again.')
+      }
+    } catch (err) {
+      console.error('[checkin] fetch error:', err)
+      setSubmitError('Network error. Please check your connection and try again.')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const TOTAL_STEPS = 4
@@ -804,6 +818,20 @@ export default function CheckinForm({
                 style={{ accentColor: '#00A896', marginTop: '2px', width: '18px', height: '18px', flexShrink: 0 }} />
               <span style={{ fontSize: '13px', color: '#4A4C58', lineHeight: '1.5' }}>{t!.gdpr}</span>
             </label>
+
+            {submitError && (
+              <div style={{
+                padding: '12px 16px',
+                background: '#FFF0EE',
+                border: '0.5px solid #F4A89A',
+                borderRadius: '12px',
+                fontSize: '13px',
+                color: '#C0392B',
+                marginTop: '4px',
+              }}>
+                {submitError}
+              </div>
+            )}
 
             <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
               <button onClick={() => setStep(3)} style={{
