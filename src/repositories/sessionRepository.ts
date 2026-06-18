@@ -106,6 +106,8 @@ export async function getSessions(
       session_date,
       duration_min,
       price,
+      currency,
+      price_original,
       commission_amount,
       commission_pct,
       origin,

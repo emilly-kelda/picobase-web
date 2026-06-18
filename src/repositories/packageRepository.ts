@@ -6,7 +6,7 @@ export async function getPackageDashboard(schoolId: string) {
   const [{ data: allPackages }, { data: allSales }] = await Promise.all([
     supabase
       .from('packages')
-      .select('id, name, sport, type, base_price, final_price, total_minutes')
+      .select('id, name, sport, type, base_price, final_price, total_minutes, price_eur, price_usd')
       .eq('school_id', schoolId)
       .eq('active', true)
       .order('base_price', { ascending: false }),
@@ -61,9 +61,11 @@ export async function getPackageDashboard(schoolId: string) {
     const utilPct          = minutesSold > 0 ? Math.round((minutesUsed / minutesSold) * 100) : 0
 
     return {
-      id:    pkg.id,
-      name:  pkg.name,
-      price: pkg.final_price ?? pkg.base_price ?? 0,
+      id:        pkg.id,
+      name:      pkg.name,
+      price:     pkg.final_price ?? pkg.base_price ?? 0,
+      price_eur: pkg.price_eur ?? null,
+      price_usd: pkg.price_usd ?? null,
       count: pkgSales.length,
       revenue,
       minutesSold,

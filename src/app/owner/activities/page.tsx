@@ -1,6 +1,7 @@
 ﻿'use client'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
+import MultiCurrencyPriceEditor from '@/components/MultiCurrencyPriceEditor'
 
 const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
 
@@ -14,15 +15,14 @@ type Activity = {
   pricing_mode: string
   active: boolean
   sort_order: number
+  price_brl: number | null
+  price_eur: number | null
+  price_usd: number | null
 }
 
 const empty = {
   name: '', code: '', sport: '', default_price: 0,
   default_duration_min: 60, pricing_mode: 'proportional', active: true, sort_order: 0,
-}
-
-function fmt(n: number) {
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 }).format(n)
 }
 
 export default function ActivitiesPage() {
@@ -196,7 +196,19 @@ export default function ActivitiesPage() {
                   <td style={{ padding: '12px 20px', fontSize: '13px', fontWeight: '500', color: 'var(--slate)' }}>{a.name}</td>
                   <td style={{ padding: '12px 20px', fontSize: '12px', color: 'var(--mist)', fontFamily: 'var(--font-mono)' }}>{a.code}</td>
                   <td style={{ padding: '12px 20px', fontSize: '13px', color: 'var(--mist)' }}>{a.sport ?? '—'}</td>
-                  <td style={{ padding: '12px 20px', fontSize: '13px', color: 'var(--slate)' }}>{fmt(a.default_price)}</td>
+                  <td style={{ padding: '12px 20px', fontSize: '13px', color: 'var(--slate)' }}>
+                    <MultiCurrencyPriceEditor
+                      packageId={a.id}
+                      currentPrices={{
+                        price_brl: a.price_brl ?? a.default_price ?? null,
+                        price_eur: a.price_eur ?? null,
+                        price_usd: a.price_usd ?? null,
+                      }}
+                      schoolId={SCHOOL_ID}
+                      type="activity"
+                      onSaved={load}
+                    />
+                  </td>
                   <td style={{ padding: '12px 20px', fontSize: '13px', color: 'var(--mist)' }}>{a.default_duration_min}min</td>
                   <td style={{ padding: '12px 20px', fontSize: '12px', color: 'var(--mist)' }}>{a.pricing_mode}</td>
                   <td style={{ padding: '12px 20px' }}>

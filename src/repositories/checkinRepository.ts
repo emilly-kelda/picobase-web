@@ -15,7 +15,7 @@ export async function getActivitiesForCheckin(schoolId: string) {
   const supabase = createServiceClient()
   const { data } = await supabase
     .from('activities')
-    .select('id, name, default_price, default_duration_min')
+    .select('id, name, default_price, default_duration_min, price_brl, price_eur, price_usd')
     .eq('school_id', schoolId)
     .eq('active', true)
     .order('sort_order')

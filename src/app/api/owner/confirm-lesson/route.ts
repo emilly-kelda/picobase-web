@@ -16,6 +16,8 @@ export async function POST(request: Request) {
     session_date,
     payment_method,
     level,
+    currency,
+    price_original,
   } = body
 
   const supabase = createServiceClient()
@@ -45,6 +47,8 @@ export async function POST(request: Request) {
       partner_id:       checkin?.partner_id ?? null,
       payment_method:   payment_method ?? null,
       level:            level || null,
+      currency:         currency ?? 'BRL',
+      price_original:   price_original ?? price,
     })
     .select('id')
     .single()

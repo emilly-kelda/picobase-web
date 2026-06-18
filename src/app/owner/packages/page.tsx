@@ -1,6 +1,6 @@
 import { getPackageDashboard } from '@/repositories/packageRepository'
 import SellPackageButton from '@/components/SellPackageButton'
-import PackagePriceEditor from '@/components/PackagePriceEditor'
+import MultiCurrencyPriceEditor from '@/components/MultiCurrencyPriceEditor'
 import Link from 'next/link'
 
 const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
@@ -180,10 +180,15 @@ export default async function PackagesPage() {
                   fontSize: '13px', color: 'var(--mist)',
                   fontVariantNumeric: 'tabular-nums',
                 }}>
-                  <PackagePriceEditor
+                  <MultiCurrencyPriceEditor
                     packageId={pkg.id}
-                    currentPrice={pkg.price ?? 0}
+                    currentPrices={{
+                      price_brl: pkg.price ?? null,
+                      price_eur: pkg.price_eur ?? null,
+                      price_usd: pkg.price_usd ?? null,
+                    }}
                     schoolId={SCHOOL_ID}
+                    type="package"
                   />
                 </td>
                 <td style={{

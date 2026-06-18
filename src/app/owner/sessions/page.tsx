@@ -300,6 +300,19 @@ export default async function SessionsPage({
                     </td>
                     <td style={{ padding: '13px 20px', fontSize: '13px', color: 'var(--slate)', fontVariantNumeric: 'tabular-nums' }}>
                       {fmt(s.price)}
+                      {s.currency && s.currency !== 'BRL' && (
+                        <span style={{
+                          padding: '1px 6px',
+                          borderRadius: '4px',
+                          background: s.currency === 'EUR' ? '#EEF3FC' : '#EDE9FE',
+                          color: s.currency === 'EUR' ? '#1A4B8A' : '#4B1AA8',
+                          fontSize: '10px',
+                          fontWeight: '600',
+                          marginLeft: '4px',
+                        }}>
+                          {s.currency}
+                        </span>
+                      )}
                     </td>
                     <td style={{ padding: '13px 20px', fontSize: '13px', color: 'var(--mist)' }}>
                       {fmtPct(s.commission_pct)}
