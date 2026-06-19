@@ -44,6 +44,25 @@ function fmtTime(iso: string) {
   })
 }
 
+function formatHours(minutes: number): string {
+  const h = Math.floor(minutes / 60)
+  const m = minutes % 60
+  if (m === 0) return `${h}h`
+  return `${h}h${m}min`
+}
+
+/** package_sales has no FK to activities — match the package's free-text
+ *  sport field against the activity catalog by name, same fuzzy approach
+ *  already used elsewhere in this file for the free-typed student name path. */
+function findActivityBySport(activities: Activity[], sport: string): Activity | undefined {
+  const needle = sport.trim().toLowerCase()
+  if (!needle || needle === '—') return undefined
+  return activities.find(a => {
+    const name = a.name.toLowerCase()
+    return name.includes(needle) || needle.includes(name)
+  })
+}
+
 const WEEKDAYS = [
   { key: 1, label: 'S' },
   { key: 2, label: 'T' },
@@ -130,9 +149,23 @@ export default function ScheduledLessons({
   const [editableDates, setEditableDates] = useState<{ date: string; time: string }[]>([])
   const [editingIndex, setEditingIndex]   = useState<number | null>(null)
   const [studentSuggestions, setStudentSuggestions] = useState<
-    Array<{ name: string; packageName: string; minutesRemaining: number }>
+    Array<{
+      student_name: string
+      package_sale_id: string
+      package_name: string
+      activity_name: string
+      minutes_purchased: number
+      minutes_used: number
+      minutes_remaining: number
+    }>
   >([])
   const [showSuggestions, setShowSuggestions]       = useState(false)
+  const [selectedPackage, setSelectedPackage]        = useState<{
+    package_sale_id: string
+    package_name: string
+    activity_name: string
+    minutes_remaining: number
+  } | null>(null)
   const [customDuration,   setCustomDuration]       = useState(false)
   const [customMinutes,    setCustomMinutes]         = useState(45)
   const [editLesson,       setEditLesson]            = useState<Lesson | null>(null)
@@ -146,15 +179,16 @@ export default function ScheduledLessons({
   const [editSaving,         setEditSaving]         = useState(false)
 
   const [form, setForm] = useState({
-    student_name:  '',
-    activity_id:   '',
-    instructor_id: '',
-    date:          new Date(Date.now() + 86400000).toISOString().slice(0, 10),
-    time:          '09:00',
-    count:         1,
-    duration_min:  60,
-    notes:         '',
-    level:         '' as string,
+    student_name:    '',
+    activity_id:     '',
+    instructor_id:   '',
+    date:            new Date(Date.now() + 86400000).toISOString().slice(0, 10),
+    time:            '09:00',
+    count:           1,
+    duration_min:    60,
+    notes:           '',
+    level:           '' as string,
+    package_sale_id: null as string | null,
   })
   const [experimentalDisabled, setExperimentalDisabled] = useState(false)
 
@@ -202,20 +236,18 @@ export default function ScheduledLessons({
     return () => clearTimeout(handle)
   }, [form.student_name, form.activity_id])
 
-  const matchedPackage = form.student_name.length > 2
-    ? activePackages.find(p =>
-        p.student_name.toLowerCase().includes(form.student_name.toLowerCase())
-      )
-    : undefined
-
-  const maxCount = matchedPackage
-    ? Math.floor(
-        (matchedPackage.minutes_purchased - matchedPackage.minutes_used) / (form.duration_min || 60)
-      )
+  // maxCount is bounded by the package the owner explicitly selected from the
+  // dropdown (selectedPackage) — not a name-substring guess. Uncapped (99) until
+  // a specific package_sale_id is picked.
+  const maxCount = selectedPackage
+    ? Math.floor(selectedPackage.minutes_remaining / (form.duration_min || 60))
     : 99
 
   function onStudentChange(name: string) {
-    setForm(f => ({ ...f, student_name: name }))
+    // Manual typing supersedes any dropdown pick — the sticky package selection
+    // only applies while the name matches what was explicitly clicked.
+    setSelectedPackage(null)
+    setForm(f => ({ ...f, student_name: name, package_sale_id: null }))
     const pkg = activePackages.find(p =>
       p.student_name.toLowerCase().includes(name.toLowerCase()) && name.length > 2
     )
@@ -235,6 +267,29 @@ export default function ScheduledLessons({
         }))
       }
     }
+  }
+
+  function onSelectPackage(student: {
+    student_name: string
+    package_sale_id: string
+    package_name: string
+    activity_name: string
+    minutes_remaining: number
+  }) {
+    const activity = findActivityBySport(activities, student.activity_name)
+    setSelectedPackage({
+      package_sale_id:   student.package_sale_id,
+      package_name:      student.package_name,
+      activity_name:     student.activity_name,
+      minutes_remaining: student.minutes_remaining,
+    })
+    setForm(f => ({
+      ...f,
+      student_name:    student.student_name,
+      package_sale_id: student.package_sale_id,
+      activity_id:     activity?.id ?? f.activity_id,
+    }))
+    setShowSuggestions(false)
   }
 
   function toggleWeekday(day: number) {
@@ -258,13 +313,14 @@ export default function ScheduledLessons({
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            student_name:  form.student_name,
-            activity_id:   form.activity_id || null,
-            instructor_id: form.instructor_id || null,
+            student_name:    form.student_name,
+            activity_id:     form.activity_id || null,
+            instructor_id:   form.instructor_id || null,
             scheduled_at,
-            duration_min:  finalDuration,
-            notes:         form.notes || null,
-            level:         form.level || null,
+            duration_min:    finalDuration,
+            notes:           form.notes || null,
+            level:           form.level || null,
+            package_sale_id: form.package_sale_id ?? null,
           }),
         })
       )
@@ -283,7 +339,9 @@ export default function ScheduledLessons({
       student_name: '', activity_id: '', instructor_id: '',
       date: new Date(Date.now() + 86400000).toISOString().slice(0, 10),
       time: '09:00', count: 1, duration_min: 60, notes: '', level: '',
+      package_sale_id: null,
     })
+    setSelectedPackage(null)
     setExperimentalDisabled(false)
     setMode('single')
     setWeekdays([1, 3, 5])
@@ -785,54 +843,56 @@ export default function ScheduledLessons({
                     }}>
                       {studentSuggestions
                         .filter(s => !form.student_name ||
-                          s.name.toLowerCase().includes(form.student_name.toLowerCase()))
-                        .map((s, i) => (
-                          <div
-                            key={i}
-                            onMouseDown={() => {
-                              onStudentChange(s.name)
-                              setShowSuggestions(false)
-                            }}
+                          s.student_name.toLowerCase().includes(form.student_name.toLowerCase()))
+                        .map(s => (
+                          <button
+                            key={s.package_sale_id}
+                            type="button"
+                            onMouseDown={() => onSelectPackage(s)}
                             style={{
+                              width: '100%',
                               padding: '10px 14px', cursor: 'pointer',
+                              border: 'none', background: 'transparent',
                               borderBottom: '0.5px solid var(--border)',
                               display: 'flex', justifyContent: 'space-between',
-                              alignItems: 'center',
+                              alignItems: 'center', gap: '12px',
+                              textAlign: 'left', fontFamily: 'var(--font-sans)',
                             }}
                           >
-                            <div>
-                              <div style={{ fontSize: '13px', fontWeight: '500', color: 'var(--slate)' }}>
-                                {s.name}
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontSize: '13px', fontWeight: '500', color: 'var(--slate)', marginBottom: '2px' }}>
+                                {s.student_name}
                               </div>
                               <div style={{ fontSize: '11px', color: 'var(--mist)' }}>
-                                {s.packageName}
+                                {s.activity_name} — {s.package_name}
                               </div>
                             </div>
                             <div style={{
-                              fontSize: '11px', fontWeight: '500',
-                              color: 'var(--glacial-dark)',
-                              background: 'var(--glacial-light)',
+                              flexShrink: 0,
+                              fontSize: '11px', fontWeight: '600',
+                              color: s.minutes_remaining < 60 ? '#92400E' : 'var(--glacial-dark)',
+                              background: s.minutes_remaining < 60 ? '#FEF3C7' : 'var(--glacial-light)',
                               padding: '2px 8px', borderRadius: '99px',
                             }}>
-                              {Math.floor(s.minutesRemaining / 60)}h restantes
+                              {formatHours(s.minutes_remaining)} restantes
                             </div>
-                          </div>
+                          </button>
                         ))}
                     </div>
                   )}
                 </div>
-                {matchedPackage && (
+                {selectedPackage && (
                   <div style={{
                     marginTop: '6px', padding: '8px 12px',
-                    background: 'var(--glacial-light)',
+                    background: selectedPackage.minutes_remaining < 60 ? '#FEF3C7' : 'var(--glacial-light)',
                     borderRadius: 'var(--radius-md)',
-                    fontSize: '12px', color: 'var(--glacial-dark)',
+                    fontSize: '12px', color: selectedPackage.minutes_remaining < 60 ? '#92400E' : 'var(--glacial-dark)',
                     display: 'flex', justifyContent: 'space-between',
                   }}>
-                    <span>📦 {(matchedPackage.packages as any)?.name}</span>
+                    <span>📦 {selectedPackage.activity_name} — {selectedPackage.package_name}</span>
                     <span>
-                      {matchedPackage.minutes_purchased - matchedPackage.minutes_used}min restantes
-                      {' → '}{form.count} aulas sugeridas
+                      {formatHours(selectedPackage.minutes_remaining)} restantes
+                      {mode !== 'single' && ` → ${form.count} aulas sugeridas`}
                     </span>
                   </div>
                 )}
@@ -914,10 +974,8 @@ export default function ScheduledLessons({
                       key={d.value}
                       onClick={() => {
                         setCustomDuration(false)
-                        const newMax = matchedPackage
-                          ? Math.floor(
-                              (matchedPackage.minutes_purchased - matchedPackage.minutes_used) / d.value
-                            )
+                        const newMax = selectedPackage
+                          ? Math.floor(selectedPackage.minutes_remaining / d.value)
                           : 99
                         setForm(f => ({
                           ...f,
@@ -1042,7 +1100,7 @@ export default function ScheduledLessons({
                 <div>
                   <label style={labelStyle}>
                     Número de aulas
-                    {matchedPackage && (
+                    {selectedPackage && (
                       <span style={{
                         fontSize: '12px', color: 'var(--mist)',
                         marginLeft: '8px', fontWeight: '400',
@@ -1092,7 +1150,7 @@ export default function ScheduledLessons({
                     </button>
                     <span style={{ fontSize: '13px', color: 'var(--mist)' }}>aulas</span>
                   </div>
-                  {matchedPackage && form.count > maxCount && (
+                  {selectedPackage && form.count > maxCount && (
                     <div style={{
                       marginTop: '6px', fontSize: '12px',
                       color: 'var(--signal-dark)',

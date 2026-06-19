@@ -18,6 +18,7 @@ export async function POST(request: Request) {
       duration_min: body.duration_min || 60,
       notes:        body.notes || null,
       level:        body.level || null,
+      package_sale_id: body.package_sale_id ?? null,
       status:       'scheduled',
     })
     .select('id')
