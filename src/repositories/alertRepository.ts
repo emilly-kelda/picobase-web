@@ -115,5 +115,26 @@ export async function getAlerts(schoolId: string): Promise<Alert[]> {
     }
   }
 
+  // 6. Outstanding receivables (sessions confirmed as "a_receber", not yet collected)
+  const { data: pendingReceivables } = await supabase
+    .from('sessions')
+    .select('id, price')
+    .eq('school_id', schoolId)
+    .eq('payment_method', 'a_receber')
+    .is('received_at', null)
+
+  if (pendingReceivables && pendingReceivables.length > 0) {
+    const totalReceivable = pendingReceivables.reduce((s, r) => s + (r.price ?? 0), 0)
+    const fmtReceivable = new Intl.NumberFormat('pt-BR', {
+      style: 'currency', currency: 'BRL',
+      minimumFractionDigits: 0, maximumFractionDigits: 0,
+    }).format(totalReceivable)
+    alerts.push({
+      type: 'warning',
+      message: `${fmtReceivable} outstanding from ${pendingReceivables.length} lesson${pendingReceivables.length !== 1 ? 's' : ''} — see Payments`,
+      link: '/owner/payments',
+    })
+  }
+
   return alerts
 }

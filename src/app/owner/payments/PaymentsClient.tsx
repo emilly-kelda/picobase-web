@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import ReceivablesView from '@/components/ReceivablesView'
 
 type Payment = {
   id: string
@@ -261,6 +262,20 @@ export default function PaymentsClient({
             </select>
           </form>
         </div>
+      </div>
+
+      {/* A Receber */}
+      <div style={{ marginBottom: '32px' }}>
+        <div style={{
+          fontSize: '11px', fontWeight: '500',
+          letterSpacing: '0.1em', textTransform: 'uppercase',
+          color: 'var(--mist)', marginBottom: '16px',
+          paddingBottom: '12px',
+          borderBottom: '0.5px solid var(--border)',
+        }}>
+          A Receber
+        </div>
+        <ReceivablesView />
       </div>
 
       {/* Message */}
