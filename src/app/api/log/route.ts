@@ -1,4 +1,5 @@
 import { createServiceClient } from '@/lib/supabase-server'
+import { computeCommissionAmount } from '@/lib/commission'
 import { NextResponse } from 'next/server'
 
 // GET — fetch today's pending checkins for this instructor
@@ -76,7 +77,7 @@ export async function POST(request: Request) {
 
   const { data: instructor, error: instrError } = await supabase
     .from('users')
-    .select('id, school_id, commission_pct')
+    .select('id, school_id, commission_pct, commission_mode, fixed_per_hour')
     .eq('log_token', token)
     .eq('role', 'instructor')
     .eq('active', true)
@@ -109,8 +110,8 @@ export async function POST(request: Request) {
       duration_min,
       price,
       origin:           'direct',
-      commission_pct:   instructor.commission_pct || 0,
-      commission_amount: price * (instructor.commission_pct || 0),
+      commission_pct:   instructor.commission_pct ?? null,
+      commission_amount: computeCommissionAmount(instructor, price, duration_min),
     })
 
   if (sessionError) {

@@ -1,4 +1,5 @@
 ﻿import { createServiceClient } from '@/lib/supabase-server'
+import { computeCommissionAmount } from '@/lib/commission'
 import { NextResponse } from 'next/server'
 
 export async function POST(request: Request) {
@@ -13,10 +14,23 @@ export async function POST(request: Request) {
     duration_min,
     price,
     notes,
-    commission_pct,
   } = body
 
-  const commission_amount = price * commission_pct
+  // Re-derive from the instructor's saved rate — same reasoning as
+  // /api/owner/confirm-lesson: a client-supplied commission_pct never
+  // reflects fixed hourly-rate instructors and can go stale.
+  const { data: instructor } = await supabase
+    .from('users')
+    .select('commission_pct, commission_mode, fixed_per_hour')
+    .eq('id', instructor_id)
+    .single()
+
+  const commission_pct    = instructor?.commission_pct ?? null
+  const commission_amount = computeCommissionAmount(
+    instructor ?? { commission_pct: null },
+    price,
+    duration_min
+  )
   const today = new Date().toISOString().slice(0, 10)
 
   const { error: sessionError } = await supabase

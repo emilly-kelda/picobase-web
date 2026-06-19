@@ -8,24 +8,31 @@ type Mode = 'percentage' | 'fixed_per_hour'
 export default function CommissionEditor({
   instructorId,
   currentPct,
+  currentMode = 'percentage',
+  currentFixedPerHour = null,
 }: {
   instructorId: string
   currentPct: number | null
+  currentMode?: string | null
+  currentFixedPerHour?: number | null
 }) {
   const router  = useRouter()
-  const [mode,  setMode]  = useState<Mode>('percentage')
+  const [mode,  setMode]  = useState<Mode>(currentMode === 'fixed_per_hour' ? 'fixed_per_hour' : 'percentage')
   const [pct,   setPct]   = useState(
     currentPct != null ? Math.round(currentPct * 100) : 38
   )
-  const [fixed, setFixed] = useState(150)
+  const [fixed, setFixed] = useState(currentFixedPerHour ?? 150)
   const [saving, setSaving] = useState(false)
   const [saved,  setSaved]  = useState(false)
 
   async function save() {
     setSaving(true)
-    const body = mode === 'percentage'
-      ? { instructor_id: instructorId, commission_pct: pct / 100 }
-      : { instructor_id: instructorId, commission_pct: null, fixed_per_hour: fixed }
+    const body = {
+      instructor_id:   instructorId,
+      commission_mode: mode,
+      commission_pct:  mode === 'percentage' ? pct / 100 : null,
+      fixed_per_hour:  mode === 'fixed_per_hour' ? fixed : null,
+    }
 
     await fetch('/api/owner/crew/commission', {
       method: 'PATCH',

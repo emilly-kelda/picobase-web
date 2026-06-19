@@ -7,6 +7,7 @@ export async function getCrewMembers(schoolId: string) {
     .from('users')
     .select(`
       id, name, email, whatsapp, commission_pct,
+      commission_mode, fixed_per_hour,
       pix_key, wise_email, active, created_at,
       nationality, languages, sports, certifications,
       bio, experience_years, max_students_per_session,

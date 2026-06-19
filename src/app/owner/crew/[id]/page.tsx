@@ -156,6 +156,8 @@ export default async function InstructorDetailPage({
           <CommissionEditor
             instructorId={member.id}
             currentPct={member.commission_pct}
+            currentMode={member.commission_mode}
+            currentFixedPerHour={member.fixed_per_hour}
           />
 
           {/* Sports */}
