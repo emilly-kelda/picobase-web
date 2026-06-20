@@ -24,9 +24,11 @@ export default function CommissionEditor({
   const [fixed, setFixed] = useState(currentFixedPerHour ?? 150)
   const [saving, setSaving] = useState(false)
   const [saved,  setSaved]  = useState(false)
+  const [error,  setError]  = useState<string | null>(null)
 
   async function save() {
     setSaving(true)
+    setError(null)
     const body = {
       instructor_id:   instructorId,
       commission_mode: mode,
@@ -34,14 +36,24 @@ export default function CommissionEditor({
       fixed_per_hour:  mode === 'fixed_per_hour' ? fixed : null,
     }
 
-    await fetch('/api/owner/crew/commission', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    })
-    setSaving(false)
-    setSaved(true)
-    setTimeout(() => { setSaved(false); router.refresh() }, 1500)
+    try {
+      const res = await fetch('/api/owner/crew/commission', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      const data = await res.json().catch(() => ({}))
+      setSaving(false)
+      if (!res.ok || data.error) {
+        setError(data.error || 'Erro ao salvar')
+        return
+      }
+      setSaved(true)
+      setTimeout(() => { setSaved(false); router.refresh() }, 1500)
+    } catch {
+      setSaving(false)
+      setError('Erro de rede ao salvar')
+    }
   }
 
   return (
@@ -176,6 +188,19 @@ export default function CommissionEditor({
           {saved ? '✓ Salvo' : saving ? '...' : 'Salvar'}
         </button>
       </div>
+
+      {error && (
+        <div style={{
+          marginTop: '10px',
+          fontSize: '12px',
+          color: 'var(--signal-dark)',
+          background: 'var(--signal-light)',
+          padding: '8px 12px',
+          borderRadius: 'var(--radius-md)',
+        }}>
+          {error}
+        </div>
+      )}
     </div>
   )
 }
