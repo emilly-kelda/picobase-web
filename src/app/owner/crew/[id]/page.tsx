@@ -2,6 +2,7 @@ import { getCrewMembers } from '@/repositories/crewRepository'
 import { getSessions } from '@/repositories/sessionRepository'
 import { notFound } from 'next/navigation'
 import CommissionEditor from './CommissionEditor'
+import CommissionHistory from './CommissionHistory'
 import Link from 'next/link'
 
 const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
@@ -159,6 +160,7 @@ export default async function InstructorDetailPage({
             currentMode={member.commission_mode}
             currentFixedPerHour={member.fixed_per_hour}
           />
+          <CommissionHistory instructorId={member.id} />
 
           {/* Sports */}
           {sports.length > 0 && (
