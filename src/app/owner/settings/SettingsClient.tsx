@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import BurnRateCalculator from '@/components/BurnRateCalculator'
 
 type School = {
   id: string
@@ -253,6 +254,10 @@ export default function SettingsClient({
               <div style={{ fontSize: '11px', color: 'var(--mist)', marginTop: '4px' }}>
                 Custos fixos mensais na baixa temporada. Usado para calcular a Reserva de Baixa Temporada.
               </div>
+              <BurnRateCalculator
+                lang={currentLang === 'en' ? 'en' : 'pt'}
+                onApply={total => setSchool(s => ({ ...s, burn_rate: total }))}
+              />
             </div>
           </div>
 
