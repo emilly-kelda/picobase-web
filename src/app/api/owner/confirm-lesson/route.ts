@@ -1,5 +1,5 @@
 import { createServiceClient } from '@/lib/supabase-server'
-import { computeCommissionAmount } from '@/lib/commission'
+import { computeCommissionAmount, getVariableCostForStudent } from '@/lib/commission'
 import { NextResponse } from 'next/server'
 
 const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
@@ -22,6 +22,12 @@ export async function POST(request: Request) {
 
   const supabase = createServiceClient()
 
+  const { data: checkin } = await supabase
+    .from('checkins')
+    .select('student_name, partner_id, scheduled_lesson_id')
+    .eq('id', checkin_id)
+    .single()
+
   // Re-derive from the instructor's saved rate rather than trusting whatever
   // commission_pct the client last loaded — that value never reflects fixed
   // hourly-rate instructors, and can go stale between page load and confirm.
@@ -31,18 +37,19 @@ export async function POST(request: Request) {
     .eq('id', instructor_id)
     .single()
 
+  // Packages with a variable cost (e.g. Downwind boat/fuel) reduce the
+  // commission base — the school still collects the full price, but the
+  // instructor's cut is computed on what's left after that cost.
+  const variableCost      = await getVariableCostForStudent(supabase, SCHOOL_ID, checkin?.student_name)
+  const costDeduction     = variableCost.variableCostAmount
+  const netRevenue        = Math.max(0, price - costDeduction)
+
   const commission_pct    = instructor?.commission_pct ?? null
   const commission_amount = computeCommissionAmount(
     instructor ?? { commission_pct: null },
-    price,
+    netRevenue,
     duration_min
   )
-
-  const { data: checkin } = await supabase
-    .from('checkins')
-    .select('partner_id, scheduled_lesson_id')
-    .eq('id', checkin_id)
-    .single()
 
   const { data: newSession, error: sessionError } = await supabase
     .from('sessions')
@@ -64,6 +71,7 @@ export async function POST(request: Request) {
       level:            level || null,
       currency:         currency ?? 'BRL',
       price_original:   price_original ?? price,
+      variable_cost_deduction: costDeduction > 0 ? costDeduction : null,
     })
     .select('id')
     .single()

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { isLevel, LEVEL_LABELS, type Level } from '@/lib/levels'
 import LevelPicker from '@/components/LevelPicker'
+import type { VariableCostInfo } from '@/lib/commission'
 
 type ActivityRef = {
   id: string
@@ -135,6 +136,7 @@ export default function PendingLessons({
   const [level, setLevel]                     = useState<Level>('experimental')
   const [experimentalDisabled, setExperimentalDisabled] = useState(false)
   const [currency, setCurrency]               = useState<Currency>('BRL')
+  const [variableCost, setVariableCost]       = useState<VariableCostInfo | null>(null)
 
   function open(checkin: Checkin) {
     const sched = checkin.scheduled_lesson
@@ -158,6 +160,12 @@ export default function PendingLessons({
     setSessionDate(new Date().toISOString().slice(0, 10))
     setPaymentMethod(null)
     setCurrency('BRL')
+    setVariableCost(null)
+
+    fetch(`/api/owner/package-variable-cost?student_name=${encodeURIComponent(checkin.student_name)}`)
+      .then(r => r.json())
+      .then(data => setVariableCost(data))
+      .catch(() => {})
 
     if (isLevel(sched?.level)) {
       setLevel(sched!.level as Level)
@@ -195,6 +203,10 @@ export default function PendingLessons({
   const totalPrice         = priceMode === 'per_hour'
     ? Math.round(pricePerHour * (finalDuration / 60))
     : price
+  // Variable package costs (e.g. Downwind boat/fuel) reduce the commission
+  // base only — the school still collects totalPrice in full.
+  const costDeduction = variableCost?.hasVariableCost ? variableCost.variableCostAmount : 0
+  const netRevenue    = Math.max(0, totalPrice - costDeduction)
   const cantConfirm = confirming || !instructorId || totalPrice <= 0 || finalDuration <= 0 || !paymentMethod
 
   async function confirm() {
@@ -799,9 +811,6 @@ export default function PendingLessons({
                       outline: 'none',
                     }}
                   />
-                  <div style={{ fontSize: '13px', color: 'var(--mist)' }}>
-                    → comissão {fmt(totalPrice * commissionPct, currency)}
-                  </div>
                 </div>
               ) : (
                 <div>
@@ -840,6 +849,55 @@ export default function PendingLessons({
                   )}
                 </div>
               )}
+
+              {costDeduction > 0 && (
+                <div style={{
+                  background: 'var(--powder)',
+                  borderRadius: '10px',
+                  padding: '12px 14px',
+                  marginTop: '14px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '8px',
+                }}>
+                  <div style={{
+                    fontSize: '10px', fontWeight: '600',
+                    letterSpacing: '0.08em', textTransform: 'uppercase',
+                    color: 'var(--mist)',
+                  }}>
+                    {lang === 'pt' ? 'Custo variável' : 'Variable cost'}
+                    {' · '}
+                    {variableCost?.variableCostMode === 'per_trip'
+                      ? (lang === 'pt' ? 'por trip' : 'per trip')
+                      : (lang === 'pt' ? 'por aluno' : 'per student')
+                    }
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                    <span style={{ color: 'var(--mist)' }}>
+                      {variableCost?.variableCostName ?? (lang === 'pt' ? 'Custo' : 'Cost')}
+                    </span>
+                    <span style={{ color: '#DC2626', fontWeight: '500' }}>
+                      − {fmt(costDeduction, currency)}
+                    </span>
+                  </div>
+                  <div style={{ height: '0.5px', background: 'var(--border)' }} />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                    <span style={{ color: 'var(--mist)' }}>
+                      {lang === 'pt' ? 'Base para comissão' : 'Commission base'}
+                    </span>
+                    <span style={{
+                      fontWeight: '600', color: 'var(--slate)',
+                      fontVariantNumeric: 'tabular-nums',
+                    }}>
+                      {fmt(netRevenue, currency)}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              <div style={{ fontSize: '13px', color: 'var(--mist)', marginTop: '8px' }}>
+                → comissão {fmt(netRevenue * commissionPct, currency)}
+              </div>
             </div>
 
             {!showNotes ? (
