@@ -299,6 +299,19 @@ export default async function OwnerPage() {
                     </td>
                     <td style={{ padding: '20px 24px', fontSize: '13px', color: 'var(--mist)' }}>
                       {(s as any).instructor?.name ?? '—'}
+                      {(s as any).instructor?.role === 'owner' && (
+                        <span style={{
+                          padding: '1px 6px',
+                          borderRadius: '4px',
+                          background: '#EDE9FE',
+                          color: '#5B21B6',
+                          fontSize: '10px',
+                          fontWeight: '600',
+                          marginLeft: '4px',
+                        }}>
+                          Dono
+                        </span>
+                      )}
                     </td>
                     <td style={{ padding: '20px 24px', fontSize: '13px', color: 'var(--mist)', whiteSpace: 'nowrap' }}>
                       {s.duration_min ? `${s.duration_min}min` : '—'}

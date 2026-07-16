@@ -33,9 +33,14 @@ export async function POST(request: Request) {
   // hourly-rate instructors, and can go stale between page load and confirm.
   const { data: instructor } = await supabase
     .from('users')
-    .select('commission_pct, commission_mode, fixed_per_hour')
+    .select('role, commission_pct, commission_mode, fixed_per_hour')
     .eq('id', instructor_id)
     .single()
+
+  // The owner doesn't pay themselves a commission when they teach a lesson —
+  // the session is still recorded (price, duration) for revenue/stats, but
+  // the payout side is always zero.
+  const isOwner = instructor?.role === 'owner'
 
   // Packages with a variable cost (e.g. Downwind boat/fuel) reduce the
   // commission base — the school still collects the full price, but the
@@ -44,8 +49,8 @@ export async function POST(request: Request) {
   const costDeduction     = variableCost.variableCostAmount
   const netRevenue        = Math.max(0, price - costDeduction)
 
-  const commission_pct    = instructor?.commission_pct ?? null
-  const commission_amount = computeCommissionAmount(
+  const commission_pct    = isOwner ? 0 : (instructor?.commission_pct ?? null)
+  const commission_amount = isOwner ? 0 : computeCommissionAmount(
     instructor ?? { commission_pct: null },
     netRevenue,
     duration_min

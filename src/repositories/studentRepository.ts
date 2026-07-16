@@ -285,7 +285,7 @@ export async function getInstructors(schoolId: string) {
     .from('users')
     .select('id, name, commission_pct')
     .eq('school_id', schoolId)
-    .eq('role', 'instructor')
+    .in('role', ['instructor', 'owner'])
     .eq('active', true)
     .order('name')
   if (error) throw error

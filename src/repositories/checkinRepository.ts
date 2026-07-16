@@ -28,7 +28,7 @@ export async function getInstructorsForCheckin(schoolId: string) {
     .from('users')
     .select('id, name')
     .eq('school_id', schoolId)
-    .eq('role', 'instructor')
+    .in('role', ['instructor', 'owner'])
     .eq('active', true)
     .order('name')
   return data ?? []

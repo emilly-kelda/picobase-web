@@ -80,7 +80,7 @@ export async function getRecentSessions(schoolId: string, limit = 8) {
       duration_min,
       price,
       commission_amount,
-      instructor:users!sessions_instructor_id_fkey ( id, name ),
+      instructor:users!sessions_instructor_id_fkey ( id, name, role ),
       checkins ( student_name ),
       activities ( name )
     `)
@@ -113,7 +113,7 @@ export async function getSessions(
       origin,
       session_type,
       payment_method,
-      instructor:users!sessions_instructor_id_fkey ( id, name ),
+      instructor:users!sessions_instructor_id_fkey ( id, name, role ),
       checkins ( student_name ),
       activities ( name ),
       partners ( name )

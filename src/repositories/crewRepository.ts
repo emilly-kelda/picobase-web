@@ -61,7 +61,7 @@ export async function getPayments(schoolId: string, period?: string) {
       total_to_pay, status, approved_at, paid_at, instructor_id,
       users!payments_instructor_id_fkey (
         id, name, email, whatsapp,
-        pix_key, wise_email, commission_pct
+        pix_key, wise_email, commission_pct, role
       )
     `)
     .eq('school_id', schoolId)
@@ -69,6 +69,13 @@ export async function getPayments(schoolId: string, period?: string) {
     .order('total_to_pay', { ascending: false })
 
   if (error) throw error
+
+  // The owner doesn't pay themselves — exclude their row even if close_month
+  // created one (it aggregates every instructor_id with sessions, owner included).
+  const nonOwnerData = (data ?? []).filter(p => {
+    const u = Array.isArray(p.users) ? p.users[0] : p.users
+    return (u as any)?.role !== 'owner'
+  })
 
   const { data: advancesData, error: advancesError } = await supabase
     .from('instructor_advances')
@@ -86,7 +93,7 @@ export async function getPayments(schoolId: string, period?: string) {
     advancesByInstructor.set(a.instructor_id, list)
   }
 
-  const payments = (data ?? []).map(p => {
+  const payments = nonOwnerData.map(p => {
     const advances = advancesByInstructor.get(p.instructor_id) ?? []
     const totalAdvances = advances.reduce((s, a) => s + (a.amount ?? 0), 0)
     const netPayout = Math.max(0, p.total_to_pay - totalAdvances)

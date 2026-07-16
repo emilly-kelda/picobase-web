@@ -258,7 +258,24 @@ export default async function SessionsPage({
                       {(() => {
                         const user = Array.isArray((s as any).instructor) ? (s as any).instructor[0] : (s as any).instructor
                         if (!user?.name) return <span style={{ color: 'var(--slate)' }}>—</span>
-                        if (!user?.id)   return <span style={{ color: 'var(--slate)' }}>{user.name}</span>
+                        const badge = user.role === 'owner' && (
+                          <span style={{
+                            padding: '1px 6px',
+                            borderRadius: '4px',
+                            background: '#EDE9FE',
+                            color: '#5B21B6',
+                            fontSize: '10px',
+                            fontWeight: '600',
+                            marginLeft: '4px',
+                          }}>
+                            Dono
+                          </span>
+                        )
+                        // The owner isn't a crew member (getCrewMembers excludes role='owner'),
+                        // so /owner/crew/[id] would 404 for them — render plain text instead.
+                        if (!user?.id || user.role === 'owner') {
+                          return <span style={{ color: 'var(--slate)' }}>{user.name}{badge}</span>
+                        }
                         return (
                           <a
                             className="tbl-name-link"
