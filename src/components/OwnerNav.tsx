@@ -28,6 +28,7 @@ export default function OwnerNav({ seasons = [], activeSeasonId, activeSeasonLab
     { href: '/owner/crew',      label: t.nav_crew      },
     { href: '/owner/packages',  label: t.nav_packages  },
     { href: '/owner/payments',  label: t.nav_payments  },
+    { href: '/owner/reports',   label: t.nav_reports   },
     { href: '/owner/settings',  label: t.nav_settings  },
     // Convenience link for master only — NOT a security boundary.
     // The destination page enforces its own server-side redirect for non-master users.
