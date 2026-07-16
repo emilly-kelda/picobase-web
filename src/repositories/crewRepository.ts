@@ -58,7 +58,7 @@ export async function getPayments(schoolId: string, period?: string) {
     .select(`
       id, period, sessions_count, revenue_generated,
       commission_pct, commission_amount, bonus,
-      total_to_pay, status, approved_at, paid_at,
+      total_to_pay, status, approved_at, paid_at, instructor_id,
       users!payments_instructor_id_fkey (
         id, name, email, whatsapp,
         pix_key, wise_email, commission_pct
@@ -70,11 +70,32 @@ export async function getPayments(schoolId: string, period?: string) {
 
   if (error) throw error
 
-  const payments = data ?? []
+  const { data: advancesData, error: advancesError } = await supabase
+    .from('instructor_advances')
+    .select('id, instructor_id, amount, note, created_at')
+    .eq('school_id', schoolId)
+    .eq('period', currentPeriod)
+    .order('created_at', { ascending: false })
 
-  const totalPending  = payments.filter(p => p.status === 'pending').reduce((s, p) => s + p.total_to_pay, 0)
-  const totalApproved = payments.filter(p => p.status === 'approved').reduce((s, p) => s + p.total_to_pay, 0)
-  const totalPaid     = payments.filter(p => p.status === 'paid').reduce((s, p) => s + p.total_to_pay, 0)
+  if (advancesError) throw advancesError
+
+  const advancesByInstructor = new Map<string, { id: string; amount: number; note: string | null; created_at: string }[]>()
+  for (const a of advancesData ?? []) {
+    const list = advancesByInstructor.get(a.instructor_id) ?? []
+    list.push({ id: a.id, amount: a.amount, note: a.note, created_at: a.created_at })
+    advancesByInstructor.set(a.instructor_id, list)
+  }
+
+  const payments = (data ?? []).map(p => {
+    const advances = advancesByInstructor.get(p.instructor_id) ?? []
+    const totalAdvances = advances.reduce((s, a) => s + (a.amount ?? 0), 0)
+    const netPayout = Math.max(0, p.total_to_pay - totalAdvances)
+    return { ...p, advances, totalAdvances, netPayout }
+  })
+
+  const totalPending  = payments.filter(p => p.status === 'pending').reduce((s, p) => s + p.netPayout, 0)
+  const totalApproved = payments.filter(p => p.status === 'approved').reduce((s, p) => s + p.netPayout, 0)
+  const totalPaid     = payments.filter(p => p.status === 'paid').reduce((s, p) => s + p.netPayout, 0)
 
   return {
     payments,

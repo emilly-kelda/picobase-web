@@ -4,6 +4,13 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import ReceivablesView from '@/components/ReceivablesView'
 
+type Advance = {
+  id: string
+  amount: number
+  note: string | null
+  created_at: string
+}
+
 type Payment = {
   id: string
   period: string
@@ -16,6 +23,9 @@ type Payment = {
   status: string
   approved_at: string | null
   paid_at: string | null
+  advances: Advance[]
+  totalAdvances: number
+  netPayout: number
   users: {
     id: string
     name: string
@@ -115,6 +125,14 @@ export default function PaymentsClient({
     }>
   } | null>(null)
   const [paymentSummary, setPaymentSummary] = useState<Record<string, { count: number; revenue: number }>>({})
+  const [advanceModal, setAdvanceModal] = useState<{
+    instructorId: string
+    instructorName: string
+    period: string
+  } | null>(null)
+  const [advanceAmount, setAdvanceAmount] = useState('')
+  const [advanceNote, setAdvanceNote] = useState('')
+  const [savingAdvance, setSavingAdvance] = useState(false)
 
   useEffect(() => {
     fetch(`/api/owner/payment-method-summary?period=${period}`)
@@ -161,9 +179,9 @@ export default function PaymentsClient({
     const updated = payments.map(p => p.id === id ? { ...p, ...update } : p)
     setPayments(updated)
     setSummary({
-      totalPending:  updated.filter(p => p.status === 'pending').reduce((s, p) => s + p.total_to_pay, 0),
-      totalApproved: updated.filter(p => p.status === 'approved').reduce((s, p) => s + p.total_to_pay, 0),
-      totalPaid:     updated.filter(p => p.status === 'paid').reduce((s, p) => s + p.total_to_pay, 0),
+      totalPending:  updated.filter(p => p.status === 'pending').reduce((s, p) => s + p.netPayout, 0),
+      totalApproved: updated.filter(p => p.status === 'approved').reduce((s, p) => s + p.netPayout, 0),
+      totalPaid:     updated.filter(p => p.status === 'paid').reduce((s, p) => s + p.netPayout, 0),
       total:         summary.total,
     })
     setLoading(null)
@@ -198,6 +216,36 @@ export default function PaymentsClient({
     const data = await res.json()
     setBreakdown(data.sessions ?? [])
     setLoadingBreakdown(false)
+  }
+
+  async function submitAdvance() {
+    if (!advanceModal) return
+    const amount = Number(advanceAmount)
+    if (!(amount > 0)) {
+      setMessage('Erro: informe um valor válido para o adiantamento')
+      return
+    }
+    setSavingAdvance(true)
+    const res  = await fetch('/api/owner/instructor-advance', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        instructor_id: advanceModal.instructorId,
+        amount,
+        period: advanceModal.period,
+        note: advanceNote || null,
+      }),
+    })
+    const data = await res.json()
+    setSavingAdvance(false)
+    if (!res.ok || data.error) {
+      setMessage(`Erro: ${data.error ?? 'não foi possível registrar o adiantamento'}`)
+      return
+    }
+    setAdvanceModal(null)
+    setAdvanceAmount('')
+    setAdvanceNote('')
+    router.refresh()
   }
 
   return (
@@ -570,7 +618,7 @@ export default function PaymentsClient({
                         fontSize: '20px', fontWeight: '600', color: 'var(--slate)',
                         marginBottom: '5px', fontVariantNumeric: 'tabular-nums',
                       }}>
-                        {fmt(p.total_to_pay)}
+                        {fmt(p.netPayout)}
                       </div>
                       <span style={{
                         padding: '3px 10px', borderRadius: '99px',
@@ -613,6 +661,53 @@ export default function PaymentsClient({
                     ))}
                   </div>
 
+                  {/* Adiantamentos — only when this instructor has advances for the period */}
+                  {p.totalAdvances > 0 && (
+                    <div style={{
+                      padding: '12px 20px', background: '#fff',
+                      borderBottom: '0.5px solid var(--border)',
+                    }}>
+                      <div style={{
+                        fontSize: '10px', fontWeight: '600',
+                        letterSpacing: '0.1em', textTransform: 'uppercase',
+                        color: 'var(--mist)', marginBottom: '8px',
+                      }}>
+                        Adiantamentos
+                      </div>
+                      {p.advances.map(a => (
+                        <div key={a.id} style={{
+                          display: 'flex', justifyContent: 'space-between',
+                          fontSize: '12px', marginBottom: '4px',
+                        }}>
+                          <span style={{ color: 'var(--mist)' }}>
+                            {new Date(a.created_at).toLocaleDateString('pt-BR', {
+                              day: '2-digit', month: 'short',
+                            })}
+                            {a.note && ` · ${a.note}`}
+                          </span>
+                          <span style={{ color: '#DC2626', fontWeight: '500' }}>
+                            − {fmt(a.amount)}
+                          </span>
+                        </div>
+                      ))}
+                      <div style={{
+                        display: 'flex', justifyContent: 'space-between',
+                        fontSize: '12px', paddingTop: '8px', marginTop: '4px',
+                        borderTop: '0.5px solid var(--border)',
+                      }}>
+                        <span style={{ color: 'var(--mist)' }}>Comissão bruta</span>
+                        <span style={{ color: 'var(--slate)' }}>{fmt(p.total_to_pay)}</span>
+                      </div>
+                      <div style={{
+                        display: 'flex', justifyContent: 'space-between',
+                        fontSize: '13px', fontWeight: '600', marginTop: '4px',
+                      }}>
+                        <span style={{ color: 'var(--slate)' }}>A pagar</span>
+                        <span style={{ color: 'var(--slate)' }}>{fmt(p.netPayout)}</span>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Actions row */}
                   <div style={{
                     padding: '12px 20px',
@@ -627,6 +722,25 @@ export default function PaymentsClient({
                       )}
                     </div>
                     <div style={{ display: 'flex', gap: '8px' }}>
+                      <button
+                        onClick={() => setAdvanceModal({
+                          instructorId: user?.id,
+                          instructorName: user?.name ?? '—',
+                          period,
+                        })}
+                        style={{
+                          padding: '6px 14px',
+                          background: 'transparent',
+                          border: '0.5px solid var(--border)',
+                          borderRadius: '99px',
+                          fontSize: '12px',
+                          color: 'var(--mist)',
+                          cursor: 'pointer',
+                          fontFamily: 'inherit',
+                        }}
+                      >
+                        + Registrar adiantamento
+                      </button>
                       <button
                         onClick={() => fetchBreakdown(user?.id)}
                         style={{
@@ -651,7 +765,7 @@ export default function PaymentsClient({
                             cursor: 'pointer', fontFamily: 'var(--font-sans)',
                           }}
                         >
-                          {loading === p.id ? '...' : `Aprovar ${fmt(p.total_to_pay)}`}
+                          {loading === p.id ? '...' : `Aprovar ${fmt(p.netPayout)}`}
                         </button>
                       )}
                       {p.status === 'approved' && (
@@ -1054,6 +1168,109 @@ export default function PaymentsClient({
                 )}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Advance ("adiantamento") modal */}
+      {advanceModal && (
+        <div
+          style={{
+            position: 'fixed', inset: 0,
+            background: 'rgba(0,0,0,0.4)',
+            zIndex: 100,
+            display: 'flex', alignItems: 'flex-end',
+          }}
+          onClick={e => { if (e.target === e.currentTarget) setAdvanceModal(null) }}
+        >
+          <div style={{
+            background: '#fff', width: '100%', maxWidth: '480px', margin: '0 auto',
+            borderRadius: '20px 20px 0 0', overflow: 'hidden',
+            padding: '20px 24px 28px',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '12px' }}>
+              <div style={{ width: '40px', height: '4px', background: 'var(--border)', borderRadius: '99px' }} />
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <div style={{ fontSize: '16px', fontWeight: '600', color: 'var(--slate)' }}>
+                Adiantamento — {advanceModal.instructorName}
+              </div>
+              <button
+                onClick={() => setAdvanceModal(null)}
+                style={{
+                  background: 'var(--powder)', border: 'none', borderRadius: '99px',
+                  width: '32px', height: '32px', cursor: 'pointer',
+                  fontSize: '16px', color: 'var(--mist)',
+                }}
+              >×</button>
+            </div>
+
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{
+                display: 'block', fontSize: '11px', fontWeight: '500',
+                letterSpacing: '0.08em', textTransform: 'uppercase',
+                color: 'var(--mist)', marginBottom: '8px',
+              }}>
+                Valor
+              </label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '18px', color: 'var(--mist)' }}>R$</span>
+                <input
+                  type="number" min={0} step={10}
+                  value={advanceAmount}
+                  onChange={e => setAdvanceAmount(e.target.value)}
+                  autoFocus
+                  style={{
+                    flex: 1, padding: '10px 12px',
+                    border: '0.5px solid var(--border-strong)',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: '18px', fontWeight: '600',
+                    color: 'var(--slate)', fontFamily: 'var(--font-sans)',
+                    outline: 'none',
+                  }}
+                />
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{
+                display: 'block', fontSize: '11px', fontWeight: '500',
+                letterSpacing: '0.08em', textTransform: 'uppercase',
+                color: 'var(--mist)', marginBottom: '8px',
+              }}>
+                Motivo (opcional)
+              </label>
+              <input
+                type="text"
+                value={advanceNote}
+                onChange={e => setAdvanceNote(e.target.value)}
+                placeholder="Ex: adiantamento para viagem"
+                style={{
+                  width: '100%', padding: '10px 12px',
+                  border: '0.5px solid var(--border-strong)',
+                  borderRadius: 'var(--radius-md)',
+                  fontSize: '13px', color: 'var(--slate)',
+                  fontFamily: 'var(--font-sans)', outline: 'none',
+                }}
+              />
+            </div>
+
+            <button
+              onClick={submitAdvance}
+              disabled={savingAdvance}
+              style={{
+                width: '100%', padding: '12px',
+                background: 'var(--slate)', color: '#fff',
+                border: 'none', borderRadius: 'var(--radius-md)',
+                fontSize: '14px', fontWeight: '500',
+                cursor: savingAdvance ? 'not-allowed' : 'pointer',
+                opacity: savingAdvance ? 0.6 : 1,
+                fontFamily: 'var(--font-sans)',
+              }}
+            >
+              {savingAdvance ? 'Salvando...' : 'Registrar adiantamento'}
+            </button>
           </div>
         </div>
       )}
