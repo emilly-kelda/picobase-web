@@ -1,4 +1,4 @@
-import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { createServiceClient } from '@/lib/supabase-server'
 import { NextResponse } from 'next/server'
 
 const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
@@ -6,7 +6,14 @@ const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
 export async function PATCH(request: Request) {
   const body = await request.json()
   const { instructor_id, commission_mode, commission_pct, fixed_per_hour } = body
-  const supabase = await createServerSupabaseClient()
+  // Service role, not the session-bound client — public.users has RLS enabled
+  // (one of only two tables that do) and this route was the only users-table
+  // writer still going through the anon-key client. RLS doesn't error on a
+  // filtered-out row, it just excludes it, so the UPDATE silently matched 0
+  // rows: 200 OK, nothing changed. crew/route.ts's PATCH/DELETE (same table,
+  // same kind of instructor edit) already uses the service client for this
+  // exact reason.
+  const supabase = createServiceClient()
 
   const mode      = commission_mode === 'fixed_per_hour' ? 'fixed_per_hour' : 'percentage'
   const newPct    = mode === 'percentage'    ? commission_pct  ?? null : null
@@ -53,6 +60,7 @@ export async function PATCH(request: Request) {
     .update(update)
     .eq('id', instructor_id)
     .eq('school_id', SCHOOL_ID)
+    .eq('role', 'instructor')
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
