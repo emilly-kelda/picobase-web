@@ -14,17 +14,19 @@ type Props = {
   activeSeasonLabel?: string
   lang?: Lang
   isMaster?: boolean
+  pendingBookingsCount?: number
 }
 
-export default function OwnerNav({ seasons = [], activeSeasonId, activeSeasonLabel, lang = 'pt', isMaster = false }: Props) {
+export default function OwnerNav({ seasons = [], activeSeasonId, activeSeasonLabel, lang = 'pt', isMaster = false, pendingBookingsCount = 0 }: Props) {
   const pathname = usePathname()
   const router   = useRouter()
   const t        = getT(lang)
 
-  const navItems = [
+  const navItems: Array<{ href: string; label: string; badge?: number }> = [
     { href: '/owner',           label: t.nav_basecamp },
     { href: '/owner/sessions',  label: t.nav_sessions  },
     { href: '/owner/students',  label: t.nav_students  },
+    { href: '/owner/bookings',  label: t.nav_bookings, badge: pendingBookingsCount },
     { href: '/owner/crew',      label: t.nav_crew      },
     { href: '/owner/packages',  label: t.nav_packages  },
     { href: '/owner/payments',  label: t.nav_payments  },
@@ -135,8 +137,19 @@ export default function OwnerNav({ seasons = [], activeSeasonId, activeSeasonLab
                 key={item.href}
                 href={item.href}
                 className={`nav-link${isActive(item.href) ? ' active' : ''}`}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
               >
                 {item.label}
+                {!!item.badge && item.badge > 0 && (
+                  <span style={{
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                    minWidth: '16px', height: '16px', padding: '0 4px',
+                    borderRadius: '99px', background: 'var(--signal)', color: '#fff',
+                    fontSize: '10px', fontWeight: '600', lineHeight: 1,
+                  }}>
+                    {item.badge}
+                  </span>
+                )}
               </Link>
             ))}
           </nav>

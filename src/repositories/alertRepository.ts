@@ -136,5 +136,20 @@ export async function getAlerts(schoolId: string): Promise<Alert[]> {
     })
   }
 
+  // 7. Pending booking requests from the public /book/[school] intake form
+  const { count: pendingBookingsCount } = await supabase
+    .from('bookings')
+    .select('*', { count: 'exact', head: true })
+    .eq('school_id', schoolId)
+    .eq('status', 'pending')
+
+  if (pendingBookingsCount && pendingBookingsCount > 0) {
+    alerts.push({
+      type: 'info',
+      message: `${pendingBookingsCount} pedido${pendingBookingsCount !== 1 ? 's' : ''} de aula aguardando confirmação`,
+      link: '/owner/bookings',
+    })
+  }
+
   return alerts
 }

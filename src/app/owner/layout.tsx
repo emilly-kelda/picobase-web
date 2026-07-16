@@ -10,6 +10,7 @@ import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { getPortalLang } from '@/lib/language'
 import { getAuthContext } from '@/lib/auth'
+import { getPendingBookingsCount } from '@/repositories/bookingRepository'
 
 export default async function OwnerLayout({ children }: { children: React.ReactNode }) {
   // ── Authorization check ───────────────────────────────────────────────────
@@ -31,7 +32,7 @@ export default async function OwnerLayout({ children }: { children: React.ReactN
     { cookies: { getAll: () => cookieStore.getAll() } }
   )
 
-  const [lang, { data: seasons }] = await Promise.all([
+  const [lang, { data: seasons }, pendingBookingsCount] = await Promise.all([
     getPortalLang(),
     // owner: seasons for their school only.
     // master: all seasons across all schools (school switcher is a future concern).
@@ -45,6 +46,8 @@ export default async function OwnerLayout({ children }: { children: React.ReactN
           .select('id, label')
           .eq('school_id', auth.schoolId)
           .order('start_date', { ascending: false }),
+    // master has no single school to scope this to — skip rather than guess.
+    auth.isMaster ? Promise.resolve(0) : getPendingBookingsCount(auth.schoolId),
   ])
 
   const activeSeason = cookieStore.get('active_season_id')?.value ?? seasons?.[0]?.id ?? ''
@@ -58,6 +61,7 @@ export default async function OwnerLayout({ children }: { children: React.ReactN
         activeSeasonLabel={activeLabel}
         lang={lang}
         isMaster={auth.isMaster}
+        pendingBookingsCount={pendingBookingsCount}
       />
       <main style={{ width: '100%', padding: '32px 40px' }}>
         {children}
