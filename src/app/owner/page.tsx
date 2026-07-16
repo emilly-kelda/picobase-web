@@ -1,6 +1,6 @@
 import { cookies } from 'next/headers'
 import { getRunwayData, getRunwayProjection } from '@/repositories/runwayRepository'
-import { getRecentSessions, getTodayStats, getPendingLessons } from '@/repositories/sessionRepository'
+import { getRecentSessions, getTodayStats, getPendingLessons, getMonthComparison } from '@/repositories/sessionRepository'
 import { getAlerts } from '@/repositories/alertRepository'
 import { getInstructors } from '@/repositories/studentRepository'
 import { getActivitiesForCheckin } from '@/repositories/checkinRepository'
@@ -38,6 +38,7 @@ export default async function OwnerPage() {
     runway, sessions, alerts, today, lang, projection,
     pending, instructors, todayLessons, tomorrowLessons,
     activities, activePackages, missedLessons, packageBalances,
+    monthComparison,
   ] = await Promise.all([
     getRunwayData(SCHOOL_ID, seasonId),
     getRecentSessions(SCHOOL_ID),
@@ -53,6 +54,7 @@ export default async function OwnerPage() {
     getPackageSales(SCHOOL_ID, 50),
     getMissedLessons(SCHOOL_ID),
     getPackageBalancesForCheckins(SCHOOL_ID),
+    getMonthComparison(SCHOOL_ID),
   ])
 
   const t = getT(lang)
@@ -139,21 +141,68 @@ export default async function OwnerPage() {
               {t.today_label}
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-              {[
-                { label: lang === 'pt' ? 'Alunos'    : 'Students',    value: String(today.students) },
-                { label: lang === 'pt' ? 'Aulas'     : 'Sessions',    value: String(today.sessions) },
-                { label: lang === 'pt' ? 'Receita'   : 'Revenue',     value: fmt(today.revenue ?? 0) },
-                { label: lang === 'pt' ? 'Comissões' : 'Commissions', value: fmt(today.commissions ?? 0) },
-              ].map((item) => (
-                <div key={item.label}>
-                  <div style={{ fontSize: '11px', color: 'var(--mist)', marginBottom: '4px', fontWeight: '500' }}>
-                    {item.label}
-                  </div>
-                  <div style={{ fontSize: '18px', fontWeight: '600', color: 'var(--slate)', fontVariantNumeric: 'tabular-nums' }}>
-                    {item.value}
-                  </div>
+              <div>
+                <div style={{ fontSize: '11px', color: 'var(--mist)', marginBottom: '4px', fontWeight: '500' }}>
+                  {lang === 'pt' ? 'Alunos' : 'Students'}
                 </div>
-              ))}
+                <div style={{ fontSize: '18px', fontWeight: '600', color: 'var(--slate)', fontVariantNumeric: 'tabular-nums' }}>
+                  {today.students}
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: '11px', color: 'var(--mist)', marginBottom: '4px', fontWeight: '500' }}>
+                  {lang === 'pt' ? 'Aulas' : 'Sessions'}
+                </div>
+                <div style={{ fontSize: '18px', fontWeight: '600', color: 'var(--slate)', fontVariantNumeric: 'tabular-nums' }}>
+                  {today.sessions}
+                  {monthComparison.lessonDelta !== null && (
+                    <span style={{
+                      fontSize: '11px',
+                      color: monthComparison.lessonDelta >= 0 ? '#007868' : '#DC2626',
+                      marginLeft: '6px',
+                    }}>
+                      {monthComparison.lessonDelta >= 0 ? '▲' : '▼'}{Math.abs(monthComparison.lessonDelta).toFixed(0)}%
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: '11px', color: 'var(--mist)', marginBottom: '4px', fontWeight: '500' }}>
+                  {lang === 'pt' ? 'Receita' : 'Revenue'}
+                </div>
+                <div style={{ fontSize: '18px', fontWeight: '600', color: 'var(--slate)', fontVariantNumeric: 'tabular-nums' }}>
+                  {fmt(today.revenue ?? 0)}
+                </div>
+                {monthComparison.revenueDelta !== null && (
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: '6px',
+                    fontSize: '12px', marginTop: '4px',
+                  }}>
+                    <span style={{
+                      color: monthComparison.revenueDelta >= 0 ? '#007868' : '#DC2626',
+                      fontWeight: '600',
+                    }}>
+                      {monthComparison.revenueDelta >= 0 ? '▲' : '▼'} {Math.abs(monthComparison.revenueDelta).toFixed(1)}%
+                    </span>
+                    <span style={{ color: 'var(--mist)' }}>
+                      {lang === 'pt' ? 'vs. mês passado' : 'vs. last month'}
+                    </span>
+                  </div>
+                )}
+                {monthComparison.revenueDelta === null && monthComparison.lastMonthRevenue === 0 && (
+                  <div style={{ fontSize: '12px', color: 'var(--mist)', marginTop: '4px' }}>
+                    {lang === 'pt' ? 'Primeiro mês de operação' : 'First month of operation'}
+                  </div>
+                )}
+              </div>
+              <div>
+                <div style={{ fontSize: '11px', color: 'var(--mist)', marginBottom: '4px', fontWeight: '500' }}>
+                  {lang === 'pt' ? 'Comissões' : 'Commissions'}
+                </div>
+                <div style={{ fontSize: '18px', fontWeight: '600', color: 'var(--slate)', fontVariantNumeric: 'tabular-nums' }}>
+                  {fmt(today.commissions ?? 0)}
+                </div>
+              </div>
             </div>
           </div>
 

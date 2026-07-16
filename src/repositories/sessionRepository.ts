@@ -190,6 +190,64 @@ export async function getTodayStats(schoolId: string) {
   }
 }
 
+/** Month-to-date revenue/lesson count vs. the same day-range last month, for
+ *  the Base Camp "vs. last month" indicator. Clamps the last-month cutoff
+ *  day to that month's actual length (e.g. May 31 → Apr 30, not an
+ *  overflowed May 1) instead of using Date#setMonth, which mis-rolls on
+ *  short months. */
+export async function getMonthComparison(schoolId: string) {
+  const supabase = createServiceClient()
+  const now = new Date()
+  const y   = now.getFullYear()
+  const m   = now.getMonth()
+  const day = now.getDate()
+
+  const thisMonthStart = `${y}-${String(m + 1).padStart(2, '0')}-01`
+  const todayStr       = now.toISOString().slice(0, 10)
+
+  const prevMonthDate   = new Date(y, m - 1, 1)
+  const py              = prevMonthDate.getFullYear()
+  const pm              = prevMonthDate.getMonth()
+  const daysInPrevMonth = new Date(py, pm + 1, 0).getDate()
+  const prevDay         = Math.min(day, daysInPrevMonth)
+
+  const lastMonthStart   = `${py}-${String(pm + 1).padStart(2, '0')}-01`
+  const lastMonthSameDay = `${py}-${String(pm + 1).padStart(2, '0')}-${String(prevDay).padStart(2, '0')}`
+
+  const [{ data: thisMonth }, { data: lastMonth }] = await Promise.all([
+    supabase
+      .from('sessions')
+      .select('price')
+      .eq('school_id', schoolId)
+      .gte('session_date', thisMonthStart)
+      .lte('session_date', todayStr),
+
+    supabase
+      .from('sessions')
+      .select('price')
+      .eq('school_id', schoolId)
+      .gte('session_date', lastMonthStart)
+      .lte('session_date', lastMonthSameDay),
+  ])
+
+  const thisMonthRevenue = (thisMonth ?? []).reduce((s, r) => s + (r.price ?? 0), 0)
+  const lastMonthRevenue = (lastMonth ?? []).reduce((s, r) => s + (r.price ?? 0), 0)
+  const thisMonthLessons = thisMonth?.length ?? 0
+  const lastMonthLessons = lastMonth?.length ?? 0
+
+  const revenueDelta = lastMonthRevenue > 0
+    ? ((thisMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100
+    : null
+  const lessonDelta = lastMonthLessons > 0
+    ? ((thisMonthLessons - lastMonthLessons) / lastMonthLessons) * 100
+    : null
+
+  return {
+    thisMonthRevenue, lastMonthRevenue, revenueDelta,
+    thisMonthLessons, lastMonthLessons, lessonDelta,
+  }
+}
+
 export async function getSessionTotals(
   schoolId: string,
   filters?: { month?: string; instructorId?: string }
