@@ -44,6 +44,23 @@ function fmtTime(iso: string) {
   })
 }
 
+/** Fortaleza-local date/time parts for pre-filling the edit form's <input type="date">
+ *  and <input type="time"> fields. Plain .slice(0,10)/.slice(11,16) on the stored UTC
+ *  string would show the raw UTC wall-clock instead — e.g. a 14:00 Fortaleza lesson
+ *  (stored as 17:00 UTC) would show "17:00" in the edit modal. */
+function toFortalezaParts(iso: string) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Fortaleza',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+  }).formatToParts(new Date(iso))
+  const get = (type: string) => parts.find(p => p.type === type)?.value ?? ''
+  return {
+    date: `${get('year')}-${get('month')}-${get('day')}`,
+    time: `${get('hour')}:${get('minute')}`,
+  }
+}
+
 function formatHours(minutes: number): string {
   const h = Math.floor(minutes / 60)
   const m = minutes % 60
@@ -305,7 +322,7 @@ export default function ScheduledLessons({
     setSaving(true)
 
     const finalDuration = customDuration ? customMinutes : form.duration_min
-    const dates = editableDates.map(d => `${d.date}T${d.time}:00`)
+    const dates = editableDates.map(d => `${d.date}T${d.time}:00-03:00`)
 
     const results = await Promise.all(
       dates.map(scheduled_at =>
@@ -364,12 +381,13 @@ export default function ScheduledLessons({
 
   function openEditModal(lesson: Lesson) {
     setEditLesson(lesson)
+    const { date, time } = toFortalezaParts(lesson.scheduled_at)
     setEditForm({
       student_name:  lesson.student_name ?? '',
       activity_id:   lesson.activities?.id ?? '',
       instructor_id: lesson.instructor?.id ?? '',
-      date:          lesson.scheduled_at.slice(0, 10),
-      time:          lesson.scheduled_at.slice(11, 16),
+      date,
+      time,
       duration_min:  lesson.duration_min || 60,
       notes:         lesson.notes ?? '',
       level:         lesson.level ?? '',
@@ -397,7 +415,7 @@ export default function ScheduledLessons({
         student_name:  editForm.student_name,
         activity_id:   editForm.activity_id || null,
         instructor_id: editForm.instructor_id || null,
-        scheduled_at:  `${editForm.date}T${editForm.time}:00`,
+        scheduled_at:  `${editForm.date}T${editForm.time}:00-03:00`,
         duration_min:  finalEditDuration,
         notes:         editForm.notes || null,
         level:         editForm.level || null,

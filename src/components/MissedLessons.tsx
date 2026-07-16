@@ -76,12 +76,12 @@ export default function MissedLessons({
 
           const formattedTime = scheduledDate.toLocaleTimeString(
             lang === 'pt' ? 'pt-BR' : 'en-US',
-            { hour: '2-digit', minute: '2-digit' }
+            { hour: '2-digit', minute: '2-digit', timeZone: 'America/Fortaleza' }
           )
 
           const formattedDate = scheduledDate.toLocaleDateString(
             lang === 'pt' ? 'pt-BR' : 'en-US',
-            { day: '2-digit', month: 'short' }
+            { day: '2-digit', month: 'short', timeZone: 'America/Fortaleza' }
           )
 
           return (

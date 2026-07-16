@@ -79,7 +79,7 @@ function fmt(n: number, currency: Currency = 'BRL') {
 
 function fmtTime(iso: string) {
   return new Date(iso).toLocaleTimeString('pt-BR', {
-    hour: '2-digit', minute: '2-digit',
+    hour: '2-digit', minute: '2-digit', timeZone: 'America/Fortaleza',
   })
 }
 

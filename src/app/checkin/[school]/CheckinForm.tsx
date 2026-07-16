@@ -780,7 +780,9 @@ export default function CheckinForm({
 
                     {filteredStudents.map((student, i) => {
                       const time = new Date(student.scheduled_at)
-                        .toLocaleTimeString(lang === 'pt' ? 'pt-BR' : 'en-US', { hour: '2-digit', minute: '2-digit' })
+                        .toLocaleTimeString(lang === 'pt' ? 'pt-BR' : 'en-US', {
+                          hour: '2-digit', minute: '2-digit', timeZone: 'America/Fortaleza',
+                        })
                       return (
                         <button
                           key={student.id}
