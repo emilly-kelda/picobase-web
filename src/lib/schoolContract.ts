@@ -2,9 +2,10 @@
 // master schools API route, so the allowed values never drift apart.
 
 export const CONTRACT_STATUSES = [
-  { value: 'trial',     label: 'Trial' },
-  { value: 'active',    label: 'Ativa' },
-  { value: 'past_due',  label: 'Inadimplente' },
+  { value: 'trial',      label: 'Trial' },
+  { value: 'active',     label: 'Ativa' },
+  { value: 'past_due',   label: 'Atrasada' },
+  { value: 'suspended',  label: 'Bloqueada' },
 ] as const
 
 export const PAYMENT_METHODS = [

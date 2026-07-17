@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { getAllSchoolsForMaster, getMasterMetrics } from '@/repositories/schoolRepository'
+import { getAllSchoolsForMaster, getMasterMetrics, getLastLoginTimes } from '@/repositories/schoolRepository'
 import SchoolsTable from './SchoolsTable'
 
 function fmt(n: number) {
@@ -14,6 +14,13 @@ export default async function MasterDashboardPage() {
     getAllSchoolsForMaster(),
     getMasterMetrics(),
   ])
+
+  // Map, not plain object across the Server->Client boundary — safer to
+  // serialize as a Record for the client component prop.
+  const ownerIds = schools.map(s => s.ownerId).filter((id): id is string => !!id)
+  const lastLoginMap = await getLastLoginTimes(ownerIds)
+  const lastLoginByOwnerId: Record<string, string | null> = {}
+  for (const id of ownerIds) lastLoginByOwnerId[id] = lastLoginMap.get(id) ?? null
 
   const metricCards = [
     { label: 'Faturamento SaaS',      value: fmt(metrics.saasRevenue),     sub: 'assinaturas cadastradas' },
@@ -86,7 +93,7 @@ export default async function MasterDashboardPage() {
         ))}
       </div>
 
-      <SchoolsTable schools={schools} />
+      <SchoolsTable schools={schools} lastLoginByOwnerId={lastLoginByOwnerId} />
     </div>
   )
 }

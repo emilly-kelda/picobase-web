@@ -7,6 +7,7 @@
 import OwnerNav from '@/components/OwnerNav'
 import AuthGuard from '@/components/AuthGuard'
 import { createServerClient } from '@supabase/ssr'
+import { createServiceClient } from '@/lib/supabase-server'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { getPortalLang } from '@/lib/language'
@@ -23,6 +24,19 @@ export default async function OwnerLayout({ children }: { children: React.ReactN
   // auth is now narrowed:
   //   { role: 'owner', isMaster: false, schoolId: string } — scoped to one school
   //   { role: 'master', isMaster: true,  schoolId: null  } — all schools, placeholder school_id ignored
+
+  // A suspended school's owner never sees /owner at all — checked here rather
+  // than inside getAuthContext() itself, since that function's contract
+  // (role/schoolId resolution) is relied on elsewhere and shouldn't gain a
+  // side effect. Master is exempt — this only applies to the owner branch.
+  if (!auth.isMaster) {
+    const { data: school } = await createServiceClient()
+      .from('schools')
+      .select('status_assinatura')
+      .eq('id', auth.schoolId)
+      .single()
+    if (school?.status_assinatura === 'suspended') redirect('/account-suspended')
+  }
 
   // ── Season data for the nav ───────────────────────────────────────────────
   const cookieStore = await cookies()

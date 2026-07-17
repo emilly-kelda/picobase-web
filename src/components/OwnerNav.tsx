@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import { getT } from '@/lib/i18n'
 import type { Lang } from '@/lib/i18n'
 import Logo from '@/components/Logo'
+import NoticeBanner from '@/components/NoticeBanner'
 import { createClient } from '@/utils/supabase/client'
 import {
   HomeIcon, CalendarIcon, UserIcon, InboxIcon, UsersIcon,
@@ -277,6 +278,7 @@ export default function OwnerNav({
       </aside>
 
       <main style={{ flex: 1, minWidth: 0, padding: '32px 40px' }}>
+        <NoticeBanner />
         {children}
       </main>
     </div>

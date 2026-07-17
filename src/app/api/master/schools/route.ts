@@ -1,33 +1,14 @@
 // SERVICE ROLE BOUNDARY: this route uses createAdminClient() (service role).
 // It must never be refactored to run client-side. All writes bypass RLS intentionally.
 
-import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { CONTRACT_STATUSES, PAYMENT_METHODS, PAYMENT_TERMS } from '@/lib/schoolContract'
+import { requireMaster } from '@/lib/masterAuth'
 import { NextResponse } from 'next/server'
 
 const STATUS_VALUES         = CONTRACT_STATUSES.map(s => s.value) as string[]
 const PAYMENT_METHOD_VALUES = PAYMENT_METHODS.map(m => m.value) as string[]
 const PAYMENT_TERMS_VALUES  = PAYMENT_TERMS.map(t => t.value) as string[]
-
-// Auth check is independent of the page guard — this route is directly
-// addressable and must enforce its own boundary regardless of what UI called it.
-async function requireMaster(): Promise<{ ok: true } | { ok: false; response: NextResponse }> {
-  const userClient = await createClient()
-  const { data: { user } } = await userClient.auth.getUser()
-  if (!user) return { ok: false, response: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
-
-  const { data: profile } = await userClient
-    .from('users')
-    .select('role')
-    .eq('id', user.id)
-    .single()
-
-  if (profile?.role !== 'master') {
-    return { ok: false, response: NextResponse.json({ error: 'Forbidden' }, { status: 403 }) }
-  }
-  return { ok: true }
-}
 
 export async function POST(request: Request) {
   const auth = await requireMaster()
@@ -138,42 +119,48 @@ export async function POST(request: Request) {
   return NextResponse.json({ ok: true, schoolId, ownerEmail: ownerEmail.trim() })
 }
 
-// Updates contract/billing fields only — status_assinatura, payment_method,
-// payment_terms, subscription_value, cost_center. Everything else about a
-// school (name, slug, country, currency, timezone) is set at creation and
-// isn't editable from this endpoint.
+// Partial update of contract/billing fields — status_assinatura,
+// payment_method, payment_terms, subscription_value, cost_center. Only keys
+// actually present in the body are written; this lets the dashboard's quick
+// suspend/reactivate action send just { id, status_assinatura } without
+// clobbering the other contract fields, while SchoolContractModal's full-form
+// save (which always sends all five) behaves exactly as before. Everything
+// else about a school (name, slug, country, currency, timezone) is set at
+// creation and isn't editable from this endpoint.
 export async function PATCH(request: Request) {
   const auth = await requireMaster()
   if (!auth.ok) return auth.response
 
   const body = await request.json()
-  const { id, status_assinatura, payment_method, payment_terms, subscription_value, cost_center } = body
+  const { id, status_assinatura } = body
 
   if (!id) return NextResponse.json({ error: 'Missing school id' }, { status: 400 })
-  if (!STATUS_VALUES.includes(status_assinatura)) {
+  if (status_assinatura != null && !STATUS_VALUES.includes(status_assinatura)) {
     return NextResponse.json({ error: 'Invalid status_assinatura' }, { status: 400 })
   }
-  if (payment_method != null && !PAYMENT_METHOD_VALUES.includes(payment_method)) {
+  if ('payment_method' in body && body.payment_method != null && !PAYMENT_METHOD_VALUES.includes(body.payment_method)) {
     return NextResponse.json({ error: 'Invalid payment_method' }, { status: 400 })
   }
-  if (payment_terms != null && !PAYMENT_TERMS_VALUES.includes(payment_terms)) {
+  if ('payment_terms' in body && body.payment_terms != null && !PAYMENT_TERMS_VALUES.includes(body.payment_terms)) {
     return NextResponse.json({ error: 'Invalid payment_terms' }, { status: 400 })
   }
-  if (subscription_value != null && !(Number(subscription_value) >= 0)) {
+  if ('subscription_value' in body && body.subscription_value != null && !(Number(body.subscription_value) >= 0)) {
     return NextResponse.json({ error: 'Invalid subscription_value' }, { status: 400 })
   }
 
+  const updates: Record<string, unknown> = {}
+  if (status_assinatura != null) updates.status_assinatura = status_assinatura
+  if ('payment_method' in body) updates.payment_method = body.payment_method || null
+  if ('payment_terms' in body) updates.payment_terms = body.payment_terms || null
+  if ('subscription_value' in body) updates.subscription_value = body.subscription_value != null ? Number(body.subscription_value) : null
+  if ('cost_center' in body) updates.cost_center = body.cost_center?.trim() || null
+
+  if (Object.keys(updates).length === 0) {
+    return NextResponse.json({ error: 'No fields to update' }, { status: 400 })
+  }
+
   const admin = createAdminClient()
-  const { error } = await admin
-    .from('schools')
-    .update({
-      status_assinatura,
-      payment_method:      payment_method || null,
-      payment_terms:       payment_terms || null,
-      subscription_value:  subscription_value != null ? Number(subscription_value) : null,
-      cost_center:         cost_center?.trim() || null,
-    })
-    .eq('id', id)
+  const { error } = await admin.from('schools').update(updates).eq('id', id)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
