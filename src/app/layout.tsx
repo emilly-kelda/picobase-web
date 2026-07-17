@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { GeistSans } from 'geist/font/sans'
 import { GeistMono } from 'geist/font/mono'
 import { Plus_Jakarta_Sans } from 'next/font/google'
+import AppLoader from '@/components/AppLoader'
 import './globals.css'
 
 const Jakarta = Plus_Jakarta_Sans({
@@ -24,7 +25,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-BR" className={`${GeistSans.variable} ${GeistMono.variable} ${Jakarta.variable}`}>
-      <body>{children}</body>
+      <body>
+        <AppLoader />
+        {children}
+      </body>
     </html>
   )
 }
