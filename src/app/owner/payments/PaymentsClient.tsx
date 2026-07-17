@@ -170,21 +170,65 @@ export default function PaymentsClient({
     if (newStatus === 'approved') update.approved_at = new Date().toISOString()
     if (newStatus === 'paid')     update.paid_at     = new Date().toISOString()
 
-    await fetch('/api/owner/close-month', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ payment_id: id, action: 'update_status', ...update }),
-    })
+    try {
+      const res = await fetch('/api/owner/close-month', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ payment_id: id, action: 'update_status', ...update }),
+      })
+      const data = await res.json()
+      // Only reflect the change locally once the write actually succeeded —
+      // this used to update state unconditionally regardless of the response,
+      // so a failed PATCH still showed "Aprovado" in the UI while the DB
+      // stayed on 'pending' (exactly what made the BTG/Wise export 404 with
+      // "no approved payments" downstream).
+      if (!data.ok) {
+        setMessage(`Erro ao atualizar pagamento: ${data.error ?? 'desconhecido'}`)
+        return
+      }
+      const updated = payments.map(p => p.id === id ? { ...p, ...update } : p)
+      setPayments(updated)
+      setSummary({
+        totalPending:  updated.filter(p => p.status === 'pending').reduce((s, p) => s + p.netPayout, 0),
+        totalApproved: updated.filter(p => p.status === 'approved').reduce((s, p) => s + p.netPayout, 0),
+        totalPaid:     updated.filter(p => p.status === 'paid').reduce((s, p) => s + p.netPayout, 0),
+        total:         summary.total,
+      })
+    } catch {
+      setMessage('Erro de rede ao atualizar pagamento.')
+    } finally {
+      setLoading(null)
+    }
+  }
 
-    const updated = payments.map(p => p.id === id ? { ...p, ...update } : p)
-    setPayments(updated)
-    setSummary({
-      totalPending:  updated.filter(p => p.status === 'pending').reduce((s, p) => s + p.netPayout, 0),
-      totalApproved: updated.filter(p => p.status === 'approved').reduce((s, p) => s + p.netPayout, 0),
-      totalPaid:     updated.filter(p => p.status === 'paid').reduce((s, p) => s + p.netPayout, 0),
-      total:         summary.total,
-    })
-    setLoading(null)
+  async function approveAll() {
+    if (pending.length === 0) return
+    setLoading('all')
+    try {
+      const res = await fetch('/api/owner/close-month', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'approve_all', period }),
+      })
+      const data = await res.json()
+      if (!data.ok) {
+        setMessage(`Erro ao aprovar pagamentos: ${data.error ?? 'desconhecido'}`)
+        return
+      }
+      const now = new Date().toISOString()
+      const updated = payments.map(p => p.status === 'pending' ? { ...p, status: 'approved', approved_at: now } : p)
+      setPayments(updated)
+      setSummary({
+        totalPending:  0,
+        totalApproved: updated.filter(p => p.status === 'approved').reduce((s, p) => s + p.netPayout, 0),
+        totalPaid:     updated.filter(p => p.status === 'paid').reduce((s, p) => s + p.netPayout, 0),
+        total:         summary.total,
+      })
+    } catch {
+      setMessage('Erro de rede ao aprovar pagamentos.')
+    } finally {
+      setLoading(null)
+    }
   }
 
   async function approvePartner(referralIds: string[], markAsPaid = false) {
@@ -507,16 +551,19 @@ export default function PaymentsClient({
           <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
             {pending.length > 0 && (
               <button
-                onClick={() => pending.forEach(p => updateStatus(p.id, 'approved'))}
+                onClick={approveAll}
+                disabled={loading === 'all'}
                 style={{
                   padding: '8px 16px',
                   background: 'var(--slate)', color: '#fff',
                   border: 'none', borderRadius: 'var(--radius-md)',
                   fontSize: '12px', fontWeight: '500',
-                  cursor: 'pointer', fontFamily: 'var(--font-sans)',
+                  cursor: loading === 'all' ? 'not-allowed' : 'pointer',
+                  fontFamily: 'var(--font-sans)',
+                  opacity: loading === 'all' ? 0.6 : 1,
                 }}
               >
-                ✓ Aprovar todos
+                {loading === 'all' ? 'Aprovando...' : '✓ Aprovar todos'}
               </button>
             )}
             {payments.some(p => p.status === 'approved' || p.status === 'paid') && (
