@@ -1,12 +1,22 @@
 'use client'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
 import { getT } from '@/lib/i18n'
 import type { Lang } from '@/lib/i18n'
 import Logo from '@/components/Logo'
 import { createClient } from '@/utils/supabase/client'
+import {
+  HomeIcon, CalendarIcon, UserIcon, InboxIcon, UsersIcon,
+  PackageIcon, WalletIcon, ChartIcon, GearIcon, PlusCircleIcon, ChevronLeftIcon,
+} from '@/components/nav-icons'
 
 type Season = { id: string; label: string }
+type NavIcon = (props: { size?: number }) => React.ReactElement
+
+const EXPANDED_WIDTH  = 216
+const COLLAPSED_WIDTH = 68
+const COLLAPSE_STORAGE_KEY = 'pb-sidebar-collapsed'
 
 type Props = {
   seasons?: Season[]
@@ -15,26 +25,48 @@ type Props = {
   lang?: Lang
   isMaster?: boolean
   pendingBookingsCount?: number
+  children?: React.ReactNode
 }
 
-export default function OwnerNav({ seasons = [], activeSeasonId, activeSeasonLabel, lang = 'pt', isMaster = false, pendingBookingsCount = 0 }: Props) {
+export default function OwnerNav({
+  seasons = [], activeSeasonId, activeSeasonLabel, lang = 'pt',
+  isMaster = false, pendingBookingsCount = 0, children,
+}: Props) {
   const pathname = usePathname()
   const router   = useRouter()
   const t        = getT(lang)
 
-  const navItems: Array<{ href: string; label: string; badge?: number }> = [
-    { href: '/owner',           label: t.nav_basecamp },
-    { href: '/owner/sessions',  label: t.nav_sessions  },
-    { href: '/owner/students',  label: t.nav_students  },
-    { href: '/owner/bookings',  label: t.nav_bookings, badge: pendingBookingsCount },
-    { href: '/owner/crew',      label: t.nav_crew      },
-    { href: '/owner/packages',  label: t.nav_packages  },
-    { href: '/owner/payments',  label: t.nav_payments  },
-    { href: '/owner/reports',   label: t.nav_reports   },
-    { href: '/owner/settings',  label: t.nav_settings  },
+  // Starts expanded on the server-rendered pass (no localStorage there) and
+  // corrects itself from the saved preference right after mount — a one-time
+  // possible flash on reload beats fighting SSR/client hydration mismatches
+  // over a purely cosmetic preference.
+  const [collapsed, setCollapsed] = useState(false)
+  useEffect(() => {
+    const saved = localStorage.getItem(COLLAPSE_STORAGE_KEY)
+    if (saved === '1') setCollapsed(true)
+  }, [])
+
+  function toggleCollapsed() {
+    setCollapsed(prev => {
+      const next = !prev
+      localStorage.setItem(COLLAPSE_STORAGE_KEY, next ? '1' : '0')
+      return next
+    })
+  }
+
+  const navItems: Array<{ href: string; label: string; icon: NavIcon; badge?: number }> = [
+    { href: '/owner',           label: t.nav_basecamp, icon: HomeIcon    },
+    { href: '/owner/sessions',  label: t.nav_sessions,  icon: CalendarIcon },
+    { href: '/owner/students',  label: t.nav_students,  icon: UserIcon     },
+    { href: '/owner/bookings',  label: t.nav_bookings,  icon: InboxIcon, badge: pendingBookingsCount },
+    { href: '/owner/crew',      label: t.nav_crew,      icon: UsersIcon    },
+    { href: '/owner/packages',  label: t.nav_packages,  icon: PackageIcon  },
+    { href: '/owner/payments',  label: t.nav_payments,  icon: WalletIcon   },
+    { href: '/owner/reports',   label: t.nav_reports,   icon: ChartIcon    },
+    { href: '/owner/settings',  label: t.nav_settings,  icon: GearIcon     },
     // Convenience link for master only — NOT a security boundary.
     // The destination page enforces its own server-side redirect for non-master users.
-    ...(isMaster ? [{ href: '/owner/admin/schools/new', label: '+ Nova Escola' }] : []),
+    ...(isMaster ? [{ href: '/owner/admin/schools/new', label: '+ Nova Escola', icon: PlusCircleIcon }] : []),
   ]
 
   function isActive(href: string) {
@@ -59,37 +91,42 @@ export default function OwnerNav({ seasons = [], activeSeasonId, activeSeasonLab
     router.refresh()
   }
 
+  const sidebarWidth = collapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH
+
   return (
-    <>
+    <div style={{ display: 'flex', minHeight: '100vh' }}>
       <style>{`
-        .nav-link {
-          padding: 4px 10px;
-          font-size: 13px;
+        .nav-row {
+          display: flex; align-items: center; gap: 12px;
+          padding: 9px ${collapsed ? '0' : '12px'};
+          justify-content: ${collapsed ? 'center' : 'flex-start'};
+          border-radius: var(--radius-md);
           color: var(--mist);
           text-decoration: none;
           white-space: nowrap;
-          transition: color 0.15s;
-          border-bottom: 2px solid transparent;
-          line-height: 1;
+          transition: background 0.15s, color 0.15s;
         }
-        .nav-link:hover { color: var(--slate); }
-        .nav-link.active {
-          color: var(--slate);
-          font-weight: 500;
-          background: transparent;
-          border-bottom-color: var(--glacial);
+        .nav-row:hover { color: var(--slate); background: var(--powder); }
+        .nav-row.active { color: var(--slate); font-weight: 500; background: var(--powder); }
+        .nav-row svg { flex-shrink: 0; }
+        .nav-label {
+          font-size: 13px;
+          opacity: ${collapsed ? 0 : 1};
+          width: ${collapsed ? '0px' : 'auto'};
+          overflow: hidden;
+          transition: opacity 0.15s;
         }
         .season-group { position: relative; }
         .season-dropdown {
           display: none;
           position: absolute;
-          top: calc(100% + 4px);
-          right: 0;
+          bottom: 0;
+          left: calc(100% + 8px);
           background: #fff;
           border: 0.5px solid var(--border);
           border-radius: var(--radius-lg);
           padding: 6px;
-          min-width: 140px;
+          min-width: 160px;
           box-shadow: 0 4px 16px rgba(0,0,0,0.12);
           z-index: 100;
           flex-direction: column;
@@ -109,109 +146,143 @@ export default function OwnerNav({ seasons = [], activeSeasonId, activeSeasonLab
         .season-option.active { background: var(--powder); color: var(--slate); font-weight: 500; }
       `}</style>
 
-      <header style={{
+      <aside style={{
+        width: `${sidebarWidth}px`,
+        flexShrink: 0,
         background: '#fff',
-        borderBottom: '1px solid var(--border)',
+        borderRight: '1px solid var(--border)',
         position: 'sticky',
         top: 0,
+        height: '100vh',
+        overflowY: 'auto',
+        display: 'flex',
+        flexDirection: 'column',
+        transition: 'width 0.2s ease',
         zIndex: 50,
       }}>
+        {/* Logo + collapse toggle */}
         <div style={{
-          width: '100%',
-          padding: '0 40px',
           display: 'flex',
+          flexDirection: collapsed ? 'column' : 'row',
           alignItems: 'center',
-          gap: '32px',
-          height: '56px',
+          justifyContent: collapsed ? 'center' : 'space-between',
+          gap: collapsed ? '10px' : 0,
+          padding: collapsed ? '18px 8px' : '18px 16px',
+          flexShrink: 0,
         }}>
-
-          {/* Logo */}
           <Link href="/owner" style={{ textDecoration: 'none', flexShrink: 0 }}>
-            <Logo size={18} variant="full" />
+            <Logo size={collapsed ? 14 : 17} variant={collapsed ? 'mark' : 'full'} />
           </Link>
+          <button
+            onClick={toggleCollapsed}
+            title={collapsed ? 'Expandir menu' : 'Recolher menu'}
+            style={{
+              width: '26px', height: '26px', borderRadius: 'var(--radius-md)',
+              border: 'none', background: 'transparent', color: 'var(--mist)',
+              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              transform: collapsed ? 'rotate(180deg)' : 'none',
+              transition: 'transform 0.2s ease',
+              flexShrink: 0,
+            }}
+          >
+            <ChevronLeftIcon size={15} />
+          </button>
+        </div>
 
-          {/* Flat nav */}
-          <nav style={{ display: 'flex', alignItems: 'center', gap: '2px', flex: 1 }}>
-            {navItems.map(item => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`nav-link${isActive(item.href) ? ' active' : ''}`}
-                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-              >
-                {item.label}
+        {/* Nav links */}
+        <nav style={{
+          display: 'flex', flexDirection: 'column', gap: '2px',
+          padding: '4px 10px', flex: 1,
+        }}>
+          {navItems.map(item => (
+            <Link
+              key={item.href}
+              href={item.href}
+              title={collapsed ? item.label : undefined}
+              className={`nav-row${isActive(item.href) ? ' active' : ''}`}
+            >
+              <span style={{ position: 'relative', display: 'inline-flex' }}>
+                <item.icon size={18} />
                 {!!item.badge && item.badge > 0 && (
                   <span style={{
+                    position: collapsed ? 'absolute' : 'static',
+                    top: -4, right: -6,
                     display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                    minWidth: '16px', height: '16px', padding: '0 4px',
+                    minWidth: '15px', height: '15px', padding: '0 3px',
+                    marginLeft: collapsed ? 0 : '2px',
                     borderRadius: '99px', background: 'var(--signal)', color: '#fff',
-                    fontSize: '10px', fontWeight: '600', lineHeight: 1,
+                    fontSize: '9px', fontWeight: '600', lineHeight: 1,
                   }}>
                     {item.badge}
                   </span>
                 )}
-              </Link>
-            ))}
-          </nav>
+              </span>
+              <span className="nav-label">{item.label}</span>
+            </Link>
+          ))}
+        </nav>
 
-          {/* Right — season selector + sign-out */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
-            {seasons.length > 0 && (
-              <div className="season-group">
-                <div style={{
-                  fontSize: '11px',
-                  fontWeight: '500',
-                  color: 'var(--mist)',
-                  background: 'var(--powder)',
-                  border: '1px solid var(--border)',
-                  padding: '5px 12px',
-                  borderRadius: 'var(--radius-full)',
-                  cursor: 'pointer',
-                  whiteSpace: 'nowrap' as const,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
+        {/* Season selector + sign-out */}
+        <div style={{
+          padding: '12px 10px', borderTop: '0.5px solid var(--border)',
+          display: 'flex', flexDirection: 'column', gap: '6px', flexShrink: 0,
+        }}>
+          {seasons.length > 0 && (
+            <div className="season-group">
+              <div style={{
+                fontSize: '11px', fontWeight: '500', color: 'var(--mist)',
+                background: 'var(--powder)', border: '1px solid var(--border)',
+                padding: collapsed ? '7px' : '7px 10px',
+                borderRadius: 'var(--radius-md)', cursor: 'pointer',
+                display: 'flex', alignItems: 'center',
+                justifyContent: collapsed ? 'center' : 'space-between', gap: '6px',
+              }}>
+                <span style={{
+                  overflow: 'hidden', textOverflow: 'ellipsis',
+                  display: collapsed ? 'none' : 'block',
                 }}>
                   {activeSeasonLabel ?? '—'}
-                  <span style={{ fontSize: '9px', opacity: 0.45 }}>▾</span>
-                </div>
-                <div className="season-dropdown">
-                  {seasons.map(s => (
-                    <div
-                      key={s.id}
-                      className={`season-option${s.id === activeSeasonId ? ' active' : ''}`}
-                      onClick={() => selectSeason(s.id)}
-                    >
-                      {s.label}
-                    </div>
-                  ))}
-                </div>
+                </span>
+                <span style={{ fontSize: '9px', opacity: 0.45, flexShrink: 0 }}>
+                  {collapsed ? '🗓' : '▾'}
+                </span>
               </div>
-            )}
+              <div className="season-dropdown">
+                {seasons.map(s => (
+                  <div
+                    key={s.id}
+                    className={`season-option${s.id === activeSeasonId ? ' active' : ''}`}
+                    onClick={() => selectSeason(s.id)}
+                  >
+                    {s.label}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
-            <button
-              onClick={signOut}
-              style={{
-                fontSize: '12px',
-                fontWeight: '500',
-                color: 'var(--mist)',
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                padding: '4px 8px',
-                borderRadius: 'var(--radius-md)',
-                fontFamily: 'var(--font-sans)',
-                transition: 'color 0.15s',
-              }}
-              onMouseEnter={e => (e.currentTarget.style.color = 'var(--slate)')}
-              onMouseLeave={e => (e.currentTarget.style.color = 'var(--mist)')}
-            >
-              Sair
-            </button>
-          </div>
-
+          <button
+            onClick={signOut}
+            title="Sair"
+            style={{
+              fontSize: '12px', fontWeight: '500', color: 'var(--mist)',
+              background: 'none', border: 'none', cursor: 'pointer',
+              padding: collapsed ? '7px' : '7px 10px',
+              borderRadius: 'var(--radius-md)', fontFamily: 'var(--font-sans)',
+              transition: 'color 0.15s, background 0.15s',
+              textAlign: collapsed ? 'center' : 'left',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.color = 'var(--slate)'; e.currentTarget.style.background = 'var(--powder)' }}
+            onMouseLeave={e => { e.currentTarget.style.color = 'var(--mist)'; e.currentTarget.style.background = 'transparent' }}
+          >
+            Sair
+          </button>
         </div>
-      </header>
-    </>
+      </aside>
+
+      <main style={{ flex: 1, minWidth: 0, padding: '32px 40px' }}>
+        {children}
+      </main>
+    </div>
   )
 }

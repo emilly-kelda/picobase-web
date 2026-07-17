@@ -62,10 +62,9 @@ export default async function OwnerLayout({ children }: { children: React.ReactN
         lang={lang}
         isMaster={auth.isMaster}
         pendingBookingsCount={pendingBookingsCount}
-      />
-      <main style={{ width: '100%', padding: '32px 40px' }}>
+      >
         {children}
-      </main>
+      </OwnerNav>
     </div>
   )
 }
