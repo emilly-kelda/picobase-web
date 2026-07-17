@@ -1,6 +1,7 @@
 ﻿import { createServiceClient } from '@/lib/supabase-server'
 import { normalizeStudentName } from '@/lib/text'
 import { resolveDefaultLevel, type Level } from '@/lib/levels'
+import { decrypt } from '@/utils/crypto'
 
 export async function getPendingLessons(schoolId: string) {
   const supabase = createServiceClient()
@@ -36,7 +37,10 @@ export async function getPendingLessons(schoolId: string) {
     .order('checkin_at', { ascending: true })
 
   if (error) throw error
-  return data ?? []
+  return (data ?? []).map(c => ({
+    ...c,
+    health_condition: c.health_condition ? decrypt(c.health_condition) : c.health_condition,
+  }))
 }
 
 /** Default level for (studentName, activityId): most recent CONFIRMED session's
@@ -280,7 +284,10 @@ export async function getPendingCheckins(schoolId: string, instructorId: string)
     .order('checkin_at', { ascending: true })
 
   if (error) throw error
-  return data ?? []
+  return (data ?? []).map(c => ({
+    ...c,
+    health_condition: c.health_condition ? decrypt(c.health_condition) : c.health_condition,
+  }))
 }
 
 export async function getSessionsByInstructorAndPeriod(

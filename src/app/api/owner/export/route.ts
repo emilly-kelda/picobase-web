@@ -1,4 +1,5 @@
 ﻿import { createServiceClient } from '@/lib/supabase-server'
+import { decrypt } from '@/utils/crypto'
 
 const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
 
@@ -29,7 +30,8 @@ export async function GET(request: Request) {
     csv = 'nome,pix,valor,descricao\n'
     csv += data.map(p => {
       const u = p.users as any
-      return `${u?.name ?? ''},${u?.pix_key ?? ''},${p.total_to_pay},Pico Base ${period}`
+      const pixKey = u?.pix_key ? decrypt(u.pix_key) : u?.pix_key
+      return `${u?.name ?? ''},${pixKey ?? ''},${p.total_to_pay},Pico Base ${period}`
     }).join('\n')
   }
 
@@ -60,9 +62,10 @@ export async function GET(request: Request) {
     for (const r of referrals) {
       const p = Array.isArray(r.partners) ? (r.partners[0] ?? null) : r.partners as any
       if (!p) continue
+      const pixKey = p.pix_key ? decrypt(p.pix_key) : p.pix_key
       const existing = partnerTotals.get(p.name) ?? {
         name: p.name,
-        pix: p.pix_key ?? p.wise_email ?? p.finance_email ?? '',
+        pix: pixKey ?? p.wise_email ?? p.finance_email ?? '',
         total: 0,
       }
       partnerTotals.set(p.name, { ...existing, total: existing.total + (r.commission_amount ?? 0) })

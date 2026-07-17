@@ -1,4 +1,5 @@
 ﻿import { createServiceClient } from '@/lib/supabase-server'
+import { decrypt } from '@/utils/crypto'
 
 export async function getCrewMembers(schoolId: string) {
   const supabase = createServiceClient()
@@ -45,6 +46,7 @@ export async function getCrewMembers(schoolId: string) {
 
   return (users ?? []).map(u => ({
     ...u,
+    pix_key: u.pix_key ? decrypt(u.pix_key) : u.pix_key,
     stats: statsMap.get(u.id) ?? { sessions: 0, revenue: 0, commissions: 0 },
   }))
 }
@@ -97,7 +99,9 @@ export async function getPayments(schoolId: string, period?: string) {
     const advances = advancesByInstructor.get(p.instructor_id) ?? []
     const totalAdvances = advances.reduce((s, a) => s + (a.amount ?? 0), 0)
     const netPayout = Math.max(0, p.total_to_pay - totalAdvances)
-    return { ...p, advances, totalAdvances, netPayout }
+    const u = Array.isArray(p.users) ? p.users[0] : p.users
+    const users = u ? { ...u, pix_key: u.pix_key ? decrypt(u.pix_key) : u.pix_key } : u
+    return { ...p, users, advances, totalAdvances, netPayout }
   })
 
   const totalPending  = payments.filter(p => p.status === 'pending').reduce((s, p) => s + p.netPayout, 0)
@@ -137,8 +141,12 @@ export async function getPartnerCommissions(schoolId: string, period: string) {
   }>()
 
   for (const r of referrals) {
-    const partner = Array.isArray(r.partners) ? (r.partners[0] ?? null) : r.partners as any
-    if (!partner) continue
+    const rawPartner = Array.isArray(r.partners) ? (r.partners[0] ?? null) : r.partners as any
+    if (!rawPartner) continue
+    const partner = {
+      ...rawPartner,
+      pix_key: rawPartner.pix_key ? decrypt(rawPartner.pix_key) : rawPartner.pix_key,
+    }
     const existing = partnerMap.get(partner.id) ?? {
       partner,
       sessions: 0,

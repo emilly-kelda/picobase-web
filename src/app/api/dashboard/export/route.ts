@@ -1,4 +1,5 @@
 import { createServiceClient } from '@/lib/supabase-server'
+import { decrypt } from '@/utils/crypto'
 import { NextResponse } from 'next/server'
 
 const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
@@ -47,8 +48,9 @@ export async function GET(request: Request) {
     const rows = ['nome,pix,valor,descricao']
     for (const p of payments) {
       const user = p.users as any
+      const pixKey = user?.pix_key ? decrypt(user.pix_key) : user?.pix_key
       rows.push(
-        `${user?.name || ''},${user?.pix_key || ''},${p.total_to_pay},Pico Base ${period}`
+        `${user?.name || ''},${pixKey || ''},${p.total_to_pay},Pico Base ${period}`
       )
     }
     return new Response(rows.join('\n'), {

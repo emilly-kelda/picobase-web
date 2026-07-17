@@ -2,6 +2,7 @@
 import { NextResponse } from 'next/server'
 import { headers } from 'next/headers'
 import { normalizeStudentName } from '@/lib/text'
+import { encrypt } from '@/utils/crypto'
 
 /** Find the nearest scheduled_lessons row for this student so check-in can carry
  *  the agendamento straight into the owner's confirmation step. Window is bounded
@@ -49,6 +50,10 @@ export async function POST(request: Request) {
     supabase, body.school_id, body.student_name as string
   )
 
+  // Encrypted once, reused for both the checkins row and the students upsert below.
+  const encryptedHealthCondition: string | null =
+    body.health_condition ? encrypt(body.health_condition) : null
+
   const { error, data } = await supabase
     .from('checkins')
     .insert({
@@ -60,7 +65,7 @@ export async function POST(request: Request) {
       activity_id:         body.activity_id || null,
       instructor_id:       body.instructor_id || null,
       partner_id:          body.partner_id ?? null,
-      health_condition:    body.health_condition || null,
+      health_condition:    encryptedHealthCondition,
       emergency_name:      body.emergency_name || null,
       emergency_phone:     body.emergency_phone || null,
       birthdate:           body.date_of_birth || null,
@@ -106,7 +111,7 @@ export async function POST(request: Request) {
       email:             body.student_email    || null,
       whatsapp:          body.student_whatsapp || null,
       nationality:       body.student_nationality || null,
-      health_conditions: body.health_condition || null,
+      health_conditions: encryptedHealthCondition,
     })
   }
 

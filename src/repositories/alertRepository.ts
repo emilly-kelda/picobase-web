@@ -1,4 +1,5 @@
 import { createServiceClient } from '@/lib/supabase-server'
+import { decrypt } from '@/utils/crypto'
 
 export type Alert = {
   type: 'warning' | 'info' | 'error'
@@ -70,9 +71,10 @@ export async function getAlerts(schoolId: string): Promise<Alert[]> {
 
   if (healthAlerts) {
     for (const c of healthAlerts) {
+      const condition = c.health_condition ? decrypt(c.health_condition) : c.health_condition
       alerts.push({
         type: 'error',
-        message: `Medical alert — ${c.student_name}: ${c.health_condition}`,
+        message: `Medical alert — ${c.student_name}: ${condition}`,
         link: '/owner/students',
       })
     }

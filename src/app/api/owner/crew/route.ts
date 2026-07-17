@@ -1,4 +1,5 @@
 import { createServiceClient } from '@/lib/supabase-server'
+import { encrypt, decrypt } from '@/utils/crypto'
 import { NextResponse } from 'next/server'
 
 const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
@@ -37,7 +38,7 @@ export async function POST(request: Request) {
     sports:           body.sports?.length > 0 ? body.sports : null,
     languages:        body.languages?.length > 0 ? body.languages : null,
     certifications:   body.certifications?.length > 0 ? body.certifications : null,
-    pix_key:          body.pix_key || null,
+    pix_key:          body.pix_key ? encrypt(body.pix_key) : null,
   }
   console.log('[crew/POST] inserting into public.users, auth_id:', newId, 'payload:', insertPayload)
 
@@ -57,7 +58,8 @@ export async function POST(request: Request) {
     await supabase.auth.admin.deleteUser(newId)
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
-  return NextResponse.json({ ok: true, instructor: data })
+  const instructor = { ...data, pix_key: data.pix_key ? decrypt(data.pix_key) : data.pix_key }
+  return NextResponse.json({ ok: true, instructor })
 }
 
 export async function PATCH(request: Request) {
@@ -76,7 +78,7 @@ export async function PATCH(request: Request) {
       sports:           fields.sports?.length > 0 ? fields.sports : null,
       languages:        fields.languages?.length > 0 ? fields.languages : null,
       certifications:   fields.certifications?.length > 0 ? fields.certifications : null,
-      pix_key:          fields.pix_key || null,
+      pix_key:          fields.pix_key ? encrypt(fields.pix_key) : null,
     })
     .eq('id', id)
     .eq('school_id', SCHOOL_ID)

@@ -1,5 +1,6 @@
 import { createServiceClient } from '@/lib/supabase-server'
 import { computeCommissionAmount } from '@/lib/commission'
+import { decrypt } from '@/utils/crypto'
 import { NextResponse } from 'next/server'
 
 // GET — fetch today's pending checkins for this instructor
@@ -59,9 +60,14 @@ export async function GET(request: Request) {
     .gte('checkin_at', `${today}T00:00:00`)
     .order('checkin_at', { ascending: true })
 
+  const decryptedCheckins = (checkins ?? []).map(c => ({
+    ...c,
+    health_condition: c.health_condition ? decrypt(c.health_condition) : c.health_condition,
+  }))
+
   return NextResponse.json({
     instructor: { id: instructor.id, name: instructor.name },
-    checkins: checkins || []
+    checkins: decryptedCheckins
   })
 }
 

@@ -1,4 +1,5 @@
 ﻿import { createServiceClient } from '@/lib/supabase-server'
+import { decrypt } from '@/utils/crypto'
 
 export async function getStudents(schoolId: string, search?: string) {
   const supabase = createServiceClient()
@@ -23,7 +24,10 @@ export async function getStudents(schoolId: string, search?: string) {
 
   const { data, error } = await query
   if (error) throw error
-  return data ?? []
+  return (data ?? []).map(s => ({
+    ...s,
+    health_conditions: s.health_conditions ? decrypt(s.health_conditions) : s.health_conditions,
+  }))
 }
 
 export async function getStudentCount(schoolId: string) {
@@ -45,7 +49,10 @@ export async function getStudentById(schoolId: string, id: string) {
     .eq('id', id)
     .single()
   if (error) throw error
-  return data
+  return {
+    ...data,
+    health_conditions: data.health_conditions ? decrypt(data.health_conditions) : data.health_conditions,
+  }
 }
 
 export async function getSessionsByStudent(schoolId: string, studentName: string, studentId?: string) {
@@ -152,7 +159,11 @@ export async function getLatestCheckinByName(schoolId: string, studentName: stri
     .order('checkin_at', { ascending: false })
     .limit(1)
     .maybeSingle()
-  return data ?? null
+  if (!data) return null
+  return {
+    ...data,
+    health_condition: data.health_condition ? decrypt(data.health_condition) : data.health_condition,
+  }
 }
 
 /** All package_sales rows for a student by name. */
@@ -177,7 +188,11 @@ export async function findStudentByName(schoolId: string, studentName: string) {
     .ilike('name', studentName.trim())
     .limit(1)
     .maybeSingle()
-  return data ?? null
+  if (!data) return null
+  return {
+    ...data,
+    health_conditions: data.health_conditions ? decrypt(data.health_conditions) : data.health_conditions,
+  }
 }
 
 /** Names from checkins that have no matching row in the students table.
@@ -224,7 +239,7 @@ export async function getCheckinOnlyStudents(schoolId: string, search?: string) 
       email:            (c as any).student_email    ?? null,
       whatsapp:         (c as any).student_whatsapp ?? null,
       nationality:      (c as any).student_nationality ?? null,
-      health_condition: c.health_condition ?? null,
+      health_condition: c.health_condition ? decrypt(c.health_condition) : null,
       first_seen:       c.checkin_at,
     })
   }

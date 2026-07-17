@@ -1,4 +1,5 @@
 import { createServiceClient } from '@/lib/supabase-server'
+import { decrypt } from '@/utils/crypto'
 import { NextResponse } from 'next/server'
 
 const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
@@ -54,5 +55,11 @@ export async function GET(request: Request) {
 
   console.log('Payments found:', payments?.length, 'Error:', error)
 
-  return NextResponse.json({ payments: payments || [], period })
+  const decryptedPayments = (payments ?? []).map(p => {
+    const u = Array.isArray(p.users) ? p.users[0] : p.users
+    const users = u ? { ...u, pix_key: u.pix_key ? decrypt(u.pix_key) : u.pix_key } : u
+    return { ...p, users }
+  })
+
+  return NextResponse.json({ payments: decryptedPayments, period })
 }
