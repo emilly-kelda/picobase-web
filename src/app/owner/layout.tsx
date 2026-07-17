@@ -62,7 +62,6 @@ export default async function OwnerLayout({ children }: { children: React.ReactN
           activeSeasonId={activeSeason}
           activeSeasonLabel={activeLabel}
           lang={lang}
-          isMaster={auth.isMaster}
           pendingBookingsCount={pendingBookingsCount}
         >
           {children}

@@ -49,7 +49,7 @@ export default function NewSchoolForm() {
     setSaving(true)
     setError(null)
 
-    const res = await fetch('/api/owner/admin/schools', {
+    const res = await fetch('/api/master/schools', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ schoolName, slug, country, currency, timezone, ownerName, ownerEmail }),
@@ -100,7 +100,7 @@ export default function NewSchoolForm() {
           O owner poderá definir sua senha pelo link no email.
         </p>
         <button
-          onClick={() => router.push('/owner')}
+          onClick={() => router.push('/master')}
           style={{
             padding: '10px 20px', background: 'var(--slate)', color: '#fff',
             border: 'none', borderRadius: 'var(--radius-md)',

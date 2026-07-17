@@ -8,7 +8,7 @@ import Logo from '@/components/Logo'
 import { createClient } from '@/utils/supabase/client'
 import {
   HomeIcon, CalendarIcon, UserIcon, InboxIcon, UsersIcon,
-  PackageIcon, WalletIcon, ChartIcon, GearIcon, PlusCircleIcon, ChevronLeftIcon,
+  PackageIcon, WalletIcon, ChartIcon, GearIcon, ChevronLeftIcon,
 } from '@/components/nav-icons'
 
 type Season = { id: string; label: string }
@@ -23,14 +23,13 @@ type Props = {
   activeSeasonId?: string
   activeSeasonLabel?: string
   lang?: Lang
-  isMaster?: boolean
   pendingBookingsCount?: number
   children?: React.ReactNode
 }
 
 export default function OwnerNav({
   seasons = [], activeSeasonId, activeSeasonLabel, lang = 'pt',
-  isMaster = false, pendingBookingsCount = 0, children,
+  pendingBookingsCount = 0, children,
 }: Props) {
   const pathname = usePathname()
   const router   = useRouter()
@@ -64,9 +63,6 @@ export default function OwnerNav({
     { href: '/owner/payments',  label: t.nav_payments,  icon: WalletIcon   },
     { href: '/owner/reports',   label: t.nav_reports,   icon: ChartIcon    },
     { href: '/owner/settings',  label: t.nav_settings,  icon: GearIcon     },
-    // Convenience link for master only — NOT a security boundary.
-    // The destination page enforces its own server-side redirect for non-master users.
-    ...(isMaster ? [{ href: '/owner/admin/schools/new', label: '+ Nova Escola', icon: PlusCircleIcon }] : []),
   ]
 
   function isActive(href: string) {

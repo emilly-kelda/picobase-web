@@ -1,19 +1,10 @@
-// Master-only page: creates a school and invites its owner.
-//
-// Although this page lives under /owner (which the layout guards for any
-// authenticated owner or master), this page adds a tighter check: only
-// master may render it. A regular owner who navigates here directly is
-// redirected to /owner before any content renders.
+// Creates a school and invites its owner. Master-only — enforced by
+// src/app/master/layout.tsx, which redirects any non-master caller before
+// this (or any other /master route) ever renders.
 
-import { getAuthContext } from '@/lib/auth'
-import { redirect } from 'next/navigation'
 import NewSchoolForm from './NewSchoolForm'
 
-export default async function NewSchoolPage() {
-  const auth = await getAuthContext()
-  if (!auth) redirect('/login')
-  if (!auth.isMaster) redirect('/owner')
-
+export default function NewSchoolPage() {
   return (
     <div style={{ maxWidth: '520px' }}>
       <div style={{ marginBottom: '28px' }}>
