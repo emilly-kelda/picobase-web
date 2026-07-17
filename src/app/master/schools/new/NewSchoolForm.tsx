@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { PAYMENT_METHODS, PAYMENT_TERMS } from '@/lib/schoolContract'
 
 type SuccessResult = { ok: true; ownerEmail: string }
 
@@ -35,6 +36,11 @@ export default function NewSchoolForm() {
   const [timezone,   setTimezone]   = useState('America/Sao_Paulo')
   const [ownerName,  setOwnerName]  = useState('')
   const [ownerEmail, setOwnerEmail] = useState('')
+  const [ownerWhatsapp, setOwnerWhatsapp] = useState('')
+  const [paymentMethod,     setPaymentMethod]     = useState('')
+  const [paymentTerms,      setPaymentTerms]      = useState('')
+  const [subscriptionValue, setSubscriptionValue] = useState('')
+  const [costCenter,        setCostCenter]        = useState('')
   const [saving,     setSaving]     = useState(false)
   const [error,      setError]      = useState<string | null>(null)
   const [result,     setResult]     = useState<SuccessResult | null>(null)
@@ -52,7 +58,14 @@ export default function NewSchoolForm() {
     const res = await fetch('/api/master/schools', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ schoolName, slug, country, currency, timezone, ownerName, ownerEmail }),
+      body:    JSON.stringify({
+        schoolName, slug, country, currency, timezone, ownerName, ownerEmail,
+        ownerWhatsapp,
+        paymentMethod:     paymentMethod || null,
+        paymentTerms:      paymentTerms || null,
+        subscriptionValue: subscriptionValue ? Number(subscriptionValue) : null,
+        costCenter:        costCenter || null,
+      }),
     })
 
     const data = await res.json()
@@ -212,6 +225,71 @@ export default function NewSchoolForm() {
             Um link de acesso será enviado para este email.
           </p>
         </div>
+
+        <div>
+          <label style={labelStyle}>WhatsApp</label>
+          <input
+            style={inputStyle} type="tel"
+            placeholder="+55 85 91234-5678"
+            value={ownerWhatsapp}
+            onChange={e => setOwnerWhatsapp(e.target.value)}
+          />
+        </div>
+
+        <hr style={{ border: 'none', borderTop: '0.5px solid var(--border)', margin: '4px 0' }} />
+
+        <p style={sectionLabel}>Financeiro</p>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+          <div>
+            <label style={labelStyle}>Método de pagamento</label>
+            <select
+              style={{ ...inputStyle, cursor: 'pointer' }}
+              value={paymentMethod}
+              onChange={e => setPaymentMethod(e.target.value)}
+            >
+              <option value="">Selecione...</option>
+              {PAYMENT_METHODS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+            </select>
+          </div>
+          <div>
+            <label style={labelStyle}>Condição de pagamento</label>
+            <select
+              style={{ ...inputStyle, cursor: 'pointer' }}
+              value={paymentTerms}
+              onChange={e => setPaymentTerms(e.target.value)}
+            >
+              <option value="">Selecione...</option>
+              {PAYMENT_TERMS.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+            </select>
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+          <div>
+            <label style={labelStyle}>Valor da assinatura (R$)</label>
+            <input
+              style={inputStyle} type="number"
+              min={0} step={10}
+              placeholder="0"
+              value={subscriptionValue}
+              onChange={e => setSubscriptionValue(e.target.value)}
+            />
+          </div>
+          <div>
+            <label style={labelStyle}>Centro de custo</label>
+            <input
+              style={inputStyle} type="text"
+              placeholder="Ex: LATAM"
+              value={costCenter}
+              onChange={e => setCostCenter(e.target.value)}
+            />
+          </div>
+        </div>
+
+        <p style={{ fontSize: '11px', color: 'var(--mist)', marginTop: '-10px' }}>
+          A escola começa em <strong>trial</strong> independente destes dados — ajuste o status quando o contrato for fechado.
+        </p>
 
         {error && (
           <div style={{

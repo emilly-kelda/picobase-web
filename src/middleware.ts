@@ -1,6 +1,13 @@
 // LAYER 1 — Middleware auth guard (primary security boundary).
 // Runs on the server before any page code executes.
-// An unauthenticated request to /owner/** never reaches the page or layout.
+// An unauthenticated request to /owner/** or /master/** never reaches the
+// page or layout, and /master/** additionally requires role = 'master'.
+//
+// auth_is_master() (used in RLS policies) is a Postgres function, not
+// something this Edge/Node runtime can call — the equivalent check here is
+// a direct public.users role lookup, same shape as getAuthContext() uses
+// server-side in master/layout.tsx. That layout guard stays in place; this
+// is defense-in-depth, not a replacement for it.
 
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
@@ -46,6 +53,30 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl)
   }
 
+  // Protect /master and every nested route — session required, and that
+  // session's role must be 'master'.
+  if (pathname.startsWith('/master')) {
+    if (!user) {
+      const loginUrl = request.nextUrl.clone()
+      loginUrl.pathname = '/login'
+      loginUrl.searchParams.set('next', pathname)
+      return NextResponse.redirect(loginUrl)
+    }
+
+    const { data: profile } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    if (profile?.role !== 'master') {
+      const ownerUrl = request.nextUrl.clone()
+      ownerUrl.pathname = '/owner'
+      ownerUrl.searchParams.delete('next')
+      return NextResponse.redirect(ownerUrl)
+    }
+  }
+
   // Redirect already-authenticated users away from /login.
   if (user && pathname === '/login') {
     const ownerUrl = request.nextUrl.clone()
@@ -60,6 +91,6 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  // Only run on /owner/** and /login — avoids unnecessary overhead on static assets.
-  matcher: ['/owner/:path*', '/login'],
+  // Only run on /owner/**, /master/**, and /login — avoids unnecessary overhead on static assets.
+  matcher: ['/owner/:path*', '/master/:path*', '/login'],
 }
