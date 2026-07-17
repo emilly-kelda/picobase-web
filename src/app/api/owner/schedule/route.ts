@@ -7,6 +7,63 @@ export async function POST(request: Request) {
   const body = await request.json()
   const supabase = createServiceClient()
 
+  if (body.mode === 'group') {
+    const students: string[] = body.students ?? []
+    const validStudents = students.map((s: string) => s.trim()).filter(Boolean)
+
+    if (validStudents.length < 2) {
+      return NextResponse.json(
+        { error: 'Grupo precisa de pelo menos 2 alunos' },
+        { status: 400 }
+      )
+    }
+
+    const { data: group, error: groupError } = await supabase
+      .from('lesson_groups')
+      .insert({
+        school_id:    SCHOOL_ID,
+        activity_id:  body.activity_id ?? null,
+        scheduled_at: body.scheduled_at,
+        duration_min: body.duration_min ?? 60,
+        notes:        body.notes ?? null,
+      })
+      .select('id')
+      .single()
+
+    if (groupError || !group) {
+      return NextResponse.json(
+        { error: groupError?.message ?? 'Failed to create group' },
+        { status: 500 }
+      )
+    }
+
+    // Instructors are assigned per student at confirm time, not here — every
+    // row in a freshly-scheduled group starts with instructor_id: null.
+    const rows = validStudents.map((name: string) => ({
+      school_id:       SCHOOL_ID,
+      student_name:    name,
+      activity_id:     body.activity_id ?? null,
+      instructor_id:   null,
+      scheduled_at:    body.scheduled_at,
+      duration_min:    body.duration_min ?? 60,
+      notes:           body.notes ?? null,
+      status:          'scheduled',
+      group_id:        group.id,
+      level:           body.level ?? null,
+      package_sale_id: null,
+    }))
+
+    const { error: lessonsError } = await supabase
+      .from('scheduled_lessons')
+      .insert(rows)
+
+    if (lessonsError) {
+      return NextResponse.json({ error: lessonsError.message }, { status: 500 })
+    }
+
+    return NextResponse.json({ ok: true, group_id: group.id })
+  }
+
   const { error, data } = await supabase
     .from('scheduled_lessons')
     .insert({

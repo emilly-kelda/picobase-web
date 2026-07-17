@@ -13,6 +13,7 @@ type Lesson = {
   status: string
   notes: string | null
   level: string | null
+  group_id: string | null
   activities: { id: string; name: string; default_price: number; default_duration_min: number } | null
   instructor: { id: string; name: string } | null
 }
@@ -79,6 +80,17 @@ function findActivityBySport(activities: Activity[], sport: string): Activity | 
     return name.includes(needle) || needle.includes(name)
   })
 }
+
+// Matches the payment_method vocabulary used everywhere else in the app
+// (PaymentsClient's PM_LABELS, /api/owner/payment-method-summary, reports) —
+// using different values here would silently drop group-confirmed sessions
+// out of those breakdowns.
+const PAYMENT_METHODS = [
+  { value: 'pix',       label: 'PIX'      },
+  { value: 'dinheiro',  label: 'Dinheiro' },
+  { value: 'cartao',    label: 'Cartão'   },
+  { value: 'a_receber', label: 'A receber' },
+]
 
 const WEEKDAYS = [
   { key: 1, label: 'S' },
@@ -163,6 +175,11 @@ export default function ScheduledLessons({
   const [activeTab, setActiveTab]   = useState<'today' | 'tomorrow'>('today')
   const [mode, setMode]             = useState<'single' | 'daily' | 'custom'>('single')
   const [weekdays, setWeekdays]     = useState<number[]>([1, 3, 5])
+  // Individual vs. group scheduling — separate from `mode` above, which is
+  // the recurrence pattern (single/daily/dias fixos) and only applies to
+  // individual lessons. Groups are always a single occurrence.
+  const [lessonMode, setLessonMode] = useState<'individual' | 'group'>('individual')
+  const [groupStudents, setGroupStudents] = useState<string[]>(['', ''])
   const [editableDates, setEditableDates] = useState<{ date: string; time: string }[]>([])
   const [editingIndex, setEditingIndex]   = useState<number | null>(null)
   const [studentSuggestions, setStudentSuggestions] = useState<
@@ -194,6 +211,23 @@ export default function ScheduledLessons({
   const [editCustomDuration, setEditCustomDuration] = useState(false)
   const [editCustomMinutes,  setEditCustomMinutes]  = useState(45)
   const [editSaving,         setEditSaving]         = useState(false)
+
+  const [groupConfirmModal, setGroupConfirmModal] = useState<{
+    groupId: string
+    activityId: string | null
+    durationMin: number
+    lessons: Array<{
+      id: string
+      student_name: string
+      instructor_id: string | null
+      price: string
+      payment_method: string | null
+      currency: string
+    }>
+  } | null>(null)
+  const [confirming,      setConfirming]      = useState(false)
+  const [confirmProgress, setConfirmProgress] = useState<string | null>(null)
+  const [confirmError,    setConfirmError]    = useState<string | null>(null)
 
   const [form, setForm] = useState({
     student_name:    '',
@@ -260,6 +294,10 @@ export default function ScheduledLessons({
     ? Math.floor(selectedPackage.minutes_remaining / (form.duration_min || 60))
     : 99
 
+  const cannotSave = lessonMode === 'group'
+    ? groupStudents.filter(s => s.trim()).length < 2
+    : !form.student_name.trim()
+
   function onStudentChange(name: string) {
     // Manual typing supersedes any dropdown pick — the sticky package selection
     // only applies while the name matches what was explicitly clicked.
@@ -318,6 +356,36 @@ export default function ScheduledLessons({
   }
 
   async function save() {
+    if (lessonMode === 'group') {
+      const validStudents = groupStudents.map(s => s.trim()).filter(Boolean)
+      if (validStudents.length < 2) return
+      setSaving(true)
+
+      const finalDuration = customDuration ? customMinutes : form.duration_min
+      const scheduled_at  = `${form.date}T${form.time}:00-03:00`
+
+      const res = await fetch('/api/owner/schedule', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mode:         'group',
+          students:     validStudents,
+          activity_id:  form.activity_id || null,
+          scheduled_at,
+          duration_min: finalDuration,
+          notes:        form.notes || null,
+        }),
+      })
+
+      setSaving(false)
+      if (res.ok) {
+        setShowModal(false)
+        resetForm()
+        router.refresh()
+      }
+      return
+    }
+
     if (!form.student_name.trim()) return
     setSaving(true)
 
@@ -366,6 +434,8 @@ export default function ScheduledLessons({
     setEditingIndex(null)
     setCustomDuration(false)
     setCustomMinutes(45)
+    setLessonMode('individual')
+    setGroupStudents(['', ''])
   }
 
   async function cancel(id: string) {
@@ -429,6 +499,75 @@ export default function ScheduledLessons({
   const displayLessons = activeTab === 'today' ? todayLessons : tomorrowLessons
   const todayCount     = todayLessons.length
   const tomorrowCount  = tomorrowLessons.length
+
+  // Group lessons collapse into one row (same activity/time/duration, N
+  // students) — everything else renders as an individual row, unchanged.
+  const individualLessons = displayLessons.filter(l => !l.group_id)
+  const groupMap = new Map<string, Lesson[]>()
+  for (const l of displayLessons.filter(l => l.group_id)) {
+    const gid = l.group_id!
+    if (!groupMap.has(gid)) groupMap.set(gid, [])
+    groupMap.get(gid)!.push(l)
+  }
+  const groupLessons = Array.from(groupMap.values())
+    .sort((a, b) => a[0].scheduled_at.localeCompare(b[0].scheduled_at))
+  const totalRows = individualLessons.length + groupLessons.length
+
+  function openGroupConfirmModal(group: Lesson[]) {
+    const first = group[0]
+    setGroupConfirmModal({
+      groupId:     first.group_id!,
+      activityId:  first.activities?.id ?? null,
+      durationMin: first.duration_min,
+      lessons: group.map(l => ({
+        id:             l.id,
+        student_name:   l.student_name ?? '—',
+        instructor_id:  l.instructor?.id ?? null,
+        price:          String(l.activities?.default_price ?? ''),
+        payment_method: null,
+        currency:       'BRL',
+      })),
+    })
+    setConfirmError(null)
+  }
+
+  async function confirmGroup() {
+    if (!groupConfirmModal) return
+    setConfirming(true)
+    setConfirmError(null)
+    const failed: string[] = []
+
+    for (let i = 0; i < groupConfirmModal.lessons.length; i++) {
+      const lesson = groupConfirmModal.lessons[i]
+      setConfirmProgress(`${i + 1} de ${groupConfirmModal.lessons.length}`)
+      const res = await fetch('/api/owner/confirm-lesson', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          checkin_id:           null,
+          scheduled_lesson_id:  lesson.id,
+          instructor_id:        lesson.instructor_id,
+          activity_id:          groupConfirmModal.activityId,
+          price:                Number(lesson.price),
+          payment_method:       lesson.payment_method,
+          currency:             lesson.currency,
+          duration_min:         groupConfirmModal.durationMin,
+        }),
+      })
+      if (!res.ok) failed.push(lesson.student_name)
+    }
+
+    setConfirming(false)
+    setConfirmProgress(null)
+
+    if (failed.length > 0) {
+      setConfirmError(`Falha ao confirmar: ${failed.join(', ')}`)
+      return
+    }
+
+    setGroupConfirmModal(null)
+    router.refresh()
+  }
 
   return (
     <>
@@ -496,7 +635,7 @@ export default function ScheduledLessons({
         </div>
 
         {/* Lessons list */}
-        {displayLessons.length === 0 ? (
+        {totalRows === 0 ? (
           <div style={{
             background: '#fff', border: '1px solid var(--border)',
             borderRadius: 'var(--radius-lg)', padding: '40px 24px',
@@ -518,11 +657,11 @@ export default function ScheduledLessons({
             background: '#fff', border: '0.5px solid var(--border)',
             borderRadius: 'var(--radius-lg)', overflow: 'hidden',
           }}>
-            {displayLessons.map((lesson, i) => (
+            {individualLessons.map((lesson, i) => (
               <div key={lesson.id} style={{
                 display: 'flex', alignItems: 'center', gap: '16px',
                 padding: '14px 20px',
-                borderBottom: i < displayLessons.length - 1
+                borderBottom: i < totalRows - 1
                   ? '0.5px solid var(--border)' : 'none',
               }}>
                 <div style={{
@@ -598,6 +737,72 @@ export default function ScheduledLessons({
                 )}
               </div>
             ))}
+
+            {groupLessons.map((group, gi) => {
+              const first = group[0]
+              return (
+                <div key={first.group_id} style={{
+                  display: 'flex', alignItems: 'flex-start', gap: '12px',
+                  padding: '14px 20px',
+                  borderBottom: individualLessons.length + gi < totalRows - 1
+                    ? '0.5px solid var(--border)' : 'none',
+                }}>
+                  <div style={{
+                    fontSize: '15px', fontWeight: '600',
+                    color: 'var(--slate)', fontVariantNumeric: 'tabular-nums',
+                    width: '44px', flexShrink: 0, paddingTop: '2px',
+                  }}>
+                    {fmtTime(first.scheduled_at)}
+                  </div>
+                  <div style={{
+                    width: '2px', height: '32px',
+                    background: '#5B21B6',
+                    borderRadius: '1px', flexShrink: 0,
+                  }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{
+                      display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px',
+                    }}>
+                      <span style={{
+                        padding: '2px 8px', borderRadius: '99px',
+                        background: '#EDE9FE', color: '#5B21B6',
+                        fontSize: '10px', fontWeight: '600',
+                      }}>
+                        👥 Grupo · {group.length} alunos
+                      </span>
+                      <span style={{ fontSize: '12px', color: 'var(--mist)' }}>
+                        {first.activities?.name ?? 'Atividade não definida'}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: '12px', color: 'var(--slate)', fontWeight: '500' }}>
+                      {group.map(l => l.student_name ?? '—').join(' · ')}
+                    </div>
+                  </div>
+                  {group.every(l => l.status === 'confirmed') ? (
+                    <span style={{
+                      padding: '3px 10px', borderRadius: 'var(--radius-full)',
+                      fontSize: '11px', fontWeight: '500',
+                      background: 'var(--glacial-light)', color: 'var(--glacial-dark)',
+                      flexShrink: 0,
+                    }}>
+                      Confirmada
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => openGroupConfirmModal(group)}
+                      style={{
+                        padding: '5px 12px', background: 'var(--signal)', color: '#fff',
+                        border: 'none', borderRadius: '99px',
+                        fontSize: '11px', fontWeight: '600',
+                        cursor: 'pointer', fontFamily: 'var(--font-sans)', flexShrink: 0,
+                      }}
+                    >
+                      Confirmar grupo →
+                    </button>
+                  )}
+                </div>
+              )
+            })}
           </div>
         )}
       </div>
@@ -835,9 +1040,38 @@ export default function ScheduledLessons({
               Agendar aula
             </div>
 
+            {/* Individual / Group toggle */}
+            <div style={{
+              display: 'flex', background: 'var(--powder)',
+              borderRadius: '12px', padding: '4px', marginBottom: '20px', gap: '4px',
+            }}>
+              {([
+                { value: 'individual', label: '👤 Individual' },
+                { value: 'group',      label: '👥 Grupo'      },
+              ] as const).map(opt => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setLessonMode(opt.value)}
+                  style={{
+                    flex: 1, padding: '8px', borderRadius: '8px', border: 'none',
+                    background: lessonMode === opt.value ? '#fff' : 'transparent',
+                    color: lessonMode === opt.value ? 'var(--slate)' : 'var(--mist)',
+                    fontSize: '13px', fontWeight: lessonMode === opt.value ? '600' : '400',
+                    cursor: 'pointer', fontFamily: 'var(--font-sans)',
+                    boxShadow: lessonMode === opt.value ? '0 1px 4px rgba(0,0,0,0.1)' : 'none',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
-              {/* Student */}
+              {/* Student — individual mode only */}
+              {lessonMode === 'individual' && (
               <div>
                 <label style={labelStyle}>Aluno *</label>
                 <div style={{ position: 'relative' }}>
@@ -915,9 +1149,89 @@ export default function ScheduledLessons({
                   </div>
                 )}
               </div>
+              )}
+
+              {/* Group students — group mode only */}
+              {lessonMode === 'group' && (
+                <div>
+                  <div style={{
+                    fontSize: '10px', fontWeight: '600',
+                    letterSpacing: '0.1em', textTransform: 'uppercase',
+                    color: 'var(--mist)', marginBottom: '10px',
+                  }}>
+                    Alunos do grupo
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {groupStudents.map((name, idx) => (
+                      <div key={idx} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <div style={{
+                          width: '24px', height: '24px', borderRadius: '50%',
+                          background: 'var(--glacial-light)', color: 'var(--glacial-dark)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: '11px', fontWeight: '700', flexShrink: 0,
+                        }}>
+                          {idx + 1}
+                        </div>
+                        <input
+                          type="text"
+                          value={name}
+                          onChange={e => {
+                            const updated = [...groupStudents]
+                            updated[idx] = e.target.value
+                            setGroupStudents(updated)
+                          }}
+                          placeholder={`Aluno ${idx + 1}`}
+                          style={{ ...inputStyle, padding: '10px 14px', fontSize: '14px', borderRadius: '10px' }}
+                        />
+                        {groupStudents.length > 2 && (
+                          <button
+                            type="button"
+                            onClick={() => setGroupStudents(groupStudents.filter((_, i) => i !== idx))}
+                            style={{
+                              width: '28px', height: '28px', borderRadius: '50%',
+                              background: 'var(--signal-light)', color: 'var(--signal-dark)',
+                              border: 'none', cursor: 'pointer',
+                              fontSize: '14px', fontFamily: 'var(--font-sans)', flexShrink: 0,
+                            }}
+                          >
+                            ×
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  {groupStudents.length < 8 && (
+                    <button
+                      type="button"
+                      onClick={() => setGroupStudents([...groupStudents, ''])}
+                      style={{
+                        marginTop: '8px', padding: '8px 16px',
+                        border: '1.5px dashed var(--border)', borderRadius: '10px',
+                        background: 'transparent', color: 'var(--mist)',
+                        fontSize: '13px', cursor: 'pointer',
+                        fontFamily: 'var(--font-sans)', width: '100%',
+                      }}
+                    >
+                      + Adicionar aluno
+                    </button>
+                  )}
+
+                  <div style={{
+                    marginTop: '12px', padding: '10px 14px',
+                    background: 'var(--glacial-light)', borderRadius: '8px',
+                    fontSize: '12px', color: 'var(--glacial-dark)', fontWeight: '500',
+                  }}>
+                    👥 {groupStudents.filter(s => s.trim()).length} alunos
+                    {' · '}{activities.find(a => a.id === form.activity_id)?.name ?? 'atividade selecionada'}
+                    {' · '}{form.time || '--:--'}
+                  </div>
+                </div>
+              )}
 
               {/* Activity + Instructor */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: lessonMode === 'group' ? '1fr' : '1fr 1fr', gap: '12px' }}>
                 <div>
                   <label style={labelStyle}>Atividade</label>
                   <select
@@ -931,6 +1245,7 @@ export default function ScheduledLessons({
                     ))}
                   </select>
                 </div>
+                {lessonMode === 'individual' && (
                 <div>
                   <label style={labelStyle}>Instrutor</label>
                   <select
@@ -944,10 +1259,11 @@ export default function ScheduledLessons({
                     ))}
                   </select>
                 </div>
+                )}
               </div>
 
-              {/* Level — pre-filled from progression once aluno + atividade are known */}
-              {form.activity_id && (
+              {/* Level — pre-filled from progression once aluno + atividade are known — individual only */}
+              {lessonMode === 'individual' && form.activity_id && (
                 <LevelPicker
                   value={form.level}
                   experimentalDisabled={experimentalDisabled}
@@ -1056,6 +1372,10 @@ export default function ScheduledLessons({
                 )}
               </div>
 
+              {/* Recurrence, weekday picker, count stepper, preview — individual only.
+                  Groups are always a single occurrence. */}
+              {lessonMode === 'individual' && (
+              <>
               {/* Recurrence mode */}
               <div>
                 <label style={labelStyle}>Repetição</label>
@@ -1256,6 +1576,8 @@ export default function ScheduledLessons({
                   </div>
                 </div>
               )}
+              </>
+              )}
 
               {/* Notes */}
               <div>
@@ -1288,27 +1610,167 @@ export default function ScheduledLessons({
               </button>
               <button
                 onClick={save}
-                disabled={saving || !form.student_name.trim()}
+                disabled={saving || cannotSave}
                 style={{
                   flex: 2, padding: '11px',
-                  background: saving || !form.student_name.trim()
+                  background: saving || cannotSave
                     ? 'var(--border)' : 'var(--slate)',
-                  color: saving || !form.student_name.trim()
+                  color: saving || cannotSave
                     ? 'var(--mist)' : '#fff',
                   border: 'none',
                   borderRadius: 'var(--radius-md)',
                   fontSize: '14px', fontWeight: '500',
-                  cursor: saving || !form.student_name.trim()
+                  cursor: saving || cannotSave
                     ? 'not-allowed' : 'pointer',
                   fontFamily: 'var(--font-sans)',
                 }}
               >
                 {saving
                   ? 'Agendando...'
-                  : mode === 'single'
-                    ? 'Agendar aula'
-                    : `Agendar ${editableDates.length || form.count} aulas`
+                  : lessonMode === 'group'
+                    ? `Agendar grupo de ${groupStudents.filter(s => s.trim()).length} alunos`
+                    : mode === 'single'
+                      ? 'Agendar aula'
+                      : `Agendar ${editableDates.length || form.count} aulas`
                 }
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Group confirm modal */}
+      {groupConfirmModal && (
+        <div
+          style={{
+            position: 'fixed', inset: 0,
+            background: 'rgba(0,0,0,0.45)',
+            display: 'flex', alignItems: 'center',
+            justifyContent: 'center', zIndex: 200, padding: '24px',
+          }}
+          onClick={e => {
+            if (e.target === e.currentTarget && !confirming) setGroupConfirmModal(null)
+          }}
+        >
+          <div style={{
+            background: '#fff', borderRadius: 'var(--radius-xl)',
+            width: '100%', maxWidth: '560px',
+            padding: '28px', maxHeight: '90vh', overflowY: 'auto',
+          }}>
+            <div style={{
+              fontSize: '18px', fontWeight: '500',
+              color: 'var(--slate)', marginBottom: '20px',
+            }}>
+              Confirmar grupo · {groupConfirmModal.lessons.length} alunos
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {groupConfirmModal.lessons.map((lesson, idx) => (
+                <div key={lesson.id} style={{
+                  padding: '14px', background: 'var(--powder)',
+                  borderRadius: 'var(--radius-md)',
+                  display: 'flex', flexDirection: 'column', gap: '10px',
+                }}>
+                  <div style={{ fontSize: '14px', fontWeight: '600', color: 'var(--slate)' }}>
+                    {lesson.student_name}
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 120px', gap: '10px' }}>
+                    <select
+                      style={{ ...inputStyle, cursor: 'pointer', background: '#fff' }}
+                      value={lesson.instructor_id ?? ''}
+                      onChange={e => {
+                        const updated = [...groupConfirmModal.lessons]
+                        updated[idx] = { ...updated[idx], instructor_id: e.target.value || null }
+                        setGroupConfirmModal({ ...groupConfirmModal, lessons: updated })
+                      }}
+                    >
+                      <option value="">Instrutor...</option>
+                      {instructors.map(i => (
+                        <option key={i.id} value={i.id}>{i.name}</option>
+                      ))}
+                    </select>
+                    <input
+                      type="number"
+                      min={0} step={5}
+                      placeholder="Preço"
+                      style={{ ...inputStyle, background: '#fff' }}
+                      value={lesson.price}
+                      onChange={e => {
+                        const updated = [...groupConfirmModal.lessons]
+                        updated[idx] = { ...updated[idx], price: e.target.value }
+                        setGroupConfirmModal({ ...groupConfirmModal, lessons: updated })
+                      }}
+                    />
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    {PAYMENT_METHODS.map(pm => (
+                      <button
+                        key={pm.value}
+                        type="button"
+                        onClick={() => {
+                          const updated = [...groupConfirmModal.lessons]
+                          updated[idx] = { ...updated[idx], payment_method: pm.value }
+                          setGroupConfirmModal({ ...groupConfirmModal, lessons: updated })
+                        }}
+                        style={{
+                          flex: 1, padding: '6px 4px',
+                          borderRadius: 'var(--radius-md)',
+                          border: `1.5px solid ${lesson.payment_method === pm.value ? 'var(--glacial)' : 'var(--border)'}`,
+                          background: lesson.payment_method === pm.value ? 'var(--glacial-light)' : '#fff',
+                          color: lesson.payment_method === pm.value ? 'var(--glacial-dark)' : 'var(--mist)',
+                          fontSize: '11px', fontWeight: '500',
+                          cursor: 'pointer', fontFamily: 'var(--font-sans)',
+                        }}
+                      >
+                        {pm.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {confirmError && (
+              <div style={{
+                marginTop: '16px', padding: '10px 14px',
+                background: 'var(--signal-light)', color: 'var(--signal-dark)',
+                borderRadius: 'var(--radius-md)', fontSize: '13px',
+              }}>
+                {confirmError}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: '10px', marginTop: '24px' }}>
+              <button
+                onClick={() => setGroupConfirmModal(null)}
+                disabled={confirming}
+                style={{
+                  flex: 1, padding: '11px',
+                  background: '#fff', color: 'var(--mist)',
+                  border: '0.5px solid var(--border)',
+                  borderRadius: 'var(--radius-md)',
+                  fontSize: '14px', cursor: confirming ? 'not-allowed' : 'pointer',
+                  fontFamily: 'var(--font-sans)',
+                }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmGroup}
+                disabled={confirming || groupConfirmModal.lessons.some(l => !l.instructor_id || !(Number(l.price) > 0))}
+                style={{
+                  flex: 2, padding: '11px',
+                  background: confirming ? 'var(--border)' : 'var(--slate)',
+                  color: confirming ? 'var(--mist)' : '#fff',
+                  border: 'none', borderRadius: 'var(--radius-md)',
+                  fontSize: '14px', fontWeight: '500',
+                  cursor: confirming ? 'not-allowed' : 'pointer',
+                  fontFamily: 'var(--font-sans)',
+                }}
+              >
+                {confirming ? `Confirmando ${confirmProgress}...` : 'Confirmar todos'}
               </button>
             </div>
           </div>

@@ -31,6 +31,7 @@ export async function getScheduledLessons(
       status,
       notes,
       level,
+      group_id,
       activities ( id, name, default_price, default_duration_min ),
       instructor:users!scheduled_lessons_instructor_id_fkey ( id, name )
     `)

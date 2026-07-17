@@ -8,6 +8,10 @@ export async function POST(request: Request) {
   const body = await request.json()
   const {
     checkin_id,
+    // Group-confirmed lessons have no checkin — the owner schedules and
+    // confirms the group directly, so the link to scheduled_lessons has to
+    // travel some other way. This carries it explicitly.
+    scheduled_lesson_id,
     instructor_id,
     activity_id,
     duration_min,
@@ -22,11 +26,13 @@ export async function POST(request: Request) {
 
   const supabase = createServiceClient()
 
-  const { data: checkin } = await supabase
-    .from('checkins')
-    .select('student_name, partner_id, scheduled_lesson_id')
-    .eq('id', checkin_id)
-    .single()
+  const { data: checkin } = checkin_id
+    ? await supabase
+        .from('checkins')
+        .select('student_name, partner_id, scheduled_lesson_id')
+        .eq('id', checkin_id)
+        .single()
+    : { data: null }
 
   // Re-derive from the instructor's saved rate rather than trusting whatever
   // commission_pct the client last loaded — that value never reflects fixed
@@ -60,7 +66,7 @@ export async function POST(request: Request) {
     .from('sessions')
     .insert({
       school_id:        SCHOOL_ID,
-      checkin_id,
+      checkin_id:       checkin_id ?? null,
       instructor_id,
       activity_id:      activity_id || null,
       session_date:     session_date ?? new Date().toISOString().slice(0, 10),
@@ -85,20 +91,25 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: sessionError.message }, { status: 500 })
   }
 
-  const { error: checkinError } = await supabase
-    .from('checkins')
-    .update({ status: 'session_confirmed' })
-    .eq('id', checkin_id)
+  if (checkin_id) {
+    const { error: checkinError } = await supabase
+      .from('checkins')
+      .update({ status: 'session_confirmed' })
+      .eq('id', checkin_id)
 
-  if (checkinError) {
-    return NextResponse.json({ error: checkinError.message }, { status: 500 })
+    if (checkinError) {
+      return NextResponse.json({ error: checkinError.message }, { status: 500 })
+    }
   }
 
-  if (checkin?.scheduled_lesson_id) {
+  // A checkin-derived link takes priority, but group confirms have no
+  // checkin and pass the scheduled_lessons row id directly instead.
+  const linkedScheduledLessonId = checkin?.scheduled_lesson_id ?? scheduled_lesson_id ?? null
+  if (linkedScheduledLessonId) {
     await supabase
       .from('scheduled_lessons')
       .update({ status: 'confirmed' })
-      .eq('id', checkin.scheduled_lesson_id)
+      .eq('id', linkedScheduledLessonId)
   }
 
   if (checkin?.partner_id) {
