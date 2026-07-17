@@ -10,6 +10,7 @@ import PendingLessons from '@/components/PendingLessons'
 import ScheduledLessons from '@/components/ScheduledLessons'
 import MissedLessons from '@/components/MissedLessons'
 import RunwayCalculator from '@/components/RunwayCalculator'
+import AlertsDrawer from '@/components/AlertsDrawer'
 import { getPortalLang } from '@/lib/language'
 import { getT } from '@/lib/i18n'
 import Link from 'next/link'
@@ -101,6 +102,8 @@ export default async function OwnerPage() {
           .dash-grid { grid-template-columns: 1fr; }
         }
       `}</style>
+
+      <AlertsDrawer alerts={alerts} lang={lang} />
 
       <div className="dash-grid">
 
@@ -221,50 +224,6 @@ export default async function OwnerPage() {
             CENTER — activity feed
         ════════════════════════════════════════════════════════════ */}
         <main style={{ display: 'flex', flexDirection: 'column', gap: '28px', minWidth: 0 }}>
-
-          {/* Alerts */}
-          {alerts.length > 0 && (
-            <div style={{
-              background: 'var(--surface)',
-              border: '0.5px solid var(--border)',
-              borderLeft: '4px solid var(--warning)',
-              borderRadius: 'var(--radius-lg)',
-              overflow: 'hidden',
-            }}>
-              <div style={{
-                padding: '10px 20px',
-                fontSize: '10px', fontWeight: '600',
-                letterSpacing: '0.12em', textTransform: 'uppercase',
-                color: 'var(--amber)',
-                borderBottom: '1px solid var(--border)',
-              }}>
-                {lang === 'pt' ? 'Atenção' : 'Alerts'}
-              </div>
-              {alerts.map((alert, i) => (
-                <a
-                  key={i}
-                  href={alert.link ?? '#'}
-                  style={{
-                    display: 'flex', alignItems: 'center',
-                    gap: '12px', textDecoration: 'none',
-                    padding: '12px 20px',
-                    borderBottom: i < alerts.length - 1 ? '1px solid var(--border)' : 'none',
-                  }}
-                >
-                  <span style={{
-                    display: 'inline-block',
-                    width: '6px', height: '6px', borderRadius: '50%',
-                    background: alert.type === 'error' ? 'var(--error)' : 'var(--warning)',
-                    flexShrink: 0,
-                  }} />
-                  <span style={{ flex: 1, fontSize: '13px', color: 'var(--slate)', lineHeight: '1.5' }}>
-                    {alert.message}
-                  </span>
-                  <span style={{ fontSize: '14px', color: 'var(--mist)', flexShrink: 0 }}>→</span>
-                </a>
-              ))}
-            </div>
-          )}
 
           {/* Missed / Pending / Scheduled */}
           <MissedLessons lessons={missedLessons as any} lang={lang} />
