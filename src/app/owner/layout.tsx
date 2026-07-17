@@ -5,6 +5,7 @@
 // No /owner content ever renders before both checks complete.
 
 import OwnerNav from '@/components/OwnerNav'
+import AuthGuard from '@/components/AuthGuard'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
@@ -55,16 +56,18 @@ export default async function OwnerLayout({ children }: { children: React.ReactN
 
   return (
     <div className="min-h-screen bg-[var(--powder)]">
-      <OwnerNav
-        seasons={seasons ?? []}
-        activeSeasonId={activeSeason}
-        activeSeasonLabel={activeLabel}
-        lang={lang}
-        isMaster={auth.isMaster}
-        pendingBookingsCount={pendingBookingsCount}
-      >
-        {children}
-      </OwnerNav>
+      <AuthGuard>
+        <OwnerNav
+          seasons={seasons ?? []}
+          activeSeasonId={activeSeason}
+          activeSeasonLabel={activeLabel}
+          lang={lang}
+          isMaster={auth.isMaster}
+          pendingBookingsCount={pendingBookingsCount}
+        >
+          {children}
+        </OwnerNav>
+      </AuthGuard>
     </div>
   )
 }
