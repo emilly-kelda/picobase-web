@@ -108,6 +108,15 @@ export function PlusCircleIcon({ size = 18 }: IconProps) {
   )
 }
 
+export function TagIcon({ size = 18 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...base}>
+      <path d="M11.5 3.5h6A2 2 0 0 1 19.5 5.5v6a2 2 0 0 1-.6 1.4l-8 8a2 2 0 0 1-2.8 0l-5.5-5.5a2 2 0 0 1 0-2.8l8-8a2 2 0 0 1 1.4-.6Z" />
+      <circle cx="15" cy="8" r="1.5" />
+    </svg>
+  )
+}
+
 export function ChevronLeftIcon({ size = 16 }: IconProps) {
   return (
     <svg width={size} height={size} {...base}>

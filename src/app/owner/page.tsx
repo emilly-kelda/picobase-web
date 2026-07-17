@@ -6,6 +6,7 @@ import { getInstructors } from '@/repositories/studentRepository'
 import { getActivitiesForCheckin } from '@/repositories/checkinRepository'
 import { getScheduledLessons, getMissedLessons } from '@/repositories/scheduledLessonRepository'
 import { getPackageSales, getPackageBalancesForCheckins } from '@/repositories/packageRepository'
+import { getMonthlyCostTotal } from '@/repositories/costRepository'
 import PendingLessons from '@/components/PendingLessons'
 import ScheduledLessons from '@/components/ScheduledLessons'
 import MissedLessons from '@/components/MissedLessons'
@@ -39,7 +40,7 @@ export default async function OwnerPage() {
     runway, sessions, alerts, today, lang, projection,
     pending, instructors, todayLessons, tomorrowLessons,
     activities, activePackages, missedLessons, packageBalances,
-    monthComparison,
+    monthComparison, realMonthlyCosts,
   ] = await Promise.all([
     getRunwayData(SCHOOL_ID, seasonId),
     getRecentSessions(SCHOOL_ID),
@@ -56,11 +57,16 @@ export default async function OwnerPage() {
     getMissedLessons(SCHOOL_ID),
     getPackageBalancesForCheckins(SCHOOL_ID),
     getMonthComparison(SCHOOL_ID),
+    getMonthlyCostTotal(SCHOOL_ID),
   ])
 
   const t = getT(lang)
 
-  const monthlyBurn             = (runway as any).burn_rate ?? 0
+  // Real itemized costs (operational_costs, via the Custos tab) take
+  // priority over the view/season's manually-set burn_rate once a school
+  // has any recurring entries — same rule as runwayRepository.getRunwayProjection,
+  // so this tile and the Runway Calculator never disagree.
+  const monthlyBurn             = realMonthlyCosts > 0 ? realMonthlyCosts : ((runway as any).burn_rate ?? 0)
   const totalPartnerCommissions = projection?.totalPartnerCommissions ?? 0
   const adjustedNetProfit       = Math.max(0, (runway.season_profit ?? 0) - totalPartnerCommissions)
   const runwayMonths            = monthlyBurn > 0

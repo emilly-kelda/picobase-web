@@ -1,4 +1,5 @@
 ﻿import { createServiceClient } from '@/lib/supabase-server'
+import { getMonthlyCostTotal } from '@/repositories/costRepository'
 
 export async function getSchool(schoolId: string) {
   const supabase = createServiceClient()
@@ -49,7 +50,13 @@ export async function getRunwayProjection(schoolId: string) {
   const daysElapsed    = Math.max(0, Math.ceil((today.getTime() - seasonStart.getTime()) / (1000 * 60 * 60 * 24)))
   const seasonProgress = totalDays > 0 ? Math.min(1, daysElapsed / totalDays) : 0
 
-  const burnRate       = season.burn_rate || (runway as any).burn_rate || 5000
+  // Real itemized costs (operational_costs) take priority over the
+  // manually-set burn_rate once a school starts logging them — see
+  // costRepository.getMonthlyCostTotal for the mensal + anual/12 formula.
+  // Falls back to the existing chain when there's no cost data yet, so
+  // schools that haven't adopted the Custos tab keep working unchanged.
+  const realMonthlyCosts = await getMonthlyCostTotal(schoolId)
+  const burnRate       = realMonthlyCosts > 0 ? realMonthlyCosts : (season.burn_rate || (runway as any).burn_rate || 5000)
   const currentProfit  = (runway as any).season_profit ?? 0
   const currentRevenue = (runway as any).season_revenue ?? 0
 

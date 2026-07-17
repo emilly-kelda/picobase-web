@@ -9,7 +9,7 @@ import NoticeBanner from '@/components/NoticeBanner'
 import { createClient } from '@/utils/supabase/client'
 import {
   HomeIcon, CalendarIcon, UserIcon, InboxIcon, UsersIcon,
-  PackageIcon, WalletIcon, ChartIcon, GearIcon, ChevronLeftIcon,
+  PackageIcon, WalletIcon, ChartIcon, GearIcon, ChevronLeftIcon, TagIcon,
 } from '@/components/nav-icons'
 
 type Season = { id: string; label: string }
@@ -62,6 +62,7 @@ export default function OwnerNav({
     { href: '/owner/crew',      label: t.nav_crew,      icon: UsersIcon    },
     { href: '/owner/packages',  label: t.nav_packages,  icon: PackageIcon  },
     { href: '/owner/payments',  label: t.nav_payments,  icon: WalletIcon   },
+    { href: '/owner/costs',     label: t.nav_costs,     icon: TagIcon      },
     { href: '/owner/reports',   label: t.nav_reports,   icon: ChartIcon    },
     { href: '/owner/settings',  label: t.nav_settings,  icon: GearIcon     },
   ]
