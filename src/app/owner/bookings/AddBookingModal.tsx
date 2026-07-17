@@ -7,7 +7,15 @@ type Activity = {
   name: string
 }
 
-const TIME_SLOTS = ['09:00', '10:00', '11:00', '14:00', '15:00', '16:00']
+function generateHourlySlots(startHour: number, endHour: number): string[] {
+  const slots: string[] = []
+  for (let hour = startHour; hour <= endHour; hour++) {
+    slots.push(`${String(hour).padStart(2, '0')}:00`)
+  }
+  return slots
+}
+
+const TIME_SLOTS = generateHourlySlots(7, 17)
 
 const inputStyle: React.CSSProperties = {
   width: '100%',
