@@ -1,6 +1,13 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import AddBookingModal from './AddBookingModal'
+
+type Activity = {
+  id: string
+  name: string
+}
 
 type Booking = {
   id: string
@@ -41,9 +48,24 @@ function confirmationMessage(booking: Booking) {
     : `Olá ${booking.student_name}! Sua aula foi confirmada${when}. Até lá! 🤙`
 }
 
-export default function BookingsClient({ bookings: initialBookings }: { bookings: Booking[] }) {
+export default function BookingsClient({
+  bookings: initialBookings,
+  activities,
+  schoolSlug,
+}: {
+  bookings: Booking[]
+  activities: Activity[]
+  schoolSlug: string | null
+}) {
+  const router = useRouter()
   const [bookings, setBookings] = useState(initialBookings)
   const [loading, setLoading]   = useState<string | null>(null)
+  const [showAddModal, setShowAddModal] = useState(false)
+
+  function onBookingCreated() {
+    setShowAddModal(false)
+    router.refresh()
+  }
 
   async function updateStatus(booking: Booking, status: 'confirmed' | 'declined') {
     setLoading(booking.id)
@@ -75,13 +97,33 @@ export default function BookingsClient({ bookings: initialBookings }: { bookings
 
   return (
     <div>
-      <div style={{ marginBottom: '24px' }}>
-        <h1 style={{ fontSize: '22px', fontWeight: '500', color: 'var(--slate)', marginBottom: '4px' }}>
-          Reservas
-        </h1>
-        <p style={{ fontSize: '13px', color: 'var(--mist)' }}>
-          Pedidos de aula recebidos pelo formulário público
-        </p>
+      <div style={{
+        display: 'flex', justifyContent: 'space-between',
+        alignItems: 'flex-start', marginBottom: '24px',
+      }}>
+        <div>
+          <h1 style={{ fontSize: '22px', fontWeight: '500', color: 'var(--slate)', marginBottom: '4px' }}>
+            Reservas
+          </h1>
+          <p style={{ fontSize: '13px', color: 'var(--mist)' }}>
+            Pedidos de aula recebidos pelo formulário público
+          </p>
+        </div>
+        {schoolSlug && (
+          <button
+            onClick={() => setShowAddModal(true)}
+            style={{
+              padding: '9px 16px',
+              background: 'var(--slate)', color: '#fff',
+              border: 'none', borderRadius: 'var(--radius-md)',
+              fontSize: '13px', fontWeight: '500',
+              cursor: 'pointer', fontFamily: 'var(--font-sans)',
+              flexShrink: 0,
+            }}
+          >
+            + Nova reserva
+          </button>
+        )}
       </div>
 
       {bookings.length === 0 ? (
@@ -165,6 +207,15 @@ export default function BookingsClient({ bookings: initialBookings }: { bookings
             </div>
           ))}
         </div>
+      )}
+
+      {showAddModal && schoolSlug && (
+        <AddBookingModal
+          schoolSlug={schoolSlug}
+          activities={activities}
+          onClose={() => setShowAddModal(false)}
+          onCreated={onBookingCreated}
+        />
       )}
     </div>
   )

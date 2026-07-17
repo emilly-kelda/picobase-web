@@ -64,3 +64,17 @@ export async function getSchoolOwnerWhatsapp(schoolId: string) {
     .maybeSingle()
   return data?.whatsapp ?? null
 }
+
+/** /api/book takes a school_slug, not a school_id (it's built for the public,
+ *  unauthenticated /book/[school] page) — the owner-side "Add Booking" modal
+ *  reuses that same endpoint rather than duplicating the insert, so it needs
+ *  the slug for its own already-known SCHOOL_ID. */
+export async function getSchoolSlug(schoolId: string) {
+  const supabase = createServiceClient()
+  const { data } = await supabase
+    .from('schools')
+    .select('slug')
+    .eq('id', schoolId)
+    .single()
+  return data?.slug ?? null
+}
