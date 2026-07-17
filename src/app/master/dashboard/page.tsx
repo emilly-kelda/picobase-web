@@ -1,15 +1,31 @@
 import Link from 'next/link'
-import { getAllSchoolsForMaster } from '@/repositories/schoolRepository'
+import { getAllSchoolsForMaster, getMasterMetrics } from '@/repositories/schoolRepository'
 import SchoolsTable from './SchoolsTable'
 
+function fmt(n: number) {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency', currency: 'BRL',
+    minimumFractionDigits: 0, maximumFractionDigits: 0,
+  }).format(n)
+}
+
 export default async function MasterDashboardPage() {
-  const schools = await getAllSchoolsForMaster()
+  const [schools, metrics] = await Promise.all([
+    getAllSchoolsForMaster(),
+    getMasterMetrics(),
+  ])
+
+  const metricCards = [
+    { label: 'Faturamento SaaS',      value: fmt(metrics.saasRevenue),     sub: 'assinaturas cadastradas' },
+    { label: 'Escolas ativas',        value: String(metrics.activeSchools), sub: `de ${schools.length} cadastrada${schools.length !== 1 ? 's' : ''}` },
+    { label: 'Volume do ecossistema', value: fmt(metrics.ecosystemVolume), sub: 'receita das escolas, acumulada' },
+  ]
 
   return (
     <div>
       <div style={{
         display: 'flex', justifyContent: 'space-between',
-        alignItems: 'flex-start', marginBottom: '28px',
+        alignItems: 'flex-start', marginBottom: '24px',
       }}>
         <div>
           <h1 style={{
@@ -36,6 +52,38 @@ export default async function MasterDashboardPage() {
         >
           + Nova Escola
         </Link>
+      </div>
+
+      <div style={{
+        display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)',
+        gap: '10px', marginBottom: '28px',
+      }}>
+        {metricCards.map(card => (
+          <div key={card.label} style={{
+            background: '#fff',
+            border: '0.5px solid var(--border)',
+            borderRadius: 'var(--radius-lg)',
+            padding: '16px 20px',
+          }}>
+            <div style={{
+              fontSize: '10px', fontWeight: '500',
+              letterSpacing: '0.1em', textTransform: 'uppercase',
+              color: 'var(--mist)', marginBottom: '8px',
+            }}>
+              {card.label}
+            </div>
+            <div style={{
+              fontSize: '22px', fontWeight: '600',
+              color: 'var(--slate)', fontVariantNumeric: 'tabular-nums',
+              marginBottom: '4px',
+            }}>
+              {card.value}
+            </div>
+            <div style={{ fontSize: '11px', color: 'var(--mist)' }}>
+              {card.sub}
+            </div>
+          </div>
+        ))}
       </div>
 
       <SchoolsTable schools={schools} />

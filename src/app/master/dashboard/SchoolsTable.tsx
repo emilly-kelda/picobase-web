@@ -13,16 +13,14 @@ function fmt(n: number | null) {
   }).format(n)
 }
 
-function fmtDate(iso: string) {
-  return new Date(iso).toLocaleDateString('pt-BR', {
-    day: '2-digit', month: 'short', year: 'numeric',
-  })
-}
-
+// past_due reads "Atrasada" here rather than "Inadimplente" (the RLS/DB
+// task's original label) — matches this task's requested badge wording.
+// Trial isn't in that requested list, but hiding it would misrepresent
+// schools that haven't started paying yet.
 const STATUS_STYLE: Record<string, { bg: string; color: string; label: string }> = {
   trial:     { bg: '#EEF3FC', color: '#1A4B8A', label: 'Trial' },
   active:    { bg: '#E0F8F5', color: '#007868', label: 'Ativa' },
-  past_due:  { bg: '#FEF2F2', color: '#DC2626', label: 'Inadimplente' },
+  past_due:  { bg: '#FEF2F2', color: '#DC2626', label: 'Atrasada' },
 }
 
 const PAYMENT_METHOD_LABEL: Record<string, string> = {
@@ -63,7 +61,7 @@ export default function SchoolsTable({ schools }: { schools: MasterSchoolRow[] }
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ background: 'var(--powder)' }}>
-              {['Escola', 'Status', 'Pagamento', 'Condição', 'Assinatura', 'Centro de custo', 'Criada em', ''].map(h => (
+              {['Escola', 'Responsável', 'Plano/Condição', 'Pagamento', 'Assinatura', 'Status', ''].map(h => (
                 <th key={h} style={{
                   padding: '11px 16px', textAlign: 'left',
                   fontSize: '10px', fontWeight: '600',
@@ -87,8 +85,20 @@ export default function SchoolsTable({ schools }: { schools: MasterSchoolRow[] }
                       {s.name}
                     </div>
                     <div style={{ fontSize: '11px', color: 'var(--mist)' }}>
-                      /{s.slug}
+                      /{s.slug}{s.cost_center ? ` · ${s.cost_center}` : ''}
                     </div>
+                  </td>
+                  <td style={{ padding: '13px 16px', fontSize: '13px', color: 'var(--slate)' }}>
+                    {s.ownerName ?? '—'}
+                  </td>
+                  <td style={{ padding: '13px 16px', fontSize: '13px', color: 'var(--slate)' }}>
+                    {s.payment_terms ? PAYMENT_TERMS_LABEL[s.payment_terms] ?? s.payment_terms : '—'}
+                  </td>
+                  <td style={{ padding: '13px 16px', fontSize: '13px', color: 'var(--slate)' }}>
+                    {s.payment_method ? PAYMENT_METHOD_LABEL[s.payment_method] ?? s.payment_method : '—'}
+                  </td>
+                  <td style={{ padding: '13px 16px', fontSize: '13px', color: 'var(--slate)', fontVariantNumeric: 'tabular-nums' }}>
+                    {fmt(s.subscription_value)}
                   </td>
                   <td style={{ padding: '13px 16px' }}>
                     <span style={{
@@ -98,21 +108,6 @@ export default function SchoolsTable({ schools }: { schools: MasterSchoolRow[] }
                     }}>
                       {status.label}
                     </span>
-                  </td>
-                  <td style={{ padding: '13px 16px', fontSize: '13px', color: 'var(--slate)' }}>
-                    {s.payment_method ? PAYMENT_METHOD_LABEL[s.payment_method] ?? s.payment_method : '—'}
-                  </td>
-                  <td style={{ padding: '13px 16px', fontSize: '13px', color: 'var(--slate)' }}>
-                    {s.payment_terms ? PAYMENT_TERMS_LABEL[s.payment_terms] ?? s.payment_terms : '—'}
-                  </td>
-                  <td style={{ padding: '13px 16px', fontSize: '13px', color: 'var(--slate)', fontVariantNumeric: 'tabular-nums' }}>
-                    {fmt(s.subscription_value)}
-                  </td>
-                  <td style={{ padding: '13px 16px', fontSize: '13px', color: 'var(--mist)' }}>
-                    {s.cost_center ?? '—'}
-                  </td>
-                  <td style={{ padding: '13px 16px', fontSize: '12px', color: 'var(--mist)' }}>
-                    {fmtDate(s.created_at)}
                   </td>
                   <td style={{ padding: '13px 16px', textAlign: 'right' }}>
                     <button
