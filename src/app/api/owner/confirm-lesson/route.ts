@@ -1,5 +1,6 @@
 import { createServiceClient } from '@/lib/supabase-server'
 import { computeCommissionAmount, getVariableCostForStudent } from '@/lib/commission'
+import { convertToBRL } from '@/lib/fx'
 import { NextResponse } from 'next/server'
 
 const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
@@ -48,12 +49,26 @@ export async function POST(request: Request) {
   // the payout side is always zero.
   const isOwner = instructor?.role === 'owner'
 
+  // Commissions (instructor and partner) are always paid in BRL, regardless
+  // of what currency the student was actually charged in. price_original is
+  // the trustworthy raw amount the owner entered — never trust a client-sent
+  // `price` for this, since a stale/bugged client could send the nominal
+  // figure unconverted (this is exactly the bug this conversion fixes).
+  let priceBRL: number
+  try {
+    priceBRL = await convertToBRL(price_original ?? price, (currency ?? 'BRL') as 'BRL' | 'USD' | 'EUR')
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Erro ao converter moeda'
+    return NextResponse.json({ error: message }, { status: 502 })
+  }
+
   // Packages with a variable cost (e.g. Downwind boat/fuel) reduce the
   // commission base — the school still collects the full price, but the
-  // instructor's cut is computed on what's left after that cost.
+  // instructor's cut is computed on what's left after that cost. The cost
+  // itself is always a BRL figure, so it's subtracted after conversion.
   const variableCost      = await getVariableCostForStudent(supabase, SCHOOL_ID, checkin?.student_name)
   const costDeduction     = variableCost.variableCostAmount
-  const netRevenue        = Math.max(0, price - costDeduction)
+  const netRevenue        = Math.max(0, priceBRL - costDeduction)
 
   const commission_pct    = isOwner ? 0 : (instructor?.commission_pct ?? null)
   const commission_amount = isOwner ? 0 : computeCommissionAmount(
@@ -71,7 +86,7 @@ export async function POST(request: Request) {
       activity_id:      activity_id || null,
       session_date:     session_date ?? new Date().toISOString().slice(0, 10),
       duration_min,
-      price,
+      price:            priceBRL,
       commission_pct,
       commission_amount,
       origin:           checkin?.partner_id ? 'partner' : 'direct',
@@ -134,9 +149,9 @@ export async function POST(request: Request) {
             partner_id:        checkin.partner_id,
             checkin_id,
             session_id:        newSession!.id,
-            revenue:           price,
+            revenue:           priceBRL,
             commission_pct:    partner.commission_pct,
-            commission_amount: price * (partner.commission_pct ?? 0),
+            commission_amount: priceBRL * (partner.commission_pct ?? 0),
             period:            (session_date ?? new Date().toISOString().slice(0, 10)).slice(0, 7),
             status:            'pending',
           })

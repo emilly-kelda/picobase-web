@@ -137,6 +137,19 @@ export default function PendingLessons({
   const [experimentalDisabled, setExperimentalDisabled] = useState(false)
   const [currency, setCurrency]               = useState<Currency>('BRL')
   const [variableCost, setVariableCost]       = useState<VariableCostInfo | null>(null)
+  const [fxRates, setFxRates]                 = useState<{ USD: number; EUR: number } | null>(null)
+  const [fxError, setFxError]                 = useState(false)
+
+  // Fetched once — commissions are always paid in BRL, so the confirm modal
+  // needs today's rate to show an accurate preview whenever a non-BRL
+  // currency is selected. The actual conversion is re-done authoritatively
+  // server-side on confirm; this is display-only.
+  useEffect(() => {
+    fetch('/api/fx')
+      .then(r => r.json())
+      .then(data => { if (data.ok) setFxRates(data.rates); else setFxError(true) })
+      .catch(() => setFxError(true))
+  }, [])
 
   function open(checkin: Checkin) {
     const sched = checkin.scheduled_lesson
@@ -208,6 +221,16 @@ export default function PendingLessons({
   const costDeduction = variableCost?.hasVariableCost ? variableCost.variableCostAmount : 0
   const netRevenue    = Math.max(0, totalPrice - costDeduction)
   const cantConfirm = confirming || !instructorId || totalPrice <= 0 || finalDuration <= 0 || !paymentMethod
+
+  // Commission preview, always in BRL — mirrors the server: convert the full
+  // charged amount to BRL first, then subtract the (already-BRL) variable
+  // cost, then apply the commission %. costDeduction must NOT be subtracted
+  // before conversion — it's a BRL figure, mixing units with totalPrice when
+  // currency isn't BRL.
+  const fxRate           = currency === 'BRL' ? 1 : fxRates?.[currency] ?? null
+  const totalPriceBRL    = fxRate != null ? totalPrice * fxRate : null
+  const netRevenueBRL    = totalPriceBRL != null ? Math.max(0, totalPriceBRL - costDeduction) : null
+  const commissionBRL    = netRevenueBRL != null ? netRevenueBRL * commissionPct : null
 
   async function confirm() {
     if (!selected || !instructorId) return
@@ -895,8 +918,18 @@ export default function PendingLessons({
                 </div>
               )}
 
-              <div style={{ fontSize: '13px', color: 'var(--mist)', marginTop: '8px' }}>
-                → comissão {fmt(netRevenue * commissionPct, currency)}
+              {currency !== 'BRL' && (
+                <div style={{ fontSize: '11px', color: 'var(--mist)', marginTop: '8px' }}>
+                  {fxRate != null
+                    ? `1 ${currency} = ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(fxRate)} hoje`
+                    : fxError
+                      ? (lang === 'pt' ? 'Taxa de câmbio indisponível' : 'Exchange rate unavailable')
+                      : (lang === 'pt' ? 'Buscando taxa de câmbio…' : 'Fetching exchange rate…')
+                  }
+                </div>
+              )}
+              <div style={{ fontSize: '13px', color: 'var(--mist)', marginTop: '4px' }}>
+                → comissão {commissionBRL != null ? fmt(commissionBRL, 'BRL') : '—'}
               </div>
             </div>
 
