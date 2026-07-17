@@ -6,7 +6,7 @@ export async function getPackageDashboard(schoolId: string) {
   const [{ data: allPackages }, { data: allSales }] = await Promise.all([
     supabase
       .from('packages')
-      .select('id, name, sport, type, base_price, final_price, total_minutes, price_eur, price_usd')
+      .select('id, name, sport, type, base_price, final_price, total_minutes, price_eur, price_usd, sort_order')
       .eq('school_id', schoolId)
       .eq('active', true)
       .order('base_price', { ascending: false }),
@@ -61,11 +61,13 @@ export async function getPackageDashboard(schoolId: string) {
     const utilPct          = minutesSold > 0 ? Math.round((minutesUsed / minutesSold) * 100) : 0
 
     return {
-      id:        pkg.id,
-      name:      pkg.name,
-      price:     pkg.final_price ?? pkg.base_price ?? 0,
-      price_eur: pkg.price_eur ?? null,
-      price_usd: pkg.price_usd ?? null,
+      id:           pkg.id,
+      name:         pkg.name,
+      sport:        pkg.sport ?? null,
+      totalMinutes: pkg.total_minutes ?? 0,
+      price:        pkg.final_price ?? pkg.base_price ?? 0,
+      price_eur:    pkg.price_eur ?? null,
+      price_usd:    pkg.price_usd ?? null,
       count: pkgSales.length,
       revenue,
       minutesSold,
@@ -174,6 +176,53 @@ export async function getPackageSaleTotals(schoolId: string) {
     revenue,
     minutesRemaining: minLeft,
   }
+}
+
+export async function createPackageType(payload: {
+  school_id: string
+  name: string
+  sport: string | null
+  total_minutes: number
+  base_price: number
+}) {
+  const supabase = createServiceClient()
+  const { data, error } = await supabase
+    .from('packages')
+    .insert({ ...payload, active: true })
+    .select('id')
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function updatePackageType(
+  id: string,
+  schoolId: string,
+  payload: { name: string; sport: string | null; total_minutes: number; base_price: number }
+) {
+  const supabase = createServiceClient()
+  const { error } = await supabase
+    .from('packages')
+    .update(payload)
+    .eq('id', id)
+    .eq('school_id', schoolId)
+  if (error) throw error
+  return { ok: true }
+}
+
+/** Soft delete — matches the pattern used for instructors (users.active) and
+ *  everywhere else that filters `.eq('active', true)`: package_sales rows
+ *  keep referencing this package_id, so a hard delete would either cascade
+ *  into historical sales or fail on the FK. */
+export async function deactivatePackageType(id: string, schoolId: string) {
+  const supabase = createServiceClient()
+  const { error } = await supabase
+    .from('packages')
+    .update({ active: false })
+    .eq('id', id)
+    .eq('school_id', schoolId)
+  if (error) throw error
+  return { ok: true }
 }
 
 
