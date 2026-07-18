@@ -21,7 +21,7 @@ export async function POST(request: Request) {
 
   const school = await getSchoolBySlug(school_slug)
   if (!school) {
-    return NextResponse.json({ error: 'School not found' }, { status: 404 })
+    return NextResponse.json({ error: 'Escola não encontrada' }, { status: 404 })
   }
 
   try {

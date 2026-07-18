@@ -26,12 +26,10 @@ function fmt(n: number) {
 
 export default function FinancialSettingsModal({
   burnRate,
-  lang,
   onClose,
   onSaved,
 }: {
   burnRate: number | null
-  lang: string
   onClose: () => void
   onSaved: (burnRate: number) => void
 }) {
@@ -98,7 +96,6 @@ export default function FinancialSettingsModal({
         </div>
 
         <BurnRateCalculator
-          lang={lang === 'en' ? 'en' : 'pt'}
           onApply={total => setValue(total)}
         />
 

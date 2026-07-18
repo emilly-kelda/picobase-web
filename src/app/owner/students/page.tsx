@@ -295,7 +295,7 @@ export default async function StudentsPage({
                       borderTop: '0.5px solid var(--border)',
                       borderBottom: '0.5px solid var(--border)',
                     }}>
-                      {lang === 'pt' ? 'Só via check-in' : 'Check-in only'}
+                      Só via check-in
                     </td>
                   </tr>
                 )}
@@ -332,7 +332,7 @@ export default async function StudentsPage({
                             background: 'var(--powder)', color: 'var(--mist)',
                             letterSpacing: '0.06em', textTransform: 'uppercase',
                           }}>
-                            {lang === 'pt' ? 'check-in' : 'check-in'}
+                            check-in
                           </span>
                         </div>
                       </div>

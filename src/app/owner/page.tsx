@@ -80,9 +80,7 @@ export default async function OwnerPage() {
     commission_pct: (i as any).commission_pct ?? null,
   }))
 
-  const colHeaders = lang === 'pt'
-    ? ['Data', 'Aluno', 'Atividade', 'Instrutor', 'Duração', 'Valor']
-    : ['Date', 'Student', 'Activity', 'Instructor', 'Duration', 'Price']
+  const colHeaders = ['Data', 'Aluno', 'Atividade', 'Instrutor', 'Duração', 'Valor']
 
   return (
     <div>
@@ -101,7 +99,7 @@ export default async function OwnerPage() {
         }
       `}</style>
 
-      <AlertsDrawer alerts={alerts} lang={lang} />
+      <AlertsDrawer alerts={alerts} />
 
       {/* Page title */}
       <div style={{ marginBottom: '24px' }}>
@@ -144,7 +142,7 @@ export default async function OwnerPage() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
               <div>
                 <div style={{ fontSize: '11px', color: 'var(--mist)', marginBottom: '4px', fontWeight: '500' }}>
-                  {lang === 'pt' ? 'Alunos' : 'Students'}
+                  Alunos
                 </div>
                 <div style={{ fontSize: '18px', fontWeight: '600', color: 'var(--slate)', fontVariantNumeric: 'tabular-nums' }}>
                   {today.students}
@@ -152,7 +150,7 @@ export default async function OwnerPage() {
               </div>
               <div>
                 <div style={{ fontSize: '11px', color: 'var(--mist)', marginBottom: '4px', fontWeight: '500' }}>
-                  {lang === 'pt' ? 'Aulas' : 'Sessions'}
+                  Aulas
                 </div>
                 <div style={{ fontSize: '18px', fontWeight: '600', color: 'var(--slate)', fontVariantNumeric: 'tabular-nums' }}>
                   {today.sessions}
@@ -169,7 +167,7 @@ export default async function OwnerPage() {
               </div>
               <div>
                 <div style={{ fontSize: '11px', color: 'var(--mist)', marginBottom: '4px', fontWeight: '500' }}>
-                  {lang === 'pt' ? 'Receita' : 'Revenue'}
+                  Receita
                 </div>
                 <div style={{ fontSize: '18px', fontWeight: '600', color: 'var(--slate)', fontVariantNumeric: 'tabular-nums' }}>
                   {fmt(today.revenue ?? 0)}
@@ -186,19 +184,19 @@ export default async function OwnerPage() {
                       {monthComparison.revenueDelta >= 0 ? '▲' : '▼'} {Math.abs(monthComparison.revenueDelta).toFixed(1)}%
                     </span>
                     <span style={{ color: 'var(--mist)' }}>
-                      {lang === 'pt' ? 'vs. mês passado' : 'vs. last month'}
+                      vs. mês passado
                     </span>
                   </div>
                 )}
                 {monthComparison.revenueDelta === null && monthComparison.lastMonthRevenue === 0 && (
                   <div style={{ fontSize: '12px', color: 'var(--mist)', marginTop: '4px' }}>
-                    {lang === 'pt' ? 'Primeiro mês de operação' : 'First month of operation'}
+                    Primeiro mês de operação
                   </div>
                 )}
               </div>
               <div>
                 <div style={{ fontSize: '11px', color: 'var(--mist)', marginBottom: '4px', fontWeight: '500' }}>
-                  {lang === 'pt' ? 'Comissões' : 'Commissions'}
+                  Comissões
                 </div>
                 <div style={{ fontSize: '18px', fontWeight: '600', color: 'var(--slate)', fontVariantNumeric: 'tabular-nums' }}>
                   {fmt(today.commissions ?? 0)}
@@ -223,13 +221,12 @@ export default async function OwnerPage() {
         ════════════════════════════════════════════════════════════ */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '28px', minWidth: 0 }}>
 
-          <MissedLessons lessons={missedLessons as any} lang={lang} />
+          <MissedLessons lessons={missedLessons as any} />
           <PendingLessons
             checkins={pending as any}
             instructors={instructorList}
             activities={activities}
             packageBalances={packageBalances}
-            lang={lang}
           />
 
           <RunwaySummary
@@ -239,7 +236,6 @@ export default async function OwnerPage() {
             netProfit={adjustedNetProfit}
             monthlyBurn={monthlyBurn}
             gapToTarget={gapToTarget}
-            lang={lang}
             projectedRunway={projection?.projectedRunway}
             daysLeft={projection?.daysLeft}
           />

@@ -229,7 +229,7 @@ export const translations = {
     th_package:     'Pacote',
     th_status:      'Status',
     th_progress:    'Progresso',
-    th_paid:        'Valor',
+    th_paid:        'Pago',
     th_name:        'Aluno',
 
     // Students
@@ -319,7 +319,7 @@ export const translations = {
     country_label:         'País',
     language_label:        'Idioma',
     burn_rate_label:       'Custo fixo mensal',
-    burn_rate_help:        'Custos fixos mensais na baixa temporada. Usados para o cálculo da Reserva de Baixa Temporada..',
+    burn_rate_help:        'Custos fixos mensais na baixa temporada. Usados para o cálculo da Reserva de Baixa Temporada.',
     save_school:           'Salvar configurações',
     saving:                'Salvando...',
     saved:                 '✓ Salvo',

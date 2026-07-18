@@ -8,8 +8,8 @@ export async function POST(request: Request) {
   const body = await request.json()
   const supabase = createServiceClient()
 
-  if (!body.name?.trim()) return NextResponse.json({ error: 'Name is required' }, { status: 400 })
-  if (!body.email?.trim()) return NextResponse.json({ error: 'Email is required' }, { status: 400 })
+  if (!body.name?.trim()) return NextResponse.json({ error: 'Nome é obrigatório' }, { status: 400 })
+  if (!body.email?.trim()) return NextResponse.json({ error: 'Email é obrigatório' }, { status: 400 })
 
   // Step 1 — create auth.users record first (required by users_id_fkey → auth.users.id)
   // Instructors log in via log_token, not Supabase Auth, so no password is set.
@@ -66,7 +66,7 @@ export async function POST(request: Request) {
 export async function PATCH(request: Request) {
   const body = await request.json()
   const { id, ...fields } = body
-  if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 })
+  if (!id) return NextResponse.json({ error: 'id é obrigatório' }, { status: 400 })
 
   const supabase = createServiceClient()
   const { error } = await supabase
@@ -93,7 +93,7 @@ export async function PATCH(request: Request) {
 export async function DELETE(request: Request) {
   const { searchParams } = new URL(request.url)
   const id = searchParams.get('id')
-  if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 })
+  if (!id) return NextResponse.json({ error: 'id é obrigatório' }, { status: 400 })
 
   const supabase = createServiceClient()
   const { error } = await supabase

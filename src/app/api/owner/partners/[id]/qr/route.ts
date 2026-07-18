@@ -24,7 +24,7 @@ export async function GET(
   ])
 
   if (!partner?.referral_code) {
-    return NextResponse.json({ error: 'Partner not found' }, { status: 404 })
+    return NextResponse.json({ error: 'Parceiro não encontrado' }, { status: 404 })
   }
 
   const slug = school?.slug ?? 'escola'

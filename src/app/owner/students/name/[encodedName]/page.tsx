@@ -123,7 +123,7 @@ export default async function StudentNameProfilePage({
                 color: 'var(--mist)',
                 letterSpacing: '0.06em', textTransform: 'uppercase',
               }}>
-                {lang === 'pt' ? 'Via check-in' : 'Check-in only'}
+                Via check-in
               </span>
             )}
             {studentRow && (
@@ -131,13 +131,13 @@ export default async function StudentNameProfilePage({
                 fontSize: '11px', color: 'var(--mist)', textDecoration: 'none',
                 borderBottom: '1px dotted var(--border)',
               }}>
-                {lang === 'pt' ? 'Ver ficha completa →' : 'Full profile →'}
+                Ver ficha completa →
               </a>
             )}
           </div>
           <p style={{ fontSize: '13px', color: 'var(--mist)' }}>
-            {nationality ?? (lang === 'pt' ? 'Nacionalidade desconhecida' : 'Unknown nationality')}
-            {latestCheckin && ` · ${lang === 'pt' ? 'Primeiro check-in' : 'First seen'} ${fmtDate(latestCheckin.checkin_at)}`}
+            {nationality ?? 'Nacionalidade desconhecida'}
+            {latestCheckin && ` · Primeiro check-in ${fmtDate(latestCheckin.checkin_at)}`}
           </p>
         </div>
       </div>
@@ -242,7 +242,7 @@ export default async function StudentNameProfilePage({
           padding: '16px 20px', marginBottom: '24px',
           fontSize: '13px', color: 'var(--mist)',
         }}>
-          {lang === 'pt' ? 'Sem pacote registrado.' : 'No package on file.'}
+          Sem pacote registrado.
         </div>
       )}
 
@@ -260,7 +260,7 @@ export default async function StudentNameProfilePage({
           { label: 'Email',    value: email    },
           { label: 'WhatsApp', value: whatsapp },
           { label: t.health_label,
-            value: healthRaw ?? (lang === 'pt' ? 'Sem condições registradas' : 'No conditions on file') },
+            value: healthRaw ?? 'Sem condições registradas' },
           { label: t.th_skill,
             value: skillLevel ? (SKILL_LABELS[skillLevel] ?? skillLevel) : '—' },
         ].map(item => (

@@ -174,8 +174,8 @@ export default function CrewClient({ initialCrew }: { initialCrew: CrewMember[] 
   }
 
   async function handleSubmit() {
-    if (!form.name.trim()) { showToast('err', 'Name is required'); return }
-    if (!form.email.trim()) { showToast('err', 'Email is required'); return }
+    if (!form.name.trim()) { showToast('err', 'Nome é obrigatório'); return }
+    if (!form.email.trim()) { showToast('err', 'Email é obrigatório'); return }
 
     setSaving(true)
     const payload = {
@@ -198,11 +198,11 @@ export default function CrewClient({ initialCrew }: { initialCrew: CrewMember[] 
       })
       const data = await res.json()
       setSaving(false)
-      if (!res.ok) { showToast('err', data.error ?? 'Update failed'); return }
+      if (!res.ok) { showToast('err', data.error ?? 'Falha ao atualizar'); return }
       setCrew(prev => prev.map(m =>
         m.id === editTarget.id ? { ...m, ...payload } : m
       ))
-      showToast('ok', `${form.name} updated`)
+      showToast('ok', `${form.name} atualizado`)
       closeModal()
     } else {
       const res = await fetch('/api/owner/crew', {
@@ -212,13 +212,13 @@ export default function CrewClient({ initialCrew }: { initialCrew: CrewMember[] 
       })
       const data = await res.json()
       setSaving(false)
-      if (!res.ok) { showToast('err', data.error ?? 'Add failed'); return }
+      if (!res.ok) { showToast('err', data.error ?? 'Falha ao adicionar'); return }
       const newMember: CrewMember = {
         ...data.instructor,
         stats: { sessions: 0, revenue: 0, commissions: 0 },
       }
       setCrew(prev => [...prev, newMember])
-      showToast('ok', `${form.name} added to crew`)
+      showToast('ok', `${form.name} adicionado à equipe`)
       closeModal()
     }
   }
@@ -229,9 +229,9 @@ export default function CrewClient({ initialCrew }: { initialCrew: CrewMember[] 
     const res = await fetch(`/api/owner/crew?id=${editTarget.id}`, { method: 'DELETE' })
     const data = await res.json()
     setDeleting(false)
-    if (!res.ok) { showToast('err', data.error ?? 'Delete failed'); return }
+    if (!res.ok) { showToast('err', data.error ?? 'Falha ao remover'); return }
     setCrew(prev => prev.filter(m => m.id !== editTarget.id))
-    showToast('ok', `${editTarget.name} removed from crew`)
+    showToast('ok', `${editTarget.name} removido da equipe`)
     closeModal()
   }
 
@@ -277,10 +277,10 @@ export default function CrewClient({ initialCrew }: { initialCrew: CrewMember[] 
       }}>
         <div>
           <h1 style={{ fontSize: '22px', fontWeight: '500', color: 'var(--slate)', marginBottom: '4px' }}>
-            Crew
+            Equipe
           </h1>
           <p style={{ fontSize: '13px', color: 'var(--mist)' }}>
-            {crew.length} instructor{crew.length !== 1 ? 's' : ''}
+            {crew.length} instrutor{crew.length !== 1 ? 'es' : ''}
           </p>
         </div>
         <button
@@ -293,7 +293,7 @@ export default function CrewClient({ initialCrew }: { initialCrew: CrewMember[] 
             cursor: 'pointer', fontFamily: 'var(--font-sans)',
           }}
         >
-          + Add Instructor
+          + Adicionar Instrutor
         </button>
       </div>
 
@@ -305,9 +305,9 @@ export default function CrewClient({ initialCrew }: { initialCrew: CrewMember[] 
         marginBottom: '28px',
       }}>
         {[
-          { label: 'Total sessions',    value: String(totalSessions)  },
-          { label: 'Revenue generated', value: fmt(totalRevenue)      },
-          { label: 'Total commissions', value: fmt(totalCommissions)  },
+          { label: 'Total de aulas',    value: String(totalSessions)  },
+          { label: 'Receita gerada',    value: fmt(totalRevenue)      },
+          { label: 'Comissões totais',  value: fmt(totalCommissions)  },
         ].map(card => (
           <div key={card.label} style={{
             background: '#fff',
@@ -389,12 +389,12 @@ export default function CrewClient({ initialCrew }: { initialCrew: CrewMember[] 
                         background: 'var(--powder)', color: 'var(--mist)',
                         letterSpacing: '0.06em', textTransform: 'uppercase',
                       }}>
-                        Inactive
+                        Inativo
                       </span>
                     )}
                   </div>
                   <div style={{ fontSize: '12px', color: 'var(--mist)' }}>
-                    {member.email ?? member.whatsapp ?? 'No contact'}
+                    {member.email ?? member.whatsapp ?? 'Sem contato'}
                   </div>
                 </div>
                 <div style={{ textAlign: 'right', flexShrink: 0 }}>
@@ -405,7 +405,7 @@ export default function CrewClient({ initialCrew }: { initialCrew: CrewMember[] 
                     {fmtPct(member.commission_pct)}
                   </div>
                   <div style={{ fontSize: '10px', color: 'var(--mist)', letterSpacing: '0.06em' }}>
-                    commission
+                    comissão
                   </div>
                 </div>
               </div>
@@ -418,9 +418,9 @@ export default function CrewClient({ initialCrew }: { initialCrew: CrewMember[] 
               borderBottom: '0.5px solid var(--border)',
             }}>
               {[
-                { label: 'Sessions', value: String(member.stats.sessions) },
-                { label: 'Revenue',  value: fmt(member.stats.revenue)     },
-                { label: 'Earned',   value: fmt(member.stats.commissions) },
+                { label: 'Aulas',    value: String(member.stats.sessions) },
+                { label: 'Receita',  value: fmt(member.stats.revenue)     },
+                { label: 'Ganho',    value: fmt(member.stats.commissions) },
               ].map((stat, i) => (
                 <div key={stat.label} style={{
                   padding: '14px 16px',
@@ -466,7 +466,7 @@ export default function CrewClient({ initialCrew }: { initialCrew: CrewMember[] 
                 )}
                 {!member.pix_key && !member.wise_email && (
                   <span style={{ fontSize: '12px', color: 'var(--mist)' }}>
-                    No payment details on file
+                    Sem dados de pagamento cadastrados
                   </span>
                 )}
               </div>
@@ -482,7 +482,7 @@ export default function CrewClient({ initialCrew }: { initialCrew: CrewMember[] 
                     textDecorationColor: 'var(--border)',
                   }}
                 >
-                  Edit
+                  Editar
                 </button>
               </div>
             </div>
@@ -500,7 +500,7 @@ export default function CrewClient({ initialCrew }: { initialCrew: CrewMember[] 
             border: '0.5px solid var(--border)',
             borderRadius: 'var(--radius-lg)',
           }}>
-            No instructors yet. Add the first one →
+            Nenhum instrutor ainda. Adicione o primeiro →
           </div>
         )}
       </div>
@@ -523,21 +523,21 @@ export default function CrewClient({ initialCrew }: { initialCrew: CrewMember[] 
           }}>
             {/* Modal header */}
             <div style={{ fontSize: '18px', fontWeight: '500', color: 'var(--slate)', marginBottom: '24px' }}>
-              {editTarget ? 'Edit Instructor' : 'Add Instructor'}
+              {editTarget ? 'Editar Instrutor' : 'Adicionar Instrutor'}
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
 
               {/* Basic Info */}
               <div>
-                <div style={sectionHeadStyle}>Basic Info</div>
+                <div style={sectionHeadStyle}>Informações Básicas</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   <div>
-                    <label style={labelStyle}>Name *</label>
+                    <label style={labelStyle}>Nome *</label>
                     <input
                       style={inputStyle}
                       type="text"
-                      placeholder="Full name"
+                      placeholder="Nome completo"
                       value={form.name}
                       autoFocus
                       onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
@@ -548,41 +548,41 @@ export default function CrewClient({ initialCrew }: { initialCrew: CrewMember[] 
                     <input
                       style={inputStyle}
                       type="email"
-                      placeholder="instructor@example.com"
+                      placeholder="instrutor@exemplo.com"
                       value={form.email}
                       onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
                     />
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
                     <div>
-                      <label style={labelStyle}>Commission (%)</label>
+                      <label style={labelStyle}>Comissão (%)</label>
                       <input
                         style={inputStyle}
                         type="number"
                         min={0} max={100} step={1}
-                        placeholder="e.g. 38"
+                        placeholder="ex: 38"
                         value={form.commission_pct}
                         onChange={e => setForm(f => ({ ...f, commission_pct: e.target.value }))}
                       />
                     </div>
                     <div>
-                      <label style={labelStyle}>Years of Experience</label>
+                      <label style={labelStyle}>Anos de Experiência</label>
                       <input
                         style={inputStyle}
                         type="number"
                         min={0} step={1}
-                        placeholder="e.g. 5"
+                        placeholder="ex: 5"
                         value={form.experience_years}
                         onChange={e => setForm(f => ({ ...f, experience_years: e.target.value }))}
                       />
                     </div>
                     <div>
-                      <label style={labelStyle}>Weekly Capacity (h)</label>
+                      <label style={labelStyle}>Capacidade Semanal (h)</label>
                       <input
                         style={inputStyle}
                         type="number"
                         min={0} step={0.5}
-                        placeholder="e.g. 40"
+                        placeholder="ex: 40"
                         value={form.weekly_capacity_hours}
                         onChange={e => setForm(f => ({ ...f, weekly_capacity_hours: e.target.value }))}
                       />
@@ -593,10 +593,10 @@ export default function CrewClient({ initialCrew }: { initialCrew: CrewMember[] 
 
               {/* Teaching */}
               <div>
-                <div style={sectionHeadStyle}>Teaching</div>
+                <div style={sectionHeadStyle}>Modalidades e Ensino</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                   <div>
-                    <label style={labelStyle}>Modalities</label>
+                    <label style={labelStyle}>Modalidades</label>
                     <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                       {MODALITIES.map(mod => (
                         <button
@@ -611,7 +611,7 @@ export default function CrewClient({ initialCrew }: { initialCrew: CrewMember[] 
                     </div>
                   </div>
                   <div>
-                    <label style={labelStyle}>Languages</label>
+                    <label style={labelStyle}>Idiomas</label>
                     <div style={{ display: 'flex', gap: '8px' }}>
                       {LANG_OPTIONS.map(lang => (
                         <button
@@ -630,7 +630,7 @@ export default function CrewClient({ initialCrew }: { initialCrew: CrewMember[] 
 
               {/* Certifications */}
               <div>
-                <div style={sectionHeadStyle}>Certifications</div>
+                <div style={sectionHeadStyle}>Certificações</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   {form.certifications.map((cert, i) => (
                     <div key={i} style={{
@@ -642,7 +642,7 @@ export default function CrewClient({ initialCrew }: { initialCrew: CrewMember[] 
                         <input
                           style={{ ...inputStyle, fontSize: '13px', padding: '8px 10px' }}
                           type="text"
-                          placeholder="Name — e.g. IKO Instructor Level 2"
+                          placeholder="Nome — ex: IKO Instructor Level 2"
                           value={cert.name}
                           onChange={e => updateCert(i, 'name', e.target.value)}
                         />
@@ -650,14 +650,14 @@ export default function CrewClient({ initialCrew }: { initialCrew: CrewMember[] 
                           <input
                             style={{ ...inputStyle, fontSize: '13px', padding: '8px 10px' }}
                             type="text"
-                            placeholder="Code — e.g. IKO-BR-2891"
+                            placeholder="Código — ex: IKO-BR-2891"
                             value={cert.code}
                             onChange={e => updateCert(i, 'code', e.target.value)}
                           />
                           <input
                             style={{ ...inputStyle, fontSize: '13px', padding: '8px 10px' }}
                             type="month"
-                            placeholder="Expiry"
+                            placeholder="Validade"
                             value={cert.expiration_date}
                             onChange={e => updateCert(i, 'expiration_date', e.target.value)}
                           />
@@ -672,7 +672,7 @@ export default function CrewClient({ initialCrew }: { initialCrew: CrewMember[] 
                             padding: '0', textAlign: 'left',
                           }}
                         >
-                          Remove
+                          Remover
                         </button>
                       </div>
                     </div>
@@ -690,20 +690,20 @@ export default function CrewClient({ initialCrew }: { initialCrew: CrewMember[] 
                       textAlign: 'left',
                     }}
                   >
-                    + Add certification
+                    + Adicionar certificação
                   </button>
                 </div>
               </div>
 
               {/* Payment */}
               <div>
-                <div style={sectionHeadStyle}>Payment</div>
+                <div style={sectionHeadStyle}>Pagamento</div>
                 <div>
-                  <label style={labelStyle}>PIX Key</label>
+                  <label style={labelStyle}>Chave PIX</label>
                   <input
                     style={inputStyle}
                     type="text"
-                    placeholder="CPF, email, phone or random key"
+                    placeholder="CPF, email, telefone ou chave aleatória"
                     value={form.pix_key}
                     onChange={e => setForm(f => ({ ...f, pix_key: e.target.value }))}
                   />
@@ -726,7 +726,7 @@ export default function CrewClient({ initialCrew }: { initialCrew: CrewMember[] 
                         textDecorationColor: 'var(--border)',
                       }}
                     >
-                      Remove instructor from crew
+                      Remover instrutor da equipe
                     </button>
                   ) : (
                     <div style={{
@@ -739,7 +739,7 @@ export default function CrewClient({ initialCrew }: { initialCrew: CrewMember[] 
                         fontSize: '13px', color: 'var(--signal)',
                         marginBottom: '10px', fontWeight: '500',
                       }}>
-                        Remove {editTarget.name} from crew?
+                        Remover {editTarget.name} da equipe?
                       </div>
                       <div style={{ display: 'flex', gap: '8px' }}>
                         <button
@@ -756,7 +756,7 @@ export default function CrewClient({ initialCrew }: { initialCrew: CrewMember[] 
                             opacity: deleting ? 0.6 : 1,
                           }}
                         >
-                          {deleting ? '...' : 'Yes, remove'}
+                          {deleting ? '...' : 'Sim, remover'}
                         </button>
                         <button
                           type="button"
@@ -770,7 +770,7 @@ export default function CrewClient({ initialCrew }: { initialCrew: CrewMember[] 
                             fontFamily: 'var(--font-sans)',
                           }}
                         >
-                          Cancel
+                          Cancelar
                         </button>
                       </div>
                     </div>
@@ -793,7 +793,7 @@ export default function CrewClient({ initialCrew }: { initialCrew: CrewMember[] 
                   fontFamily: 'var(--font-sans)',
                 }}
               >
-                Cancel
+                Cancelar
               </button>
               <button
                 type="button"
@@ -810,7 +810,7 @@ export default function CrewClient({ initialCrew }: { initialCrew: CrewMember[] 
                   opacity: saving ? 0.7 : 1,
                 }}
               >
-                {saving ? 'Saving...' : editTarget ? 'Save Changes' : 'Add Instructor'}
+                {saving ? 'Salvando...' : editTarget ? 'Salvar Alterações' : 'Adicionar Instrutor'}
               </button>
             </div>
           </div>

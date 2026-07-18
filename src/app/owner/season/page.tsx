@@ -147,7 +147,7 @@ export default function SeasonPage() {
       )}
 
       {loading ? (
-        <div style={{ padding: '40px', textAlign: 'center', fontSize: '13px', color: 'var(--mist)' }}>Loading…</div>
+        <div style={{ padding: '40px', textAlign: 'center', fontSize: '13px', color: 'var(--mist)' }}>Carregando...</div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           {seasons.map((s, i) => {

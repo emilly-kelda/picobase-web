@@ -7,7 +7,7 @@ export async function PATCH(request: Request) {
   const { id, status } = await request.json()
 
   if (!id || (status !== 'confirmed' && status !== 'declined')) {
-    return NextResponse.json({ error: 'id and a valid status are required' }, { status: 400 })
+    return NextResponse.json({ error: 'id e um status válido são obrigatórios' }, { status: 400 })
   }
 
   try {

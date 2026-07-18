@@ -54,13 +54,13 @@ export default async function CostsPage() {
             letterSpacing: '0.1em', textTransform: 'uppercase',
             color: 'var(--mist)', marginBottom: '6px',
           }}>
-            Custo mensal recorrente
+            Custo operacional mensal
           </span>
           <span style={{ fontSize: '22px', fontWeight: '600', color: 'var(--slate)', fontVariantNumeric: 'tabular-nums' }}>
             {fmt(monthlyCostTotal)}
           </span>
           <span style={{ fontSize: '11px', color: 'var(--mist)', marginTop: '4px' }}>
-            mensais + anuais/12 · alimenta o indicador de Custo mensal no Base Camp
+            mensais + anuais/12 · alimenta o indicador de Custo operacional mensal no Base Camp
           </span>
         </div>
       )}

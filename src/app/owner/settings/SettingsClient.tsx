@@ -143,7 +143,6 @@ export default function SettingsClient({
       {activeModal === 'financial' && (
         <FinancialSettingsModal
           burnRate={school.burn_rate}
-          lang={currentLang}
           onClose={() => setActiveModal(null)}
           onSaved={burnRate => { setSchool(s => ({ ...s, burn_rate: burnRate })); closeAndRefresh() }}
         />

@@ -21,10 +21,8 @@ function formatRate(mode: string | null, pct: number | null, hourly: number | nu
 
 export default function CommissionHistory({
   instructorId,
-  lang = 'pt',
 }: {
   instructorId: string
-  lang?: 'pt' | 'en'
 }) {
   const [history, setHistory] = useState<HistoryRow[]>([])
   const [open, setOpen]       = useState(false)
@@ -53,10 +51,7 @@ export default function CommissionHistory({
           display: 'block',
         }}
       >
-        {open
-          ? (lang === 'pt' ? '▲ Fechar histórico' : '▲ Close history')
-          : (lang === 'pt' ? '▼ Ver histórico de comissão' : '▼ View commission history')
-        }
+        {open ? '▲ Fechar histórico' : '▼ Ver histórico de comissão'}
       </button>
 
       {open && (
@@ -68,17 +63,14 @@ export default function CommissionHistory({
         }}>
           {!loaded ? (
             <div style={{ padding: '16px 20px', fontSize: '12px', color: 'var(--mist)' }}>
-              {lang === 'pt' ? 'Carregando...' : 'Loading...'}
+              Carregando...
             </div>
           ) : history.length === 0 ? (
             <div style={{
               padding: '16px 20px',
               fontSize: '12px', color: 'var(--mist)',
             }}>
-              {lang === 'pt'
-                ? 'Nenhuma alteração registrada ainda.'
-                : 'No changes recorded yet.'
-              }
+              Nenhuma alteração registrada ainda.
             </div>
           ) : (
             <>
@@ -90,10 +82,7 @@ export default function CommissionHistory({
                 fontSize: '11px',
                 color: 'var(--glacial-dark)',
               }}>
-                {lang === 'pt'
-                  ? 'Aulas já confirmadas mantêm a comissão do momento da confirmação.'
-                  : 'Already confirmed lessons keep the commission rate at time of confirmation.'
-                }
+                Aulas já confirmadas mantêm a comissão do momento da confirmação.
               </div>
 
               {history.map((h, i) => (
@@ -143,12 +132,12 @@ export default function CommissionHistory({
                     flexShrink: 0, textAlign: 'right',
                   }}>
                     {new Date(h.changed_at).toLocaleDateString(
-                      lang === 'pt' ? 'pt-BR' : 'en-US',
+                      'pt-BR',
                       { day: '2-digit', month: 'short', year: 'numeric' }
                     )}
                     <br />
                     {new Date(h.changed_at).toLocaleTimeString(
-                      lang === 'pt' ? 'pt-BR' : 'en-US',
+                      'pt-BR',
                       { hour: '2-digit', minute: '2-digit' }
                     )}
                   </div>

@@ -14,10 +14,10 @@ export async function GET() {
 
 export async function PATCH(request: Request) {
   const auth = await getAuthContext()
-  if (!auth || auth.isMaster) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!auth || auth.isMaster) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
   const { id } = await request.json()
-  if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 })
+  if (!id) return NextResponse.json({ error: 'id é obrigatório' }, { status: 400 })
 
   await dismissNotice(id, auth.schoolId)
   return NextResponse.json({ ok: true })

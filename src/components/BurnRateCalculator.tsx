@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 
-const COST_ITEMS_PT = [
+const COST_ITEMS = [
   { key: 'rent',        label: 'Aluguel / armazenamento' },
   { key: 'insurance',   label: 'Seguro'                  },
   { key: 'accountant',  label: 'Contador'                },
@@ -13,28 +13,15 @@ const COST_ITEMS_PT = [
   { key: 'other',       label: 'Outros'                  },
 ]
 
-const COST_ITEMS_EN = [
-  { key: 'rent',        label: 'Rent / storage'          },
-  { key: 'insurance',   label: 'Insurance'               },
-  { key: 'accountant',  label: 'Accountant'              },
-  { key: 'marketing',   label: 'Marketing'               },
-  { key: 'maintenance', label: 'Equipment maintenance'   },
-  { key: 'software',    label: 'Software and tools'      },
-  { key: 'transport',   label: 'Transport'               },
-  { key: 'other',       label: 'Other'                   },
-]
-
 export default function BurnRateCalculator({
   onApply,
-  lang = 'pt',
 }: {
   onApply: (total: number) => void
-  lang?: 'pt' | 'en'
 }) {
   const [open,   setOpen]   = useState(false)
   const [values, setValues] = useState<Record<string, number>>({})
 
-  const items = lang === 'pt' ? COST_ITEMS_PT : COST_ITEMS_EN
+  const items = COST_ITEMS
 
   const total = Object.values(values).reduce((s, v) => s + (v || 0), 0)
 
@@ -61,10 +48,7 @@ export default function BurnRateCalculator({
       >
         <span>{open ? '▲' : '▼'}</span>
         <span>
-          {lang === 'pt'
-            ? 'Como calcular meus custos mensais?'
-            : 'How to calculate my monthly costs?'
-          }
+          Como calcular meus custos mensais?
         </span>
       </button>
 
@@ -84,10 +68,7 @@ export default function BurnRateCalculator({
             marginBottom: '16px',
             lineHeight: '1.6',
           }}>
-            {lang === 'pt'
-              ? 'Preencha os seus custos fixos mensais para calcular o valor correto. Não salva dados individuais — só o total.'
-              : 'Fill in your monthly fixed costs to calculate the right number. Individual items are not saved — only the total.'
-            }
+            Preencha os seus custos fixos mensais para calcular o valor correto. Não salva dados individuais — só o total.
           </div>
 
           {/* Cost rows */}
@@ -171,7 +152,7 @@ export default function BurnRateCalculator({
                 color: 'var(--mist)',
                 marginBottom: '3px',
               }}>
-                {lang === 'pt' ? 'Total calculado' : 'Calculated total'}
+                Total calculado
               </div>
               <div style={{
                 fontSize: '22px',
@@ -209,7 +190,7 @@ export default function BurnRateCalculator({
                 transition: 'all 0.15s',
               }}
             >
-              {lang === 'pt' ? 'Usar este valor →' : 'Use this value →'}
+              Usar este valor →
             </button>
           </div>
 
@@ -221,10 +202,7 @@ export default function BurnRateCalculator({
               color: 'var(--mist)',
               lineHeight: '1.5',
             }}>
-              {lang === 'pt'
-                ? '💡 Estes valores são apenas para cálculo. Ao clicar em "Usar este valor", só o total será salvo nas configurações.'
-                : '💡 These values are for calculation only. Clicking "Use this value" saves only the total to your settings.'
-              }
+              💡 Estes valores são apenas para cálculo. Ao clicar em "Usar este valor", só o total será salvo nas configurações.
             </div>
           )}
         </div>

@@ -105,13 +105,11 @@ export default function PendingLessons({
   instructors,
   activities = [],
   packageBalances = {},
-  lang = 'pt',
 }: {
   checkins: Checkin[]
   instructors: Instructor[]
   activities?: ActivityRef[]
   packageBalances?: Record<string, { minutesRemaining: number; hasPackage: boolean }>
-  lang?: string
 }) {
   const router = useRouter()
   const [checkins, setCheckins]         = useState(initialCheckins)
@@ -335,7 +333,7 @@ export default function PendingLessons({
                   padding: '2px 8px', borderRadius: '99px',
                   background: 'var(--powder)',
                 }}>
-                  {lang === 'pt' ? 'Sem pacote' : 'No package'}
+                  Sem pacote
                 </span>
               )
             } else if (exhausted) {
@@ -347,7 +345,7 @@ export default function PendingLessons({
                   background: '#DC2626',
                   letterSpacing: '0.01em',
                 }}>
-                  ⚠ {lang === 'pt' ? 'Pacote esgotado — cobrar avulsa' : 'Package exhausted — charge separately'}
+                  ⚠ Pacote esgotado — cobrar avulsa
                 </span>
               )
             } else if (lastLesson) {
@@ -358,7 +356,7 @@ export default function PendingLessons({
                   padding: '3px 10px', borderRadius: '99px',
                   background: '#FEF3C7',
                 }}>
-                  ⚠ {lang === 'pt' ? `Última aula · ${fmtMinutes(balance.minutesRemaining)}` : `Last lesson · ${fmtMinutes(balance.minutesRemaining)}`}
+                  ⚠ Última aula · {fmtMinutes(balance.minutesRemaining)}
                 </span>
               )
             } else {
@@ -369,7 +367,7 @@ export default function PendingLessons({
                   padding: '3px 10px', borderRadius: '99px',
                   background: '#E0F8F5',
                 }}>
-                  ✓ {lang === 'pt' ? `${fmtMinutes(balance.minutesRemaining)} restantes` : `${fmtMinutes(balance.minutesRemaining)} remaining`}
+                  ✓ {fmtMinutes(balance.minutesRemaining)} restantes
                 </span>
               )
             }
@@ -744,7 +742,7 @@ export default function PendingLessons({
                 letterSpacing: '0.08em', textTransform: 'uppercase',
                 color: 'var(--mist)', marginBottom: '8px',
               }}>
-                {lang === 'pt' ? 'Moeda cobrada' : 'Currency charged'}
+                Moeda cobrada
               </div>
               <div style={{ display: 'flex', gap: '8px' }}>
                 {CURRENCY_OPTIONS.map(c => (
@@ -784,10 +782,7 @@ export default function PendingLessons({
                 alignItems: 'center',
               }}>
                 <span>
-                  {lang === 'pt'
-                    ? `Valor cobrado (${CURRENCY_SYMBOL[currency]})`
-                    : `Amount charged (${CURRENCY_SYMBOL[currency]})`
-                  }
+                  Valor cobrado ({CURRENCY_SYMBOL[currency]})
                 </span>
                 <div style={{
                   display: 'flex', gap: '2px',
@@ -888,16 +883,13 @@ export default function PendingLessons({
                     letterSpacing: '0.08em', textTransform: 'uppercase',
                     color: 'var(--mist)',
                   }}>
-                    {lang === 'pt' ? 'Custo variável' : 'Variable cost'}
+                    Custo variável
                     {' · '}
-                    {variableCost?.variableCostMode === 'per_trip'
-                      ? (lang === 'pt' ? 'por trip' : 'per trip')
-                      : (lang === 'pt' ? 'por aluno' : 'per student')
-                    }
+                    {variableCost?.variableCostMode === 'per_trip' ? 'por trip' : 'por aluno'}
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
                     <span style={{ color: 'var(--mist)' }}>
-                      {variableCost?.variableCostName ?? (lang === 'pt' ? 'Custo' : 'Cost')}
+                      {variableCost?.variableCostName ?? 'Custo'}
                     </span>
                     <span style={{ color: '#DC2626', fontWeight: '500' }}>
                       − {fmt(costDeduction, currency)}
@@ -906,7 +898,7 @@ export default function PendingLessons({
                   <div style={{ height: '0.5px', background: 'var(--border)' }} />
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
                     <span style={{ color: 'var(--mist)' }}>
-                      {lang === 'pt' ? 'Base para comissão' : 'Commission base'}
+                      Base para comissão
                     </span>
                     <span style={{
                       fontWeight: '600', color: 'var(--slate)',
@@ -923,8 +915,8 @@ export default function PendingLessons({
                   {fxRate != null
                     ? `1 ${currency} = ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(fxRate)} hoje`
                     : fxError
-                      ? (lang === 'pt' ? 'Taxa de câmbio indisponível' : 'Exchange rate unavailable')
-                      : (lang === 'pt' ? 'Buscando taxa de câmbio…' : 'Fetching exchange rate…')
+                      ? 'Taxa de câmbio indisponível'
+                      : 'Buscando taxa de câmbio…'
                   }
                 </div>
               )}

@@ -16,7 +16,7 @@ function BellIcon({ size = 18 }: { size?: number }) {
   )
 }
 
-export default function AlertsDrawer({ alerts, lang }: { alerts: Alert[]; lang: 'pt' | 'en' }) {
+export default function AlertsDrawer({ alerts }: { alerts: Alert[] }) {
   const [open, setOpen] = useState(false)
 
   if (alerts.length === 0) return null
@@ -27,7 +27,7 @@ export default function AlertsDrawer({ alerts, lang }: { alerts: Alert[]; lang: 
           regardless of scroll position or which column is under the cursor. */}
       <button
         onClick={() => setOpen(true)}
-        aria-label={lang === 'pt' ? 'Abrir alertas' : 'Open alerts'}
+        aria-label="Abrir alertas"
         style={{
           position: 'fixed', top: '20px', right: '24px', zIndex: 90,
           width: '44px', height: '44px', borderRadius: '50%',
@@ -81,11 +81,11 @@ export default function AlertsDrawer({ alerts, lang }: { alerts: Alert[]; lang: 
               fontSize: '10px', fontWeight: '600', letterSpacing: '0.12em',
               textTransform: 'uppercase', color: 'var(--amber)',
             }}>
-              {lang === 'pt' ? `Atenção · ${alerts.length}` : `Alerts · ${alerts.length}`}
+              Atenção · {alerts.length}
             </div>
             <button
               onClick={() => setOpen(false)}
-              aria-label={lang === 'pt' ? 'Fechar' : 'Close'}
+              aria-label="Fechar"
               style={{
                 width: '28px', height: '28px', borderRadius: 'var(--radius-md)',
                 border: 'none', background: 'var(--powder)', color: 'var(--mist)',

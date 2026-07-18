@@ -9,7 +9,7 @@ export async function GET(request: Request) {
   const period       = searchParams.get('period') ?? new Date().toISOString().slice(0, 7)
 
   if (!instructorId) {
-    return NextResponse.json({ error: 'instructor required' }, { status: 400 })
+    return NextResponse.json({ error: 'instrutor é obrigatório' }, { status: 400 })
   }
 
   const supabase = createServiceClient()

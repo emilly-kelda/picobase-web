@@ -14,10 +14,8 @@ type MissedLesson = {
 
 export default function MissedLessons({
   lessons,
-  lang,
 }: {
   lessons: MissedLesson[]
-  lang: 'pt' | 'en'
 }) {
   const router = useRouter()
   const [dismissed, setDismissed] = useState<Set<string>>(new Set())
@@ -45,7 +43,7 @@ export default function MissedLessons({
           letterSpacing: '0.1em', textTransform: 'uppercase',
           color: 'var(--signal)',
         }}>
-          {lang === 'pt' ? 'Aulas não realizadas' : 'Missed lessons'}
+          Aulas não realizadas
         </div>
         <span style={{
           background: 'var(--signal)',
@@ -67,20 +65,16 @@ export default function MissedLessons({
           const daysAgo = Math.floor(hoursAgo / 24)
 
           const timeAgo = daysAgo > 0
-            ? lang === 'pt'
-              ? `${daysAgo} dia${daysAgo > 1 ? 's' : ''} atrás`
-              : `${daysAgo} day${daysAgo > 1 ? 's' : ''} ago`
-            : lang === 'pt'
-              ? `${hoursAgo}h atrás`
-              : `${hoursAgo}h ago`
+            ? `${daysAgo} dia${daysAgo > 1 ? 's' : ''} atrás`
+            : `${hoursAgo}h atrás`
 
           const formattedTime = scheduledDate.toLocaleTimeString(
-            lang === 'pt' ? 'pt-BR' : 'en-US',
+            'pt-BR',
             { hour: '2-digit', minute: '2-digit', timeZone: 'America/Fortaleza' }
           )
 
           const formattedDate = scheduledDate.toLocaleDateString(
-            lang === 'pt' ? 'pt-BR' : 'en-US',
+            'pt-BR',
             { day: '2-digit', month: 'short', timeZone: 'America/Fortaleza' }
           )
 
@@ -141,7 +135,7 @@ export default function MissedLessons({
                     fontFamily: 'var(--font-sans)',
                   }}
                 >
-                  {loading === lesson.id ? '...' : lang === 'pt' ? 'Descartar' : 'Dismiss'}
+                  {loading === lesson.id ? '...' : 'Descartar'}
                 </button>
               </div>
             </div>

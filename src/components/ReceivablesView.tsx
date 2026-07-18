@@ -25,7 +25,7 @@ function fmt(n: number, currency = 'BRL') {
   }).format(n)
 }
 
-export default function ReceivablesView({ lang = 'pt' }: { lang?: 'pt' | 'en' }) {
+export default function ReceivablesView() {
   const router = useRouter()
   const [receivables, setReceivables] = useState<Receivable[]>([])
   const [total,       setTotal]       = useState(0)
@@ -63,7 +63,7 @@ export default function ReceivablesView({ lang = 'pt' }: { lang?: 'pt' | 'en' })
         padding: '32px', textAlign: 'center',
         fontSize: '13px', color: 'var(--mist)',
       }}>
-        {lang === 'pt' ? 'Carregando...' : 'Loading...'}
+        Carregando...
       </div>
     )
   }
@@ -83,19 +83,13 @@ export default function ReceivablesView({ lang = 'pt' }: { lang?: 'pt' | 'en' })
             fontSize: '14px', fontWeight: '500',
             color: 'var(--glacial-dark)',
           }}>
-            {lang === 'pt'
-              ? 'Nenhum valor a receber'
-              : 'No outstanding receivables'
-            }
+            Nenhum valor a receber
           </div>
           <div style={{
             fontSize: '12px', color: 'var(--glacial-dark)',
             opacity: 0.7,
           }}>
-            {lang === 'pt'
-              ? 'Todos os pagamentos foram recebidos.'
-              : 'All payments have been collected.'
-            }
+            Todos os pagamentos foram recebidos.
           </div>
         </div>
       </div>
@@ -122,7 +116,7 @@ export default function ReceivablesView({ lang = 'pt' }: { lang?: 'pt' | 'en' })
             letterSpacing: '0.1em', textTransform: 'uppercase',
             color: '#92400E', marginBottom: '6px',
           }}>
-            {lang === 'pt' ? 'Total a receber' : 'Total receivable'}
+            Total a receber
           </div>
           <div style={{
             fontSize: '24px', fontWeight: '700',
@@ -132,7 +126,7 @@ export default function ReceivablesView({ lang = 'pt' }: { lang?: 'pt' | 'en' })
             {fmt(total)}
           </div>
           <div style={{ fontSize: '11px', color: '#92400E', opacity: 0.7, marginTop: '3px' }}>
-            {receivables.length} {lang === 'pt' ? 'aula' : 'lesson'}{receivables.length !== 1 ? 's' : ''}
+            {receivables.length} aula{receivables.length !== 1 ? 's' : ''}
           </div>
         </div>
 
@@ -148,7 +142,7 @@ export default function ReceivablesView({ lang = 'pt' }: { lang?: 'pt' | 'en' })
             color: atRiskTotal > 0 ? '#991B1B' : 'var(--mist)',
             marginBottom: '6px',
           }}>
-            {lang === 'pt' ? 'Mais de 7 dias' : 'Over 7 days'}
+            Mais de 7 dias
           </div>
           <div style={{
             fontSize: '24px', fontWeight: '700',
@@ -162,7 +156,7 @@ export default function ReceivablesView({ lang = 'pt' }: { lang?: 'pt' | 'en' })
             color: atRiskTotal > 0 ? '#991B1B' : 'var(--mist)',
             opacity: 0.7, marginTop: '3px',
           }}>
-            {lang === 'pt' ? 'risco de não receber' : 'at risk of non-payment'}
+            risco de não receber
           </div>
         </div>
       </div>
@@ -186,10 +180,10 @@ export default function ReceivablesView({ lang = 'pt' }: { lang?: 'pt' | 'en' })
             letterSpacing: '0.1em', textTransform: 'uppercase',
             color: 'var(--mist)',
           }}>
-            {lang === 'pt' ? 'A receber' : 'Receivables'}
+            A receber
           </span>
           <span style={{ fontSize: '12px', color: 'var(--mist)' }}>
-            {lang === 'pt' ? 'ordenado por data' : 'sorted by date'}
+            ordenado por data
           </span>
         </div>
 
@@ -234,7 +228,7 @@ export default function ReceivablesView({ lang = 'pt' }: { lang?: 'pt' | 'en' })
                 {r.activity_name}
                 {' · '}
                 {new Date(r.session_date).toLocaleDateString(
-                  lang === 'pt' ? 'pt-BR' : 'en-US',
+                  'pt-BR',
                   { day: '2-digit', month: 'short' }
                 )}
                 {r.at_risk && (
@@ -280,10 +274,7 @@ export default function ReceivablesView({ lang = 'pt' }: { lang?: 'pt' | 'en' })
                   fontFamily: 'var(--font-sans)',
                 }}
               >
-                {marking === r.id
-                  ? '...'
-                  : lang === 'pt' ? '✓ Recebido' : '✓ Collected'
-                }
+                {marking === r.id ? '...' : '✓ Recebido'}
               </button>
             </div>
           </div>
@@ -301,7 +292,7 @@ export default function ReceivablesView({ lang = 'pt' }: { lang?: 'pt' | 'en' })
             fontSize: '12px', fontWeight: '500',
             color: 'var(--mist)',
           }}>
-            {lang === 'pt' ? 'Total em aberto' : 'Total outstanding'}
+            Total em aberto
           </span>
           <span style={{
             fontSize: '18px', fontWeight: '700',

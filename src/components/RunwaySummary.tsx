@@ -9,7 +9,6 @@ type Props = {
   netProfit: number
   monthlyBurn: number
   gapToTarget: number
-  lang: string
   projectedRunway?: number
   daysLeft?: number
 }
@@ -30,18 +29,18 @@ function fmt(n: number) {
  *  the breakdown itself. */
 export default function RunwaySummary({
   runwayMonths, seasonRevenue, commissions, netProfit, monthlyBurn,
-  gapToTarget, lang, projectedRunway, daysLeft,
+  gapToTarget, projectedRunway, daysLeft,
 }: Props) {
   const [isOpen, setIsOpen] = useState(true)
 
   const safetyScore = runwayMonths >= 9
-    ? { label: lang === 'pt' ? 'Protegido' : 'Protected', color: '#6DD5C0' }
+    ? { label: 'Protegido', color: '#6DD5C0' }
     : runwayMonths >= 6
-    ? { label: lang === 'pt' ? 'Saudável' : 'Healthy',    color: '#6DD5C0' }
+    ? { label: 'Saudável',  color: '#6DD5C0' }
     : runwayMonths >= 3
-    ? { label: lang === 'pt' ? 'Vulnerável' : 'Vulnerable', color: '#F0C674' }
+    ? { label: 'Vulnerável', color: '#F0C674' }
     : runwayMonths > 0
-    ? { label: lang === 'pt' ? 'Crítico' : 'Critical',    color: '#E88C7D' }
+    ? { label: 'Crítico',   color: '#E88C7D' }
     : { label: '—', color: 'rgba(255,255,255,0.4)' }
 
   return (
@@ -60,7 +59,7 @@ export default function RunwaySummary({
           letterSpacing: '0.16em', textTransform: 'uppercase',
           color: 'rgba(255,255,255,0.6)',
         }}>
-          {lang === 'pt' ? 'Reserva de Baixa Temporada' : 'Off-Season Runway'}
+          Reserva de Baixa Temporada
         </span>
         <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           {!isOpen && (
@@ -90,7 +89,7 @@ export default function RunwaySummary({
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
             <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.4)' }}>
-              {lang === 'pt' ? 'meses cobertos' : 'months covered'}
+              meses cobertos
             </span>
             <span style={{
               padding: '2px 10px', borderRadius: '99px',
@@ -106,7 +105,7 @@ export default function RunwaySummary({
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', letterSpacing: '0.06em' }}>
-                {lang === 'pt' ? 'Receita da temporada' : 'Season revenue'}
+                Receita da temporada
               </span>
               <span style={{ fontSize: '13px', fontWeight: '500', color: 'rgba(255,255,255,0.7)', fontVariantNumeric: 'tabular-nums' }}>
                 {fmt(seasonRevenue)}
@@ -114,7 +113,7 @@ export default function RunwaySummary({
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', letterSpacing: '0.06em' }}>
-                {lang === 'pt' ? 'Comissões pagas' : 'Commissions paid'}
+                Comissões pagas
               </span>
               <span style={{ fontSize: '13px', fontWeight: '500', color: 'rgba(220,100,100,0.8)', fontVariantNumeric: 'tabular-nums' }}>
                 − {fmt(commissions)}
@@ -122,7 +121,7 @@ export default function RunwaySummary({
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '8px', borderTop: '0.5px solid rgba(255,255,255,0.08)' }}>
               <span style={{ fontSize: '12px', fontWeight: '600', color: 'rgba(255,255,255,0.7)', letterSpacing: '0.06em' }}>
-                {lang === 'pt' ? 'Lucro líquido' : 'Net profit'}
+                Lucro líquido
               </span>
               <span style={{ fontSize: '14px', fontWeight: '700', color: '#fff', fontVariantNumeric: 'tabular-nums' }}>
                 {fmt(netProfit)}
@@ -131,7 +130,7 @@ export default function RunwaySummary({
             {monthlyBurn > 0 && (
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', letterSpacing: '0.06em' }}>
-                  {lang === 'pt' ? 'Custo mensal' : 'Monthly burn'}
+                  Custo operacional mensal
                 </span>
                 <span style={{ fontSize: '13px', fontWeight: '500', color: '#fff', fontVariantNumeric: 'tabular-nums' }}>
                   {fmt(monthlyBurn)}
@@ -148,9 +147,7 @@ export default function RunwaySummary({
               fontSize: '12px', color: 'var(--warning)',
               lineHeight: '1.5',
             }}>
-              {lang === 'pt'
-                ? `Faltam ${fmt(gapToTarget)} para 6 meses`
-                : `${fmt(gapToTarget)} short of 6 months`}
+              Faltam {fmt(gapToTarget)} para 6 meses
             </div>
           )}
 
@@ -158,9 +155,7 @@ export default function RunwaySummary({
             <div style={{
               marginTop: '12px', fontSize: '12px', color: 'rgba(255,255,255,0.45)', lineHeight: '1.6',
             }}>
-              {lang === 'pt'
-                ? `Projeção: ${projectedRunway.toFixed(1)} meses ao fim da temporada · ${daysLeft} dias restantes`
-                : `Projection: ${projectedRunway.toFixed(1)} months at season end · ${daysLeft} days left`}
+              Projeção: {projectedRunway.toFixed(1)} meses ao fim da temporada · {daysLeft} dias restantes
             </div>
           )}
         </div>
