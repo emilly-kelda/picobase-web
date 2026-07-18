@@ -1,7 +1,9 @@
 ﻿import { getSessions, getSessionTotals } from '@/repositories/sessionRepository'
+import { getScheduledLessonsList } from '@/repositories/scheduledLessonRepository'
 import { getInstructors } from '@/repositories/studentRepository'
 import { getPortalLang } from '@/lib/language'
 import { getT } from '@/lib/i18n'
+import { LEVEL_LABELS, isLevel } from '@/lib/levels'
 
 const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
 
@@ -16,6 +18,12 @@ function fmt(n: number | null | undefined) {
 function fmtDate(d: string) {
   return new Date(d + 'T12:00:00').toLocaleDateString('pt-BR', {
     day: '2-digit', month: 'short',
+  })
+}
+
+function fmtDateTime(iso: string) {
+  return new Date(iso).toLocaleString('pt-BR', {
+    day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit',
   })
 }
 
@@ -44,12 +52,40 @@ const ORIGIN_COLORS: Record<string, { bg: string; color: string }> = {
   referral: { bg: 'var(--glacial-light)', color: 'var(--glacial-dark)' },
 }
 
+function renderInstructorCell(user: { id?: string; name?: string; role?: string } | null | undefined) {
+  if (!user?.name) return <span style={{ color: 'var(--slate)' }}>—</span>
+  const badge = user.role === 'owner' && (
+    <span style={{
+      padding: '1px 6px',
+      borderRadius: '4px',
+      background: '#EDE9FE',
+      color: '#5B21B6',
+      fontSize: '10px',
+      fontWeight: '600',
+      marginLeft: '4px',
+    }}>
+      Dono
+    </span>
+  )
+  // The owner isn't a crew member (getCrewMembers excludes role='owner'),
+  // so /owner/crew/[id] would 404 for them — render plain text instead.
+  if (!user?.id || user.role === 'owner') {
+    return <span style={{ color: 'var(--slate)' }}>{user.name}{badge}</span>
+  }
+  return (
+    <a className="tbl-name-link" href={`/owner/crew/${user.id}`}>
+      {user.name}
+    </a>
+  )
+}
+
 export default async function SessionsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ month?: string; instructor?: string }>
+  searchParams: Promise<{ month?: string; instructor?: string; tab?: string }>
 }) {
-  const { month, instructor } = await searchParams
+  const { month, instructor, tab } = await searchParams
+  const activeTab: 'realizadas' | 'agendadas' = tab === 'agendadas' ? 'agendadas' : 'realizadas'
 
   const currentMonth = new Date().toISOString().slice(0, 7)
   const activeMonth = month ?? currentMonth
@@ -59,13 +95,18 @@ export default async function SessionsPage({
     instructorId: instructor,
   }
 
-  const [sessions, totals, instructors, lang] = await Promise.all([
+  const [sessions, totals, instructors, lang, scheduledLessons] = await Promise.all([
     getSessions(SCHOOL_ID, filters),
     getSessionTotals(SCHOOL_ID, filters),
     getInstructors(SCHOOL_ID),
     getPortalLang(),
+    getScheduledLessonsList(SCHOOL_ID, filters),
   ])
   const t = getT(lang)
+
+  const forecastRevenue = scheduledLessons.reduce(
+    (sum, l) => sum + (((l.activities as any)?.default_price as number | null) ?? 0), 0
+  )
 
   const monthOptions = Array.from({ length: 12 }, (_, i) => {
     const d = new Date()
@@ -74,6 +115,14 @@ export default async function SessionsPage({
     const label = d.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
     return { value, label }
   })
+
+  function tabHref(target: 'realizadas' | 'agendadas') {
+    const params = new URLSearchParams()
+    params.set('tab', target)
+    if (month) params.set('month', month)
+    if (instructor) params.set('instructor', instructor)
+    return `?${params.toString()}`
+  }
 
   return (
     <div>
@@ -92,12 +141,36 @@ export default async function SessionsPage({
         </p>
       </div>
 
+      {/* Tabs */}
+      <div style={{ display: 'flex', gap: '6px', marginBottom: '20px' }}>
+        {([
+          ['realizadas', t.tab_completed],
+          ['agendadas',  t.tab_scheduled],
+        ] as const).map(([key, label]) => (
+          <a
+            key={key}
+            href={tabHref(key)}
+            style={{
+              padding: '7px 16px', borderRadius: '99px',
+              fontSize: '13px', fontWeight: '500',
+              textDecoration: 'none', fontFamily: 'var(--font-sans)',
+              background: activeTab === key ? 'var(--slate)' : '#fff',
+              color: activeTab === key ? '#fff' : 'var(--mist)',
+              border: activeTab === key ? '0.5px solid var(--slate)' : '0.5px solid var(--border-strong)',
+            }}
+          >
+            {label}
+          </a>
+        ))}
+      </div>
+
       {/* Filters */}
       <form method="GET" style={{
         display: 'flex', gap: '10px',
         alignItems: 'center', marginBottom: '20px',
         flexWrap: 'wrap',
       }}>
+        <input type="hidden" name="tab" value={activeTab} />
         <select
           name="month"
           defaultValue={activeMonth}
@@ -191,7 +264,23 @@ export default async function SessionsPage({
         ))}
       </div>
 
-      {/* Sessions table */}
+      {/* Discreet forecast — scheduled lessons aren't confirmed revenue, so
+          this stays visually secondary to the totals bar above rather than
+          another card of the same weight. */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: '8px',
+        marginBottom: '20px', fontSize: '12px', color: 'var(--mist)',
+      }}>
+        <span style={{
+          padding: '2px 9px', borderRadius: '99px',
+          border: '1px dashed var(--border-strong)',
+          fontWeight: '500', fontVariantNumeric: 'tabular-nums',
+        }}>
+          {t.scheduled_forecast}: {fmt(forecastRevenue)} · {scheduledLessons.length}
+        </span>
+      </div>
+
+      {activeTab === 'realizadas' ? (
       <div style={{
         background: '#fff',
         border: '0.5px solid var(--border)',
@@ -255,36 +344,7 @@ export default async function SessionsPage({
                       {(s.activities as any)?.name ?? '—'}
                     </td>
                     <td style={{ padding: '13px 20px', fontSize: '13px', color: 'var(--slate)' }}>
-                      {(() => {
-                        const user = Array.isArray((s as any).instructor) ? (s as any).instructor[0] : (s as any).instructor
-                        if (!user?.name) return <span style={{ color: 'var(--slate)' }}>—</span>
-                        const badge = user.role === 'owner' && (
-                          <span style={{
-                            padding: '1px 6px',
-                            borderRadius: '4px',
-                            background: '#EDE9FE',
-                            color: '#5B21B6',
-                            fontSize: '10px',
-                            fontWeight: '600',
-                            marginLeft: '4px',
-                          }}>
-                            Dono
-                          </span>
-                        )
-                        // The owner isn't a crew member (getCrewMembers excludes role='owner'),
-                        // so /owner/crew/[id] would 404 for them — render plain text instead.
-                        if (!user?.id || user.role === 'owner') {
-                          return <span style={{ color: 'var(--slate)' }}>{user.name}{badge}</span>
-                        }
-                        return (
-                          <a
-                            className="tbl-name-link"
-                            href={`/owner/crew/${user.id}`}
-                          >
-                            {user.name}
-                          </a>
-                        )
-                      })()}
+                      {renderInstructorCell(Array.isArray((s as any).instructor) ? (s as any).instructor[0] : (s as any).instructor)}
                     </td>
                     <td style={{ padding: '13px 20px', fontSize: '13px', color: 'var(--mist)' }}>
                       {s.duration_min}min
@@ -344,6 +404,91 @@ export default async function SessionsPage({
           </tbody>
         </table>
       </div>
+      ) : (
+      <div style={{
+        background: '#fff',
+        border: '0.5px solid var(--border)',
+        borderRadius: 'var(--radius-lg)',
+        overflow: 'hidden',
+      }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr>
+              {[t.th_datetime, t.th_student, t.th_activity, t.th_instructor, t.th_duration, t.th_skill, t.th_status].map(h => (
+                <th key={h} style={{
+                  padding: '10px 20px',
+                  textAlign: 'left',
+                  fontSize: '11px', fontWeight: '500',
+                  letterSpacing: '0.08em', textTransform: 'uppercase',
+                  color: 'var(--mist)',
+                  background: 'var(--powder)',
+                  borderBottom: '0.5px solid var(--border)',
+                  whiteSpace: 'nowrap',
+                }}>
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {scheduledLessons.length === 0 ? (
+              <tr>
+                <td colSpan={7} style={{
+                  padding: '48px 20px',
+                  textAlign: 'center',
+                  fontSize: '13px', color: 'var(--mist)',
+                }}>
+                  {t.no_scheduled_lessons}
+                </td>
+              </tr>
+            ) : (
+              scheduledLessons.map((s, i) => (
+                <tr key={s.id} style={{
+                  borderBottom: i < scheduledLessons.length - 1
+                    ? '0.5px solid var(--border)' : 'none',
+                }}>
+                  <td style={{ padding: '13px 20px', fontSize: '13px', color: 'var(--mist)', whiteSpace: 'nowrap' }}>
+                    {fmtDateTime(s.scheduled_at)}
+                  </td>
+                  <td style={{ padding: '13px 20px', fontSize: '13px', fontWeight: '500', color: 'var(--slate)' }}>
+                    <a
+                      className="tbl-name-link"
+                      style={{ fontWeight: '500' }}
+                      href={`/owner/students/name/${encodeURIComponent(s.student_name)}`}
+                    >
+                      {s.student_name}
+                    </a>
+                  </td>
+                  <td style={{ padding: '13px 20px', fontSize: '13px', color: 'var(--slate)' }}>
+                    {(s.activities as any)?.name ?? '—'}
+                  </td>
+                  <td style={{ padding: '13px 20px', fontSize: '13px', color: 'var(--slate)' }}>
+                    {renderInstructorCell(Array.isArray((s as any).instructor) ? (s as any).instructor[0] : (s as any).instructor)}
+                  </td>
+                  <td style={{ padding: '13px 20px', fontSize: '13px', color: 'var(--mist)' }}>
+                    {s.duration_min}min
+                  </td>
+                  <td style={{ padding: '13px 20px', fontSize: '13px', color: 'var(--slate)' }}>
+                    {isLevel(s.level) ? LEVEL_LABELS[s.level][lang] : '—'}
+                  </td>
+                  <td style={{ padding: '13px 20px' }}>
+                    <span style={{
+                      display: 'inline-block',
+                      padding: '3px 10px',
+                      borderRadius: 'var(--radius-full)',
+                      fontSize: '11px', fontWeight: '500',
+                      background: 'var(--amber-light)', color: 'var(--amber)',
+                    }}>
+                      {t.status_scheduled}
+                    </span>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+      )}
 
     </div>
   )

@@ -45,6 +45,48 @@ export async function getScheduledLessons(
   return data ?? []
 }
 
+/** Upcoming/pending lessons for the "Agendadas" tab on /owner/sessions —
+ *  status stays 'scheduled' until confirm-lesson flips it to 'confirmed' or
+ *  it's cancelled, so filtering on status alone already covers "future or
+ *  still pending" (a past lesson nobody confirmed yet is still actionable,
+ *  same as getMissedLessons surfaces separately). */
+export async function getScheduledLessonsList(
+  schoolId: string,
+  filters?: { month?: string; instructorId?: string }
+) {
+  const supabase = createServiceClient()
+  let query = supabase
+    .from('scheduled_lessons')
+    .select(`
+      id,
+      student_name,
+      scheduled_at,
+      duration_min,
+      level,
+      status,
+      instructor:users!scheduled_lessons_instructor_id_fkey ( id, name, role ),
+      activities ( name, default_price )
+    `)
+    .eq('school_id', schoolId)
+    .eq('status', 'scheduled')
+    .order('scheduled_at', { ascending: true })
+
+  if (filters?.month) {
+    const [y, m] = filters.month.split('-').map(Number)
+    const start = `${filters.month}-01T00:00:00`
+    const nextFirst = new Date(y, m, 1).toISOString().slice(0, 10) + 'T00:00:00'
+    query = query.gte('scheduled_at', start).lt('scheduled_at', nextFirst)
+  }
+
+  if (filters?.instructorId) {
+    query = query.eq('instructor_id', filters.instructorId)
+  }
+
+  const { data, error } = await query
+  if (error) throw error
+  return data ?? []
+}
+
 export async function getMissedLessons(schoolId: string) {
   const supabase = createServiceClient()
   const cutoff   = new Date(Date.now() - 30 * 60 * 1000).toISOString()

@@ -91,6 +91,12 @@ export const translations = {
     all_instructors:     'All instructors',
     filter_btn:          'Filter',
     no_sessions_period:  'No sessions found for this period.',
+    tab_completed:        'Completed',
+    tab_scheduled:        'Scheduled',
+    th_datetime:          'Date/Time',
+    no_scheduled_lessons: 'No scheduled lessons for this period.',
+    scheduled_forecast:   'Forecasted revenue (scheduled)',
+    status_scheduled:     'Scheduled',
 
     // Crew
     crew_title:          'Crew',
@@ -254,6 +260,12 @@ export const translations = {
     all_instructors:     'Todos os instrutores',
     filter_btn:          'Filtrar',
     no_sessions_period:  'Nenhuma aula encontrada para este período.',
+    tab_completed:        'Realizadas',
+    tab_scheduled:        'Agendadas',
+    th_datetime:          'Data/Hora',
+    no_scheduled_lessons: 'Nenhuma aula agendada para este período.',
+    scheduled_forecast:   'Previsão de receita (agendadas)',
+    status_scheduled:     'Agendada',
 
     // Crew
     crew_title:          'Equipe',
