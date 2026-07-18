@@ -49,6 +49,13 @@ const actionButtonStyle: React.CSSProperties = {
   whiteSpace: 'nowrap',
 }
 
+const softBadgeStyle: React.CSSProperties = {
+  display: 'inline-block',
+  padding: '3px 10px', borderRadius: '99px',
+  background: 'var(--powder-dark)', color: 'var(--slate)',
+  fontSize: '11px', fontWeight: '500', whiteSpace: 'nowrap',
+}
+
 export default function SchoolsTable({
   schools,
   lastLoginByOwnerId,
@@ -105,8 +112,8 @@ export default function SchoolsTable({
     return (
       <div style={{
         background: '#fff', border: '0.5px solid var(--border)',
-        borderRadius: 'var(--radius-lg)', padding: '48px',
-        textAlign: 'center', fontSize: '13px', color: 'var(--mist)',
+        borderRadius: 'var(--radius-xl)', boxShadow: 'var(--shadow-sm)',
+        padding: '48px', textAlign: 'center', fontSize: '13px', color: 'var(--mist)',
       }}>
         Nenhuma escola cadastrada ainda.
       </div>
@@ -115,16 +122,19 @@ export default function SchoolsTable({
 
   return (
     <>
+      <style>{`.schools-row:hover > td { background: var(--powder); }`}</style>
+
       <div style={{
         background: '#fff', border: '0.5px solid var(--border)',
-        borderRadius: 'var(--radius-lg)', overflow: 'auto',
+        borderRadius: 'var(--radius-xl)', boxShadow: 'var(--shadow-sm)',
+        overflow: 'auto',
       }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ background: 'var(--powder)' }}>
               {['Escola', 'Responsável', 'Email', 'Último login', 'Plano/Condição', 'Pagamento', 'Assinatura', 'Status', ''].map(h => (
                 <th key={h} style={{
-                  padding: '11px 16px', textAlign: 'left',
+                  padding: '11px 24px', textAlign: 'left',
                   fontSize: '10px', fontWeight: '600',
                   letterSpacing: '0.06em', textTransform: 'uppercase',
                   color: 'var(--mist)', borderBottom: '0.5px solid var(--border)',
@@ -140,36 +150,44 @@ export default function SchoolsTable({
               const status = STATUS_STYLE[s.status_assinatura] ?? STATUS_STYLE.trial
               const lastLogin = s.ownerId ? lastLoginByOwnerId[s.ownerId] ?? null : null
               return (
-                <tr key={s.id} style={{
+                <tr key={s.id} className="schools-row" style={{
                   borderBottom: i < schools.length - 1 ? '0.5px solid var(--border)' : 'none',
                 }}>
-                  <td style={{ padding: '13px 16px' }}>
-                    <div style={{ fontSize: '13px', fontWeight: '500', color: 'var(--slate)' }}>
+                  <td style={{ padding: '16px 24px', whiteSpace: 'nowrap' }}>
+                    <div style={{ fontSize: '14px', fontWeight: '600', color: 'var(--slate)' }}>
                       {s.name}
                     </div>
                     <div style={{ fontSize: '11px', color: 'var(--mist)' }}>
                       /{s.slug}{s.cost_center ? ` · ${s.cost_center}` : ''}
                     </div>
                   </td>
-                  <td style={{ padding: '13px 16px', fontSize: '13px', color: 'var(--slate)' }}>
+                  <td style={{ padding: '16px 24px', fontSize: '13px', color: 'var(--slate)', whiteSpace: 'nowrap' }}>
                     {s.ownerName ?? '—'}
                   </td>
-                  <td style={{ padding: '13px 16px', fontSize: '12px', color: 'var(--mist)' }}>
+                  <td style={{ padding: '16px 24px', fontSize: '12px', color: 'var(--mist)', whiteSpace: 'nowrap' }}>
                     {s.ownerEmail ?? '—'}
                   </td>
-                  <td style={{ padding: '13px 16px', fontSize: '12px', color: 'var(--mist)', whiteSpace: 'nowrap' }}>
+                  <td style={{
+                    padding: '16px 24px', fontSize: '12px', whiteSpace: 'nowrap',
+                    color: lastLogin ? 'var(--slate)' : 'var(--border-strong)',
+                    fontStyle: lastLogin ? 'normal' : 'italic',
+                  }}>
                     {fmtLastLogin(lastLogin)}
                   </td>
-                  <td style={{ padding: '13px 16px', fontSize: '13px', color: 'var(--slate)' }}>
-                    {s.payment_terms ? PAYMENT_TERMS_LABEL[s.payment_terms] ?? s.payment_terms : '—'}
+                  <td style={{ padding: '16px 24px' }}>
+                    <span style={softBadgeStyle}>
+                      {s.payment_terms ? PAYMENT_TERMS_LABEL[s.payment_terms] ?? s.payment_terms : '—'}
+                    </span>
                   </td>
-                  <td style={{ padding: '13px 16px', fontSize: '13px', color: 'var(--slate)' }}>
-                    {s.payment_method ? PAYMENT_METHOD_LABEL[s.payment_method] ?? s.payment_method : '—'}
+                  <td style={{ padding: '16px 24px' }}>
+                    <span style={softBadgeStyle}>
+                      {s.payment_method ? PAYMENT_METHOD_LABEL[s.payment_method] ?? s.payment_method : '—'}
+                    </span>
                   </td>
-                  <td style={{ padding: '13px 16px', fontSize: '13px', color: 'var(--slate)', fontVariantNumeric: 'tabular-nums' }}>
+                  <td style={{ padding: '16px 24px', fontSize: '13px', color: 'var(--slate)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
                     {fmt(s.subscription_value)}
                   </td>
-                  <td style={{ padding: '13px 16px' }}>
+                  <td style={{ padding: '16px 24px' }}>
                     <span style={{
                       padding: '3px 10px', borderRadius: '99px',
                       background: status.bg, color: status.color,
@@ -178,7 +196,7 @@ export default function SchoolsTable({
                       {status.label}
                     </span>
                   </td>
-                  <td style={{ padding: '13px 16px' }}>
+                  <td style={{ padding: '16px 24px' }}>
                     <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
                       <button onClick={() => setEditing(s)} style={actionButtonStyle}>
                         Editar
