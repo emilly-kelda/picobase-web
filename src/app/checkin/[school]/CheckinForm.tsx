@@ -442,16 +442,27 @@ function CheckinProgress({
 type Step = 'name' | 'activity' | 'source' | 'waiver'
 const STEP_ORDER: Step[] = ['name', 'activity', 'source', 'waiver']
 
+type ReferredPartner = {
+  id: string
+  name: string
+  type: string | null
+  discount_pct: number | null
+}
+
 export default function CheckinForm({
   school,
   activities,
   instructors,
   partners = [],
+  referredPartner = null,
 }: {
   school: School
   activities: Activity[]
   instructors: Instructor[]
   partners?: Partner[]
+  /** Resolved server-side from the pb_ref cookie (see page.tsx) — when
+   *  present, the source/partner step is pre-filled instead of asked. */
+  referredPartner?: ReferredPartner | null
 }) {
   const defaultLang = (school.language === 'pt' ? 'pt'
     : school.language === 'fr' ? 'fr'
@@ -481,8 +492,13 @@ export default function CheckinForm({
     signature_data:      '',
   })
 
-  const [source, setSource]       = useState<Source | null>(null)
-  const [partnerId, setPartnerId] = useState<string | null>(null)
+  // Cookie-attributed referral pre-fills the source/partner step invisibly —
+  // still overridable by the manual selection below, for walk-ins who share
+  // a device or a link that got forwarded.
+  const [source, setSource]       = useState<Source | null>(
+    referredPartner ? (referredPartner.type === 'hotel' ? 'hotel' : 'agencia') : null
+  )
+  const [partnerId, setPartnerId] = useState<string | null>(referredPartner?.id ?? null)
   const [stepError, setStepError] = useState<string | null>(null)
 
   const [scheduledStudents, setScheduledStudents] = useState<ScheduledStudent[]>([])
@@ -704,6 +720,26 @@ export default function CheckinForm({
       </div>
 
       <div style={{ padding: '24px', paddingBottom: '40px' }}>
+
+        {referredPartner && (
+          <div style={{
+            fontSize: '12px', color: '#0B5E75', background: '#E0F8F5',
+            padding: '8px 12px', borderRadius: '8px', marginBottom: '16px',
+            display: 'flex', alignItems: 'center', gap: '6px',
+          }}>
+            <span>🤝</span>
+            <span>
+              {lang === 'pt'
+                ? `Indicado por ${referredPartner.name}`
+                : `Referred by ${referredPartner.name}`}
+              {referredPartner.discount_pct
+                ? (lang === 'pt'
+                    ? ` · desconto de parceiro aplicado`
+                    : ` · partner discount applied`)
+                : ''}
+            </span>
+          </div>
+        )}
 
         {/* STEP 1 — Name + nationality */}
         {step === 'name' && (

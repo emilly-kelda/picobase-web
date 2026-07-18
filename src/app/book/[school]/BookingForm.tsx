@@ -11,9 +11,22 @@ type School = {
 type Activity = {
   id: string
   name: string
+  default_price?: number | null
+}
+
+type ReferredPartner = {
+  id: string
+  name: string
+  discount_pct: number | null
 }
 
 const TIME_SLOTS = ['09:00', '10:00', '11:00', '14:00', '15:00', '16:00']
+
+function fmtBRL(n: number) {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency', currency: 'BRL', minimumFractionDigits: 0,
+  }).format(n)
+}
 
 const inputStyle: React.CSSProperties = {
   width: '100%',
@@ -49,10 +62,13 @@ export default function BookingForm({
   school,
   activities,
   ownerWhatsapp,
+  referredPartner = null,
 }: {
   school: School
   activities: Activity[]
   ownerWhatsapp: string | null
+  /** Resolved server-side from the pb_ref cookie (see page.tsx). */
+  referredPartner?: ReferredPartner | null
 }) {
   const [form, setForm] = useState({
     student_name:   '',
@@ -86,6 +102,7 @@ export default function BookingForm({
           preferred_date: form.preferred_date || null,
           preferred_time: form.preferred_time || null,
           notes:          form.notes || null,
+          partner_id:     referredPartner?.id ?? null,
         }),
       })
       const data = await res.json()
@@ -174,6 +191,20 @@ export default function BookingForm({
 
       <div style={{ padding: '24px', paddingBottom: '40px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
 
+        {referredPartner && (
+          <div style={{
+            fontSize: '13px', color: '#1B4B5A', background: '#E0F8F5',
+            padding: '10px 14px', borderRadius: '12px',
+            display: 'flex', alignItems: 'center', gap: '8px',
+          }}>
+            <span>🤝</span>
+            <span>
+              Indicado por <strong>{referredPartner.name}</strong>
+              {referredPartner.discount_pct ? ' · desconto de parceiro aplicado' : ''}
+            </span>
+          </div>
+        )}
+
         <div>
           <label style={labelStyle}>Nome completo *</label>
           <input
@@ -211,6 +242,26 @@ export default function BookingForm({
                 <option key={a.id} value={a.id}>{a.name}</option>
               ))}
             </select>
+            {(() => {
+              const selected = activities.find(a => a.id === form.activity_id)
+              if (!selected?.default_price) return null
+              const discounted = referredPartner?.discount_pct
+                ? selected.default_price * (1 - referredPartner.discount_pct)
+                : null
+              return (
+                <div style={{ fontSize: '13px', color: '#8A8C98', marginTop: '8px' }}>
+                  {discounted != null ? (
+                    <>
+                      Preço estimado: <span style={{ textDecoration: 'line-through' }}>{fmtBRL(selected.default_price)}</span>
+                      {' '}<strong style={{ color: '#00A896' }}>{fmtBRL(discounted)}</strong>
+                    </>
+                  ) : (
+                    <>Preço estimado: {fmtBRL(selected.default_price)}</>
+                  )}
+                  {' '}<span style={{ fontSize: '11px' }}>(a confirmar com a escola)</span>
+                </div>
+              )
+            })()}
           </div>
         )}
 

@@ -117,6 +117,16 @@ export function TagIcon({ size = 18 }: IconProps) {
   )
 }
 
+export function LinkIcon({ size = 18 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...base}>
+      <path d="M9.5 14.5 14.5 9.5" />
+      <path d="M11 6.5 13.2 4.3a3.5 3.5 0 1 1 5 5L16 11.5" />
+      <path d="M13 17.5 10.8 19.7a3.5 3.5 0 1 1-5-5L8 12.5" />
+    </svg>
+  )
+}
+
 export function ChevronLeftIcon({ size = 16 }: IconProps) {
   return (
     <svg width={size} height={size} {...base}>

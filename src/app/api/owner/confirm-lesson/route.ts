@@ -134,28 +134,26 @@ export async function POST(request: Request) {
       .eq('id', checkin.partner_id)
       .single()
 
+    // Writes to `referrals` — the table every partner-commission read in the
+    // app actually queries (crewRepository.getPartnerCommissions, reports,
+    // exports, api/partner/[id]). This used to write to `partner_referrals`,
+    // a table nothing else reads, so partner commissions from confirmed
+    // lessons never actually showed up anywhere. No duplicate-checkin guard
+    // here (referrals has no confirmed checkin_id column to key off, and the
+    // sessions insert two steps up has no such guard either — matching the
+    // route's existing idempotency posture rather than inventing a new one).
     if (partner) {
-      const { data: existing } = await supabase
-        .from('partner_referrals')
-        .select('id')
-        .eq('checkin_id', checkin_id)
-        .maybeSingle()
-
-      if (!existing) {
-        await supabase
-          .from('partner_referrals')
-          .insert({
-            school_id:         SCHOOL_ID,
-            partner_id:        checkin.partner_id,
-            checkin_id,
-            session_id:        newSession!.id,
-            revenue:           priceBRL,
-            commission_pct:    partner.commission_pct,
-            commission_amount: priceBRL * (partner.commission_pct ?? 0),
-            period:            (session_date ?? new Date().toISOString().slice(0, 10)).slice(0, 7),
-            status:            'pending',
-          })
-      }
+      await supabase
+        .from('referrals')
+        .insert({
+          school_id:         SCHOOL_ID,
+          partner_id:        checkin.partner_id,
+          session_price:     priceBRL,
+          commission_pct:    partner.commission_pct,
+          commission_amount: priceBRL * (partner.commission_pct ?? 0),
+          period:            (session_date ?? new Date().toISOString().slice(0, 10)).slice(0, 7),
+          status:            'pending',
+        })
     }
   }
 

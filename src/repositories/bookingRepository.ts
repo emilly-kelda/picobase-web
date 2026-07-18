@@ -8,6 +8,7 @@ export async function createBooking(payload: {
   preferred_date: string | null
   preferred_time: string | null
   notes: string | null
+  partner_id?: string | null
 }) {
   const supabase = createServiceClient()
   const { error } = await supabase

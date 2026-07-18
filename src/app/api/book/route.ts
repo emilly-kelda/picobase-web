@@ -12,6 +12,7 @@ export async function POST(request: Request) {
     preferred_date,
     preferred_time,
     notes,
+    partner_id,
   } = body
 
   if (!school_slug || !student_name?.trim() || !whatsapp?.trim()) {
@@ -32,6 +33,7 @@ export async function POST(request: Request) {
       preferred_date: preferred_date ?? null,
       preferred_time: preferred_time ?? null,
       notes:          notes?.trim() ?? null,
+      partner_id:     partner_id ?? null,
     })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'

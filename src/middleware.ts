@@ -13,6 +13,31 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl
+
+  // Trackable partner referral links — /book/[school]?ref=CODE and
+  // /checkin/[school]?ref=CODE. Public, anonymous-friendly pages: no session
+  // check needed, so this returns immediately rather than falling through to
+  // the auth/session logic below (which every other matched path needs, this
+  // one never does). No DB validation happens here either — middleware has
+  // no good way to check the code against a real partner; the cookie is just
+  // carried along, and the page (server component) resolves + validates it
+  // before ever using it for a discount or attribution.
+  if (pathname.startsWith('/book') || pathname.startsWith('/checkin')) {
+    const response = NextResponse.next({ request })
+    const ref = request.nextUrl.searchParams.get('ref')
+    if (ref) {
+      response.cookies.set('pb_ref', ref, {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 24 * 30,
+        path: '/',
+      })
+    }
+    return response
+  }
+
   // supabaseResponse is mutated by setAll so cookies are forwarded downstream.
   let supabaseResponse = NextResponse.next({ request })
 
@@ -42,8 +67,6 @@ export async function middleware(request: NextRequest) {
   const {
     data: { user },
   } = await supabase.auth.getUser()
-
-  const { pathname } = request.nextUrl
 
   // Protect /owner and every nested route.
   if (!user && pathname.startsWith('/owner')) {
@@ -91,6 +114,7 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  // Only run on /owner/**, /master/**, and /login — avoids unnecessary overhead on static assets.
-  matcher: ['/owner/:path*', '/master/:path*', '/login'],
+  // Only run on /owner/**, /master/**, /login, /book/**, /checkin/** — avoids
+  // unnecessary overhead on static assets and every other public route.
+  matcher: ['/owner/:path*', '/master/:path*', '/login', '/book/:path*', '/checkin/:path*'],
 }
