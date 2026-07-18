@@ -5,7 +5,7 @@ export async function getSchool(schoolId: string) {
   const supabase = createServiceClient()
   const { data, error } = await supabase
     .from('schools')
-    .select('id, name, slug, burn_rate, currency, language, sport_types, country, waiver_en, waiver_pt, waiver_fr, waiver_es')
+    .select('id, name, slug, burn_rate, currency, language, sport_types, country, waiver_en, waiver_pt, waiver_fr, waiver_es, daily_notice')
     .eq('id', schoolId)
     .single()
   if (error) throw error

@@ -14,7 +14,7 @@ export async function PATCH(request: Request) {
     // Financial, Waiver) that each only know about their own slice of
     // `schools`; sending the full row from every modal risked one modal's
     // save clobbering another's more recent edit with stale data.
-    const schoolFields = ['name', 'burn_rate', 'language', 'country', 'waiver_en', 'waiver_pt', 'waiver_fr', 'waiver_es']
+    const schoolFields = ['name', 'burn_rate', 'language', 'country', 'waiver_en', 'waiver_pt', 'waiver_fr', 'waiver_es', 'daily_notice']
     const update: Record<string, unknown> = { updated_at: new Date().toISOString() }
     for (const key of schoolFields) {
       if (key in fields) update[key] = fields[key]

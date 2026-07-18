@@ -1,5 +1,5 @@
 import { cookies } from 'next/headers'
-import { getRunwayData, getRunwayProjection } from '@/repositories/runwayRepository'
+import { getRunwayData, getRunwayProjection, getSchool } from '@/repositories/runwayRepository'
 import { getRecentSessions, getTodayStats, getPendingLessons, getMonthComparison } from '@/repositories/sessionRepository'
 import { getAlerts } from '@/repositories/alertRepository'
 import { getInstructors } from '@/repositories/studentRepository'
@@ -13,6 +13,7 @@ import MissedLessons from '@/components/MissedLessons'
 import RunwaySummary from '@/components/RunwaySummary'
 import AlertsDrawer from '@/components/AlertsDrawer'
 import WeatherWidget from '@/components/WeatherWidget'
+import DailyNoticeEditor from '@/components/DailyNoticeEditor'
 import { getWeather } from '@/lib/weather'
 import { getPortalLang } from '@/lib/language'
 import { getT } from '@/lib/i18n'
@@ -42,7 +43,7 @@ export default async function OwnerPage() {
     runway, sessions, alerts, today, lang, projection,
     pending, instructors, todayLessons, tomorrowLessons,
     activities, activePackages, missedLessons, packageBalances,
-    monthComparison, realMonthlyCosts, weather,
+    monthComparison, realMonthlyCosts, weather, school,
   ] = await Promise.all([
     getRunwayData(SCHOOL_ID, seasonId),
     getRecentSessions(SCHOOL_ID),
@@ -61,6 +62,7 @@ export default async function OwnerPage() {
     getMonthComparison(SCHOOL_ID),
     getMonthlyCostTotal(SCHOOL_ID),
     getWeather(),
+    getSchool(SCHOOL_ID),
   ])
 
   const t = getT(lang)
@@ -120,8 +122,9 @@ export default async function OwnerPage() {
         </div>
       </div>
 
-      <div style={{ marginBottom: '24px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
         <WeatherWidget weather={weather} />
+        <DailyNoticeEditor notice={(school as any)?.daily_notice ?? null} />
       </div>
 
       <div className="dash-grid-2col">
