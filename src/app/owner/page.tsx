@@ -12,6 +12,8 @@ import ScheduledLessons from '@/components/ScheduledLessons'
 import MissedLessons from '@/components/MissedLessons'
 import RunwaySummary from '@/components/RunwaySummary'
 import AlertsDrawer from '@/components/AlertsDrawer'
+import WeatherWidget from '@/components/WeatherWidget'
+import { getWeather } from '@/lib/weather'
 import { getPortalLang } from '@/lib/language'
 import { getT } from '@/lib/i18n'
 import Link from 'next/link'
@@ -40,7 +42,7 @@ export default async function OwnerPage() {
     runway, sessions, alerts, today, lang, projection,
     pending, instructors, todayLessons, tomorrowLessons,
     activities, activePackages, missedLessons, packageBalances,
-    monthComparison, realMonthlyCosts,
+    monthComparison, realMonthlyCosts, weather,
   ] = await Promise.all([
     getRunwayData(SCHOOL_ID, seasonId),
     getRecentSessions(SCHOOL_ID),
@@ -58,6 +60,7 @@ export default async function OwnerPage() {
     getPackageBalancesForCheckins(SCHOOL_ID),
     getMonthComparison(SCHOOL_ID),
     getMonthlyCostTotal(SCHOOL_ID),
+    getWeather(),
   ])
 
   const t = getT(lang)
@@ -115,6 +118,10 @@ export default async function OwnerPage() {
             ? `${runway.school_name}${runway.current_season ? ' · ' + runway.current_season : ''}`
             : (runway.current_season ?? t.basecamp_season)}
         </div>
+      </div>
+
+      <div style={{ marginBottom: '24px' }}>
+        <WeatherWidget weather={weather} />
       </div>
 
       <div className="dash-grid-2col">
