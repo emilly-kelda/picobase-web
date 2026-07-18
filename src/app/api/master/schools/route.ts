@@ -77,9 +77,18 @@ export async function POST(request: Request) {
   // ── Step (b): invite the owner ────────────────────────────────────────────
   // inviteUserByEmail sends a secure, time-limited invite email.
   // The invitee sets their own password — we never see or handle a password.
+  // redirectTo must be explicit: without it, Supabase falls back to the
+  // project's dashboard-configured Site URL, which defaults to localhost and
+  // left every invite link dead in production. Also requires
+  // https://picobase.com.br/** to be added under Authentication → URL
+  // Configuration → Redirect URLs in the Supabase dashboard — this code
+  // change alone isn't sufficient if that allowlist doesn't already cover it.
   const { data: inviteData, error: inviteError } = await admin.auth.admin.inviteUserByEmail(
     ownerEmail.trim(),
-    { data: { full_name: ownerName.trim(), school_id: schoolId } }
+    {
+      data: { full_name: ownerName.trim(), school_id: schoolId },
+      redirectTo: `${process.env.NEXT_PUBLIC_BASE_URL ?? 'https://picobase.com.br'}/auth/callback?next=/owner/setup`,
+    }
   )
 
   if (inviteError || !inviteData?.user) {
