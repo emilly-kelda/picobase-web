@@ -246,6 +246,49 @@ export default async function StudentNameProfilePage({
         </div>
       )}
 
+      {/* Completed packages — certificate download */}
+      {packageSales.filter(p => (p.minutes_used ?? 0) >= (p.minutes_purchased ?? 0) && (p.minutes_purchased ?? 0) > 0).length > 0 && (
+        <div style={{
+          background: '#fff',
+          border: '0.5px solid var(--border)',
+          borderRadius: 'var(--radius-lg)',
+          padding: '16px 20px', marginBottom: '24px',
+          display: 'flex', flexDirection: 'column', gap: '10px',
+        }}>
+          <div style={{
+            fontSize: '11px', fontWeight: '500',
+            letterSpacing: '0.1em', textTransform: 'uppercase',
+            color: 'var(--mist)',
+          }}>
+            Pacotes concluídos
+          </div>
+          {packageSales
+            .filter(p => (p.minutes_used ?? 0) >= (p.minutes_purchased ?? 0) && (p.minutes_purchased ?? 0) > 0)
+            .map(p => (
+              <div key={p.id} style={{
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              }}>
+                <span style={{ fontSize: '13px', color: 'var(--slate)' }}>
+                  {(p.packages as any)?.name ?? 'Pacote'}
+                </span>
+                <a
+                  href={`/api/owner/certificate/${p.id}`}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '6px',
+                    padding: '6px 14px',
+                    background: 'var(--slate)', color: '#fff',
+                    borderRadius: '99px',
+                    fontSize: '12px', fontWeight: '500',
+                    textDecoration: 'none',
+                  }}
+                >
+                  🎓 Gerar certificado
+                </a>
+              </div>
+            ))}
+        </div>
+      )}
+
       {/* Contact & health */}
       <div style={{
         background: '#fff',

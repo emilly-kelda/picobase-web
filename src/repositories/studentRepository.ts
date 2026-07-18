@@ -139,7 +139,7 @@ export async function getSessionsByStudentName(schoolId: string, studentName: st
   const { data } = await supabase
     .from('sessions')
     .select(`
-      id, session_date, duration_min, price, commission_amount,
+      id, session_date, duration_min, price, commission_amount, level,
       users!sessions_instructor_id_fkey ( name ),
       activities ( name )
     `)

@@ -1,4 +1,5 @@
 ﻿import { createServiceClient } from '@/lib/supabase-server'
+import { getSessionsByStudentName } from './studentRepository'
 
 export async function getPackageDashboard(schoolId: string) {
   const supabase = createServiceClient()
@@ -223,6 +224,49 @@ export async function deactivatePackageType(id: string, schoolId: string) {
     .eq('school_id', schoolId)
   if (error) throw error
   return { ok: true }
+}
+
+/** Data for a completion certificate. package_sales has no student_id/FK to
+ *  sessions (nothing in this codebase ever writes checkins.package_sale_id —
+ *  see lib/commission.ts) — level and instructor come from the student's most
+ *  recent session by name match, same as everywhere else in this app that
+ *  needs "this student's latest lesson" without a real join to lean on. */
+export async function getCertificateData(schoolId: string, packageSaleId: string) {
+  const supabase = createServiceClient()
+
+  const { data: sale, error } = await supabase
+    .from('package_sales')
+    .select('id, student_name, minutes_purchased, minutes_used, sold_at, packages ( name, sport )')
+    .eq('id', packageSaleId)
+    .eq('school_id', schoolId)
+    .single()
+
+  if (error || !sale) return null
+  if ((sale.minutes_used ?? 0) < (sale.minutes_purchased ?? 0)) return null
+
+  const [{ data: school }, { data: owner }, sessions] = await Promise.all([
+    supabase.from('schools').select('name').eq('id', schoolId).single(),
+    supabase.from('users').select('name').eq('school_id', schoolId).eq('role', 'owner').limit(1).maybeSingle(),
+    getSessionsByStudentName(schoolId, sale.student_name),
+  ])
+
+  const mostRecent = sessions[0] as any
+  const instructorUser = mostRecent
+    ? (Array.isArray(mostRecent.users) ? mostRecent.users[0] : mostRecent.users)
+    : null
+  const pkg = sale.packages as any
+
+  return {
+    studentName:    sale.student_name,
+    activityName:   pkg?.sport || pkg?.name || 'Atividade',
+    level:          mostRecent?.level ?? null,
+    hoursTotal:     Math.round(((sale.minutes_purchased ?? 0) / 60) * 10) / 10,
+    completedAt:    new Date().toISOString(),
+    instructorName: instructorUser?.name ?? null,
+    schoolName:     school?.name ?? 'Escola',
+    ownerName:      owner?.name ?? 'Diretor',
+    certificateId:  `PB-${sale.id.slice(0, 8).toUpperCase()}`,
+  }
 }
 
 
