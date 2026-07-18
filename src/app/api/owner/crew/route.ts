@@ -39,6 +39,7 @@ export async function POST(request: Request) {
     languages:        body.languages?.length > 0 ? body.languages : null,
     certifications:   body.certifications?.length > 0 ? body.certifications : null,
     pix_key:          body.pix_key ? encrypt(body.pix_key) : null,
+    weekly_capacity_hours: body.weekly_capacity_hours ?? null,
   }
   console.log('[crew/POST] inserting into public.users, auth_id:', newId, 'payload:', insertPayload)
 
@@ -48,7 +49,7 @@ export async function POST(request: Request) {
     .select(`
       id, name, email, whatsapp, commission_pct, pix_key, wise_email, active, created_at,
       nationality, languages, sports, certifications, bio, experience_years,
-      max_students_per_session, first_aid_certified, contract_type
+      max_students_per_session, first_aid_certified, contract_type, weekly_capacity_hours
     `)
     .single()
 
@@ -79,6 +80,7 @@ export async function PATCH(request: Request) {
       languages:        fields.languages?.length > 0 ? fields.languages : null,
       certifications:   fields.certifications?.length > 0 ? fields.certifications : null,
       pix_key:          fields.pix_key ? encrypt(fields.pix_key) : null,
+      weekly_capacity_hours: fields.weekly_capacity_hours ?? null,
     })
     .eq('id', id)
     .eq('school_id', SCHOOL_ID)

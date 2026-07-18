@@ -12,7 +12,7 @@ export async function getCrewMembers(schoolId: string) {
       pix_key, wise_email, active, created_at,
       nationality, languages, sports, certifications,
       bio, experience_years, max_students_per_session,
-      first_aid_certified, contract_type
+      first_aid_certified, contract_type, weekly_capacity_hours
     `)
     .eq('school_id', schoolId)
     .eq('role', 'instructor')

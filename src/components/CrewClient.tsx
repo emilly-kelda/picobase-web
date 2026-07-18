@@ -25,6 +25,7 @@ type CrewMember = {
   max_students_per_session?: number | null
   first_aid_certified?: boolean | null
   contract_type?: string | null
+  weekly_capacity_hours?: number | null
   stats: Stats
 }
 
@@ -52,6 +53,7 @@ const emptyForm = () => ({
   email: '',
   commission_pct: '',
   experience_years: '',
+  weekly_capacity_hours: '',
   sports: [] as string[],
   languages: [] as string[],
   certifications: [] as Cert[],
@@ -120,6 +122,9 @@ export default function CrewClient({ initialCrew }: { initialCrew: CrewMember[] 
       experience_years: member.experience_years != null
         ? String(member.experience_years)
         : '',
+      weekly_capacity_hours: member.weekly_capacity_hours != null
+        ? String(member.weekly_capacity_hours)
+        : '',
       sports:    Array.isArray(member.sports)    ? (member.sports as string[])    : [],
       languages: Array.isArray(member.languages) ? (member.languages as string[]) : [],
       certifications: Array.isArray(member.certifications)
@@ -178,6 +183,7 @@ export default function CrewClient({ initialCrew }: { initialCrew: CrewMember[] 
       email:            form.email.trim(),
       commission_pct:   form.commission_pct !== '' ? Number(form.commission_pct) / 100 : null,
       experience_years: form.experience_years !== '' ? Number(form.experience_years) : null,
+      weekly_capacity_hours: form.weekly_capacity_hours !== '' ? Number(form.weekly_capacity_hours) : null,
       sports:           form.sports,
       languages:        form.languages,
       certifications:   form.certifications.filter(c => c.name.trim()),
@@ -547,7 +553,7 @@ export default function CrewClient({ initialCrew }: { initialCrew: CrewMember[] 
                       onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
                     />
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
                     <div>
                       <label style={labelStyle}>Commission (%)</label>
                       <input
@@ -568,6 +574,17 @@ export default function CrewClient({ initialCrew }: { initialCrew: CrewMember[] 
                         placeholder="e.g. 5"
                         value={form.experience_years}
                         onChange={e => setForm(f => ({ ...f, experience_years: e.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <label style={labelStyle}>Weekly Capacity (h)</label>
+                      <input
+                        style={inputStyle}
+                        type="number"
+                        min={0} step={0.5}
+                        placeholder="e.g. 40"
+                        value={form.weekly_capacity_hours}
+                        onChange={e => setForm(f => ({ ...f, weekly_capacity_hours: e.target.value }))}
                       />
                     </div>
                   </div>

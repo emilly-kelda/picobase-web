@@ -16,6 +16,16 @@ type InstructorData = {
   lessons: number
   revenue: number
   commission: number
+  hours: number
+  net: number
+}
+
+type SportData = {
+  sport: string
+  lessons: number
+  revenue: number
+  commissions: number
+  net: number
 }
 
 type PartnerData = {
@@ -29,9 +39,30 @@ type PartnerData = {
 
 type PaymentData = Record<string, { count: number; total: number }>
 
+type Metrics = {
+  ticketMedioBRL: number | null
+  ticketMedioEUR: number | null
+  occupancyPct: number | null
+  occupancyHoursTaught: number
+  occupancyCapacityHours: number
+  renewalRatePct: number | null
+  renewalCompletions: number
+  renewalRenewed: number
+}
+
+type GroupRow = { key: string; label: string; lessons: number; revenue: number; commissions: number; net: number }
+type GroupBy = 'month' | 'instructor' | 'sport'
+
 function fmt(n: number) {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency', currency: 'BRL',
+    minimumFractionDigits: 0,
+  }).format(n)
+}
+
+function fmtEUR(n: number) {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency', currency: 'EUR',
     minimumFractionDigits: 0,
   }).format(n)
 }
@@ -42,14 +73,74 @@ function fmtMonth(ym: string) {
   return date.toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' })
 }
 
+function groupRows(
+  monthly: MonthData[],
+  instructors: InstructorData[],
+  sports: SportData[],
+  groupBy: GroupBy
+): GroupRow[] {
+  if (groupBy === 'instructor') {
+    return instructors.map(i => ({
+      key: i.id, label: i.name, lessons: i.lessons,
+      revenue: i.revenue, commissions: i.commission, net: i.net,
+    }))
+  }
+  if (groupBy === 'sport') {
+    return sports.map(s => ({
+      key: s.sport, label: s.sport, lessons: s.lessons,
+      revenue: s.revenue, commissions: s.commissions, net: s.net,
+    }))
+  }
+  return monthly.map(m => ({
+    key: m.month, label: fmtMonth(m.month), lessons: m.lessons,
+    revenue: m.revenue, commissions: m.commissions, net: m.net,
+  }))
+}
+
+const GROUP_LABELS: Record<GroupBy, string> = {
+  month: 'Mês', instructor: 'Instrutor', sport: 'Modalidade',
+}
+
+const cardStyle: React.CSSProperties = {
+  background: '#fff',
+  border: '0.5px solid var(--border)',
+  borderRadius: '12px',
+  padding: '18px 20px',
+}
+
+const cardLabelStyle: React.CSSProperties = {
+  fontSize: '10px', fontWeight: '600',
+  letterSpacing: '0.1em', textTransform: 'uppercase',
+  color: 'var(--mist)', marginBottom: '8px',
+}
+
+const tableWrapStyle: React.CSSProperties = {
+  background: '#fff',
+  border: '0.5px solid var(--border)',
+  borderRadius: '16px',
+  overflow: 'hidden',
+}
+
+const thStyle = (align: 'left' | 'right'): React.CSSProperties => ({
+  padding: '10px 16px',
+  textAlign: align,
+  fontSize: '10px', fontWeight: '600',
+  letterSpacing: '0.08em', textTransform: 'uppercase',
+  color: 'var(--mist)',
+  borderBottom: '0.5px solid var(--border)',
+})
+
 export default function ReportsPage() {
   const [data, setData] = useState<{
     monthly:     MonthData[]
     instructors: InstructorData[]
+    sports:      SportData[]
     partners:    PartnerData[]
     payments:    PaymentData
+    metrics:     Metrics
   } | null>(null)
-  const [tab, setTab] = useState<'revenue' | 'instructors' | 'partners' | 'payments'>('revenue')
+  const [tab, setTab] = useState<'faturamento' | 'modalidade' | 'instructors' | 'partners' | 'payments'>('faturamento')
+  const [groupBy, setGroupBy] = useState<GroupBy>('month')
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -71,9 +162,43 @@ export default function ReportsPage() {
 
   const totalRevenue     = data.monthly.reduce((s, m) => s + m.revenue, 0)
   const totalCommissions = data.monthly.reduce((s, m) => s + m.commissions, 0)
-  const totalNet         = data.monthly.reduce((s, m) => s + m.net, 0)
+  const totalNet          = data.monthly.reduce((s, m) => s + m.net, 0)
   const totalLessons     = data.monthly.reduce((s, m) => s + m.lessons, 0)
   const maxRevenue       = Math.max(...data.monthly.map(m => m.revenue), 1)
+  const maxSportRevenue  = Math.max(...data.sports.map(s => s.revenue), 1)
+
+  const rows = groupRows(data.monthly, data.instructors, data.sports, groupBy)
+
+  const metricCards: { label: string; value: string; color: string; sub?: string }[] = [
+    { label: 'Receita total',     value: fmt(totalRevenue),        color: 'var(--slate)' },
+    { label: 'Comissões pagas',   value: fmt(totalCommissions),    color: '#DC2626'      },
+    { label: 'Lucro líquido',     value: fmt(totalNet),            color: '#007868'      },
+    { label: 'Aulas confirmadas', value: totalLessons.toString(),  color: 'var(--slate)' },
+    {
+      label: 'Ticket médio',
+      value: data.metrics.ticketMedioBRL != null ? fmt(data.metrics.ticketMedioBRL) : '—',
+      color: 'var(--slate)',
+      sub: data.metrics.ticketMedioEUR != null
+        ? `${fmtEUR(data.metrics.ticketMedioEUR)} ticket médio (EUR)`
+        : undefined,
+    },
+    {
+      label: 'Taxa de ocupação',
+      value: data.metrics.occupancyPct != null ? `${data.metrics.occupancyPct.toFixed(0)}%` : '—',
+      color: 'var(--slate)',
+      sub: data.metrics.occupancyPct != null
+        ? `${data.metrics.occupancyHoursTaught.toFixed(0)}h de ${data.metrics.occupancyCapacityHours.toFixed(0)}h de capacidade`
+        : 'Configure a capacidade em Equipe',
+    },
+    {
+      label: 'Taxa de renovação',
+      value: data.metrics.renewalRatePct != null ? `${data.metrics.renewalRatePct.toFixed(0)}%` : '—',
+      color: 'var(--slate)',
+      sub: data.metrics.renewalCompletions > 0
+        ? `${data.metrics.renewalRenewed} de ${data.metrics.renewalCompletions} pacotes concluídos renovados`
+        : undefined,
+    },
+  ]
 
   return (
     <div style={{ maxWidth: '960px', margin: '0 auto', padding: '32px 40px' }}>
@@ -97,28 +222,12 @@ export default function ReportsPage() {
 
       {/* Summary metrics */}
       <div style={{
-        display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)',
+        display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
         gap: '12px', marginBottom: '32px',
       }}>
-        {[
-          { label: 'Receita total',    value: fmt(totalRevenue),     color: 'var(--slate)' },
-          { label: 'Comissões pagas',  value: fmt(totalCommissions), color: '#DC2626'      },
-          { label: 'Lucro líquido',    value: fmt(totalNet),         color: '#007868'      },
-          { label: 'Aulas confirmadas', value: totalLessons.toString(), color: 'var(--slate)' },
-        ].map(metric => (
-          <div key={metric.label} style={{
-            background: '#fff',
-            border: '0.5px solid var(--border)',
-            borderRadius: '12px',
-            padding: '18px 20px',
-          }}>
-            <div style={{
-              fontSize: '10px', fontWeight: '600',
-              letterSpacing: '0.1em', textTransform: 'uppercase',
-              color: 'var(--mist)', marginBottom: '8px',
-            }}>
-              {metric.label}
-            </div>
+        {metricCards.map(metric => (
+          <div key={metric.label} style={cardStyle}>
+            <div style={cardLabelStyle}>{metric.label}</div>
             <div style={{
               fontSize: '22px', fontWeight: '700',
               color: metric.color,
@@ -126,6 +235,11 @@ export default function ReportsPage() {
             }}>
               {metric.value}
             </div>
+            {metric.sub && (
+              <div style={{ fontSize: '11px', color: 'var(--mist)', marginTop: '6px' }}>
+                {metric.sub}
+              </div>
+            )}
           </div>
         ))}
       </div>
@@ -134,13 +248,14 @@ export default function ReportsPage() {
       <div style={{
         display: 'flex', gap: '0',
         borderBottom: '0.5px solid var(--border)',
-        marginBottom: '28px',
+        marginBottom: '28px', flexWrap: 'wrap',
       }}>
         {[
-          { key: 'revenue',      label: 'Receita mensal' },
-          { key: 'instructors',  label: 'Instrutores'    },
-          { key: 'partners',     label: 'Parceiros'      },
-          { key: 'payments',     label: 'Pagamentos'     },
+          { key: 'faturamento', label: 'Faturamento vs. Comissões' },
+          { key: 'modalidade',  label: 'Desempenho por Modalidade' },
+          { key: 'instructors', label: 'Instrutores'                },
+          { key: 'partners',    label: 'Parceiros'                  },
+          { key: 'payments',    label: 'Pagamentos'                 },
         ].map(t => (
           <button
             key={t.key}
@@ -156,6 +271,7 @@ export default function ReportsPage() {
               cursor: 'pointer',
               fontFamily: 'inherit',
               marginBottom: '-0.5px',
+              whiteSpace: 'nowrap',
             }}
           >
             {t.label}
@@ -163,10 +279,10 @@ export default function ReportsPage() {
         ))}
       </div>
 
-      {/* TAB: Revenue by month */}
-      {tab === 'revenue' && (
+      {/* TAB: Faturamento vs. Comissões */}
+      {tab === 'faturamento' && (
         <div>
-          {/* Bar chart */}
+          {/* Stacked bar chart */}
           <div style={{
             background: '#fff',
             border: '0.5px solid var(--border)',
@@ -273,50 +389,59 @@ export default function ReportsPage() {
             </div>
           </div>
 
-          {/* Monthly table */}
-          <div style={{
-            background: '#fff',
-            border: '0.5px solid var(--border)',
-            borderRadius: '16px',
-            overflow: 'hidden',
-          }}>
+          {/* Group-by control */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+            <span style={{ fontSize: '12px', color: 'var(--mist)' }}>Agrupar por</span>
+            <select
+              value={groupBy}
+              onChange={e => setGroupBy(e.target.value as GroupBy)}
+              style={{
+                padding: '7px 12px',
+                border: '0.5px solid var(--border-strong)',
+                borderRadius: 'var(--radius-md)',
+                fontSize: '13px', color: 'var(--slate)',
+                background: '#fff', cursor: 'pointer',
+                fontFamily: 'inherit', outline: 'none',
+              }}
+            >
+              <option value="month">Mês</option>
+              <option value="instructor">Instrutor</option>
+              <option value="sport">Modalidade</option>
+            </select>
+          </div>
+
+          {/* Grouped table */}
+          <div style={tableWrapStyle}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ background: 'var(--powder)' }}>
-                  {['Mês', 'Aulas', 'Receita', 'Comissões', 'Lucro líquido'].map((h, i) => (
-                    <th key={h} style={{
-                      padding: '10px 16px',
-                      textAlign: i === 0 ? 'left' : 'right',
-                      fontSize: '10px', fontWeight: '600',
-                      letterSpacing: '0.08em', textTransform: 'uppercase',
-                      color: 'var(--mist)',
-                      borderBottom: '0.5px solid var(--border)',
-                    }}>
-                      {h}
-                    </th>
-                  ))}
+                  <th style={thStyle('left')}>{GROUP_LABELS[groupBy]}</th>
+                  <th style={thStyle('right')}>Aulas</th>
+                  <th style={thStyle('right')}>Receita</th>
+                  <th style={thStyle('right')}>Comissões</th>
+                  <th style={thStyle('right')}>Lucro líquido</th>
                 </tr>
               </thead>
               <tbody>
-                {data.monthly.map((m, i) => (
-                  <tr key={m.month} style={{
-                    borderBottom: i < data.monthly.length - 1
+                {rows.map((r, i) => (
+                  <tr key={r.key} style={{
+                    borderBottom: i < rows.length - 1
                       ? '0.5px solid var(--border)' : 'none',
                   }}>
                     <td style={{ padding: '13px 16px', fontSize: '13px', fontWeight: '500', color: 'var(--slate)' }}>
-                      {fmtMonth(m.month)}
+                      {r.label}
                     </td>
                     <td style={{ padding: '13px 16px', fontSize: '13px', color: 'var(--mist)', textAlign: 'right' }}>
-                      {m.lessons}
+                      {r.lessons}
                     </td>
                     <td style={{ padding: '13px 16px', fontSize: '13px', fontWeight: '500', color: 'var(--slate)', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
-                      {fmt(m.revenue)}
+                      {fmt(r.revenue)}
                     </td>
                     <td style={{ padding: '13px 16px', fontSize: '13px', color: '#DC2626', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
-                      − {fmt(m.commissions)}
+                      − {fmt(r.commissions)}
                     </td>
                     <td style={{ padding: '13px 16px', fontSize: '13px', fontWeight: '600', color: '#007868', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
-                      {fmt(m.net)}
+                      {fmt(r.net)}
                     </td>
                   </tr>
                 ))}
@@ -335,26 +460,108 @@ export default function ReportsPage() {
         </div>
       )}
 
+      {/* TAB: Desempenho por Modalidade */}
+      {tab === 'modalidade' && (
+        <div>
+          <div style={{
+            background: '#fff',
+            border: '0.5px solid var(--border)',
+            borderRadius: '16px',
+            padding: '28px',
+            marginBottom: '20px',
+          }}>
+            <div style={{
+              fontSize: '12px', fontWeight: '600',
+              color: 'var(--mist)', marginBottom: '24px',
+              letterSpacing: '0.06em', textTransform: 'uppercase',
+            }}>
+              Receita por modalidade
+            </div>
+
+            {data.sports.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '40px', color: 'var(--mist)', fontSize: '13px' }}>
+                Nenhum dado disponível ainda.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {data.sports.map(sp => {
+                  const pct = (sp.revenue / maxSportRevenue) * 100
+                  return (
+                    <div key={sp.sport} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div style={{ width: '130px', flexShrink: 0, fontSize: '13px', fontWeight: '500', color: 'var(--slate)' }}>
+                        {sp.sport}
+                      </div>
+                      <div style={{
+                        flex: 1, height: '20px',
+                        background: 'var(--powder)', borderRadius: '99px', overflow: 'hidden',
+                      }}>
+                        <div style={{
+                          height: '100%', width: `${pct}%`,
+                          background: 'var(--glacial)', borderRadius: '99px', opacity: 0.85,
+                        }} />
+                      </div>
+                      <div style={{
+                        width: '110px', flexShrink: 0, textAlign: 'right',
+                        fontSize: '13px', fontWeight: '600', color: 'var(--slate)',
+                        fontVariantNumeric: 'tabular-nums',
+                      }}>
+                        {fmt(sp.revenue)}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+
+          <div style={tableWrapStyle}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ background: 'var(--powder)' }}>
+                  <th style={thStyle('left')}>Modalidade</th>
+                  <th style={thStyle('right')}>Aulas</th>
+                  <th style={thStyle('right')}>Receita</th>
+                  <th style={thStyle('right')}>Comissões</th>
+                  <th style={thStyle('right')}>Lucro líquido</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.sports.map((sp, i) => (
+                  <tr key={sp.sport} style={{
+                    borderBottom: i < data.sports.length - 1
+                      ? '0.5px solid var(--border)' : 'none',
+                  }}>
+                    <td style={{ padding: '13px 16px', fontSize: '13px', fontWeight: '500', color: 'var(--slate)' }}>
+                      {sp.sport}
+                    </td>
+                    <td style={{ padding: '13px 16px', fontSize: '13px', color: 'var(--mist)', textAlign: 'right' }}>
+                      {sp.lessons}
+                    </td>
+                    <td style={{ padding: '13px 16px', fontSize: '13px', fontWeight: '500', color: 'var(--slate)', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                      {fmt(sp.revenue)}
+                    </td>
+                    <td style={{ padding: '13px 16px', fontSize: '13px', color: '#DC2626', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                      − {fmt(sp.commissions)}
+                    </td>
+                    <td style={{ padding: '13px 16px', fontSize: '13px', fontWeight: '600', color: '#007868', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                      {fmt(sp.net)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       {/* TAB: Instructors */}
       {tab === 'instructors' && (
-        <div style={{
-          background: '#fff',
-          border: '0.5px solid var(--border)',
-          borderRadius: '16px',
-          overflow: 'hidden',
-        }}>
+        <div style={tableWrapStyle}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ background: 'var(--powder)' }}>
                 {['Instrutor', 'Aulas', 'Receita gerada', 'Comissão total', '% do total'].map((h, i) => (
-                  <th key={h} style={{
-                    padding: '10px 16px',
-                    textAlign: i === 0 ? 'left' : 'right',
-                    fontSize: '10px', fontWeight: '600',
-                    letterSpacing: '0.08em', textTransform: 'uppercase',
-                    color: 'var(--mist)',
-                    borderBottom: '0.5px solid var(--border)',
-                  }}>
+                  <th key={h} style={thStyle(i === 0 ? 'left' : 'right')}>
                     {h}
                   </th>
                 ))}
@@ -426,12 +633,7 @@ export default function ReportsPage() {
 
       {/* TAB: Partners */}
       {tab === 'partners' && (
-        <div style={{
-          background: '#fff',
-          border: '0.5px solid var(--border)',
-          borderRadius: '16px',
-          overflow: 'hidden',
-        }}>
+        <div style={tableWrapStyle}>
           {data.partners.length === 0 ? (
             <div style={{ padding: '48px', textAlign: 'center', fontSize: '13px', color: 'var(--mist)' }}>
               Nenhuma indicação de parceiro registrada ainda.
@@ -441,14 +643,7 @@ export default function ReportsPage() {
               <thead>
                 <tr style={{ background: 'var(--powder)' }}>
                   {['Parceiro', 'Indicações', 'Receita gerada', 'Comissão paga', 'ROI'].map((h, i) => (
-                    <th key={h} style={{
-                      padding: '10px 16px',
-                      textAlign: i === 0 ? 'left' : 'right',
-                      fontSize: '10px', fontWeight: '600',
-                      letterSpacing: '0.08em', textTransform: 'uppercase',
-                      color: 'var(--mist)',
-                      borderBottom: '0.5px solid var(--border)',
-                    }}>
+                    <th key={h} style={thStyle(i === 0 ? 'left' : 'right')}>
                       {h}
                     </th>
                   ))}
