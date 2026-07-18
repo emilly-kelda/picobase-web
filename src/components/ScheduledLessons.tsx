@@ -1200,18 +1200,28 @@ export default function ScheduledLessons({
                             <div style={{
                               flexShrink: 0,
                               fontSize: '11px', fontWeight: '600',
-                              color: s.minutes_remaining < 60 ? '#92400E' : 'var(--glacial-dark)',
-                              background: s.minutes_remaining < 60 ? '#FEF3C7' : 'var(--glacial-light)',
+                              color: s.minutes_remaining <= 0 ? '#DC2626' : s.minutes_remaining < 60 ? '#92400E' : 'var(--glacial-dark)',
+                              background: s.minutes_remaining <= 0 ? '#FEE2E2' : s.minutes_remaining < 60 ? '#FEF3C7' : 'var(--glacial-light)',
                               padding: '2px 8px', borderRadius: '99px',
                             }}>
-                              {formatHours(s.minutes_remaining)} restantes
+                              {s.minutes_remaining <= 0 ? 'Esgotado' : `${formatHours(s.minutes_remaining)} restantes`}
                             </div>
                           </button>
                         ))}
                     </div>
                   )}
                 </div>
-                {selectedPackage && (
+                {selectedPackage && selectedPackage.minutes_remaining <= 0 && (
+                  <div style={{
+                    marginTop: '6px', padding: '8px 12px',
+                    background: '#FEE2E2', borderRadius: 'var(--radius-md)',
+                    fontSize: '12px', color: '#DC2626',
+                  }}>
+                    ⚠ {selectedPackage.package_name} esgotado — aluno não possui créditos suficientes.
+                    Considere cobrar uma aula avulsa ou renovar o plano.
+                  </div>
+                )}
+                {selectedPackage && selectedPackage.minutes_remaining > 0 && (
                   <div style={{
                     marginTop: '6px', padding: '8px 12px',
                     background: selectedPackage.minutes_remaining < 60 ? '#FEF3C7' : 'var(--glacial-light)',

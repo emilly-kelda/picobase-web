@@ -27,11 +27,10 @@ export async function GET() {
 
     if (error) return NextResponse.json({ students: [] })
 
+    // Exhausted packages are included too (not just remaining > 0) — the
+    // owner needs to see and select them in order to get the insufficient-
+    // balance warning when scheduling; hiding them just meant zero feedback.
     const students = (data ?? [])
-      .filter(s => {
-        const remaining = (s.minutes_purchased ?? 0) - (s.minutes_used ?? 0)
-        return remaining > 0
-      })
       .map(s => {
         const pkg = unwrap(s.packages)
         return {
