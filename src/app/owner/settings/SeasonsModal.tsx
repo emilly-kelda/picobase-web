@@ -54,7 +54,6 @@ export default function SeasonsModal({
           label:      season.label,
           start_date: season.start_date,
           end_date:   season.end_date,
-          burn_rate:  season.burn_rate,
         }),
       })
       const data = await res.json()
@@ -83,7 +82,7 @@ export default function SeasonsModal({
     >
       <div style={{
         background: '#fff', borderRadius: 'var(--radius-xl)',
-        width: '100%', maxWidth: '560px',
+        width: '100%', maxWidth: '680px',
         padding: '28px', maxHeight: '90vh', overflowY: 'auto',
       }}>
         <div style={{ fontSize: '18px', fontWeight: '500', color: 'var(--slate)', marginBottom: '20px' }}>
@@ -105,28 +104,22 @@ export default function SeasonsModal({
             Nenhuma temporada cadastrada.
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             {seasons.map((season, i) => (
               <div key={season.id} style={{
-                paddingTop: i > 0 ? '20px' : 0,
+                paddingTop: i > 0 ? '14px' : 0,
                 borderTop: i > 0 ? '0.5px solid var(--border)' : 'none',
               }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+                <div style={{
+                  display: 'grid', gridTemplateColumns: '1.4fr 1fr 1fr auto',
+                  gap: '12px', alignItems: 'end',
+                }}>
                   <div>
                     <label style={labelStyle}>Nome</label>
                     <input
                       style={inputStyle}
                       value={season.label}
                       onChange={e => setSeasons(prev => prev.map(s => s.id === season.id ? { ...s, label: e.target.value } : s))}
-                    />
-                  </div>
-                  <div>
-                    <label style={labelStyle}>Custo operacional mensal</label>
-                    <input
-                      style={inputStyle}
-                      type="number"
-                      value={season.burn_rate}
-                      onChange={e => setSeasons(prev => prev.map(s => s.id === season.id ? { ...s, burn_rate: Number(e.target.value) } : s))}
                     />
                   </div>
                   <div>
@@ -147,26 +140,22 @@ export default function SeasonsModal({
                       onChange={e => setSeasons(prev => prev.map(s => s.id === season.id ? { ...s, end_date: e.target.value } : s))}
                     />
                   </div>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <button
                     onClick={() => saveSeason(season)}
                     disabled={saving === season.id}
                     style={{
-                      padding: '8px 16px',
+                      padding: '9px 16px',
                       background: saving === season.id ? 'var(--mist)' : 'var(--slate)',
                       color: '#fff', border: 'none', borderRadius: 'var(--radius-md)',
                       fontSize: '12px', fontWeight: '500',
                       cursor: saving === season.id ? 'not-allowed' : 'pointer',
                       fontFamily: 'var(--font-sans)',
                       opacity: saving === season.id ? 0.7 : 1,
+                      whiteSpace: 'nowrap',
                     }}
                   >
-                    {saving === season.id ? 'Salvando...' : 'Salvar temporada'}
+                    {saving === season.id ? '...' : saved === season.id ? 'Salvo ✓' : 'Salvar'}
                   </button>
-                  {saved === season.id && (
-                    <span style={{ fontSize: '12px', color: 'var(--glacial-dark)' }}>Salvo</span>
-                  )}
                 </div>
               </div>
             ))}

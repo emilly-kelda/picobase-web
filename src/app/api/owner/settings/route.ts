@@ -52,14 +52,20 @@ export async function PATCH(request: Request) {
       )
     }
 
+    // Partial update — burn_rate is no longer edited from the Seasons modal
+    // (Custo Operacional Mensal now lives only on the school-level Financial
+    // settings), but existing per-season values are left alone rather than
+    // wiped to null just because the client stopped sending the field.
+    const seasonUpdate: Record<string, unknown> = {
+      label:      fields.label,
+      start_date: fields.start_date,
+      end_date:   fields.end_date,
+    }
+    if ('burn_rate' in fields) seasonUpdate.burn_rate = fields.burn_rate
+
     const { error } = await supabase
       .from('seasons')
-      .update({
-        label:      fields.label,
-        start_date: fields.start_date,
-        end_date:   fields.end_date,
-        burn_rate:  fields.burn_rate,
-      })
+      .update(seasonUpdate)
       .eq('id', fields.id)
       .eq('school_id', SCHOOL_ID)
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
