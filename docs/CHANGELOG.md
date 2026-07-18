@@ -161,3 +161,12 @@ their commit message and diff.
   now surfaces an explicit insufficient-balance warning when picking a
   student whose package is exhausted, instead of silently hiding them from
   the suggestion list.
+- `0e9f5cb` **docs**: added this `docs/` folder.
+- `0d4d554` **feat**: waiver can now be an uploaded PDF/Word document
+  instead of typed text — global or per-language (`waiver_type`,
+  `waiver_file_global_url`, `waiver_files_by_lang`), uploaded to a new
+  `school-waivers` Storage bucket (same service-role upload-route pattern
+  as `partner-logos`). At check-in, file mode replaces the typed-text block
+  with a view-only "Visualizar Termo de Responsabilidade (PDF)" link —
+  the student still checks the existing agree/GDPR boxes and signs the
+  existing canvas; only the waiver text display itself changes.
