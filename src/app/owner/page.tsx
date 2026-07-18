@@ -22,7 +22,7 @@ function fmt(n: number | null | undefined) {
   if (n == null) return '—'
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency', currency: 'BRL',
-    minimumFractionDigits: 0, maximumFractionDigits: 0,
+    minimumFractionDigits: 2, maximumFractionDigits: 2,
   }).format(n)
 }
 
@@ -154,7 +154,7 @@ export default async function OwnerPage() {
                 </div>
                 <div style={{ fontSize: '18px', fontWeight: '600', color: 'var(--slate)', fontVariantNumeric: 'tabular-nums' }}>
                   {today.sessions}
-                  {monthComparison.lessonDelta !== null && (
+                  {monthComparison.lessonDelta !== null && monthComparison.thisMonthLessons > 0 && (
                     <span style={{
                       fontSize: '11px',
                       color: monthComparison.lessonDelta >= 0 ? '#007868' : '#DC2626',
@@ -172,7 +172,11 @@ export default async function OwnerPage() {
                 <div style={{ fontSize: '18px', fontWeight: '600', color: 'var(--slate)', fontVariantNumeric: 'tabular-nums' }}>
                   {fmt(today.revenue ?? 0)}
                 </div>
-                {monthComparison.revenueDelta !== null && (
+                {monthComparison.thisMonthRevenue === 0 ? (
+                  <div style={{ fontSize: '12px', color: 'var(--mist)', marginTop: '4px' }}>
+                    Início do período
+                  </div>
+                ) : monthComparison.revenueDelta !== null ? (
                   <div style={{
                     display: 'flex', alignItems: 'center', gap: '6px',
                     fontSize: '12px', marginTop: '4px',
@@ -187,8 +191,7 @@ export default async function OwnerPage() {
                       vs. mês passado
                     </span>
                   </div>
-                )}
-                {monthComparison.revenueDelta === null && monthComparison.lastMonthRevenue === 0 && (
+                ) : monthComparison.lastMonthRevenue === 0 && (
                   <div style={{ fontSize: '12px', color: 'var(--mist)', marginTop: '4px' }}>
                     Primeiro mês de operação
                   </div>

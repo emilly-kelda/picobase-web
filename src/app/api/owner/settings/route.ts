@@ -28,6 +28,26 @@ export async function PATCH(request: Request) {
   }
 
   if (type === 'season') {
+    // Overlap check — two seasons sharing any day would double-count that
+    // day's sessions/costs in both periods' runway math. Standard interval
+    // overlap test: they collide unless one entirely precedes the other.
+    const { data: otherSeasons, error: fetchError } = await supabase
+      .from('seasons')
+      .select('id, label, start_date, end_date')
+      .eq('school_id', SCHOOL_ID)
+      .neq('id', fields.id)
+    if (fetchError) return NextResponse.json({ error: fetchError.message }, { status: 500 })
+
+    const overlapping = (otherSeasons ?? []).find(s =>
+      fields.start_date <= s.end_date && fields.end_date >= s.start_date
+    )
+    if (overlapping) {
+      return NextResponse.json(
+        { error: `As datas coincidem com a temporada "${overlapping.label}" (${overlapping.start_date} a ${overlapping.end_date})` },
+        { status: 409 }
+      )
+    }
+
     const { error } = await supabase
       .from('seasons')
       .update({

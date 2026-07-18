@@ -17,11 +17,11 @@ type Receivable = {
 }
 
 function fmt(n: number, currency = 'BRL') {
-  if (currency === 'EUR') return `€ ${n.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}`
-  if (currency === 'USD') return `$ ${n.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}`
+  if (currency === 'EUR') return `€ ${n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  if (currency === 'USD') return `$ ${n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency', currency: 'BRL',
-    minimumFractionDigits: 0,
+    minimumFractionDigits: 2, maximumFractionDigits: 2,
   }).format(n)
 }
 

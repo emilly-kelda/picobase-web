@@ -74,7 +74,7 @@ const SOURCE_ICON: Record<string, string> = {
 function fmt(n: number, currency: Currency = 'BRL') {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency', currency,
-    minimumFractionDigits: 0, maximumFractionDigits: 0,
+    minimumFractionDigits: 2, maximumFractionDigits: 2,
   }).format(n)
 }
 
@@ -880,7 +880,7 @@ export default function PendingLessons({
                     }}>
                       <span>{pricePerHour}/h × {(finalDuration/60).toFixed(1)}h</span>
                       <span style={{ fontWeight: '600' }}>
-                        = {new Intl.NumberFormat('pt-BR', { style: 'currency', currency, minimumFractionDigits: 0 }).format(totalPrice)}
+                        = {new Intl.NumberFormat('pt-BR', { style: 'currency', currency, minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(totalPrice)}
                       </span>
                     </div>
                   )}
