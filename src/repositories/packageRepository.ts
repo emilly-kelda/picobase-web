@@ -99,25 +99,25 @@ export async function getPackageDashboard(schoolId: string) {
  *  For students with multiple sales, prefers the most-recent unexhausted one. */
 export async function getPackageBalancesForCheckins(
   schoolId: string
-): Promise<Record<string, { minutesRemaining: number; hasPackage: boolean }>> {
+): Promise<Record<string, { minutesRemaining: number; hasPackage: boolean; packageSaleId: string }>> {
   const supabase = createServiceClient()
   const { data } = await supabase
     .from('package_sales')
-    .select('student_name, minutes_purchased, minutes_used, sold_at')
+    .select('id, student_name, minutes_purchased, minutes_used, sold_at')
     .eq('school_id', schoolId)
     .order('sold_at', { ascending: false })
 
-  const map: Record<string, { minutesRemaining: number; hasPackage: boolean }> = {}
+  const map: Record<string, { minutesRemaining: number; hasPackage: boolean; packageSaleId: string }> = {}
   for (const sale of data ?? []) {
     const key = (sale.student_name ?? '').trim().toLowerCase()
     if (!key) continue
     const minutesRemaining = (sale.minutes_purchased ?? 0) - (sale.minutes_used ?? 0)
     const existing = map[key]
     if (!existing) {
-      map[key] = { minutesRemaining, hasPackage: true }
+      map[key] = { minutesRemaining, hasPackage: true, packageSaleId: sale.id }
     } else if (existing.minutesRemaining <= 0 && minutesRemaining > 0) {
       // Replace exhausted entry with a fresh unexhausted one
-      map[key] = { minutesRemaining, hasPackage: true }
+      map[key] = { minutesRemaining, hasPackage: true, packageSaleId: sale.id }
     }
   }
   return map
@@ -224,6 +224,46 @@ export async function deactivatePackageType(id: string, schoolId: string) {
     .eq('school_id', schoolId)
   if (error) throw error
   return { ok: true }
+}
+
+/** Session history for one package_sale. There's no reliable FK from
+ *  package_sales to sessions (see getCertificateData above) — this bounds
+ *  the student's name-matched session list to the window between this
+ *  sale's sold_at and their NEXT sale's sold_at (or now, if this is their
+ *  latest), so a student who bought a second package doesn't have the
+ *  first package's history bleed into the second's. Approximate, not exact
+ *  — the best available given the schema. */
+export async function getSessionHistoryForPackageSale(schoolId: string, packageSaleId: string) {
+  const supabase = createServiceClient()
+
+  const { data: sale, error } = await supabase
+    .from('package_sales')
+    .select('id, student_name, sold_at')
+    .eq('id', packageSaleId)
+    .eq('school_id', schoolId)
+    .single()
+
+  if (error || !sale) return null
+
+  const { data: laterSales } = await supabase
+    .from('package_sales')
+    .select('sold_at')
+    .eq('school_id', schoolId)
+    .ilike('student_name', sale.student_name)
+    .gt('sold_at', sale.sold_at)
+    .order('sold_at', { ascending: true })
+    .limit(1)
+
+  const windowEnd = laterSales?.[0]?.sold_at ?? null
+  const allSessions = await getSessionsByStudentName(schoolId, sale.student_name)
+
+  const sessions = allSessions.filter(s => {
+    if (s.session_date < sale.sold_at.slice(0, 10)) return false
+    if (windowEnd && s.session_date >= windowEnd.slice(0, 10)) return false
+    return true
+  })
+
+  return { studentName: sale.student_name, sessions }
 }
 
 /** Data for a completion certificate. package_sales has no student_id/FK to

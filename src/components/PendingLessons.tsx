@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { isLevel, LEVEL_LABELS, type Level } from '@/lib/levels'
 import LevelPicker from '@/components/LevelPicker'
+import StudentPackageHistoryModal from '@/components/StudentPackageHistoryModal'
 import type { VariableCostInfo } from '@/lib/commission'
 
 type ActivityRef = {
@@ -109,10 +110,11 @@ export default function PendingLessons({
   checkins: Checkin[]
   instructors: Instructor[]
   activities?: ActivityRef[]
-  packageBalances?: Record<string, { minutesRemaining: number; hasPackage: boolean }>
+  packageBalances?: Record<string, { minutesRemaining: number; hasPackage: boolean; packageSaleId?: string }>
 }) {
   const router = useRouter()
   const [checkins, setCheckins]         = useState(initialCheckins)
+  const [historyModal, setHistoryModal] = useState<{ studentName: string; packageSaleId: string } | null>(null)
   const [selected, setSelected]         = useState<Checkin | null>(null)
   const [activityId, setActivityId]     = useState('')
   const [duration, setDuration]         = useState(60)
@@ -453,7 +455,24 @@ export default function PendingLessons({
                     {fmtTime(checkin.checkin_at)}
                   </div>
                   <div style={{ marginTop: '6px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                    {packageBadge}
+                    {balance?.hasPackage && balance.packageSaleId ? (
+                      <button
+                        type="button"
+                        onClick={() => setHistoryModal({
+                          studentName: checkin.student_name,
+                          packageSaleId: balance.packageSaleId!,
+                        })}
+                        style={{
+                          background: 'none', border: 'none', padding: 0,
+                          cursor: 'pointer', transition: 'opacity 0.15s',
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.opacity = '0.8' }}
+                        onMouseLeave={e => { e.currentTarget.style.opacity = '1' }}
+                        title="Ver histórico do pacote"
+                      >
+                        {packageBadge}
+                      </button>
+                    ) : packageBadge}
                     {checkin.scheduled_lesson && (() => {
                       const sched = checkin.scheduled_lesson
                       const schedInstructor = unwrapInstructor(sched.instructor)
@@ -1105,6 +1124,14 @@ export default function PendingLessons({
 
           </div>
         </div>
+      )}
+
+      {historyModal && (
+        <StudentPackageHistoryModal
+          studentName={historyModal.studentName}
+          packageSaleId={historyModal.packageSaleId}
+          onClose={() => setHistoryModal(null)}
+        />
       )}
     </>
   )
