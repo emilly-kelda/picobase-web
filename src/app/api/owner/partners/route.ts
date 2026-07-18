@@ -34,6 +34,7 @@ export async function POST(request: Request) {
       discountPct:   body.discountPct != null ? Number(body.discountPct) : null,
       financeEmail:  body.financeEmail?.trim() || null,
       referralCode:  body.referralCode?.trim() || null,
+      logoUrl:       body.logoUrl?.trim() || null,
     })
     return NextResponse.json({ ok: true })
   } catch (err) {
@@ -55,6 +56,7 @@ export async function PATCH(request: Request) {
       commissionPct: Number(body.commissionPct),
       discountPct:   body.discountPct != null ? Number(body.discountPct) : null,
       financeEmail:  body.financeEmail?.trim() || null,
+      logoUrl:       body.logoUrl?.trim() || null,
     })
     return NextResponse.json({ ok: true })
   } catch (err) {
@@ -66,7 +68,7 @@ export async function PATCH(request: Request) {
 export async function DELETE(request: Request) {
   const { searchParams } = new URL(request.url)
   const id = searchParams.get('id')
-  if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 })
+  if (!id) return NextResponse.json({ error: 'id é obrigatório' }, { status: 400 })
 
   try {
     await deactivatePartner(id, SCHOOL_ID)

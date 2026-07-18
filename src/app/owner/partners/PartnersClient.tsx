@@ -100,12 +100,22 @@ export default function PartnersClient({
                   padding: '16px 18px 12px',
                 }}>
                   <div style={{
-                    width: '38px', height: '38px', borderRadius: 'var(--radius-md)',
-                    background: style.bg, flexShrink: 0,
+                    width: '44px', height: '44px', borderRadius: 'var(--radius-lg)',
+                    background: partner.logo_url ? '#fff' : style.bg, flexShrink: 0,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '18px',
+                    fontSize: '18px', overflow: 'hidden',
+                    border: partner.logo_url ? '0.5px solid var(--border)' : 'none',
                   }}>
-                    {style.icon}
+                    {partner.logo_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={partner.logo_url}
+                        alt={partner.name}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      />
+                    ) : (
+                      style.icon
+                    )}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: '14px', fontWeight: '600', color: 'var(--slate)', marginBottom: '2px' }}>

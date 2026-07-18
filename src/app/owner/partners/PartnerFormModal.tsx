@@ -44,8 +44,31 @@ export default function PartnerFormModal({
   const [commissionPct, setCommissionPct] = useState(editing ? Math.round((editing.commission_pct ?? 0) * 100) : 15)
   const [discountPct, setDiscountPct]   = useState(editing?.discount_pct ? Math.round(editing.discount_pct * 100) : 0)
   const [financeEmail, setFinanceEmail] = useState(editing?.finance_email ?? '')
+  const [logoUrl, setLogoUrl]           = useState(editing?.logo_url ?? '')
+  const [uploadingLogo, setUploadingLogo] = useState(false)
   const [saving, setSaving]             = useState(false)
   const [error, setError]               = useState<string | null>(null)
+
+  async function handleLogoSelect(file: File | undefined) {
+    if (!file) return
+    setUploadingLogo(true)
+    setError(null)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      const res = await fetch('/api/owner/partners/upload-logo', { method: 'POST', body: formData })
+      const data = await res.json()
+      if (data.ok) {
+        setLogoUrl(data.url)
+      } else {
+        setError(data.error ?? 'Não foi possível enviar o logotipo.')
+      }
+    } catch {
+      setError('Erro de rede ao enviar o logotipo.')
+    } finally {
+      setUploadingLogo(false)
+    }
+  }
 
   const canSave = name.trim().length >= 2 && commissionPct >= 0 && commissionPct <= 100 && !saving
 
@@ -64,6 +87,7 @@ export default function PartnerFormModal({
           commissionPct: commissionPct / 100,
           discountPct:   discountPct > 0 ? discountPct / 100 : null,
           financeEmail:  financeEmail || null,
+          logoUrl:       logoUrl || null,
         }),
       })
       const data = await res.json()
@@ -96,6 +120,36 @@ export default function PartnerFormModal({
       }}>
         <div style={{ fontSize: '18px', fontWeight: '500', color: 'var(--slate)', marginBottom: '20px' }}>
           {editing ? 'Editar parceiro' : 'Novo parceiro'}
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
+          <label style={{ cursor: uploadingLogo ? 'not-allowed' : 'pointer', textAlign: 'center' }}>
+            <div style={{
+              width: '72px', height: '72px', borderRadius: 'var(--radius-lg)',
+              background: logoUrl ? '#fff' : 'var(--powder)',
+              border: '0.5px solid var(--border-strong)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              overflow: 'hidden', margin: '0 auto 8px',
+              opacity: uploadingLogo ? 0.5 : 1,
+            }}>
+              {logoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={logoUrl} alt="Logotipo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : (
+                <span style={{ fontSize: '11px', color: 'var(--mist)' }}>🤝</span>
+              )}
+            </div>
+            <span style={{ fontSize: '12px', color: 'var(--glacial-dark)', fontWeight: '500' }}>
+              {uploadingLogo ? 'Enviando...' : logoUrl ? 'Trocar logotipo' : '+ Adicionar logotipo'}
+            </span>
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              onChange={e => handleLogoSelect(e.target.files?.[0])}
+              disabled={uploadingLogo}
+              style={{ display: 'none' }}
+            />
+          </label>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>

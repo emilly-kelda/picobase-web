@@ -8,6 +8,7 @@ export type Partner = {
   discount_pct: number | null
   referral_code: string | null
   finance_email: string | null
+  logo_url: string | null
   active: boolean
 }
 
@@ -15,7 +16,7 @@ export async function getPartners(schoolId: string): Promise<Partner[]> {
   const supabase = createServiceClient()
   const { data, error } = await supabase
     .from('partners')
-    .select('id, name, type, commission_pct, discount_pct, referral_code, finance_email, active')
+    .select('id, name, type, commission_pct, discount_pct, referral_code, finance_email, logo_url, active')
     .eq('school_id', schoolId)
     .eq('active', true)
     .order('name')
@@ -30,7 +31,7 @@ export async function getPartnerByReferralCode(code: string, schoolId: string): 
   const supabase = createServiceClient()
   const { data } = await supabase
     .from('partners')
-    .select('id, name, type, commission_pct, discount_pct, referral_code, finance_email, active')
+    .select('id, name, type, commission_pct, discount_pct, referral_code, finance_email, logo_url, active')
     .eq('referral_code', code)
     .eq('school_id', schoolId)
     .eq('active', true)
@@ -50,6 +51,7 @@ export async function createPartner(payload: {
   discountPct: number | null
   financeEmail: string | null
   referralCode?: string | null
+  logoUrl?: string | null
 }) {
   const supabase = createServiceClient()
 
@@ -71,6 +73,7 @@ export async function createPartner(payload: {
       discount_pct:   payload.discountPct,
       finance_email:  payload.financeEmail,
       referral_code:  finalCode,
+      logo_url:       payload.logoUrl ?? null,
       active:         true,
     })
   if (error) throw error
@@ -83,6 +86,7 @@ export async function updatePartner(id: string, schoolId: string, payload: {
   commissionPct: number
   discountPct: number | null
   financeEmail: string | null
+  logoUrl?: string | null
 }) {
   const supabase = createServiceClient()
   const { error } = await supabase
@@ -93,6 +97,7 @@ export async function updatePartner(id: string, schoolId: string, payload: {
       commission_pct: payload.commissionPct,
       discount_pct:   payload.discountPct,
       finance_email:  payload.financeEmail,
+      logo_url:       payload.logoUrl ?? null,
     })
     .eq('id', id)
     .eq('school_id', schoolId)
