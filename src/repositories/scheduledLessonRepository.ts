@@ -1,4 +1,5 @@
 import { createServiceClient } from '@/lib/supabase-server'
+import { normalizeStudentName } from '@/lib/text'
 
 export async function getScheduledLessons(
   schoolId: string,
@@ -20,29 +21,45 @@ export async function getScheduledLessons(
   const start = `${targetDate}T00:00:00`
   const end   = `${targetDate}T23:59:59`
 
-  const { data, error } = await supabase
-    .from('scheduled_lessons')
-    .select(`
-      id,
-      student_name,
-      student_id,
-      scheduled_at,
-      duration_min,
-      status,
-      notes,
-      level,
-      group_id,
-      activities ( id, name, default_price, default_duration_min ),
-      instructor:users!scheduled_lessons_instructor_id_fkey ( id, name )
-    `)
-    .eq('school_id', schoolId)
-    .gte('scheduled_at', start)
-    .lte('scheduled_at', end)
-    .neq('status', 'cancelled')
-    .order('scheduled_at', { ascending: true })
+  const [{ data, error }, { data: students }] = await Promise.all([
+    supabase
+      .from('scheduled_lessons')
+      .select(`
+        id,
+        student_name,
+        student_id,
+        scheduled_at,
+        duration_min,
+        status,
+        notes,
+        level,
+        group_id,
+        activities ( id, name, default_price, default_duration_min ),
+        instructor:users!scheduled_lessons_instructor_id_fkey ( id, name )
+      `)
+      .eq('school_id', schoolId)
+      .gte('scheduled_at', start)
+      .lte('scheduled_at', end)
+      .neq('status', 'cancelled')
+      .order('scheduled_at', { ascending: true }),
+
+    // scheduled_lessons.student_id is rarely populated (schedule route never
+    // sets it) — same fuzzy name-match approach used everywhere else in this
+    // app for "find this student's contact info" without a reliable FK.
+    supabase.from('students').select('name, whatsapp').eq('school_id', schoolId),
+  ])
 
   if (error) throw error
-  return data ?? []
+
+  const whatsappByName = new Map<string, string | null>()
+  for (const s of students ?? []) {
+    whatsappByName.set(normalizeStudentName(s.name), s.whatsapp)
+  }
+
+  return (data ?? []).map(lesson => ({
+    ...lesson,
+    student_whatsapp: whatsappByName.get(normalizeStudentName(lesson.student_name)) ?? null,
+  }))
 }
 
 /** Upcoming/pending lessons for the "Agendadas" tab on /owner/sessions —

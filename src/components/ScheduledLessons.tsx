@@ -14,6 +14,7 @@ type Lesson = {
   notes: string | null
   level: string | null
   group_id: string | null
+  student_whatsapp?: string | null
   activities: { id: string; name: string; default_price: number; default_duration_min: number } | null
   instructor: { id: string; name: string } | null
 }
@@ -37,6 +38,27 @@ type PackageSale = {
   minutes_purchased: number
   minutes_used: number
   packages: { name: string } | null
+}
+
+// Same hand-drawn inline-SVG convention as nav-icons.tsx (24x24 viewBox,
+// stroke=currentColor, no fill) — no icon library installed in this project.
+function WhatsAppIcon() {
+  return (
+    <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 21c5 0 9-3.8 9-8.5S17 4 12 4s-9 3.8-9 8.5c0 1.6.5 3.1 1.3 4.4L3.5 21l4.4-1.3c1.2.8 2.6 1.3 4.1 1.3z" />
+      <path d="M9 9.8c0-.4.3-.8.7-.8h.6c.3 0 .6.2.7.5l.5 1.3c.1.3 0 .6-.2.8l-.5.5c.4.9 1.1 1.6 2 2l.5-.5c.2-.2.5-.3.8-.2l1.3.5c.3.1.5.4.5.7v.6c0 .4-.4.7-.8.7-3 0-5.5-2.5-5.5-5.5z" />
+    </svg>
+  )
+}
+
+function CheckinIcon() {
+  return (
+    <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+      <rect x="5" y="4" width="14" height="17" rx="2" />
+      <path d="M9 3.5h6a1 1 0 0 1 1 1V6a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1z" />
+      <path d="M8.5 13l2 2 4-4" />
+    </svg>
+  )
 }
 
 function fmtTime(iso: string) {
@@ -161,12 +183,16 @@ export default function ScheduledLessons({
   activities,
   instructors,
   activePackages = [],
+  schoolName = 'Pico Base',
+  schoolSlug = '',
 }: {
   todayLessons: Lesson[]
   tomorrowLessons: Lesson[]
   activities: Activity[]
   instructors: Instructor[]
   activePackages?: PackageSale[]
+  schoolName?: string
+  schoolSlug?: string
 }) {
   const router = useRouter()
   const [showModal, setShowModal]   = useState(false)
@@ -513,6 +539,18 @@ export default function ScheduledLessons({
     .sort((a, b) => a[0].scheduled_at.localeCompare(b[0].scheduled_at))
   const totalRows = individualLessons.length + groupLessons.length
 
+  function buildWhatsAppUrl(lesson: Lesson): string {
+    const dayLabel = activeTab === 'today' ? 'hoje' : 'amanhã'
+    const activityName = lesson.activities?.name ?? 'sua aula'
+    const message =
+      `Olá, ${lesson.student_name ?? ''}! Tudo bem? Passando para lembrar da sua aula de ` +
+      `${activityName} agendada para ${dayLabel} às ${fmtTime(lesson.scheduled_at)} na ${schoolName}. ` +
+      `Para agilizar a sua entrada, por favor preencha o nosso check-in e termo de responsabilidade ` +
+      `clicando aqui: https://picobase.com.br/checkin/${schoolSlug}. Aguardamos você!`
+    const phone = (lesson.student_whatsapp ?? '').replace(/\D/g, '')
+    return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
+  }
+
   function openGroupConfirmModal(group: Lesson[]) {
     const first = group[0]
     setGroupConfirmModal({
@@ -711,6 +749,46 @@ export default function ScheduledLessons({
                     : lesson.status === 'checked_in' ? 'Check-in'
                     : 'Agendada'}
                 </span>
+                <a
+                  href={lesson.student_whatsapp ? buildWhatsAppUrl(lesson) : undefined}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title={lesson.student_whatsapp ? 'Enviar lembrete no WhatsApp' : 'Aluno sem WhatsApp cadastrado'}
+                  aria-disabled={!lesson.student_whatsapp}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    width: '28px', height: '28px', flexShrink: 0,
+                    color: 'var(--border-strong)',
+                    opacity: lesson.student_whatsapp ? 1 : 0.2,
+                    pointerEvents: lesson.student_whatsapp ? 'auto' : 'none',
+                    textDecoration: 'none',
+                    transition: 'color 0.15s',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.color = '#25D366' }}
+                  onMouseLeave={e => { e.currentTarget.style.color = 'var(--border-strong)' }}
+                >
+                  <WhatsAppIcon />
+                </a>
+                <a
+                  href={schoolSlug ? `/checkin/${schoolSlug}?student=${encodeURIComponent(lesson.student_name ?? '')}` : undefined}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="Abrir check-in público"
+                  aria-disabled={!schoolSlug}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    width: '28px', height: '28px', flexShrink: 0,
+                    color: 'var(--border-strong)',
+                    opacity: schoolSlug ? 1 : 0.2,
+                    pointerEvents: schoolSlug ? 'auto' : 'none',
+                    textDecoration: 'none',
+                    transition: 'color 0.15s',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.color = 'var(--glacial-dark)' }}
+                  onMouseLeave={e => { e.currentTarget.style.color = 'var(--border-strong)' }}
+                >
+                  <CheckinIcon />
+                </a>
                 <button
                   onClick={() => openEditModal(lesson)}
                   style={{
