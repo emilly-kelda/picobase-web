@@ -729,66 +729,89 @@ export default function ScheduledLessons({
                     )}
                   </div>
                 </div>
-                <span style={{
-                  padding: '3px 10px',
-                  borderRadius: 'var(--radius-full)',
-                  fontSize: '11px', fontWeight: '500',
-                  background: lesson.status === 'confirmed'
-                    ? 'var(--glacial-light)'
-                    : lesson.status === 'checked_in'
-                      ? 'var(--amber-light)'
-                      : 'var(--powder)',
-                  color: lesson.status === 'confirmed'
-                    ? 'var(--glacial-dark)'
-                    : lesson.status === 'checked_in'
-                      ? 'var(--amber)'
-                      : 'var(--mist)',
-                  flexShrink: 0,
-                }}>
-                  {lesson.status === 'confirmed' ? 'Confirmada'
-                    : lesson.status === 'checked_in' ? 'Check-in'
-                    : 'Agendada'}
-                </span>
-                <a
-                  href={lesson.student_whatsapp ? buildWhatsAppUrl(lesson) : undefined}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  title={lesson.student_whatsapp ? 'Enviar lembrete no WhatsApp' : 'Aluno sem WhatsApp cadastrado'}
-                  aria-disabled={!lesson.student_whatsapp}
-                  style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    width: '28px', height: '28px', flexShrink: 0,
-                    color: 'var(--border-strong)',
-                    opacity: lesson.student_whatsapp ? 1 : 0.2,
-                    pointerEvents: lesson.student_whatsapp ? 'auto' : 'none',
-                    textDecoration: 'none',
-                    transition: 'color 0.15s',
-                  }}
-                  onMouseEnter={e => { e.currentTarget.style.color = '#25D366' }}
-                  onMouseLeave={e => { e.currentTarget.style.color = 'var(--border-strong)' }}
-                >
-                  <WhatsAppIcon />
-                </a>
-                <a
-                  href={schoolSlug ? `/checkin/${schoolSlug}?student=${encodeURIComponent(lesson.student_name ?? '')}` : undefined}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  title="Abrir check-in público"
-                  aria-disabled={!schoolSlug}
-                  style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    width: '28px', height: '28px', flexShrink: 0,
-                    color: 'var(--border-strong)',
-                    opacity: schoolSlug ? 1 : 0.2,
-                    pointerEvents: schoolSlug ? 'auto' : 'none',
-                    textDecoration: 'none',
-                    transition: 'color 0.15s',
-                  }}
-                  onMouseEnter={e => { e.currentTarget.style.color = 'var(--glacial-dark)' }}
-                  onMouseLeave={e => { e.currentTarget.style.color = 'var(--border-strong)' }}
-                >
-                  <CheckinIcon />
-                </a>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                  <span style={{
+                    padding: '3px 10px',
+                    borderRadius: 'var(--radius-full)',
+                    fontSize: '11px', fontWeight: '500',
+                    background: lesson.status === 'confirmed'
+                      ? 'var(--glacial-light)'
+                      : lesson.status === 'checked_in'
+                        ? 'var(--amber-light)'
+                        : 'var(--powder)',
+                    color: lesson.status === 'confirmed'
+                      ? 'var(--glacial-dark)'
+                      : lesson.status === 'checked_in'
+                        ? 'var(--amber)'
+                        : 'var(--mist)',
+                  }}>
+                    {lesson.status === 'confirmed' ? 'Confirmada'
+                      : lesson.status === 'checked_in' ? 'Check-in'
+                      : 'Agendada'}
+                  </span>
+                  <a
+                    href={lesson.student_whatsapp ? buildWhatsAppUrl(lesson) : undefined}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={lesson.student_whatsapp ? 'Enviar lembrete no WhatsApp' : 'Aluno sem WhatsApp cadastrado'}
+                    aria-disabled={!lesson.student_whatsapp}
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      width: '32px', height: '32px', flexShrink: 0,
+                      borderRadius: 'var(--radius-md)',
+                      color: 'var(--mist)',
+                      opacity: lesson.student_whatsapp ? 1 : 0.35,
+                      pointerEvents: lesson.student_whatsapp ? 'auto' : 'none',
+                      cursor: lesson.student_whatsapp ? 'pointer' : 'not-allowed',
+                      textDecoration: 'none',
+                      transform: 'scale(1)',
+                      transition: 'color 0.15s, transform 0.15s, background-color 0.15s',
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.color = '#25D366'
+                      e.currentTarget.style.transform = 'scale(1.1)'
+                      e.currentTarget.style.backgroundColor = 'var(--powder)'
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.color = 'var(--mist)'
+                      e.currentTarget.style.transform = 'scale(1)'
+                      e.currentTarget.style.backgroundColor = 'transparent'
+                    }}
+                  >
+                    <WhatsAppIcon />
+                  </a>
+                  <a
+                    href={schoolSlug ? `/checkin/${schoolSlug}?student=${encodeURIComponent(lesson.student_name ?? '')}` : undefined}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="Abrir check-in público"
+                    aria-disabled={!schoolSlug}
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      width: '32px', height: '32px', flexShrink: 0,
+                      borderRadius: 'var(--radius-md)',
+                      color: 'var(--mist)',
+                      opacity: schoolSlug ? 1 : 0.35,
+                      pointerEvents: schoolSlug ? 'auto' : 'none',
+                      cursor: schoolSlug ? 'pointer' : 'not-allowed',
+                      textDecoration: 'none',
+                      transform: 'scale(1)',
+                      transition: 'color 0.15s, transform 0.15s, background-color 0.15s',
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.color = 'var(--glacial-dark)'
+                      e.currentTarget.style.transform = 'scale(1.1)'
+                      e.currentTarget.style.backgroundColor = 'var(--powder)'
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.color = 'var(--mist)'
+                      e.currentTarget.style.transform = 'scale(1)'
+                      e.currentTarget.style.backgroundColor = 'transparent'
+                    }}
+                  >
+                    <CheckinIcon />
+                  </a>
+                </div>
                 <button
                   onClick={() => openEditModal(lesson)}
                   style={{
