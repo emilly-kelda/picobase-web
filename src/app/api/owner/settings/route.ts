@@ -9,19 +9,20 @@ export async function PATCH(request: Request) {
   const { type, ...fields } = body
 
   if (type === 'school') {
+    // Partial update — only fields actually present in the request body are
+    // written. Settings is now split across separate modals (General,
+    // Financial, Waiver) that each only know about their own slice of
+    // `schools`; sending the full row from every modal risked one modal's
+    // save clobbering another's more recent edit with stale data.
+    const schoolFields = ['name', 'burn_rate', 'language', 'country', 'waiver_en', 'waiver_pt', 'waiver_fr', 'waiver_es']
+    const update: Record<string, unknown> = { updated_at: new Date().toISOString() }
+    for (const key of schoolFields) {
+      if (key in fields) update[key] = fields[key]
+    }
+
     const { error } = await supabase
       .from('schools')
-      .update({
-        name:       fields.name,
-        burn_rate:  fields.burn_rate,
-        language:   fields.language,
-        country:    fields.country,
-        waiver_en:  fields.waiver_en,
-        waiver_pt:  fields.waiver_pt,
-        waiver_fr:  fields.waiver_fr,
-        waiver_es:  fields.waiver_es,
-        updated_at: new Date().toISOString(),
-      })
+      .update(update)
       .eq('id', SCHOOL_ID)
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   }

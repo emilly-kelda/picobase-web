@@ -1,8 +1,11 @@
-﻿'use client'
+'use client'
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import BurnRateCalculator from '@/components/BurnRateCalculator'
+import GeneralSettingsModal from './GeneralSettingsModal'
+import FinancialSettingsModal from './FinancialSettingsModal'
+import SeasonsModal from './SeasonsModal'
+import WaiverModal from './WaiverModal'
 
 type School = {
   id: string
@@ -27,54 +30,23 @@ type Season = {
   burn_rate: number
 }
 
+type ModalKey = 'general' | 'financial' | 'seasons' | 'waiver'
+
 function fmt(n: number) {
   return new Intl.NumberFormat('pt-BR', {
-    style: 'currency', currency: 'BRL',
-    minimumFractionDigits: 0, maximumFractionDigits: 0,
+    style: 'currency', currency: 'BRL', minimumFractionDigits: 0,
   }).format(n)
 }
 
-const inputStyle = {
-  width: '100%',
-  padding: '9px 12px',
-  border: '0.5px solid var(--border-strong)',
-  borderRadius: 'var(--radius-md)',
-  fontSize: '13px',
-  color: 'var(--slate)',
-  background: '#fff',
-  outline: 'none',
-  fontFamily: 'var(--font-sans)',
-  boxSizing: 'border-box' as const,
-}
-
-const labelStyle = {
-  fontSize: '11px',
-  fontWeight: '500' as const,
-  letterSpacing: '0.1em',
-  textTransform: 'uppercase' as const,
-  color: 'var(--mist)',
-  marginBottom: '6px',
-  display: 'block',
-}
-
-const sectionStyle = {
+const cardStyle: React.CSSProperties = {
   background: '#fff',
   border: '0.5px solid var(--border)',
   borderRadius: 'var(--radius-lg)',
-  overflow: 'hidden',
-  marginBottom: '20px',
-}
-
-const sectionHeaderStyle = {
-  padding: '16px 24px',
-  borderBottom: '0.5px solid var(--border)',
-  fontSize: '14px',
-  fontWeight: '500' as const,
-  color: 'var(--slate)',
-}
-
-const sectionBodyStyle = {
-  padding: '24px',
+  padding: '20px',
+  cursor: 'pointer',
+  textAlign: 'left',
+  fontFamily: 'var(--font-sans)',
+  transition: 'border-color 0.15s',
 }
 
 export default function SettingsClient({
@@ -87,354 +59,116 @@ export default function SettingsClient({
   currentLang: string
 }) {
   const router = useRouter()
-  const [school, setSchool] = useState(initialSchool)
+  const [school, setSchool]   = useState(initialSchool)
   const [seasons, setSeasons] = useState(initialSeasons)
-  const [saving, setSaving] = useState<string | null>(null)
-  const [saved, setSaved] = useState<string | null>(null)
+  const [activeModal, setActiveModal] = useState<ModalKey | null>(null)
 
-  async function saveSchool() {
-    setSaving('school')
-    const res = await fetch('/api/owner/settings', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        type:      'school',
-        name:      school.name,
-        burn_rate: school.burn_rate,
-        language:  school.language,
-        country:   school.country,
-        waiver_en: school.waiver_en,
-        waiver_pt: school.waiver_pt,
-        waiver_fr: school.waiver_fr,
-        waiver_es: school.waiver_es,
-      }),
-    })
-    const data = await res.json()
-    setSaving(null)
-    if (data.ok) {
-      setSaved('school')
-      setTimeout(() => setSaved(null), 2000)
-      router.refresh()
-    }
+  // Every modal only ever writes its own slice, then patches that same
+  // slice into local state and refreshes the server-rendered parts of the
+  // page (the launch checklist) — no other card's data is touched.
+  function closeAndRefresh() {
+    setActiveModal(null)
+    router.refresh()
   }
 
-  async function saveSeason(season: Season) {
-    setSaving(season.id)
-    const res = await fetch('/api/owner/settings', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        type:       'season',
-        id:         season.id,
-        label:      season.label,
-        start_date: season.start_date,
-        end_date:   season.end_date,
-        burn_rate:  season.burn_rate,
-      }),
-    })
-    const data = await res.json()
-    setSaving(null)
-    if (data.ok) {
-      setSaved(season.id)
-      setTimeout(() => setSaved(null), 2000)
-      router.refresh()
-    }
-  }
+  const waiverCount = [school.waiver_en, school.waiver_pt, school.waiver_fr, school.waiver_es]
+    .filter(w => w && w.trim().length > 0).length
 
-  const btnStyle = (id: string) => ({
-    padding: '9px 20px',
-    background: saving === id ? 'var(--mist)' : 'var(--slate)',
-    color: '#fff',
-    border: 'none',
-    borderRadius: 'var(--radius-md)',
-    fontSize: '13px',
-    fontWeight: '500' as const,
-    cursor: saving === id ? 'not-allowed' as const : 'pointer' as const,
-    fontFamily: 'var(--font-sans)',
-    opacity: saving === id ? 0.7 : 1,
-  })
+  const cards: Array<{ key: ModalKey; title: string; summary: string; sub: string }> = [
+    {
+      key: 'general',
+      title: 'Geral',
+      summary: school.name,
+      sub: `${school.country || '—'} · ${school.language.toUpperCase()}`,
+    },
+    {
+      key: 'financial',
+      title: 'Financeiro',
+      summary: school.burn_rate ? fmt(school.burn_rate) : 'Não definido',
+      sub: 'Custo operacional mensal',
+    },
+    {
+      key: 'seasons',
+      title: 'Temporadas',
+      summary: `${seasons.length} temporada${seasons.length !== 1 ? 's' : ''}`,
+      sub: seasons[0]?.label ?? 'Nenhuma cadastrada',
+    },
+    {
+      key: 'waiver',
+      title: 'Waiver',
+      summary: `${waiverCount}/4 idiomas`,
+      sub: 'Termo de responsabilidade',
+    },
+  ]
 
   return (
     <div style={{ maxWidth: '720px' }}>
-
-      {/* Language toggle */}
-      <div style={sectionStyle}>
-        <div style={sectionHeaderStyle}>{currentLang === 'pt' ? 'Idioma do portal' : 'Portal language'}</div>
-        <div style={sectionBodyStyle}>
-          <p style={{ fontSize: '13px', color: 'var(--mist)', marginBottom: '16px', marginTop: 0 }}>
-            {currentLang === 'pt'
-              ? 'Escolha o idioma do portal do proprietário.'
-              : 'Choose the language for the owner portal interface.'}
-          </p>
-          <div style={{ display: 'flex', gap: '10px' }}>
-            {[
-              { value: 'pt', label: '🇧🇷 Português' },
-              { value: 'en', label: '🇬🇧 English'   },
-            ].map(option => (
-              <button
-                key={option.value}
-                onClick={async () => {
-                  await fetch('/api/owner/language', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ lang: option.value }),
-                  })
-                  window.location.reload()
-                }}
-                style={{
-                  padding: '10px 20px',
-                  borderRadius: 'var(--radius-md)',
-                  border: `1.5px solid ${currentLang === option.value ? 'var(--glacial)' : 'var(--border-strong)'}`,
-                  background: currentLang === option.value ? 'var(--glacial-light)' : '#fff',
-                  color: currentLang === option.value ? 'var(--glacial-dark)' : 'var(--slate)',
-                  fontSize: '14px', fontWeight: '500',
-                  cursor: 'pointer', fontFamily: 'var(--font-sans)',
-                }}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* School settings */}
-      <div style={sectionStyle}>
-        <div style={sectionHeaderStyle}>School</div>
-        <div style={sectionBodyStyle}>
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
-            gap: '16px',
-            marginBottom: '16px',
-          }}>
-            <div>
-              <label style={labelStyle}>School name</label>
-              <input
-                style={inputStyle}
-                value={school.name}
-                onChange={e => setSchool(s => ({ ...s, name: e.target.value }))}
-              />
-            </div>
-            <div>
-              <label style={labelStyle}>Country</label>
-              <input
-                style={inputStyle}
-                value={school.country ?? ''}
-                placeholder="BR"
-                onChange={e => setSchool(s => ({ ...s, country: e.target.value }))}
-              />
-            </div>
-            <div>
-              <label style={labelStyle}>Language</label>
-              <select
-                style={inputStyle}
-                value={school.language}
-                onChange={e => setSchool(s => ({ ...s, language: e.target.value }))}
-              >
-                <option value="pt">Portuguese</option>
-                <option value="en">English</option>
-                <option value="es">Spanish</option>
-              </select>
-            </div>
-            <div>
-              <label style={labelStyle}>
-                Custos operacionais mensais
-                <span style={{ marginLeft: '6px', color: 'var(--glacial)', fontWeight: '400', textTransform: 'none', letterSpacing: 0 }}>
-                  {school.burn_rate ? fmt(school.burn_rate) : '—'}
-                </span>
-              </label>
-              <input
-                style={inputStyle}
-                type="number"
-                value={school.burn_rate ?? ''}
-                placeholder="5000"
-                onChange={e => setSchool(s => ({ ...s, burn_rate: Number(e.target.value) }))}
-              />
-              <div style={{ fontSize: '11px', color: 'var(--mist)', marginTop: '4px' }}>
-                Custos fixos mensais na baixa temporada. Usado para calcular a Reserva de Baixa Temporada.
-              </div>
-              <BurnRateCalculator
-                lang={currentLang === 'en' ? 'en' : 'pt'}
-                onApply={total => setSchool(s => ({ ...s, burn_rate: total }))}
-              />
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <button
-              onClick={saveSchool}
-              disabled={saving === 'school'}
-              style={btnStyle('school')}
-            >
-              {saving === 'school' ? 'Saving...' : 'Save school settings'}
-            </button>
-            {saved === 'school' && (
-              <span style={{ fontSize: '13px', color: 'var(--glacial-dark)' }}>
-                Saved
-              </span>
-            )}
-          </div>
-
-          <div style={{ borderTop: '0.5px solid var(--border)', marginTop: '24px', paddingTop: '24px' }}>
-            <div style={{ fontSize: '13px', fontWeight: '500', color: 'var(--slate)', marginBottom: '4px' }}>
-              Liability Waiver Text
-            </div>
-            <div style={{ fontSize: '12px', color: 'var(--mist)', marginBottom: '16px', lineHeight: '1.5' }}>
-              Each language version is shown to students during check-in based on
-              their language selection. Edit with your legal counsel.
-            </div>
-
-            {[
-              { key: 'waiver_en', label: 'EN · English'    },
-              { key: 'waiver_pt', label: 'PT · Português'  },
-              { key: 'waiver_fr', label: 'FR · Français'   },
-              { key: 'waiver_es', label: 'ES · Español'    },
-            ].map(({ key, label }) => (
-              <div key={key} style={{ marginBottom: '16px' }}>
-                <label style={labelStyle}>{label}</label>
-                <textarea
-                  style={{
-                    ...inputStyle,
-                    minHeight: '120px',
-                    resize: 'vertical' as const,
-                    lineHeight: '1.6',
-                    fontSize: '13px',
-                  }}
-                  value={(school as any)[key] ?? ''}
-                  onChange={e => setSchool(s => ({ ...s, [key]: e.target.value }))}
-                  placeholder={`Waiver text in ${label}...`}
-                />
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Seasons */}
-      <div style={sectionStyle}>
-        <div style={sectionHeaderStyle}>Seasons</div>
-        <div style={{ padding: '8px 0' }}>
-          {seasons.length === 0 ? (
+      <div style={{
+        display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '14px',
+      }}>
+        {cards.map(card => (
+          <button
+            key={card.key}
+            onClick={() => setActiveModal(card.key)}
+            style={cardStyle}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--border-strong)' }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)' }}
+          >
             <div style={{
-              padding: '32px 24px', textAlign: 'center',
-              fontSize: '13px', color: 'var(--mist)',
+              fontSize: '11px', fontWeight: '500',
+              letterSpacing: '0.1em', textTransform: 'uppercase',
+              color: 'var(--mist)', marginBottom: '10px',
             }}>
-              No seasons configured.
+              {card.title}
             </div>
-          ) : (
-            seasons.map((season, i) => (
-              <div key={season.id} style={{
-                padding: '20px 24px',
-                borderBottom: i < seasons.length - 1
-                  ? '0.5px solid var(--border)' : 'none',
-              }}>
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr 1fr 1fr',
-                  gap: '12px',
-                  marginBottom: '14px',
-                }}>
-                  <div>
-                    <label style={labelStyle}>Label</label>
-                    <input
-                      style={inputStyle}
-                      value={season.label}
-                      onChange={e => setSeasons(prev =>
-                        prev.map(s => s.id === season.id
-                          ? { ...s, label: e.target.value } : s)
-                      )}
-                    />
-                  </div>
-                  <div>
-                    <label style={labelStyle}>Start date</label>
-                    <input
-                      style={inputStyle}
-                      type="date"
-                      value={season.start_date}
-                      onChange={e => setSeasons(prev =>
-                        prev.map(s => s.id === season.id
-                          ? { ...s, start_date: e.target.value } : s)
-                      )}
-                    />
-                  </div>
-                  <div>
-                    <label style={labelStyle}>End date</label>
-                    <input
-                      style={inputStyle}
-                      type="date"
-                      value={season.end_date}
-                      onChange={e => setSeasons(prev =>
-                        prev.map(s => s.id === season.id
-                          ? { ...s, end_date: e.target.value } : s)
-                      )}
-                    />
-                  </div>
-                  <div>
-                    <label style={labelStyle}>Custos operacionais mensais</label>
-                    <input
-                      style={inputStyle}
-                      type="number"
-                      value={season.burn_rate}
-                      onChange={e => setSeasons(prev =>
-                        prev.map(s => s.id === season.id
-                          ? { ...s, burn_rate: Number(e.target.value) } : s)
-                      )}
-                    />
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <button
-                    onClick={() => saveSeason(season)}
-                    disabled={saving === season.id}
-                    style={btnStyle(season.id)}
-                  >
-                    {saving === season.id ? 'Saving...' : 'Save season'}
-                  </button>
-                  {saved === season.id && (
-                    <span style={{ fontSize: '13px', color: 'var(--glacial-dark)' }}>
-                      Saved
-                    </span>
-                  )}
-                </div>
-              </div>
-            ))
-          )}
-        </div>
+            <div style={{ fontSize: '16px', fontWeight: '600', color: 'var(--slate)', marginBottom: '4px' }}>
+              {card.summary}
+            </div>
+            <div style={{ fontSize: '12px', color: 'var(--mist)' }}>
+              {card.sub}
+            </div>
+          </button>
+        ))}
       </div>
 
-      {/* Read-only system info */}
-      <div style={sectionStyle}>
-        <div style={sectionHeaderStyle}>System info</div>
-        <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          {[
-            { label: 'School ID', value: initialSchool.id                           },
-            { label: 'Slug',      value: initialSchool.slug                         },
-            { label: 'Currency',  value: initialSchool.currency                     },
-            { label: 'Sports',    value: initialSchool.sport_types?.join(', ') ?? '�' },
-          ].map(item => (
-            <div key={item.label} style={{ display: 'flex', gap: '16px', alignItems: 'baseline' }}>
-              <span style={{
-                fontSize: '11px', fontWeight: '500',
-                letterSpacing: '0.08em', textTransform: 'uppercase',
-                color: 'var(--mist)', width: '80px', flexShrink: 0,
-              }}>
-                {item.label}
-              </span>
-              <span style={{
-                fontSize: '12px', fontFamily: 'var(--font-mono)',
-                color: 'var(--slate)',
-              }}>
-                {item.value}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
+      {activeModal === 'general' && (
+        <GeneralSettingsModal
+          school={school}
+          currentLang={currentLang}
+          onClose={() => setActiveModal(null)}
+          onSaved={patch => { setSchool(s => ({ ...s, ...patch })); closeAndRefresh() }}
+        />
+      )}
 
+      {activeModal === 'financial' && (
+        <FinancialSettingsModal
+          burnRate={school.burn_rate}
+          lang={currentLang}
+          onClose={() => setActiveModal(null)}
+          onSaved={burnRate => { setSchool(s => ({ ...s, burn_rate: burnRate })); closeAndRefresh() }}
+        />
+      )}
+
+      {activeModal === 'seasons' && (
+        <SeasonsModal
+          seasons={seasons}
+          onClose={() => { setActiveModal(null); router.refresh() }}
+          onSaved={updated => setSeasons(prev => prev.map(s => s.id === updated.id ? updated : s))}
+        />
+      )}
+
+      {activeModal === 'waiver' && (
+        <WaiverModal
+          waivers={{
+            waiver_en: school.waiver_en,
+            waiver_pt: school.waiver_pt,
+            waiver_fr: school.waiver_fr,
+            waiver_es: school.waiver_es,
+          }}
+          onClose={() => setActiveModal(null)}
+          onSaved={patch => { setSchool(s => ({ ...s, ...patch })); closeAndRefresh() }}
+        />
+      )}
     </div>
   )
 }
-
-
