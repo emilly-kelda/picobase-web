@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import type { Partner } from '@/repositories/partnerRepository'
+import SearchableSelect from '@/components/SearchableSelect'
 
 const inputStyle: React.CSSProperties = {
   width: '100%',
@@ -112,17 +113,12 @@ export default function PartnerFormModal({
 
           <div>
             <label style={labelStyle}>Tipo</label>
-            <input
-              style={inputStyle}
-              type="text"
-              list="partner-types"
+            <SearchableSelect
               value={type}
-              onChange={e => setType(e.target.value)}
+              onChange={setType}
+              options={TYPE_SUGGESTIONS}
               placeholder="Ex: hotel"
             />
-            <datalist id="partner-types">
-              {TYPE_SUGGESTIONS.map(t => <option key={t} value={t} />)}
-            </datalist>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
