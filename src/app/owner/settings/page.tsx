@@ -50,7 +50,9 @@ export default async function SettingsPage() {
     },
     {
       label: 'Waiver configurado',
-      done:  !!(school?.waiver_pt),
+      done:  school?.waiver_type === 'file'
+        ? !!(school?.waiver_file_global_url) || Object.keys(school?.waiver_files_by_lang ?? {}).length > 0
+        : !!(school?.waiver_pt),
       sub:   'Termo de responsabilidade para os alunos',
       href:  '/owner/settings',
     },

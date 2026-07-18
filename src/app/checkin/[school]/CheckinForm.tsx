@@ -177,6 +177,9 @@ type School = {
   waiver_pt: string | null
   waiver_fr: string | null
   waiver_es: string | null
+  waiver_type?: string | null
+  waiver_file_global_url?: string | null
+  waiver_files_by_lang?: Record<string, string> | null
 }
 
 type Activity = {
@@ -1207,17 +1210,48 @@ export default function CheckinForm({
               ))}
             </div>
 
-            <div style={{
-              background: '#fff', borderRadius: '14px', padding: '16px',
-              fontSize: '13px', color: '#4A4C58', lineHeight: '1.7',
-              border: '0.5px solid #E4E0D8', maxHeight: '120px', overflowY: 'auto',
-            }}>
-              {(() => {
-                const waiverKey = `waiver_${lang}` as keyof typeof school
-                const dbWaiver = school[waiverKey] as string | null
-                return dbWaiver || t.waiver_text
-              })()}
-            </div>
+            {(() => {
+              // File mode: the student consults the official document (view
+              // only, never signed inside the PDF itself) instead of reading
+              // typed text inline. Falls back to the text flow below if the
+              // owner switched to file mode but never actually uploaded one.
+              const waiverFileUrl = school.waiver_type === 'file'
+                ? (school.waiver_files_by_lang?.[lang] ?? school.waiver_file_global_url ?? null)
+                : null
+
+              if (waiverFileUrl) {
+                return (
+                  <a
+                    href={waiverFileUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
+                      background: '#fff', borderRadius: '14px', padding: '18px',
+                      border: '1.5px solid #00A896', textDecoration: 'none',
+                      fontSize: '15px', fontWeight: 600, color: '#00A896',
+                    }}
+                  >
+                    📄 {lang === 'pt' ? 'Visualizar Termo de Responsabilidade (PDF)'
+                      : lang === 'fr' ? 'Consulter les conditions générales (PDF)'
+                      : lang === 'es' ? 'Ver términos y condiciones (PDF)'
+                      : 'View waiver document (PDF)'}
+                  </a>
+                )
+              }
+
+              const waiverKey = `waiver_${lang}` as keyof typeof school
+              const dbWaiver = school[waiverKey] as string | null
+              return (
+                <div style={{
+                  background: '#fff', borderRadius: '14px', padding: '16px',
+                  fontSize: '13px', color: '#4A4C58', lineHeight: '1.7',
+                  border: '0.5px solid #E4E0D8', maxHeight: '120px', overflowY: 'auto',
+                }}>
+                  {dbWaiver || t.waiver_text}
+                </div>
+              )
+            })()}
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <label style={{

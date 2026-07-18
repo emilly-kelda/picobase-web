@@ -20,6 +20,9 @@ type School = {
   waiver_pt: string | null
   waiver_fr: string | null
   waiver_es: string | null
+  waiver_type: string | null
+  waiver_file_global_url: string | null
+  waiver_files_by_lang: Record<string, string> | null
 }
 
 type Season = {
@@ -73,6 +76,11 @@ export default function SettingsClient({
 
   const waiverCount = [school.waiver_en, school.waiver_pt, school.waiver_fr, school.waiver_es]
     .filter(w => w && w.trim().length > 0).length
+  const waiverFileCount = Object.keys(school.waiver_files_by_lang ?? {}).length
+    + (school.waiver_file_global_url ? 1 : 0)
+  const waiverSummary = school.waiver_type === 'file'
+    ? `${waiverFileCount} arquivo${waiverFileCount !== 1 ? 's' : ''}`
+    : `${waiverCount}/4 idiomas`
 
   const cards: Array<{ key: ModalKey; title: string; summary: string; sub: string }> = [
     {
@@ -96,7 +104,7 @@ export default function SettingsClient({
     {
       key: 'waiver',
       title: 'Waiver',
-      summary: `${waiverCount}/4 idiomas`,
+      summary: waiverSummary,
       sub: 'Termo de responsabilidade',
     },
   ]
@@ -163,6 +171,9 @@ export default function SettingsClient({
             waiver_pt: school.waiver_pt,
             waiver_fr: school.waiver_fr,
             waiver_es: school.waiver_es,
+            waiver_type: school.waiver_type,
+            waiver_file_global_url: school.waiver_file_global_url,
+            waiver_files_by_lang: school.waiver_files_by_lang,
           }}
           onClose={() => setActiveModal(null)}
           onSaved={patch => { setSchool(s => ({ ...s, ...patch })); closeAndRefresh() }}
