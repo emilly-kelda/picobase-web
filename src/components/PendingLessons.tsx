@@ -144,18 +144,27 @@ export default function PendingLessons({
   const [fxRates, setFxRates]                 = useState<{ USD: number; EUR: number } | null>(null)
   const [fxError, setFxError]                 = useState(false)
 
-  // Fetched once — commissions are always paid in BRL, so the confirm modal
-  // needs today's rate to show an accurate preview whenever a non-BRL
-  // currency is selected. The actual conversion is re-done authoritatively
-  // server-side on confirm; this is display-only.
-  useEffect(() => {
+  // Commissions are always paid in BRL, so the confirm modal needs today's
+  // rate to show an accurate preview whenever a non-BRL currency is
+  // selected. Re-fetched every time the modal opens (not just once on
+  // mount) so the rate can't go stale across a long-open Base Camp tab —
+  // one call covers both USD and EUR, so switching currency mid-modal
+  // doesn't need a second fetch. The actual conversion is re-done
+  // authoritatively server-side on confirm; this is display-only.
+  function loadFxRates() {
+    setFxError(false)
     fetch('/api/fx')
       .then(r => r.json())
       .then(data => { if (data.ok) setFxRates(data.rates); else setFxError(true) })
       .catch(() => setFxError(true))
+  }
+
+  useEffect(() => {
+    loadFxRates()
   }, [])
 
   function open(checkin: Checkin) {
+    loadFxRates()
     const sched = checkin.scheduled_lesson
     const fallbackActivity = sched?.activities ?? checkin.activities
     const schedInstructor = unwrapInstructor(sched?.instructor ?? null)
@@ -897,6 +906,31 @@ export default function PendingLessons({
                 </div>
               )}
 
+              {currency !== 'BRL' && totalPrice > 0 && (
+                <div style={{ fontSize: '12px', color: 'var(--mist)', marginTop: '8px' }}>
+                  {totalPriceBRL != null ? (
+                    `Convertido: ${fmt(totalPriceBRL, 'BRL')} (Cotação: 1 ${currency} = ${fmt(fxRate ?? 0, 'BRL')})`
+                  ) : fxError ? (
+                    <>
+                      Taxa de câmbio indisponível.{' '}
+                      <button
+                        type="button"
+                        onClick={loadFxRates}
+                        style={{
+                          background: 'none', border: 'none', padding: 0,
+                          color: 'var(--glacial-dark)', textDecoration: 'underline',
+                          cursor: 'pointer', fontSize: '12px', fontFamily: 'var(--font-sans)',
+                        }}
+                      >
+                        Tentar novamente
+                      </button>
+                    </>
+                  ) : (
+                    'Buscando taxa de câmbio…'
+                  )}
+                </div>
+              )}
+
               {costDeduction > 0 && (
                 <div style={{
                   background: 'var(--powder)',
@@ -939,16 +973,6 @@ export default function PendingLessons({
                 </div>
               )}
 
-              {currency !== 'BRL' && (
-                <div style={{ fontSize: '11px', color: 'var(--mist)', marginTop: '8px' }}>
-                  {fxRate != null
-                    ? `1 ${currency} = ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(fxRate)} hoje`
-                    : fxError
-                      ? 'Taxa de câmbio indisponível'
-                      : 'Buscando taxa de câmbio…'
-                  }
-                </div>
-              )}
               <div style={{ fontSize: '13px', color: 'var(--mist)', marginTop: '4px' }}>
                 {usesFixedPayout
                   ? `→ repasse do instrutor ${fmt(commissionBRL ?? 0, 'BRL')} (fixo)`
