@@ -100,6 +100,7 @@ export async function getSessions(
   filters?: {
     month?: string
     instructorId?: string
+    origin?: string
   }
 ) {
   const supabase = createServiceClient()
@@ -135,6 +136,10 @@ export async function getSessions(
 
   if (filters?.instructorId) {
     query = query.eq('instructor_id', filters.instructorId)
+  }
+
+  if (filters?.origin) {
+    query = query.eq('origin', filters.origin)
   }
 
   const { data, error } = await query
@@ -254,12 +259,16 @@ export async function getMonthComparison(schoolId: string) {
 
 export async function getSessionTotals(
   schoolId: string,
-  filters?: { month?: string; instructorId?: string }
+  filters?: { month?: string; instructorId?: string; origin?: string }
 ) {
   const sessions = await getSessions(schoolId, filters)
   const revenue     = sessions.reduce((s, r) => s + (r.price ?? 0), 0)
   const commissions = sessions.reduce((s, r) => s + (r.commission_amount ?? 0), 0)
-  return { count: sessions.length, revenue, commissions }
+  // Exact division requested: filtered season revenue / filtered session
+  // count — so it moves with whatever month/instructor/origin filter is
+  // active, same as the other totals cards.
+  const avgTicket = sessions.length > 0 ? revenue / sessions.length : 0
+  return { count: sessions.length, revenue, commissions, avgTicket }
 }
 
 export async function getPendingCheckins(schoolId: string, instructorId: string) {

@@ -82,10 +82,11 @@ function renderInstructorCell(user: { id?: string; name?: string; role?: string 
 export default async function SessionsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ month?: string; instructor?: string; tab?: string }>
+  searchParams: Promise<{ month?: string; instructor?: string; tab?: string; origin?: string }>
 }) {
-  const { month, instructor, tab } = await searchParams
+  const { month, instructor, tab, origin } = await searchParams
   const activeTab: 'realizadas' | 'agendadas' = tab === 'agendadas' ? 'agendadas' : 'realizadas'
+  const activeOrigin = origin === 'direct' || origin === 'partner' ? origin : undefined
 
   const currentMonth = new Date().toISOString().slice(0, 7)
   const activeMonth = month ?? currentMonth
@@ -93,6 +94,7 @@ export default async function SessionsPage({
   const filters = {
     month: activeMonth,
     instructorId: instructor,
+    origin: activeOrigin,
   }
 
   const [sessions, totals, instructors, lang, scheduledLessons] = await Promise.all([
@@ -121,6 +123,16 @@ export default async function SessionsPage({
     params.set('tab', target)
     if (month) params.set('month', month)
     if (instructor) params.set('instructor', instructor)
+    if (activeOrigin) params.set('origin', activeOrigin)
+    return `?${params.toString()}`
+  }
+
+  function originHref(target: 'all' | 'direct' | 'partner') {
+    const params = new URLSearchParams()
+    params.set('tab', activeTab)
+    if (month) params.set('month', month)
+    if (instructor) params.set('instructor', instructor)
+    if (target !== 'all') params.set('origin', target)
     return `?${params.toString()}`
   }
 
@@ -171,6 +183,7 @@ export default async function SessionsPage({
         flexWrap: 'wrap',
       }}>
         <input type="hidden" name="tab" value={activeTab} />
+        <input type="hidden" name="origin" value={activeOrigin ?? ''} />
         <select
           name="month"
           defaultValue={activeMonth}
@@ -217,19 +230,45 @@ export default async function SessionsPage({
           {t.filter_btn}
         </button>
 
-        {(month || instructor) && (
+        {(month || instructor || activeOrigin) && (
           <a href="/owner/sessions" style={{
             fontSize: '13px', color: 'var(--mist)', textDecoration: 'none',
           }}>
             {t.students_clear}
           </a>
         )}
+
+        {/* Origin quick filters */}
+        <div style={{ display: 'flex', gap: '6px' }}>
+          {([
+            ['all',     t.origin_all],
+            ['direct',  t.origin_direct],
+            ['partner', t.origin_partners],
+          ] as const).map(([key, label]) => {
+            const active = key === 'all' ? !activeOrigin : activeOrigin === key
+            return (
+              <a
+                key={key}
+                href={originHref(key)}
+                style={{
+                  padding: '7px 14px', borderRadius: '99px',
+                  fontSize: '12px', fontWeight: '500',
+                  textDecoration: 'none', fontFamily: 'var(--font-sans)',
+                  background: active ? 'var(--slate)' : 'var(--powder)',
+                  color: active ? '#fff' : 'var(--mist)',
+                }}
+              >
+                {label}
+              </a>
+            )
+          })}
+        </div>
       </form>
 
       {/* Totals bar */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(3, 1fr)',
+        gridTemplateColumns: 'repeat(4, 1fr)',
         gap: '12px',
         marginBottom: '20px',
       }}>
@@ -237,6 +276,7 @@ export default async function SessionsPage({
           { label: t.today_sessions,    value: String(totals.count)    },
           { label: t.season_revenue,    value: fmt(totals.revenue)     },
           { label: t.season_commissions,value: fmt(totals.commissions) },
+          { label: t.avg_ticket,        value: fmt(totals.avgTicket)   },
         ].map(card => (
           <div key={card.label} style={{
             background: '#fff',

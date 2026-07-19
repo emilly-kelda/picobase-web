@@ -97,6 +97,10 @@ export const translations = {
     no_scheduled_lessons: 'No scheduled lessons for this period.',
     scheduled_forecast:   'Forecasted revenue (scheduled)',
     status_scheduled:     'Scheduled',
+    avg_ticket:           'Average Ticket',
+    origin_all:           'All',
+    origin_direct:        'Direct',
+    origin_partners:      'Partners',
 
     // Crew
     crew_title:          'Crew',
@@ -266,6 +270,10 @@ export const translations = {
     no_scheduled_lessons: 'Nenhuma aula agendada para este período.',
     scheduled_forecast:   'Previsão de receita (agendadas)',
     status_scheduled:     'Agendada',
+    avg_ticket:           'Ticket Médio',
+    origin_all:           'Todos',
+    origin_direct:        'Direto',
+    origin_partners:      'Parceiros',
 
     // Crew
     crew_title:          'Equipe',
