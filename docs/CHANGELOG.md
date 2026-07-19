@@ -451,3 +451,25 @@ their commit message and diff.
   "Última aula · 1h" badge, and "Ocupação da Equipe" switched from an
   hours/weekly-capacity ratio to % of instructors with a lesson
   scheduled today.
+- `4ab3e26` **feat**: split Sala de Espera's "Confirmar" into two
+  separate actions across the two widgets. A walk-in with nothing
+  pre-arranged now gets "Agendar Aula" — a new lightweight modal
+  (`ScheduleFromCheckinModal.tsx`, no price/payment fields) that writes
+  a real `scheduled_lessons` row via new `api/owner/schedule-from-checkin`
+  and links it back onto the checkin. The actual pricing/payment
+  decision moved to a new "✓ Confirmar / Iniciar Aula" button on
+  individual Aulas Agendadas rows (`ConfirmLessonModal.tsx`, ported from
+  Sala de Espera's modal, confirms via `scheduled_lesson_id` instead of
+  `checkin_id`). A checkin that arrives already matched to a
+  pre-existing booking keeps the one-step "Confirmar →" in Sala de
+  Espera unchanged — new migration `20260802000000` adds
+  `checkins.deferred_to_schedule` specifically to tell these two cases
+  apart (both end up with `scheduled_lesson_id` set). Deviated from the
+  literal spec, which asked to wire "Agendar Aula" to `AddBookingModal`
+  — that writes to the unrelated `bookings` (leads) table, not
+  `scheduled_lessons`, so it would never have shown up in Aulas
+  Agendadas at all. Also fixed a real pre-existing bug this surfaced:
+  `confirm-lesson`'s package auto-debit and variable-cost lookup only
+  ran when a `checkin_id` was present, so the already-existing group-
+  confirm flow (which always confirms via `scheduled_lesson_id` alone)
+  was silently never debiting any package.
