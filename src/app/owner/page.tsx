@@ -291,7 +291,7 @@ export default async function OwnerPage() {
             instructors={instructorList}
             activePackages={(activePackages as any).filter((p: any) => p.status === 'active')}
             schoolName={runway.school_name ?? 'Pico Base'}
-            schoolSlug={runway.slug ?? ''}
+            schoolSlug={(school as any)?.slug ?? runway.slug ?? ''}
           />
 
         </div>
