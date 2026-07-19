@@ -143,6 +143,8 @@ export default function PendingLessons({
   const [variableCost, setVariableCost]       = useState<VariableCostInfo | null>(null)
   const [fxRates, setFxRates]                 = useState<{ USD: number; EUR: number } | null>(null)
   const [fxError, setFxError]                 = useState(false)
+  const [fxLoading, setFxLoading]              = useState(false)
+  const [fxSource, setFxSource]                = useState<'live' | 'stale-cache' | 'fallback' | null>(null)
 
   // Commissions are always paid in BRL, so the confirm modal needs today's
   // rate to show an accurate preview whenever a non-BRL currency is
@@ -151,12 +153,23 @@ export default function PendingLessons({
   // one call covers both USD and EUR, so switching currency mid-modal
   // doesn't need a second fetch. The actual conversion is re-done
   // authoritatively server-side on confirm; this is display-only.
+  //
+  // The timestamp query param is a client-side cache-buster (belt and
+  // suspenders — api/fx/route.ts now also sets dynamic='force-dynamic' and
+  // Cache-Control: no-store, which was the actual bug: without those, the
+  // route could serve the same cached response, including a cached
+  // failure, on every request, making "Tentar novamente" look broken).
   function loadFxRates() {
     setFxError(false)
-    fetch('/api/fx')
+    setFxLoading(true)
+    fetch(`/api/fx?t=${Date.now()}`)
       .then(r => r.json())
-      .then(data => { if (data.ok) setFxRates(data.rates); else setFxError(true) })
+      .then(data => {
+        if (data.ok) { setFxRates(data.rates); setFxSource(data.source ?? 'live') }
+        else setFxError(true)
+      })
       .catch(() => setFxError(true))
+      .finally(() => setFxLoading(false))
   }
 
   useEffect(() => {
@@ -907,8 +920,13 @@ export default function PendingLessons({
               )}
 
               {currency !== 'BRL' && totalPrice > 0 && (
-                <div style={{ fontSize: '12px', color: 'var(--mist)', marginTop: '8px' }}>
-                  {totalPriceBRL != null ? (
+                <div style={{
+                  fontSize: '12px', marginTop: '8px',
+                  color: fxSource === 'fallback' ? '#92400E' : 'var(--mist)',
+                }}>
+                  {totalPriceBRL != null && fxSource === 'fallback' ? (
+                    `Convertido: ${fmt(totalPriceBRL, 'BRL')} — usando taxa padrão da escola devido à instabilidade de rede`
+                  ) : totalPriceBRL != null ? (
                     `Convertido: ${fmt(totalPriceBRL, 'BRL')} (Cotação: 1 ${currency} = ${fmt(fxRate ?? 0, 'BRL')})`
                   ) : fxError ? (
                     <>
@@ -916,13 +934,15 @@ export default function PendingLessons({
                       <button
                         type="button"
                         onClick={loadFxRates}
+                        disabled={fxLoading}
                         style={{
                           background: 'none', border: 'none', padding: 0,
                           color: 'var(--glacial-dark)', textDecoration: 'underline',
-                          cursor: 'pointer', fontSize: '12px', fontFamily: 'var(--font-sans)',
+                          cursor: fxLoading ? 'not-allowed' : 'pointer', fontSize: '12px',
+                          fontFamily: 'var(--font-sans)',
                         }}
                       >
-                        Tentar novamente
+                        {fxLoading ? 'Tentando...' : 'Tentar novamente'}
                       </button>
                     </>
                   ) : (
