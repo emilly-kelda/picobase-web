@@ -3,14 +3,12 @@ import { getCosts, getKnownCategories, getMonthlyCostTotal } from '@/repositorie
 import { getRunwayData, getRunwayProjection } from '@/repositories/runwayRepository'
 import CostsClient from './CostsClient'
 import RunwayCalculator from '@/components/RunwayCalculator'
+import { formatCurrency } from '@/lib/currency'
 
 const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
 
 function fmt(n: number) {
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency', currency: 'BRL',
-    minimumFractionDigits: 0, maximumFractionDigits: 0,
-  }).format(n)
+  return formatCurrency(n, { decimals: 0 })
 }
 
 export default async function CostsPage() {

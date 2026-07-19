@@ -18,6 +18,7 @@ import { ReceptionModeProvider } from '@/components/ReceptionModeContext'
 import ReceptionModeToggle from '@/components/ReceptionModeToggle'
 import MaskableValue from '@/components/MaskableValue'
 import { getWeather } from '@/lib/weather'
+import { formatCurrency } from '@/lib/currency'
 import { getPortalLang } from '@/lib/language'
 import { getT } from '@/lib/i18n'
 import Link from 'next/link'
@@ -25,11 +26,7 @@ import Link from 'next/link'
 const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
 
 function fmt(n: number | null | undefined) {
-  if (n == null) return '—'
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency', currency: 'BRL',
-    minimumFractionDigits: 2, maximumFractionDigits: 2,
-  }).format(n)
+  return formatCurrency(n, { decimals: 2 })
 }
 
 function fmtDate(d: string) {
@@ -219,6 +216,11 @@ export default async function OwnerPage() {
                     </span>
                   )}
                 </div>
+                {monthComparison.thisMonthLessons === 0 && (
+                  <div style={{ fontSize: '12px', color: 'var(--mist)', marginTop: '4px' }}>
+                    Início do período
+                  </div>
+                )}
               </div>
               <div>
                 <div style={{ fontSize: '11px', color: 'var(--mist)', marginBottom: '4px', fontWeight: '500' }}>

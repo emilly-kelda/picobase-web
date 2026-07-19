@@ -41,7 +41,26 @@ export default function SeasonsModal({
   const [saved, setSaved]     = useState<string | null>(null)
   const [error, setError]     = useState<string | null>(null)
 
+  /** Client-side pre-check against the seasons already loaded in this
+   *  modal — same interval-overlap test the API repeats authoritatively
+   *  (api/owner/settings, type: 'season') before writing, so a stale local
+   *  list can't let a real conflict through. This just avoids a pointless
+   *  round-trip for the common case. */
+  function findOverlap(season: Season): Season | null {
+    return seasons.find(s =>
+      s.id !== season.id &&
+      season.start_date <= s.end_date &&
+      season.end_date >= s.start_date
+    ) ?? null
+  }
+
   async function saveSeason(season: Season) {
+    const overlapping = findOverlap(season)
+    if (overlapping) {
+      setError('Este período entra em conflito com uma temporada existente.')
+      return
+    }
+
     setSaving(season.id)
     setError(null)
     try {

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import ReceivablesView from '@/components/ReceivablesView'
+import { formatCurrency } from '@/lib/currency'
 
 type Advance = {
   id: string
@@ -62,11 +63,7 @@ type Summary = {
 }
 
 function fmt(n: number | null | undefined) {
-  if (n == null) return '—'
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency', currency: 'BRL',
-    minimumFractionDigits: 2, maximumFractionDigits: 2,
-  }).format(n)
+  return formatCurrency(n, { decimals: 2 })
 }
 
 function fmtDate(d: string | null) {

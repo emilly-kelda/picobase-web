@@ -3,12 +3,10 @@
 import { useState } from 'react'
 import type { OperationalCost } from '@/repositories/costRepository'
 import AddCostModal from './AddCostModal'
+import { formatCurrency } from '@/lib/currency'
 
 function fmt(n: number) {
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency', currency: 'BRL',
-    minimumFractionDigits: 0, maximumFractionDigits: 0,
-  }).format(n)
+  return formatCurrency(n, { decimals: 0 })
 }
 
 function fmtDate(iso: string) {
