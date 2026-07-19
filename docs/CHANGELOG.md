@@ -319,3 +319,14 @@ their commit message and diff.
   `activity_id`/`instructor_id` in its initial state, so whichever step
   the student reaches already shows that option selected. No `?level=`
   — the check-in form has no skill-level field anywhere to bind it to.
+- `7cc54ed` **feat**: "Exportar PDF" and "Enviar WhatsApp" buttons in the
+  Payments Recibo bottom sheet, plus an Adiantamentos deduction line and
+  a bold "Total a receber" (net of advances) in its footer. Found the
+  existing `api/receipt/[instructorId]` route recomputes commission
+  from raw price × pct — ignoring fixed_per_hour, variable costs, the
+  fixed payout model, bonus, and advances — so a PDF from it couldn't
+  be trusted to match the real payout. Built
+  `api/owner/receipt/[paymentId]` instead, sourced directly from the
+  same closed `payments` row the table renders from, so the on-screen
+  total, the PDF, and the WhatsApp message can never disagree. Old
+  route left untouched (still used by `close-month/page.tsx`).
