@@ -16,7 +16,7 @@ import { ReceptionModeProvider } from '@/components/ReceptionModeContext'
 import ReceptionModeToggle from '@/components/ReceptionModeToggle'
 import AutoRefresh from '@/components/AutoRefresh'
 import MaskableValue from '@/components/MaskableValue'
-import { getWeather } from '@/lib/weather'
+import { getWeather, buildWeatherSpots, resolveWeatherSpot } from '@/lib/weather'
 import { formatCurrency } from '@/lib/currency'
 import { getPortalLang } from '@/lib/language'
 import { getT } from '@/lib/i18n'
@@ -39,11 +39,19 @@ export default async function OwnerPage() {
   const seasonId = cookieStore.get('active_season_id')?.value
   const weatherSpotId = cookieStore.get('weather_spot')?.value
 
+  // Fetched ahead of the big parallel batch below — getWeather() needs to
+  // know which spot to call Open-Meteo for, and that now depends on the
+  // school's own saved location (Settings → Geral), not just a hardcoded
+  // default.
+  const school = await getSchool(SCHOOL_ID)
+  const weatherSpots       = buildWeatherSpots(school as any)
+  const selectedWeatherSpot = resolveWeatherSpot(weatherSpots, weatherSpotId)
+
   const [
     runway, sessions, alerts, today, lang,
     pending, instructors, todayLessons, tomorrowLessons,
     activities, activePackages, missedLessons, packageBalances,
-    monthComparison, weather, school, packageTypes,
+    monthComparison, weather, packageTypes,
   ] = await Promise.all([
     getRunwayData(SCHOOL_ID, seasonId),
     getRecentSessions(SCHOOL_ID),
@@ -59,8 +67,7 @@ export default async function OwnerPage() {
     getMissedLessons(SCHOOL_ID),
     getPackageBalancesForCheckins(SCHOOL_ID),
     getMonthComparison(SCHOOL_ID),
-    getWeather(weatherSpotId),
-    getSchool(SCHOOL_ID),
+    getWeather(selectedWeatherSpot),
     getPackages(SCHOOL_ID),
   ])
 
@@ -191,7 +198,7 @@ export default async function OwnerPage() {
         ════════════════════════════════════════════════════════════ */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', minWidth: 0 }}>
 
-          <WeatherWidget weather={weather} />
+          <WeatherWidget weather={weather} spots={weatherSpots} />
 
           {/* Today stats */}
           <div style={{

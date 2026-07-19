@@ -21,6 +21,7 @@ export async function PATCH(request: Request) {
       'notify_student_before_class', 'notify_payment_and_waiver', 'notify_instructor_on_checkin',
       'notify_package_low', 'notify_late_cancellation', 'notify_post_class_feedback',
       'payout_model', 'fixed_payout_value', 'privacy_policy_url',
+      'spot_name', 'latitude', 'longitude',
     ]
     const update: Record<string, unknown> = { updated_at: new Date().toISOString() }
     for (const key of schoolFields) {

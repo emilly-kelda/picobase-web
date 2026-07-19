@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { compassLabel, weatherIcon, WEATHER_SPOTS, type WeatherData } from '@/lib/weather'
+import { compassLabel, weatherIcon, type WeatherData, type WeatherSpot } from '@/lib/weather'
 
 // Same "set the cookie directly, then router.refresh()" pattern OwnerNav.tsx
 // already uses for the season switcher — no dedicated API route needed,
@@ -14,7 +14,7 @@ const COOKIE_MAX_AGE = 60 * 60 * 24 * 365
 // stacked temp/wind rows instead of side-by-side, since the full compass
 // names (e.g. "Leste-Sudeste") need more horizontal room than the old
 // 8-point abbreviations did.
-export default function WeatherWidget({ weather }: { weather: WeatherData | null }) {
+export default function WeatherWidget({ weather, spots }: { weather: WeatherData | null; spots: WeatherSpot[] }) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const wrapRef = useRef<HTMLDivElement>(null)
@@ -102,7 +102,7 @@ export default function WeatherWidget({ weather }: { weather: WeatherData | null
           borderRadius: 'var(--radius-md)', boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
           minWidth: '180px', overflow: 'hidden',
         }}>
-          {WEATHER_SPOTS.map(spot => {
+          {spots.map(spot => {
             const active = spot.id === weather.spotId
             return (
               <button

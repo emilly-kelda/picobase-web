@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
 type School = {
   id: string
@@ -13,7 +13,12 @@ type School = {
   payout_model: string
   fixed_payout_value: number | null
   privacy_policy_url: string | null
+  spot_name: string | null
+  latitude: number | null
+  longitude: number | null
 }
+
+type GeocodeResult = { displayName: string; lat: number; lon: number }
 
 const inputStyle: React.CSSProperties = {
   width: '100%', padding: '9px 12px',
@@ -51,6 +56,48 @@ export default function GeneralSettingsModal({
   const [error, setError]       = useState<string | null>(null)
   const [portalLangSaving, setPortalLangSaving] = useState(false)
 
+  // Spot location — searched via Nominatim/OpenStreetMap (api/owner/geocode
+  // proxies it server-side; Nominatim requires a descriptive User-Agent a
+  // browser fetch can't reliably set). Feeds Base Camp's WeatherWidget as
+  // the school's default monitored location.
+  const [spotName, setSpotName]     = useState(school.spot_name ?? '')
+  const [latitude, setLatitude]     = useState<number | null>(school.latitude ?? null)
+  const [longitude, setLongitude]   = useState<number | null>(school.longitude ?? null)
+  const [searchingSpot, setSearchingSpot] = useState(!school.spot_name)
+  const [spotQuery, setSpotQuery]         = useState('')
+  const [spotResults, setSpotResults]     = useState<GeocodeResult[]>([])
+  const [spotSearching, setSpotSearching] = useState(false)
+  const [showSpotResults, setShowSpotResults] = useState(false)
+  const spotDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    if (spotDebounceRef.current) clearTimeout(spotDebounceRef.current)
+    if (spotQuery.trim().length < 3) {
+      setSpotResults([])
+      setShowSpotResults(false)
+      return
+    }
+    spotDebounceRef.current = setTimeout(() => {
+      setSpotSearching(true)
+      fetch(`/api/owner/geocode?q=${encodeURIComponent(spotQuery.trim())}`)
+        .then(r => r.json())
+        .then(data => { setSpotResults(data.results ?? []); setShowSpotResults(true) })
+        .catch(() => setSpotResults([]))
+        .finally(() => setSpotSearching(false))
+    }, 400)
+    return () => { if (spotDebounceRef.current) clearTimeout(spotDebounceRef.current) }
+  }, [spotQuery])
+
+  function selectSpot(result: GeocodeResult) {
+    setSpotName(result.displayName)
+    setLatitude(result.lat)
+    setLongitude(result.lon)
+    setSpotQuery('')
+    setSpotResults([])
+    setShowSpotResults(false)
+    setSearchingSpot(false)
+  }
+
   const canSave = name.trim().length >= 2
     && (payoutModel !== 'fixed' || Number(fixedPayoutValue) > 0)
     && !saving
@@ -68,6 +115,8 @@ export default function GeneralSettingsModal({
           payout_model: payoutModel,
           fixed_payout_value: payoutModel === 'fixed' ? Number(fixedPayoutValue) : null,
           privacy_policy_url: privacyPolicyUrl.trim() || null,
+          spot_name: spotName.trim() || null,
+          latitude, longitude,
         }),
       })
       const data = await res.json()
@@ -77,6 +126,8 @@ export default function GeneralSettingsModal({
           payout_model: payoutModel,
           fixed_payout_value: payoutModel === 'fixed' ? Number(fixedPayoutValue) : null,
           privacy_policy_url: privacyPolicyUrl.trim() || null,
+          spot_name: spotName.trim() || null,
+          latitude, longitude,
         })
       } else {
         setError(data.error ?? 'Não foi possível salvar.')
@@ -124,6 +175,85 @@ export default function GeneralSettingsModal({
             <label style={labelStyle}>Nome da escola</label>
             <input style={inputStyle} value={name} onChange={e => setName(e.target.value)} />
           </div>
+
+          <div>
+            <label style={labelStyle}>Localização (spot) da escola</label>
+            {!searchingSpot && spotName ? (
+              <div style={{
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                padding: '10px 12px', background: 'var(--glacial-light)',
+                border: '1px solid var(--glacial)', borderRadius: 'var(--radius-md)',
+              }}>
+                <div style={{ fontSize: '13px', fontWeight: '500', color: 'var(--slate)', minWidth: 0 }}>
+                  {spotName}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSearchingSpot(true)}
+                  style={{
+                    background: 'none', border: 'none', padding: '4px 8px', flexShrink: 0,
+                    color: 'var(--glacial-dark)', fontSize: '12px', cursor: 'pointer',
+                    fontFamily: 'var(--font-sans)', textDecoration: 'underline',
+                  }}
+                >
+                  Trocar
+                </button>
+              </div>
+            ) : (
+              <div style={{ position: 'relative' }}>
+                <input
+                  style={inputStyle}
+                  type="text"
+                  value={spotQuery}
+                  onChange={e => setSpotQuery(e.target.value)}
+                  onFocus={() => { if (spotResults.length > 0) setShowSpotResults(true) }}
+                  onBlur={() => setTimeout(() => setShowSpotResults(false), 200)}
+                  placeholder="Buscar spot/praia (ex: Lagoa da Taíba)..."
+                  autoFocus={!!spotName}
+                />
+                {spotSearching && (
+                  <div style={{ fontSize: '11px', color: 'var(--mist)', marginTop: '4px' }}>
+                    Buscando...
+                  </div>
+                )}
+                {showSpotResults && spotResults.length > 0 && (
+                  <div style={{
+                    position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0,
+                    background: '#fff', border: '0.5px solid var(--border)',
+                    borderRadius: 'var(--radius-md)', zIndex: 50,
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.1)',
+                    maxHeight: '220px', overflowY: 'auto',
+                  }}>
+                    {spotResults.map((r, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onMouseDown={() => selectSpot(r)}
+                        style={{
+                          width: '100%', padding: '10px 14px', cursor: 'pointer',
+                          border: 'none', background: 'transparent',
+                          borderBottom: '0.5px solid var(--border)',
+                          textAlign: 'left', fontFamily: 'var(--font-sans)',
+                          fontSize: '13px', color: 'var(--slate)',
+                        }}
+                      >
+                        {r.displayName}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {showSpotResults && spotResults.length === 0 && !spotSearching && spotQuery.trim().length >= 3 && (
+                  <div style={{ fontSize: '12px', color: 'var(--mist)', marginTop: '6px' }}>
+                    Nenhum local encontrado.
+                  </div>
+                )}
+              </div>
+            )}
+            <div style={{ fontSize: '11px', color: 'var(--mist)', marginTop: '4px' }}>
+              Busca via OpenStreetMap (Nominatim). Alimenta o card de clima do Base Camp.
+            </div>
+          </div>
+
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
             <div>
               <label style={labelStyle}>País</label>

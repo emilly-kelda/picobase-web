@@ -2,24 +2,43 @@
 // manage.
 export type WeatherSpot = { id: string; label: string; lat: number; lon: number }
 
-// This app has no multi-location/"sedes" concept anywhere in the schema —
-// every table is scoped to one hardcoded SCHOOL_ID, single-tenant, no
-// locations table to read a list from. Rather than inventing that schema
-// for a weather picker alone, this is a small curated list of real,
-// well-known wind/kite spots along the Ceará coast (the school itself,
-// Taíba Kites, is named after one of them) — a plausible set of places an
-// operator actually wants to check, not a database-backed location registry.
-export const WEATHER_SPOTS: WeatherSpot[] = [
+// Small curated list of real, well-known wind/kite spots along the Ceará
+// coast (the school itself, Taíba Kites, is named after one of them) — a
+// plausible set of places an operator wants to quick-check regardless of
+// where the school is actually based. The school's OWN location (set via
+// Nominatim search in Settings → Geral, schools.spot_name/latitude/
+// longitude) is prepended ahead of these by buildWeatherSpots() below and
+// used as the default — these presets are just extra quick-swap options in
+// WeatherWidget's popover, not the primary source of "where is my school".
+const CURATED_WEATHER_SPOTS: WeatherSpot[] = [
   { id: 'fortaleza',     label: 'Fortaleza',         lat: -3.7319, lon: -38.5267 },
   { id: 'cumbuco',       label: 'Cumbuco',           lat: -3.6167, lon: -38.7333 },
   { id: 'taiba',         label: 'Taíba',             lat: -3.5667, lon: -38.9000 },
   { id: 'icarai',        label: 'Icaraí de Amontada', lat: -3.2667, lon: -39.3667 },
   { id: 'jericoacoara',  label: 'Jericoacoara',      lat: -2.7967, lon: -40.5136 },
 ]
-export const DEFAULT_WEATHER_SPOT_ID = WEATHER_SPOTS[0].id
 
-export function resolveWeatherSpot(spotId?: string | null): WeatherSpot {
-  return WEATHER_SPOTS.find(s => s.id === spotId) ?? WEATHER_SPOTS[0]
+/** Builds the spot list for a given school: its own configured location
+ *  first (if set), then the curated presets. Called server-side (owner/
+ *  page.tsx) with the school row already fetched — the result gets passed
+ *  to both getWeather() (to resolve which one to fetch) and WeatherWidget
+ *  (to render the popover), so the two always agree on the same list. */
+export function buildWeatherSpots(school?: {
+  spot_name?: string | null
+  latitude?: number | null
+  longitude?: number | null
+} | null): WeatherSpot[] {
+  if (school?.latitude != null && school?.longitude != null) {
+    return [
+      { id: 'school', label: school.spot_name || 'Localização da escola', lat: school.latitude, lon: school.longitude },
+      ...CURATED_WEATHER_SPOTS,
+    ]
+  }
+  return CURATED_WEATHER_SPOTS
+}
+
+export function resolveWeatherSpot(spots: WeatherSpot[], spotId?: string | null): WeatherSpot {
+  return spots.find(s => s.id === spotId) ?? spots[0]
 }
 
 export type WeatherData = {
@@ -31,8 +50,7 @@ export type WeatherData = {
   spotLabel: string
 }
 
-export async function getWeather(spotId?: string | null): Promise<WeatherData | null> {
-  const spot = resolveWeatherSpot(spotId)
+export async function getWeather(spot: WeatherSpot): Promise<WeatherData | null> {
   try {
     const url = `https://api.open-meteo.com/v1/forecast?latitude=${spot.lat}&longitude=${spot.lon}` +
       `&current=temperature_2m,wind_speed_10m,wind_direction_10m,weather_code&wind_speed_unit=kn&timezone=America%2FFortaleza`
