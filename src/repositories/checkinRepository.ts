@@ -71,4 +71,35 @@ export async function getPackageBalanceForCheckin(schoolId: string, studentName:
   }
 }
 
+/** Single-name, single-day match — deliberately not a "list today's
+ *  scheduled students" query. The public check-in form used to fetch and
+ *  render the whole day's roster (name/activity/instructor) client-side
+ *  so it could offer name suggestions as the student typed, which meant
+ *  any anonymous visitor could see every other student scheduled that
+ *  day just by focusing the field, no typing required — a real LGPD
+ *  exposure. This only ever answers "does *this exact* name have a
+ *  lesson today", returning a single match or null, never an array, so
+ *  there's nothing to browse. */
+export async function getTodayScheduledMatchForCheckin(schoolId: string, studentName: string) {
+  const supabase = createServiceClient()
+  const today = new Date().toISOString().slice(0, 10)
+
+  const { data } = await supabase
+    .from('scheduled_lessons')
+    .select('activity_id, instructor_id, student_name')
+    .eq('school_id', schoolId)
+    .eq('status', 'scheduled')
+    .gte('scheduled_at', `${today}T00:00:00`)
+    .lte('scheduled_at', `${today}T23:59:59`)
+
+  const target = normalizeStudentName(studentName)
+  const match = (data ?? []).find(s => normalizeStudentName(s.student_name) === target)
+  if (!match) return null
+
+  return {
+    activityId:   match.activity_id,
+    instructorId: match.instructor_id,
+  }
+}
+
 
