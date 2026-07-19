@@ -6,10 +6,13 @@ import CheckinForm from './CheckinForm'
 
 export default async function CheckinPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ school: string }>
+  searchParams: Promise<{ student?: string; instructor?: string; activity?: string }>
 }) {
   const { school: slug } = await params
+  const { student, instructor, activity } = await searchParams
   const school = await getSchoolBySlug(slug)
   if (!school) notFound()
 
@@ -31,6 +34,9 @@ export default async function CheckinPage({
       instructors={instructors}
       partners={partners}
       referredPartner={referredPartner}
+      prefillStudentName={student}
+      prefillInstructorName={instructor}
+      prefillActivityName={activity}
     />
   )
 }

@@ -93,6 +93,20 @@ function formatHours(minutes: number): string {
   return `${h}h${m}min`
 }
 
+/** Carries the lesson's known context into the public check-in form so the
+ *  student doesn't have to re-select their instructor/activity there —
+ *  CheckinForm.tsx resolves these names back to activity_id/instructor_id
+ *  against its own school-scoped lists. No `level` param: the check-in
+ *  form has no skill-level field at all (that's set later by the owner/
+ *  instructor via ProgressionEditor, never collected at check-in), so
+ *  there's nothing on the other end to bind it to. */
+function buildCheckinUrl(schoolSlug: string, lesson: Lesson): string {
+  const params = new URLSearchParams({ student: lesson.student_name ?? '' })
+  if (lesson.instructor?.name) params.set('instructor', lesson.instructor.name)
+  if (lesson.activities?.name) params.set('activity', lesson.activities.name)
+  return `/checkin/${schoolSlug}?${params.toString()}`
+}
+
 /** Package-balance badge for a scheduled-lesson row — exact (not
  *  substring) case-insensitive match against activePackages, since both
  *  sides here are already-complete names, not partial typed input (unlike
@@ -899,7 +913,7 @@ export default function ScheduledLessons({
                     Confirmar Aula
                   </a>
                   <a
-                    href={schoolSlug ? `/checkin/${schoolSlug}?student=${encodeURIComponent(lesson.student_name ?? '')}` : undefined}
+                    href={schoolSlug ? buildCheckinUrl(schoolSlug, lesson) : undefined}
                     target="_blank"
                     rel="noopener noreferrer"
                     title="Abrir check-in público"

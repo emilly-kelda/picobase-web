@@ -458,6 +458,9 @@ export default function CheckinForm({
   instructors,
   partners = [],
   referredPartner = null,
+  prefillStudentName,
+  prefillInstructorName,
+  prefillActivityName,
 }: {
   school: School
   activities: Activity[]
@@ -466,6 +469,14 @@ export default function CheckinForm({
   /** Resolved server-side from the pb_ref cookie (see page.tsx) — when
    *  present, the source/partner step is pre-filled instead of asked. */
   referredPartner?: ReferredPartner | null
+  /** From the owner dashboard's "Abrir check-in público" link
+   *  (buildCheckinUrl in ScheduledLessons.tsx) — carries the already-known
+   *  lesson context so the student doesn't retype/reselect it. Names, not
+   *  ids (matches the human-readable ?student= convention that link
+   *  already used) — resolved against `activities`/`instructors` below. */
+  prefillStudentName?: string
+  prefillInstructorName?: string
+  prefillActivityName?: string
 }) {
   const defaultLang = (school.language === 'pt' ? 'pt'
     : school.language === 'fr' ? 'fr'
@@ -482,13 +493,13 @@ export default function CheckinForm({
   const [hasHealth, setHasHealth]   = useState(false)
 
   const [form, setForm] = useState({
-    student_name:        '',
+    student_name:        prefillStudentName ?? '',
     student_email:       '',
     student_whatsapp:    '',
     student_nationality: '',
     date_of_birth:       '',
-    activity_id:         '',
-    instructor_id:       '',
+    activity_id:         activities.find(a => a.name.toLowerCase() === prefillActivityName?.toLowerCase())?.id ?? '',
+    instructor_id:       instructors.find(i => i.name.toLowerCase() === prefillInstructorName?.toLowerCase())?.id ?? '',
     health_condition:    '',
     emergency_name:      '',
     emergency_phone:     '',
@@ -544,6 +555,14 @@ export default function CheckinForm({
       setPackageChecked(true)
     }
   }
+
+  // A typed/selected name normally triggers this on blur or on picking a
+  // scheduled-student suggestion — neither fires for a name that arrived
+  // pre-filled from the URL, so it's kicked off explicitly here instead.
+  useEffect(() => {
+    if (prefillStudentName) checkPackageBalance(prefillStudentName)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   function getPos(e: React.TouchEvent | React.MouseEvent, canvas: HTMLCanvasElement) {
     const rect = canvas.getBoundingClientRect()
