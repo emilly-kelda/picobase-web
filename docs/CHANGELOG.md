@@ -540,3 +540,17 @@ their commit message and diff.
   noted twice already this pass: that modal writes to `bookings`
   (pre-arrival leads), which never surfaces back in Aulas Agendadas.
   Group rows unchanged, keep their own "Confirmar grupo →" flow.
+- `1438163` **fix**: reported as "the confirm button was accidentally
+  removed" from Aulas Agendadas — it wasn't, it had been deliberately
+  relabeled "Iniciar Aula" and restricted to the "Hoje" tab across the
+  previous two passes, context this report didn't have. Relabeled back
+  to "Confirmar Aula" and removed the Hoje-only restriction (shows on
+  Amanhã too — the confirm modal's session-date field is already
+  editable, so pre-confirming a lesson booked for tomorrow works fine).
+  Kept the green "+ Agendar Próxima" swap for already-confirmed/past-due
+  lessons instead of reverting to no button at all: the report's actual
+  concern — no double-click double-confirming the same lesson (would
+  double the session/package debit) — is exactly what that swap already
+  prevents, without leaving the row with no action. Removing it outright
+  would have undone an explicit request approved one pass earlier in
+  this same session.
