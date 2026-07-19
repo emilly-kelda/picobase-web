@@ -62,6 +62,19 @@ function CheckinIcon() {
   )
 }
 
+/** The check-in form's WhatsApp field is free text with no format hint, so
+ *  numbers are often saved as just DDD+phone (10-11 digits), no country
+ *  code. wa.me needs the full international number — without it, the link
+ *  still opens a tab, just to an invalid or wrong contact, which reads as
+ *  "the button does nothing." This school operates out of Fortaleza, so
+ *  55 (Brazil) is the only safe default to backfill; anything already
+ *  long enough to plausibly carry a country code is left untouched. */
+function whatsappDigitsWithCountryCode(raw: string | null | undefined): string {
+  const digits = (raw ?? '').replace(/\D/g, '')
+  if (digits.length === 10 || digits.length === 11) return `55${digits}`
+  return digits
+}
+
 function fmtTime(iso: string) {
   return new Date(iso).toLocaleTimeString('pt-BR', {
     hour: '2-digit', minute: '2-digit', timeZone: 'America/Fortaleza',
@@ -548,7 +561,7 @@ export default function ScheduledLessons({
       `${activityName} agendada para ${dayLabel} às ${fmtTime(lesson.scheduled_at)} na ${schoolName}. ` +
       `Para agilizar a sua entrada, por favor preencha o nosso check-in e termo de responsabilidade ` +
       `clicando aqui: https://picobase.com.br/checkin/${schoolSlug}. Aguardamos você!`
-    const phone = (lesson.student_whatsapp ?? '').replace(/\D/g, '')
+    const phone = whatsappDigitsWithCountryCode(lesson.student_whatsapp)
     return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
   }
 
