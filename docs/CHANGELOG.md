@@ -343,3 +343,17 @@ their commit message and diff.
   directly and needed no change. Open modals in both fixed components
   hold their own state, never derived from the refreshed list, so a
   background sync can't close them or reset in-progress fields.
+- `301ee20` **fix**: `api/checkin/route.ts` wrote `lgpd_consent`/
+  `gdpr_consent` as hardcoded `true` on every row regardless of the
+  actual checkbox state (the client never even sent those fields) —
+  the audit trail claimed full consent independent of reality. Client
+  now sends the real states; server validates both are true (rejects
+  otherwise) and persists what was actually submitted. Confirmed
+  `ip_address`/`user_agent`/`waiver_signed_at` were already captured
+  server-side — no change needed there. Grew the existing scrolling
+  waiver box (120px -> 192px), added a "follow school safety rules"
+  line and formalized checkbox wording across all 4 languages this
+  form supports, and added an optional scroll-to-bottom gate. Did not
+  add a link to a fabricated privacy policy document — added an
+  optional `privacy_policy_url` column instead (Settings > Geral), the
+  checkin form only shows the link when the owner has actually set one.
