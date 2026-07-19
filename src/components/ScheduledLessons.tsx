@@ -912,14 +912,19 @@ export default function ScheduledLessons({
                       the public waiver form, which was really just another
                       way of saying "start this lesson". The public form is
                       still reachable (Sala de Espera's QR button, or the
-                      link itself), just not duplicated here. Only offered
-                      for today's lessons — starting/rebooking off a
-                      lesson scheduled for tomorrow doesn't make sense yet.
+                      link itself), just not duplicated here. Shown on both
+                      Hoje and Amanhã — a school may want to pre-confirm a
+                      lesson booked in advance (the confirm modal's own
+                      session-date field is editable for exactly that).
                       Once the lesson is done (confirmed) or its slot has
-                      already passed, the action flips from starting THIS
-                      lesson to a retention nudge: book the student's NEXT
-                      one before they leave the counter. */}
-                  {activeTab === 'today' && (
+                      already passed, the action flips from a repeatable
+                      "confirm this" click — which would double-charge/
+                      double-debit a package if clicked again — to a
+                      retention nudge: book the student's NEXT one before
+                      they leave the counter. That swap is what actually
+                      satisfies "no repeated-click button once confirmed",
+                      not removing the action outright. */}
+                  {
                     lesson.status === 'confirmed' || new Date(lesson.scheduled_at).getTime() < Date.now() ? (
                       <button
                         onClick={() => openRebookModal(lesson)}
@@ -944,10 +949,10 @@ export default function ScheduledLessons({
                           whiteSpace: 'nowrap',
                         }}
                       >
-                        Iniciar Aula
+                        Confirmar Aula
                       </button>
                     )
-                  )}
+                  }
                   <a
                     href={lesson.student_whatsapp ? buildWhatsAppUrl(lesson) : undefined}
                     target="_blank"
