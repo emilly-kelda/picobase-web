@@ -473,3 +473,19 @@ their commit message and diff.
   ran when a `checkin_id` was present, so the already-existing group-
   confirm flow (which always confirms via `scheduled_lesson_id` alone)
   was silently never debiting any package.
+- `c27f99e` **feat**: public check-in form (`checkin/[school]/
+  CheckinForm.tsx`) now filters the instructor list by the selected
+  activity's modality, instead of always showing every active
+  instructor. The instructor↔modality link already existed
+  (`users.sports`, set by the owner in Equipe/`CrewClient.tsx`, already
+  used by `scheduledLessonRepository.ts`'s reschedule suggester) — just
+  wasn't selected or applied here. `getInstructorsForCheckin` now
+  selects `sports`; the form detects modality from the activity name
+  (same prefix-match convention as `detectModality`/
+  `activityMatchesSport` elsewhere) and filters, falling back to the
+  full list when nobody matches — same fallback the reschedule
+  suggester already uses, so a school that hasn't tagged any instructor
+  yet doesn't lose instructor selection entirely. "Sem preferência"
+  stays outside the filter, always visible. Switching to a modality the
+  currently-picked instructor doesn't teach resets the selection back
+  to "Sem preferência".
