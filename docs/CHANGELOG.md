@@ -271,3 +271,13 @@ their commit message and diff.
   scheduling with no `package_sale_id` already worked fine underneath.
   Now merges in every student with no matching sale, shown with a
   neutral "Sem pacote" badge instead of the minutes-remaining pill.
+- `c0fe547` **feat**: shared `formatCurrency` (`src/lib/currency.ts`),
+  migrated into Base Camp/Pagamentos/Custos in place of their own
+  duplicated `Intl.NumberFormat` calls — kept each page's existing
+  decimal precision rather than forcing 2-decimal everywhere (0-decimal
+  is the dominant convention across ~27 other files in the app, so
+  unifying to 2-decimal would have been an unrequested visual change).
+  Added the missing front-end half of the season date-overlap check
+  (API already validated it) to `SeasonsModal.tsx`, and gave the Aulas
+  KPI the same "Início do período" empty-state text the Receita KPI
+  next to it already had.
