@@ -250,3 +250,17 @@ their commit message and diff.
   no "Convertido: R$ X (Cotação: ...)" line for the raw total price.
   Kept the "Taxa de câmbio indisponível" message (a real conditional
   error, not a static one) but gave it a "Tentar novamente" action.
+- Declined a request to remove the "Financeiro" settings card: its
+  `burn_rate` field is the fallback the Off-Season Runway calculation
+  and the onboarding checklist still depend on when a school has no
+  itemized Costs entries — removing it would have quietly broken both
+  for any school without itemized costs. Flagged this before touching
+  anything; no change made.
+- `9f44e69` **feat**: three more notification flags —
+  `notify_package_low`, `notify_late_cancellation`,
+  `notify_post_class_feedback` — with the modal now grouping all six
+  toggles into labeled subcategories (Financeiro / Operacionais /
+  Pós-Aula) and a success toast on save (new shared `Toast`/`useToast`,
+  extracted from CrewClient's inline pattern). TODO comments mark the
+  real trigger points in `api/owner/confirm-lesson` (package balance
+  update, session insert) and `api/owner/schedule`'s DELETE handler.
