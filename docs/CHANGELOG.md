@@ -554,3 +554,17 @@ their commit message and diff.
   prevents, without leaving the row with no action. Removing it outright
   would have undone an explicit request approved one pass earlier in
   this same session.
+- `0c9301f` **feat**: real per-school location, replacing the curated-
+  spots-only workaround from two passes ago. New `GET /api/owner/geocode`
+  proxies Nominatim/OpenStreetMap server-side (their usage policy wants
+  a descriptive User-Agent a browser fetch can't set reliably); a
+  debounced search field in Settings → Geral (`GeneralSettingsModal.tsx`,
+  same debounce/dropdown pattern as `AddBookingModal.tsx`) lets the
+  owner search by spot/beach name and saves `spot_name`/`latitude`/
+  `longitude` on `schools` (migration `20260803000000`, all nullable).
+  `weather.ts`'s `buildWeatherSpots()` now puts the school's own saved
+  location first in the list `WeatherWidget` reads from, ahead of the
+  existing curated Ceará presets (which stay available as quick-swap
+  options, not replaced). `getWeather()` now takes an already-resolved
+  spot object instead of resolving by id internally, since resolution
+  needs the school row the caller already has.
