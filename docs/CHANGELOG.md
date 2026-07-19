@@ -232,3 +232,12 @@ their commit message and diff.
   status, via a new PATCH `/api/owner/students` route. Scoped to
   columns that actually exist on `students` — no languages/sports
   fields, since those are instructor-only (`users.sports/languages`).
+- `5ce9b11` **feat**: school-wide "Taxa fixa por aula" payout option
+  (Settings > Geral), overriding every instructor's individual
+  commission_pct/fixed_per_hour with one flat BRL value per lesson.
+  Wired into `api/owner/confirm-lesson`, the single authoritative
+  commission calc shared by both individual and group confirms, and
+  into the confirm-modal's live preview. The dashboard's Comissões sum
+  needed no change — it already sums `sessions.commission_amount`,
+  computed once at confirm time and stored, so it reflects whichever
+  model was active per lesson automatically.
