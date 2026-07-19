@@ -489,3 +489,15 @@ their commit message and diff.
   stays outside the filter, always visible. Switching to a modality the
   currently-picked instructor doesn't teach resets the selection back
   to "Sem preferência".
+- `5155b5d` **polish**: `PendingLessons.tsx`'s "Sem pacote" badge (gray,
+  neutral) became "⚠ Sem Créditos" (red, same weight as the existing
+  "Pacote esgotado" badge) — now that Sala de Espera's primary action
+  is "Agendar Aula" instead of an immediate charge, a student with zero
+  credit is easier to schedule and forget about, so the badge needed to
+  read as an alert, not just info. `ScheduledLessons.tsx`: removed the
+  "Check-in" link (opened the public waiver form), which duplicated the
+  "Confirmar/Iniciar Aula" button added last pass — both were really
+  just two ways to say "start this lesson". Renamed to "✓ Iniciar Aula
+  / Check-in", now only shown on the "Hoje" tab (starting tomorrow's
+  lesson today doesn't make sense). The public form is still reachable
+  via Sala de Espera's QR button.
