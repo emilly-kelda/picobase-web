@@ -122,6 +122,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: sessionError.message }, { status: 500 })
   }
 
+  // TODO(notify_post_class_feedback): this is where a lesson becomes
+  // "completed" (the sessions row above), but the message fires 1h AFTER
+  // this moment, not now — same nuance as notify_student_before_class in
+  // api/owner/schedule: this route runs at confirm time, not an hour
+  // later, so it can't dispatch inline. Once a message-dispatch service
+  // exists, its time-based job (cron/queue worker) should check
+  // schools.notify_post_class_feedback and, for sessions where
+  // created_at + 1h has passed, send the student a congratulations +
+  // skill-progress summary via WhatsApp. No such job exists yet.
+
   if (checkin_id) {
     const { error: checkinError } = await supabase
       .from('checkins')
@@ -162,10 +172,19 @@ export async function POST(request: Request) {
       s => (s.minutes_purchased ?? 0) - (s.minutes_used ?? 0) > 0
     )
     if (activeSale) {
+      const newMinutesUsed = (activeSale.minutes_used ?? 0) + duration_min
       await supabase
         .from('package_sales')
-        .update({ minutes_used: (activeSale.minutes_used ?? 0) + duration_min })
+        .update({ minutes_used: newMinutesUsed })
         .eq('id', activeSale.id)
+
+      // TODO(notify_package_low): once a message-dispatch service (Z-API,
+      // Evolution API, or similar) is wired up, check
+      // schools.notify_package_low here before sending — if true and the
+      // remaining balance (activeSale.minutes_purchased - newMinutesUsed)
+      // just dropped to <= 60 minutes, notify the student via WhatsApp
+      // suggesting a renewal. No dispatch exists yet; this is the correct
+      // trigger point for it (right after the balance is actually updated).
     }
   }
 

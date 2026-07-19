@@ -7,6 +7,7 @@ import FinancialSettingsModal from './FinancialSettingsModal'
 import SeasonsModal from './SeasonsModal'
 import WaiverModal from './WaiverModal'
 import NotificationsModal from './NotificationsModal'
+import { Toast, useToast } from '@/components/Toast'
 
 type School = {
   id: string
@@ -27,6 +28,9 @@ type School = {
   notify_student_before_class: boolean
   notify_payment_and_waiver: boolean
   notify_instructor_on_checkin: boolean
+  notify_package_low: boolean
+  notify_late_cancellation: boolean
+  notify_post_class_feedback: boolean
   payout_model: string
   fixed_payout_value: number | null
 }
@@ -71,6 +75,7 @@ export default function SettingsClient({
   const [school, setSchool]   = useState(initialSchool)
   const [seasons, setSeasons] = useState(initialSeasons)
   const [activeModal, setActiveModal] = useState<ModalKey | null>(null)
+  const { toast, showToast } = useToast()
 
   // Every modal only ever writes its own slice, then patches that same
   // slice into local state and refreshes the server-rendered parts of the
@@ -92,6 +97,9 @@ export default function SettingsClient({
     school.notify_student_before_class,
     school.notify_payment_and_waiver,
     school.notify_instructor_on_checkin,
+    school.notify_package_low,
+    school.notify_late_cancellation,
+    school.notify_post_class_feedback,
   ].filter(Boolean).length
 
   const cards: Array<{ key: ModalKey; title: string; summary: string; sub: string }> = [
@@ -122,7 +130,7 @@ export default function SettingsClient({
     {
       key: 'notifications',
       title: 'Notificações',
-      summary: `${notificationsOnCount}/3 ativos`,
+      summary: `${notificationsOnCount}/6 ativos`,
       sub: 'Mensagens automáticas e gatilhos',
     },
   ]
@@ -204,11 +212,20 @@ export default function SettingsClient({
             notify_student_before_class: school.notify_student_before_class,
             notify_payment_and_waiver: school.notify_payment_and_waiver,
             notify_instructor_on_checkin: school.notify_instructor_on_checkin,
+            notify_package_low: school.notify_package_low,
+            notify_late_cancellation: school.notify_late_cancellation,
+            notify_post_class_feedback: school.notify_post_class_feedback,
           }}
           onClose={() => setActiveModal(null)}
-          onSaved={patch => { setSchool(s => ({ ...s, ...patch })); closeAndRefresh() }}
+          onSaved={patch => {
+            setSchool(s => ({ ...s, ...patch }))
+            closeAndRefresh()
+            showToast('ok', 'Notificações atualizadas com sucesso')
+          }}
         />
       )}
+
+      <Toast toast={toast} />
     </div>
   )
 }

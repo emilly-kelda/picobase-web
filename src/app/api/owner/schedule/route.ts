@@ -100,6 +100,16 @@ export async function DELETE(request: Request) {
   if (!id) return NextResponse.json({ error: 'id é obrigatório' }, { status: 400 })
 
   const supabase = createServiceClient()
+
+  // TODO(notify_late_cancellation): once a message-dispatch service
+  // (Z-API, Evolution API, or similar) is wired up, check
+  // schools.notify_late_cancellation here before sending — this is the
+  // correct trigger point (a cancellation always goes through this DELETE),
+  // but it needs the row's scheduled_at first (not currently selected
+  // here) to know whether "now" is within 24h of it. If so, notify the
+  // student that the hour is debited / the refund is forfeited. No
+  // dispatch exists yet.
+
   const { error } = await supabase
     .from('scheduled_lessons')
     .update({ status: 'cancelled' })
