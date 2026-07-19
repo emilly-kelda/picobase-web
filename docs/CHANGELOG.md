@@ -501,3 +501,14 @@ their commit message and diff.
   / Check-in", now only shown on the "Hoje" tab (starting tomorrow's
   lesson today doesn't make sense). The public form is still reachable
   via Sala de Espera's QR button.
+- `436b853` **refactor**: swapped Base Camp's two columns. Left (now
+  wider — grid `1.6fr 1fr` instead of `1fr 1fr`) holds the operational
+  stack reception actually works from: Venda Rápida, Sala de Espera,
+  Aulas Perdidas, Aulas Agendadas, in that order. Right (narrower) holds
+  weather and the "HOJE" KPI card — glanceable context, nothing to
+  click. `WeatherWidget.tsx` (single call site) had its padding/gap/font
+  sizes tightened to fit the narrower sidebar it now lives in instead of
+  the old full-width top row. The existing `max-width: 900px` collapse
+  to one column stacks the two column `<div>`s in DOM order for free —
+  operational column fully first, weather/KPIs last — so no extra
+  responsive logic was needed for that ordering.
