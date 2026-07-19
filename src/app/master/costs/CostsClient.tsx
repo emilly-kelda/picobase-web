@@ -32,16 +32,27 @@ const labelStyle: React.CSSProperties = {
   color: 'var(--mist)', display: 'block', marginBottom: '6px',
 }
 
+const CATEGORIES = [
+  'Infraestrutura/Software (SaaS)',
+  'Marketing',
+  'Contador/Legal',
+  'Desenvolvimento',
+  'Outro',
+] as const
+
 export default function CostsClient({ costs }: { costs: PicobaseCost[] }) {
   const router = useRouter()
-  const [category, setCategory]       = useState('')
+  const [category, setCategory]       = useState<string>('')
+  const [customCategory, setCustomCategory] = useState('')
   const [description, setDescription] = useState('')
   const [amount, setAmount]           = useState('')
   const [costDate, setCostDate]       = useState(new Date().toISOString().slice(0, 10))
   const [saving, setSaving]           = useState(false)
   const [error, setError]             = useState<string | null>(null)
 
-  const canSave = category.trim() && description.trim() && Number(amount) > 0 && !saving
+  const isOther = category === 'Outro'
+  const finalCategory = isOther ? customCategory.trim() : category
+  const canSave = finalCategory.trim() && description.trim() && Number(amount) > 0 && !saving
 
   async function save() {
     if (!canSave) return
@@ -51,11 +62,12 @@ export default function CostsClient({ costs }: { costs: PicobaseCost[] }) {
       const res = await fetch('/api/master/costs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ category, description, amount: Number(amount), costDate }),
+        body: JSON.stringify({ category: finalCategory, description, amount: Number(amount), costDate }),
       })
       const data = await res.json()
       if (data.ok) {
         setCategory('')
+        setCustomCategory('')
         setDescription('')
         setAmount('')
         router.refresh()
@@ -81,11 +93,20 @@ export default function CostsClient({ costs }: { costs: PicobaseCost[] }) {
         }}>
           Registrar custo
         </p>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr 1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isOther ? '1fr 1fr 2fr 1fr 1fr' : '1fr 2fr 1fr 1fr', gap: '12px', marginBottom: '12px' }}>
           <div>
             <label style={labelStyle}>Categoria</label>
-            <input style={inputStyle} type="text" placeholder="Servidor, licenças..." value={category} onChange={e => setCategory(e.target.value)} />
+            <select style={{ ...inputStyle, cursor: 'pointer' }} value={category} onChange={e => setCategory(e.target.value)}>
+              <option value="">Selecione...</option>
+              {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
           </div>
+          {isOther && (
+            <div>
+              <label style={labelStyle}>Especificar</label>
+              <input style={inputStyle} type="text" placeholder="Nome da categoria" value={customCategory} onChange={e => setCustomCategory(e.target.value)} />
+            </div>
+          )}
           <div>
             <label style={labelStyle}>Descrição</label>
             <input style={inputStyle} type="text" placeholder="Ex: Supabase Pro — julho" value={description} onChange={e => setDescription(e.target.value)} />

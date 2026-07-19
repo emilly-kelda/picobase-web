@@ -24,6 +24,13 @@ export default async function MasterCostsPage() {
     { label: 'Resultado líquido',     value: fmt(netResult),           color: netResult >= 0 ? '#007868' : '#DC2626' },
   ]
 
+  // Break-even: how many active schools (at the average subscription
+  // value already contracted) it takes to cover totalCosts. Needs at
+  // least one active school with a subscription_value on file — without
+  // that there's no per-school revenue figure to divide by.
+  const avgRevenuePerSchool = metrics.activeSchools > 0 ? metrics.saasRevenue / metrics.activeSchools : 0
+  const breakEvenSchools = avgRevenuePerSchool > 0 ? Math.ceil(totalCosts / avgRevenuePerSchool) : null
+
   return (
     <div>
       <div style={{ marginBottom: '24px' }}>
@@ -64,6 +71,39 @@ export default async function MasterCostsPage() {
             </div>
           </div>
         ))}
+      </div>
+
+      <div style={{
+        background: '#fff',
+        border: '0.5px solid var(--border)',
+        borderRadius: 'var(--radius-lg)',
+        padding: '16px 20px', marginBottom: '24px',
+        display: 'flex', alignItems: 'center', gap: '14px',
+      }}>
+        <span style={{ fontSize: '22px' }}>⚖️</span>
+        <div>
+          <div style={{
+            fontSize: '10px', fontWeight: '500',
+            letterSpacing: '0.1em', textTransform: 'uppercase',
+            color: 'var(--mist)', marginBottom: '4px',
+          }}>
+            Ponto de equilíbrio
+          </div>
+          {breakEvenSchools !== null ? (
+            <div style={{ fontSize: '14px', color: 'var(--slate)' }}>
+              Você precisa de <strong>{breakEvenSchools}</strong> escola{breakEvenSchools === 1 ? '' : 's'} ativa{breakEvenSchools === 1 ? '' : 's'} para
+              cobrir os custos operacionais atuais de <strong>{fmt(totalCosts)}</strong>
+              {metrics.activeSchools > 0 && (
+                <span style={{ color: 'var(--mist)' }}> ({metrics.activeSchools} ativa{metrics.activeSchools === 1 ? '' : 's'} hoje)</span>
+              )}
+              .
+            </div>
+          ) : (
+            <div style={{ fontSize: '14px', color: 'var(--mist)' }}>
+              Defina o valor de assinatura (subscription_value) de ao menos uma escola ativa para calcular o ponto de equilíbrio.
+            </div>
+          )}
+        </div>
       </div>
 
       <CostsClient costs={costs} />

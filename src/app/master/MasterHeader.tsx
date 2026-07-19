@@ -8,6 +8,7 @@ import Logo from '@/components/Logo'
 const NAV_ITEMS = [
   { href: '/master/dashboard', label: 'Escolas' },
   { href: '/master/costs',     label: 'Centro de Custos' },
+  { href: '/master/status',    label: 'Status' },
 ]
 
 export default function MasterHeader() {
