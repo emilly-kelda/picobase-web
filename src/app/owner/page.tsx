@@ -71,35 +71,19 @@ export default async function OwnerPage() {
     commission_pct: (i as any).commission_pct ?? null,
   }))
 
-  // Team occupancy for today — hours of lessons scheduled today ÷ today's
-  // instructor capacity. Group lessons share one instructor/duration across
-  // N students, so they're deduped by group_id first — same collapse
-  // ScheduledLessons.tsx uses for its own rows — otherwise a 3-student group
-  // would triple-count as 3x the instructor-hours it actually costs.
+  // Team occupancy for today — % of instructors with at least one lesson
+  // scheduled today. Used to be hours-booked ÷ (weekly_capacity_hours ÷ 7),
+  // an hours-utilization ratio that depended on every instructor having
+  // weekly_capacity_hours configured on the Crew page (falling back to a
+  // guessed 6h/instructor default otherwise) — a headcount read ("is my
+  // team busy today") is a more direct answer for reception than a
+  // capacity-hours ratio, and doesn't silently depend on unconfigured data.
   const todayLessonsForOccupancy = todayLessons as any[]
-  const individualDurations = todayLessonsForOccupancy
-    .filter(l => !l.group_id)
-    .map(l => l.duration_min ?? 0)
-  const groupDurations = Array.from(
-    new Map(
-      todayLessonsForOccupancy.filter(l => l.group_id).map(l => [l.group_id, l.duration_min ?? 0])
-    ).values()
+  const instructorIdsScheduledToday = new Set(
+    todayLessonsForOccupancy.map(l => l.instructor?.id).filter(Boolean)
   )
-  const hoursScheduledToday = [...individualDurations, ...groupDurations]
-    .reduce((sum, min) => sum + min, 0) / 60
-
-  // weekly_capacity_hours is set per instructor (Crew page) — daily capacity
-  // spreads it evenly across the week. Falls back to a friendly default
-  // (6h/instructor/day) only when nobody has capacity configured at all,
-  // rather than showing a broken 0%/blank stat.
-  const FALLBACK_DAILY_HOURS_PER_INSTRUCTOR = 6
-  const instructorsWithCapacity = instructors.filter(i => (i as any).weekly_capacity_hours != null)
-  const dailyCapacityHours = instructorsWithCapacity.length > 0
-    ? instructorsWithCapacity.reduce((sum, i) => sum + ((i as any).weekly_capacity_hours ?? 0), 0) / 7
-    : instructors.length * FALLBACK_DAILY_HOURS_PER_INSTRUCTOR
-
-  const occupancyPct = dailyCapacityHours > 0
-    ? Math.round((hoursScheduledToday / dailyCapacityHours) * 100)
+  const occupancyPct = instructors.length > 0
+    ? Math.round((instructorIdsScheduledToday.size / instructors.length) * 100)
     : null
 
   const colHeaders = ['Data', 'Aluno', 'Atividade', 'Instrutor', 'Duração', 'Valor']

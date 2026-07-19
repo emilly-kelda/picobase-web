@@ -445,7 +445,7 @@ export default function PendingLessons({
                   padding: '3px 10px', borderRadius: '99px',
                   background: '#FEF3C7',
                 }}>
-                  ⚠ Última aula · {fmtMinutes(balance.minutesRemaining)}
+                  ⚠ Última aula do pacote · {fmtMinutes(balance.minutesRemaining)} restante
                 </span>
               )
             } else {

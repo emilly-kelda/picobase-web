@@ -53,12 +53,14 @@ export default function AutoRefresh() {
     <div style={{
       display: 'inline-flex', alignItems: 'center', gap: '6px',
       fontSize: '11px', color: 'var(--mist)',
+      flexShrink: 0, whiteSpace: 'nowrap',
     }}>
       {isPending ? (
         <>
           <span style={{
             width: '6px', height: '6px', borderRadius: '50%',
             background: 'var(--glacial)', display: 'inline-block',
+            flexShrink: 0,
             animation: 'pb-autorefresh-pulse 1s ease-in-out infinite',
           }} />
           Sincronizando dados...
