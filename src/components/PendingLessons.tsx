@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import { isLevel, LEVEL_LABELS, type Level } from '@/lib/levels'
 import LevelPicker from '@/components/LevelPicker'
 import StudentPackageHistoryModal from '@/components/StudentPackageHistoryModal'
+import CheckinQRButton from '@/components/CheckinQRButton'
+import SellPackageFlowModal, { type PackageOption } from '@/components/SellPackageFlowModal'
 import type { VariableCostInfo } from '@/lib/commission'
 
 type ActivityRef = {
@@ -128,6 +130,9 @@ export default function PendingLessons({
   packageBalances = {},
   payoutModel = 'percentage',
   fixedPayoutValue = null,
+  packageTypes = [],
+  schoolSlug,
+  schoolName,
 }: {
   checkins: Checkin[]
   instructors: Instructor[]
@@ -135,6 +140,9 @@ export default function PendingLessons({
   packageBalances?: Record<string, { minutesRemaining: number; hasPackage: boolean; packageSaleId?: string }>
   payoutModel?: string
   fixedPayoutValue?: number | null
+  packageTypes?: PackageOption[]
+  schoolSlug: string
+  schoolName: string
 }) {
   const router = useRouter()
   const [checkins, setCheckins]         = useState(initialCheckins)
@@ -150,6 +158,7 @@ export default function PendingLessons({
   useEffect(() => { setCheckins(initialCheckins) }, [initialCheckins])
   const [historyModal, setHistoryModal] = useState<{ studentName: string; packageSaleId: string } | null>(null)
   const [fichaModal, setFichaModal]     = useState<Checkin | null>(null)
+  const [sellModal, setSellModal]       = useState<Checkin | null>(null)
   const [selected, setSelected]         = useState<Checkin | null>(null)
   const [activityId, setActivityId]     = useState('')
   const [duration, setDuration]         = useState(60)
@@ -332,12 +341,13 @@ export default function PendingLessons({
     }
   }
 
-  if (checkins.length === 0 && !confirmed) return null
-
   return (
     <>
       <div style={{ marginBottom: '28px' }}>
 
+        {/* Header (and its QR button) always renders, even with an empty
+            waiting room — that's exactly when reception hands a new
+            arrival the QR code, so it can't be gated behind checkins.length. */}
         <div style={{
           display: 'flex',
           justifyContent: 'space-between',
@@ -363,6 +373,7 @@ export default function PendingLessons({
               {checkins.length}
             </span>
           </div>
+          <CheckinQRButton slug={schoolSlug} schoolName={schoolName} />
         </div>
 
         {confirmed && (
@@ -381,6 +392,18 @@ export default function PendingLessons({
           </div>
         )}
 
+        {checkins.length === 0 ? (
+          <div style={{
+            background: '#fff',
+            border: '0.5px dashed var(--border)',
+            borderRadius: 'var(--radius-lg)',
+            padding: '20px',
+            textAlign: 'center',
+            fontSize: '13px', color: 'var(--mist)',
+          }}>
+            Nenhum aluno aguardando check-in.
+          </div>
+        ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {checkins.map(checkin => {
             const instructor = unwrapInstructor(checkin.instructor)
@@ -609,11 +632,30 @@ export default function PendingLessons({
                   >
                     Ver Ficha
                   </button>
+                  {!balance?.hasPackage || exhausted ? (
+                    <button
+                      onClick={() => setSellModal(checkin)}
+                      style={{
+                        padding: '6px 18px',
+                        background: 'transparent',
+                        color: '#007868',
+                        border: '0.5px solid #007868',
+                        borderRadius: 'var(--radius-md)',
+                        fontSize: '12px', fontWeight: '500',
+                        cursor: 'pointer',
+                        fontFamily: 'var(--font-sans)',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      Vender Pacote
+                    </button>
+                  ) : null}
                 </div>
               </div>
             )
           })}
         </div>
+        )}
       </div>
 
       {selected && (
@@ -1251,6 +1293,15 @@ export default function PendingLessons({
           studentName={historyModal.studentName}
           packageSaleId={historyModal.packageSaleId}
           onClose={() => setHistoryModal(null)}
+        />
+      )}
+
+      {sellModal && (
+        <SellPackageFlowModal
+          packageTypes={packageTypes}
+          initialStudentName={sellModal.student_name}
+          onClose={() => setSellModal(null)}
+          onSold={() => { setSellModal(null); router.refresh() }}
         />
       )}
 

@@ -3,6 +3,7 @@ import { getCosts, getKnownCategories, getMonthlyCostTotal } from '@/repositorie
 import { getRunwayData, getRunwayProjection } from '@/repositories/runwayRepository'
 import CostsClient from './CostsClient'
 import RunwayCalculator from '@/components/RunwayCalculator'
+import RunwaySummary from '@/components/RunwaySummary'
 import { formatCurrency } from '@/lib/currency'
 
 const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
@@ -25,6 +26,16 @@ export default async function CostsPage() {
 
   const totalPartnerCommissions = projection?.totalPartnerCommissions ?? 0
   const adjustedNetProfit = Math.max(0, ((runway as any).season_profit ?? 0) - totalPartnerCommissions)
+
+  // Same fallback rule as Base Camp used to apply before this card moved
+  // here: real itemized costs (this page's own list) take priority over the
+  // season's manually-set burn_rate once any recurring entry exists, so the
+  // two never disagree.
+  const monthlyBurn  = monthlyCostTotal > 0 ? monthlyCostTotal : ((runway as any).burn_rate ?? 0)
+  const runwayMonths = monthlyBurn > 0
+    ? adjustedNetProfit / monthlyBurn
+    : ((runway as any).winter_runway_months ?? 0)
+  const gapToTarget  = Math.max(0, 6 * monthlyBurn - adjustedNetProfit)
 
   return (
     <div>
@@ -70,6 +81,23 @@ export default async function CostsPage() {
         knownCategories={knownCategories}
       />
 
+      {/* ── Reserva de Baixa Temporada ────────────────────────────────────
+          Moved from Base Camp so the dashboard's Sala de Espera / Aulas
+          Agendadas columns get the full height for counter operations —
+          this is a financial deep-dive, not a walk-in workflow. */}
+      <div style={{ marginTop: '40px', maxWidth: '420px' }}>
+        <RunwaySummary
+          runwayMonths={runwayMonths}
+          seasonRevenue={(runway as any).season_revenue ?? 0}
+          commissions={((runway as any).crew_commissions ?? 0) + totalPartnerCommissions}
+          netProfit={adjustedNetProfit}
+          monthlyBurn={monthlyBurn}
+          gapToTarget={gapToTarget}
+          projectedRunway={projection?.projectedRunway}
+          daysLeft={projection?.daysLeft}
+        />
+      </div>
+
       {/* ── Simulador de Cenários / Baixa Temporada ──────────────────────
           The interactive sliders used to live on Base Camp — moved here so
           the dashboard stays a read-only summary of real numbers, and
@@ -80,7 +108,7 @@ export default async function CostsPage() {
             Simulador de Cenários / Baixa Temporada
           </h2>
           <p style={{ fontSize: '13px', color: 'var(--mist)' }}>
-            Ajuste os valores para simular hipóteses — o Base Camp sempre mostra os números reais.
+            Ajuste os valores para simular hipóteses — os números acima são os reais.
           </p>
         </div>
         <RunwayCalculator

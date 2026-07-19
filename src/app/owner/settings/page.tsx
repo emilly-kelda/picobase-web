@@ -5,6 +5,7 @@ import { getT } from '@/lib/i18n'
 import SettingsClient from './SettingsClient'
 import QRCodeDisplay from '@/components/QRCodeDisplay'
 import SeasonLaunchChecklist from '@/components/SeasonLaunchChecklist'
+import DailyNoticeEditor from '@/components/DailyNoticeEditor'
 
 const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
 
@@ -86,6 +87,13 @@ export default async function SettingsPage() {
         slug={school?.slug ?? 'escola'}
         schoolName={school?.name ?? 'Escola'}
       />
+
+      {/* Moved from Base Camp's dashboard — that slot now hosts Venda
+          Rápida. The instructor-facing page (/instructor/[school]) still
+          reads school.daily_notice, so editing stays available here. */}
+      <div style={{ marginBottom: '24px' }}>
+        <DailyNoticeEditor notice={(school as any)?.daily_notice ?? null} />
+      </div>
 
       <SettingsClient school={school} seasons={seasons} currentLang={lang} />
     </div>

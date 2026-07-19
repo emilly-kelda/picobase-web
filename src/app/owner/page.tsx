@@ -1,19 +1,17 @@
 import { cookies } from 'next/headers'
-import { getRunwayData, getRunwayProjection, getSchool } from '@/repositories/runwayRepository'
+import { getRunwayData, getSchool } from '@/repositories/runwayRepository'
 import { getRecentSessions, getTodayStats, getPendingLessons, getMonthComparison } from '@/repositories/sessionRepository'
 import { getAlerts } from '@/repositories/alertRepository'
 import { getInstructors } from '@/repositories/studentRepository'
 import { getActivitiesForCheckin } from '@/repositories/checkinRepository'
 import { getScheduledLessons, getMissedLessons } from '@/repositories/scheduledLessonRepository'
-import { getPackageSales, getPackageBalancesForCheckins } from '@/repositories/packageRepository'
-import { getMonthlyCostTotal } from '@/repositories/costRepository'
+import { getPackageSales, getPackageBalancesForCheckins, getPackages } from '@/repositories/packageRepository'
 import PendingLessons from '@/components/PendingLessons'
 import ScheduledLessons from '@/components/ScheduledLessons'
 import MissedLessons from '@/components/MissedLessons'
-import RunwaySummary from '@/components/RunwaySummary'
 import AlertsDrawer from '@/components/AlertsDrawer'
 import WeatherWidget from '@/components/WeatherWidget'
-import DailyNoticeEditor from '@/components/DailyNoticeEditor'
+import QuickSaleCard from '@/components/QuickSaleCard'
 import { ReceptionModeProvider } from '@/components/ReceptionModeContext'
 import ReceptionModeToggle from '@/components/ReceptionModeToggle'
 import AutoRefresh from '@/components/AutoRefresh'
@@ -41,17 +39,16 @@ export default async function OwnerPage() {
   const seasonId = cookieStore.get('active_season_id')?.value
 
   const [
-    runway, sessions, alerts, today, lang, projection,
+    runway, sessions, alerts, today, lang,
     pending, instructors, todayLessons, tomorrowLessons,
     activities, activePackages, missedLessons, packageBalances,
-    monthComparison, realMonthlyCosts, weather, school,
+    monthComparison, weather, school, packageTypes,
   ] = await Promise.all([
     getRunwayData(SCHOOL_ID, seasonId),
     getRecentSessions(SCHOOL_ID),
     getAlerts(SCHOOL_ID),
     getTodayStats(SCHOOL_ID),
     getPortalLang(),
-    getRunwayProjection(SCHOOL_ID),
     getPendingLessons(SCHOOL_ID),
     getInstructors(SCHOOL_ID),
     getScheduledLessons(SCHOOL_ID, 'today'),
@@ -61,24 +58,12 @@ export default async function OwnerPage() {
     getMissedLessons(SCHOOL_ID),
     getPackageBalancesForCheckins(SCHOOL_ID),
     getMonthComparison(SCHOOL_ID),
-    getMonthlyCostTotal(SCHOOL_ID),
     getWeather(),
     getSchool(SCHOOL_ID),
+    getPackages(SCHOOL_ID),
   ])
 
   const t = getT(lang)
-
-  // Real itemized costs (operational_costs, via the Custos tab) take
-  // priority over the view/season's manually-set burn_rate once a school
-  // has any recurring entries — same rule as runwayRepository.getRunwayProjection,
-  // so this tile and the Costs simulator never disagree.
-  const monthlyBurn             = realMonthlyCosts > 0 ? realMonthlyCosts : ((runway as any).burn_rate ?? 0)
-  const totalPartnerCommissions = projection?.totalPartnerCommissions ?? 0
-  const adjustedNetProfit       = Math.max(0, (runway.season_profit ?? 0) - totalPartnerCommissions)
-  const runwayMonths            = monthlyBurn > 0
-    ? adjustedNetProfit / monthlyBurn
-    : (runway.winter_runway_months ?? 0)
-  const gapToTarget             = Math.max(0, 6 * monthlyBurn - adjustedNetProfit)
 
   const instructorList = instructors.map(i => ({
     id: i.id,
@@ -168,7 +153,7 @@ export default async function OwnerPage() {
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
         <WeatherWidget weather={weather} />
-        <DailyNoticeEditor notice={(school as any)?.daily_notice ?? null} />
+        <QuickSaleCard packageTypes={packageTypes as any} />
       </div>
 
       <div className="dash-grid-2col">
@@ -301,7 +286,11 @@ export default async function OwnerPage() {
         </div>
 
         {/* ════════════════════════════════════════════════════════════
-            COLUMN 2 — pending items + collapsible runway
+            COLUMN 2 — pending items
+            The Reserva de Baixa Temporada card used to sit here too — moved
+            to /owner/costs (next to the interactive Simulador de Cenários,
+            same real numbers) so Sala de Espera and Aulas Agendadas get the
+            full column height for a receptionist working the counter.
         ════════════════════════════════════════════════════════════ */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '28px', minWidth: 0 }}>
 
@@ -317,17 +306,9 @@ export default async function OwnerPage() {
             packageBalances={packageBalances}
             payoutModel={(school as any)?.payout_model ?? 'percentage'}
             fixedPayoutValue={(school as any)?.fixed_payout_value ?? null}
-          />
-
-          <RunwaySummary
-            runwayMonths={runwayMonths}
-            seasonRevenue={runway.season_revenue ?? 0}
-            commissions={(runway.crew_commissions ?? 0) + totalPartnerCommissions}
-            netProfit={adjustedNetProfit}
-            monthlyBurn={monthlyBurn}
-            gapToTarget={gapToTarget}
-            projectedRunway={projection?.projectedRunway}
-            daysLeft={projection?.daysLeft}
+            packageTypes={packageTypes as any}
+            schoolSlug={(school as any)?.slug ?? runway.slug ?? ''}
+            schoolName={runway.school_name ?? 'Pico Base'}
           />
 
         </div>
