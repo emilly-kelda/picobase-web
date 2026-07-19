@@ -1,8 +1,25 @@
 import { createServiceClient } from '@/lib/supabase-server'
+import { getStudents } from '@/repositories/studentRepository'
 import { encrypt } from '@/utils/crypto'
 import { NextResponse } from 'next/server'
 
 const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
+
+/** Backs AddBookingModal.tsx's customer search — reception looks up a
+ *  student who already filled the public check-in/waiver form (that flow
+ *  find-or-creates the students row) instead of re-typing their contact
+ *  info. Reuses getStudents' existing name-search, just capped for a
+ *  live-typing dropdown rather than the full paginated students list. */
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url)
+  const q = searchParams.get('q')?.trim()
+  if (!q || q.length < 2) return NextResponse.json({ students: [] })
+
+  const students = await getStudents(SCHOOL_ID, q)
+  return NextResponse.json({
+    students: students.slice(0, 8).map(s => ({ id: s.id, name: s.name, whatsapp: s.whatsapp })),
+  })
+}
 
 export async function POST(request: Request) {
   const { name, nationality, whatsapp } = await request.json()
