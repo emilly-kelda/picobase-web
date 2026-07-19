@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import ReceivablesView from '@/components/ReceivablesView'
 import { formatCurrency } from '@/lib/currency'
 import { whatsappDigitsWithCountryCode } from '@/lib/whatsapp'
+import AutoRefresh from '@/components/AutoRefresh'
 
 type Advance = {
   id: string
@@ -144,6 +145,19 @@ export default function PaymentsClient({
   const [savingAdvance, setSavingAdvance] = useState(false)
   const [tab, setTab] = useState<'team' | 'partners'>('team')
   const [showPaymentMethods, setShowPaymentMethods] = useState(false)
+
+  // payments/summary/partnerData start as copies of the server props so
+  // in-page actions (approve, mark paid, advances) can update them
+  // optimistically without a full round trip. That copy-once pattern
+  // means a background AutoRefresh (router.refresh() re-fetching this
+  // route's server data) would otherwise never reach the screen — the
+  // new props would arrive, but nothing re-reads them into state. These
+  // three keep the local copies honest whenever fresh data lands, without
+  // touching the unrelated UI state (open modals, loading flags) that
+  // lives in its own separate state and isn't affected by this.
+  useEffect(() => { setPayments(initialPayments) }, [initialPayments])
+  useEffect(() => { setSummary(initialSummary) }, [initialSummary])
+  useEffect(() => { setPartnerData(partnerCommissions) }, [partnerCommissions])
 
   useEffect(() => {
     fetch(`/api/owner/payment-method-summary?period=${period}`)
@@ -321,7 +335,8 @@ export default function PaymentsClient({
             Pagamento de instrutores e parceiros
           </p>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <AutoRefresh />
           {/* Re-run button: always visible so newly-added instructors are picked up
               even after close_month was already run for this period. Safe because
               the underlying close_month SQL function uses UPSERT — see migration

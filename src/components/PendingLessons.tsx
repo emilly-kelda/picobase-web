@@ -118,6 +118,16 @@ export default function PendingLessons({
 }) {
   const router = useRouter()
   const [checkins, setCheckins]         = useState(initialCheckins)
+
+  // checkins starts as a copy of the server prop (list rows get removed
+  // locally as each gets confirmed, without waiting on a full refresh).
+  // A background AutoRefresh (router.refresh()) delivers fresh
+  // initialCheckins as a new prop, but that copy-once pattern means
+  // nothing re-reads it unless told to — this keeps the list honest.
+  // The confirm modal's own fields (selected, activityId, price, etc.)
+  // are separate state set once when it opens, not derived from
+  // `checkins`, so a background sync here can't reset an open modal.
+  useEffect(() => { setCheckins(initialCheckins) }, [initialCheckins])
   const [historyModal, setHistoryModal] = useState<{ studentName: string; packageSaleId: string } | null>(null)
   const [selected, setSelected]         = useState<Checkin | null>(null)
   const [activityId, setActivityId]     = useState('')

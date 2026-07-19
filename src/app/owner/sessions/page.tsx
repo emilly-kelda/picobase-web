@@ -4,6 +4,7 @@ import { getInstructors } from '@/repositories/studentRepository'
 import { getPortalLang } from '@/lib/language'
 import { getT } from '@/lib/i18n'
 import { LEVEL_LABELS, isLevel } from '@/lib/levels'
+import AutoRefresh from '@/components/AutoRefresh'
 
 const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
 
@@ -141,16 +142,22 @@ export default async function SessionsPage({
       <style>{`.tbl-name-link{color:var(--slate);text-decoration:none;border-bottom:1px solid transparent;transition:border-color 0.15s}.tbl-name-link:hover{border-bottom-color:var(--glacial)}`}</style>
 
       {/* Page header */}
-      <div style={{ marginBottom: '28px' }}>
-        <h1 style={{
-          fontSize: '22px', fontWeight: '500',
-          color: 'var(--slate)', marginBottom: '4px',
-        }}>
-          {t.sessions_title}
-        </h1>
-        <p style={{ fontSize: '13px', color: 'var(--mist)' }}>
-          {t.sessions_sub}
-        </p>
+      <div style={{
+        display: 'flex', justifyContent: 'space-between',
+        alignItems: 'flex-start', marginBottom: '28px',
+      }}>
+        <div>
+          <h1 style={{
+            fontSize: '22px', fontWeight: '500',
+            color: 'var(--slate)', marginBottom: '4px',
+          }}>
+            {t.sessions_title}
+          </h1>
+          <p style={{ fontSize: '13px', color: 'var(--mist)' }}>
+            {t.sessions_sub}
+          </p>
+        </div>
+        <AutoRefresh />
       </div>
 
       {/* Tabs */}

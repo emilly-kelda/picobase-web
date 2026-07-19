@@ -16,6 +16,7 @@ import WeatherWidget from '@/components/WeatherWidget'
 import DailyNoticeEditor from '@/components/DailyNoticeEditor'
 import { ReceptionModeProvider } from '@/components/ReceptionModeContext'
 import ReceptionModeToggle from '@/components/ReceptionModeToggle'
+import AutoRefresh from '@/components/AutoRefresh'
 import MaskableValue from '@/components/MaskableValue'
 import { getWeather } from '@/lib/weather'
 import { formatCurrency } from '@/lib/currency'
@@ -162,6 +163,7 @@ export default async function OwnerPage() {
               : (runway.current_season ?? t.basecamp_season)}
           </div>
         </div>
+        <AutoRefresh />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
