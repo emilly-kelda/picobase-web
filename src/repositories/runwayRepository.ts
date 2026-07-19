@@ -23,22 +23,36 @@ export async function getSeasons(schoolId: string) {
   return data ?? []
 }
 
-export async function getRunwayProjection(schoolId: string) {
+// seasonId must mirror getRunwayData's own resolution exactly (same RPC when
+// present, same v_runway fallback when not) — this used to always read
+// v_runway for revenue/profit while independently grabbing "the most recent
+// season by start_date" for the referrals date-range filter, so switching
+// the active-season cookie changed season_revenue/crew_commissions (read via
+// getRunwayData elsewhere) without changing totalPartnerCommissions here,
+// silently mixing two different "current season" windows in one card.
+export async function getRunwayProjection(schoolId: string, seasonId?: string) {
   const supabase = createServiceClient()
 
-  const { data: season } = await supabase
-    .from('seasons')
-    .select('start_date, end_date, burn_rate, label')
-    .eq('school_id', schoolId)
-    .order('start_date', { ascending: false })
-    .limit(1)
-    .single()
+  const seasonQuery = seasonId
+    ? supabase
+        .from('seasons')
+        .select('start_date, end_date, burn_rate, label')
+        .eq('id', seasonId)
+        .eq('school_id', schoolId)
+        .single()
+    : supabase
+        .from('seasons')
+        .select('start_date, end_date, burn_rate, label')
+        .eq('school_id', schoolId)
+        .order('start_date', { ascending: false })
+        .limit(1)
+        .single()
 
-  const { data: runway } = await supabase
-    .from('v_runway')
-    .select('*')
-    .eq('school_id', schoolId)
-    .single()
+  const runwayQuery = seasonId
+    ? supabase.rpc('get_runway_by_season', { p_school_id: schoolId, p_season_id: seasonId }).single()
+    : supabase.from('v_runway').select('*').eq('school_id', schoolId).single()
+
+  const [{ data: season }, { data: runway }] = await Promise.all([seasonQuery, runwayQuery])
 
   if (!season || !runway) return null
 
@@ -73,7 +87,14 @@ export async function getRunwayProjection(schoolId: string) {
   const totalPartnerCommissions = (partnerReferrals ?? [])
     .reduce((sum, r) => sum + (r.commission_amount ?? 0), 0)
 
-  const adjustedNetProfit = Math.max(0, currentProfit - totalPartnerCommissions)
+  // rawNetProfit is the real figure (can go negative) — used for the "Lucro
+  // líquido" display. adjustedNetProfit stays floored at 0 for the runway-
+  // months/gap math below, where a negative value wouldn't mean anything
+  // (there's no such thing as "-2 months of runway" in that formula) — but
+  // that floor was also leaking into what got shown as net profit, hiding a
+  // real loss behind "R$ 0,00".
+  const rawNetProfit      = currentProfit - totalPartnerCommissions
+  const adjustedNetProfit = Math.max(0, rawNetProfit)
   const currentRunway     = burnRate > 0 ? adjustedNetProfit / burnRate : 0
 
   const dailyRevenue    = daysElapsed > 0 ? currentRevenue / daysElapsed : 0
@@ -94,6 +115,7 @@ export async function getRunwayProjection(schoolId: string) {
     burnRate,
     currentProfit,
     adjustedNetProfit,
+    rawNetProfit,
     totalPartnerCommissions,
     projectedProfit,
     gap,

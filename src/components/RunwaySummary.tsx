@@ -124,7 +124,11 @@ export default function RunwaySummary({
               <span style={{ fontSize: '12px', fontWeight: '600', color: 'rgba(255,255,255,0.7)', letterSpacing: '0.06em' }}>
                 Lucro líquido
               </span>
-              <span style={{ fontSize: '14px', fontWeight: '700', color: '#fff', fontVariantNumeric: 'tabular-nums' }}>
+              <span style={{
+                fontSize: '14px', fontWeight: '700',
+                color: netProfit < 0 ? '#E88C7D' : '#fff',
+                fontVariantNumeric: 'tabular-nums',
+              }}>
                 <MaskableValue>{fmt(netProfit)}</MaskableValue>
               </span>
             </div>

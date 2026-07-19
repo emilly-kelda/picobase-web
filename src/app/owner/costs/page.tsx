@@ -21,11 +21,23 @@ export default async function CostsPage() {
     getKnownCategories(SCHOOL_ID),
     getMonthlyCostTotal(SCHOOL_ID),
     getRunwayData(SCHOOL_ID, seasonId),
-    getRunwayProjection(SCHOOL_ID),
+    // Same seasonId as getRunwayData above — it used to always read the
+    // most-recent-by-start_date season regardless of the active-season
+    // cookie, so switching seasons here changed season_revenue/
+    // crew_commissions without changing totalPartnerCommissions, mixing two
+    // different "current season" windows in one card (see AUDITORIA_DASHBOARD.md).
+    getRunwayProjection(SCHOOL_ID, seasonId),
   ])
 
   const totalPartnerCommissions = projection?.totalPartnerCommissions ?? 0
-  const adjustedNetProfit = Math.max(0, ((runway as any).season_profit ?? 0) - totalPartnerCommissions)
+  // Real figure, can be negative — this is what "Lucro líquido" displays.
+  // runwayMonths/gapToTarget below use a floored-at-0 version instead (same
+  // split as runwayRepository.getRunwayProjection's own
+  // rawNetProfit/adjustedNetProfit): "-2 months of runway" isn't a
+  // meaningful number, but clamping the number shown as net profit hid a
+  // real loss behind "R$ 0,00".
+  const rawNetProfit = ((runway as any).season_profit ?? 0) - totalPartnerCommissions
+  const adjustedNetProfit = Math.max(0, rawNetProfit)
 
   // Same fallback rule as Base Camp used to apply before this card moved
   // here: real itemized costs (this page's own list) take priority over the
@@ -90,7 +102,7 @@ export default async function CostsPage() {
           runwayMonths={runwayMonths}
           seasonRevenue={(runway as any).season_revenue ?? 0}
           commissions={((runway as any).crew_commissions ?? 0) + totalPartnerCommissions}
-          netProfit={adjustedNetProfit}
+          netProfit={rawNetProfit}
           monthlyBurn={monthlyBurn}
           gapToTarget={gapToTarget}
           projectedRunway={projection?.projectedRunway}
