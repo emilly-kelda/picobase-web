@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import ReceivablesView from '@/components/ReceivablesView'
 import { formatCurrency } from '@/lib/currency'
+import { whatsappDigitsWithCountryCode } from '@/lib/whatsapp'
 
 type Advance = {
   id: string
@@ -1092,86 +1093,172 @@ export default function PaymentsClient({
               width: '32px', height: '4px', background: 'var(--border)',
               borderRadius: '2px', margin: '0 auto 20px',
             }} />
-            <div style={{
-              display: 'flex', justifyContent: 'space-between',
-              alignItems: 'center', marginBottom: '16px',
-            }}>
-              <div>
-                <div style={{ fontSize: '16px', fontWeight: '500', color: 'var(--slate)', marginBottom: '2px' }}>
-                  Aulas · {period}
-                </div>
-                <div style={{ fontSize: '12px', color: 'var(--mist)' }}>
-                  {(payments.find(p => (p.users as any)?.id === breakdownFor)?.users as any)?.name ?? '—'}
-                </div>
-              </div>
-              <button
-                onClick={() => setBreakdownFor(null)}
-                style={{
-                  background: 'var(--powder)', border: 'none',
-                  borderRadius: '50%', width: '30px', height: '30px',
-                  fontSize: '14px', cursor: 'pointer', color: 'var(--mist)',
-                }}
-              >
-                ×
-              </button>
-            </div>
+            {(() => {
+              const breakdownPayment = payments.find(p => (p.users as any)?.id === breakdownFor)
+              const bpUser = breakdownPayment?.users as any
+              const totalAdvances = breakdownPayment?.totalAdvances ?? 0
+              const netPayout = breakdownPayment?.netPayout ?? 0
 
-            {loadingBreakdown ? (
-              <div style={{ padding: '40px', textAlign: 'center', fontSize: '13px', color: 'var(--mist)' }}>
-                Carregando...
-              </div>
-            ) : (
-              <div style={{
-                border: '0.5px solid var(--border)',
-                borderRadius: 'var(--radius-lg)', overflow: 'hidden',
-              }}>
-                {breakdown.map((s: any, i: number) => (
-                  <div key={s.id} style={{
-                    display: 'flex', justifyContent: 'space-between',
-                    alignItems: 'center', padding: '12px 16px',
-                    borderBottom: i < breakdown.length - 1 ? '0.5px solid var(--border)' : 'none',
-                    background: i % 2 === 0 ? '#fff' : 'var(--powder)',
-                  }}>
-                    <div>
-                      <div style={{ fontSize: '13px', fontWeight: '500', color: 'var(--slate)', marginBottom: '2px' }}>
-                        {s.checkins?.student_name ?? '—'}
-                      </div>
-                      <div style={{ fontSize: '11px', color: 'var(--mist)' }}>
-                        {s.activities?.name ?? '—'} · {s.duration_min}min ·{' '}
-                        {new Date(s.session_date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
-                      </div>
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: '13px', fontWeight: '500', color: 'var(--slate)', fontVariantNumeric: 'tabular-nums' }}>
-                        {fmt(s.commission_amount)}
-                      </div>
-                      <div style={{ fontSize: '11px', color: 'var(--mist)' }}>
-                        de {fmt(s.price)}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-                {breakdown.length > 0 && (
+              const whatsappMessage = breakdownPayment
+                ? `Olá ${bpUser?.name ?? ''}! Segue o resumo do fechamento de ${period}: ` +
+                  `${breakdownPayment.sessions_count} aula${breakdownPayment.sessions_count !== 1 ? 's' : ''}, ` +
+                  `comissão de ${fmt(breakdownPayment.commission_amount)}` +
+                  `${breakdownPayment.bonus > 0 ? ` + bônus de ${fmt(breakdownPayment.bonus)}` : ''}` +
+                  `${totalAdvances > 0 ? `, com desconto de ${fmt(totalAdvances)} em adiantamentos` : ''}. ` +
+                  `Total líquido a receber: ${fmt(netPayout)}.`
+                : ''
+
+              return (
+                <>
                   <div style={{
                     display: 'flex', justifyContent: 'space-between',
-                    padding: '12px 16px', background: 'var(--powder)',
-                    borderTop: '0.5px solid var(--border)',
+                    alignItems: 'flex-start', marginBottom: '16px', gap: '12px',
                   }}>
-                    <span style={{ fontSize: '12px', color: 'var(--mist)' }}>
-                      {breakdown.length} aulas · receita {fmt(breakdown.reduce((s: number, r: any) => s + (r.price ?? 0), 0))}
-                    </span>
-                    <span style={{ fontSize: '15px', fontWeight: '600', color: 'var(--slate)', fontVariantNumeric: 'tabular-nums' }}>
-                      {fmt(breakdown.reduce((s: number, r: any) => s + r.commission_amount, 0))}
-                    </span>
+                    <div>
+                      <div style={{ fontSize: '16px', fontWeight: '500', color: 'var(--slate)', marginBottom: '2px' }}>
+                        Aulas · {period}
+                      </div>
+                      <div style={{ fontSize: '12px', color: 'var(--mist)' }}>
+                        {bpUser?.name ?? '—'}
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                      {breakdownPayment && (
+                        <>
+                          <a
+                            href={`/api/owner/receipt/${breakdownPayment.id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              padding: '6px 12px', background: '#fff', color: 'var(--slate)',
+                              border: '0.5px solid var(--border-strong)', borderRadius: '99px',
+                              fontSize: '11px', fontWeight: '500', textDecoration: 'none',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            ↓ Exportar PDF
+                          </a>
+                          <a
+                            href={bpUser?.whatsapp
+                              ? `https://api.whatsapp.com/send?phone=${whatsappDigitsWithCountryCode(bpUser.whatsapp)}&text=${encodeURIComponent(whatsappMessage)}`
+                              : undefined}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title={bpUser?.whatsapp ? undefined : 'Instrutor sem WhatsApp cadastrado'}
+                            aria-disabled={!bpUser?.whatsapp}
+                            style={{
+                              padding: '6px 12px',
+                              background: 'rgba(37,211,102,0.1)', color: '#128C4A',
+                              border: 'none', borderRadius: '99px',
+                              fontSize: '11px', fontWeight: '500', textDecoration: 'none',
+                              whiteSpace: 'nowrap',
+                              opacity: bpUser?.whatsapp ? 1 : 0.4,
+                              pointerEvents: bpUser?.whatsapp ? 'auto' : 'none',
+                              cursor: bpUser?.whatsapp ? 'pointer' : 'not-allowed',
+                            }}
+                          >
+                            Enviar WhatsApp
+                          </a>
+                        </>
+                      )}
+                      <button
+                        onClick={() => setBreakdownFor(null)}
+                        style={{
+                          background: 'var(--powder)', border: 'none',
+                          borderRadius: '50%', width: '30px', height: '30px',
+                          fontSize: '14px', cursor: 'pointer', color: 'var(--mist)',
+                          flexShrink: 0,
+                        }}
+                      >
+                        ×
+                      </button>
+                    </div>
                   </div>
-                )}
-                {breakdown.length === 0 && (
-                  <div style={{ padding: '32px', textAlign: 'center', fontSize: '13px', color: 'var(--mist)' }}>
-                    Nenhuma aula encontrada.
-                  </div>
-                )}
-              </div>
-            )}
+
+                  {loadingBreakdown ? (
+                    <div style={{ padding: '40px', textAlign: 'center', fontSize: '13px', color: 'var(--mist)' }}>
+                      Carregando...
+                    </div>
+                  ) : (
+                    <div style={{
+                      border: '0.5px solid var(--border)',
+                      borderRadius: 'var(--radius-lg)', overflow: 'hidden',
+                    }}>
+                      {breakdown.map((s: any, i: number) => (
+                        <div key={s.id} style={{
+                          display: 'flex', justifyContent: 'space-between',
+                          alignItems: 'center', padding: '12px 16px',
+                          borderBottom: i < breakdown.length - 1 ? '0.5px solid var(--border)' : 'none',
+                          background: i % 2 === 0 ? '#fff' : 'var(--powder)',
+                        }}>
+                          <div>
+                            <div style={{ fontSize: '13px', fontWeight: '500', color: 'var(--slate)', marginBottom: '2px' }}>
+                              {s.checkins?.student_name ?? '—'}
+                            </div>
+                            <div style={{ fontSize: '11px', color: 'var(--mist)' }}>
+                              {s.activities?.name ?? '—'} · {s.duration_min}min ·{' '}
+                              {new Date(s.session_date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+                            </div>
+                          </div>
+                          <div style={{ textAlign: 'right' }}>
+                            <div style={{ fontSize: '13px', fontWeight: '500', color: 'var(--slate)', fontVariantNumeric: 'tabular-nums' }}>
+                              {fmt(s.commission_amount)}
+                            </div>
+                            <div style={{ fontSize: '11px', color: 'var(--mist)' }}>
+                              de {fmt(s.price)}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                      {breakdown.length > 0 && (
+                        <div style={{
+                          display: 'flex', justifyContent: 'space-between',
+                          padding: '12px 16px', background: 'var(--powder)',
+                          borderTop: '0.5px solid var(--border)',
+                        }}>
+                          <span style={{ fontSize: '12px', color: 'var(--mist)' }}>
+                            {breakdown.length} aulas · receita {fmt(breakdown.reduce((s: number, r: any) => s + (r.price ?? 0), 0))}
+                          </span>
+                          <span style={{ fontSize: '15px', fontWeight: '600', color: 'var(--slate)', fontVariantNumeric: 'tabular-nums' }}>
+                            {fmt(breakdown.reduce((s: number, r: any) => s + r.commission_amount, 0))}
+                          </span>
+                        </div>
+                      )}
+                      {breakdown.length === 0 && (
+                        <div style={{ padding: '32px', textAlign: 'center', fontSize: '13px', color: 'var(--mist)' }}>
+                          Nenhuma aula encontrada.
+                        </div>
+                      )}
+                      {totalAdvances > 0 && (
+                        <div style={{
+                          display: 'flex', justifyContent: 'space-between',
+                          padding: '10px 16px', borderTop: '0.5px solid var(--border)',
+                        }}>
+                          <span style={{ fontSize: '12px', color: 'var(--mist)' }}>Adiantamentos</span>
+                          <span style={{ fontSize: '13px', fontWeight: '500', color: '#DC2626' }}>
+                            − {fmt(totalAdvances)}
+                          </span>
+                        </div>
+                      )}
+                      {breakdownPayment && (
+                        <div style={{
+                          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                          padding: '12px 16px', background: 'var(--powder)',
+                          borderTop: '0.5px solid var(--border)',
+                        }}>
+                          <span style={{ fontSize: '12px', fontWeight: '600', color: 'var(--slate)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                            Total a receber
+                          </span>
+                          <span style={{ fontSize: '17px', fontWeight: '700', color: 'var(--slate)', fontVariantNumeric: 'tabular-nums' }}>
+                            {fmt(netPayout)}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </>
+              )
+            })()}
           </div>
         </div>
       )}

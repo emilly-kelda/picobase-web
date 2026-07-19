@@ -154,7 +154,13 @@ interface ReceiptProps {
   commissionPct: number
   commission:  number
   bonus:       number
+  /** Gross total before advances — commission + bonus, matches
+   *  payments.total_to_pay. The bold final total below is this minus
+   *  totalAdvances, so the PDF always agrees with netPayout (what
+   *  actually gets paid) rather than showing what the instructor would
+   *  have earned before deductions. */
   total:       number
+  totalAdvances?: number
   generatedAt: string
 }
 
@@ -169,8 +175,10 @@ export function ReceiptPDF({
   commission,
   bonus,
   total,
+  totalAdvances = 0,
   generatedAt,
 }: ReceiptProps) {
+  const netTotal = Math.max(0, total - totalAdvances)
   function fmt(n: number) {
     return 'R$ ' + n.toLocaleString('pt-BR', { minimumFractionDigits: 2 })
   }
@@ -217,12 +225,20 @@ export function ReceiptPDF({
               <Text style={styles.rowValue}>{fmt(bonus)}</Text>
             </View>
           )}
+          {totalAdvances > 0 && (
+            <View style={styles.row}>
+              <Text style={styles.rowLabel}>Advances (adiantamentos)</Text>
+              <Text style={[styles.rowValue, { color: '#C0392B' }]}>− {fmt(totalAdvances)}</Text>
+            </View>
+          )}
         </View>
 
         {/* Total */}
         <View style={styles.totalRow}>
-          <Text style={styles.totalLabel}>Total to receive</Text>
-          <Text style={styles.totalValue}>{fmt(total)}</Text>
+          <Text style={styles.totalLabel}>
+            {totalAdvances > 0 ? 'Total to receive (net of advances)' : 'Total to receive'}
+          </Text>
+          <Text style={styles.totalValue}>{fmt(netTotal)}</Text>
         </View>
 
         <View style={styles.badge}>
