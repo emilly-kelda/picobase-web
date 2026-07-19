@@ -529,3 +529,14 @@ their commit message and diff.
   skipped: no free, keyless tide API covers Brazil (NOAA is US-only;
   WorldTides/Stormglass/TidesAtlas all require a paid signup) — didn't
   fabricate a fake reading rather than leave it for later.
+- `3430e7f` **feat**: Aulas Agendadas' per-lesson action button is now
+  dynamic — "Iniciar Aula" while a today's lesson is still pending,
+  flips to green "+ Agendar Próxima" once it's confirmed or its slot
+  has already passed. Clicking it reopens this same file's existing
+  "+ Agendar" scheduling modal (real `scheduled_lessons` row via
+  `api/owner/schedule`), pre-filled with the student's name/activity/
+  instructor — only date/time left for reception to set. Deviated from
+  the literal spec (asked for `AddBookingModal`) for the same reason
+  noted twice already this pass: that modal writes to `bookings`
+  (pre-arrival leads), which never surfaces back in Aulas Agendadas.
+  Group rows unchanged, keep their own "Confirmar grupo →" flow.
