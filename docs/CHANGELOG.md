@@ -205,3 +205,14 @@ their commit message and diff.
   filter badges (Todos/Kitesurf/Wingfoil/Kitefoil/Surf/Windsurf) above
   Aulas Agendadas, matched by a prefix check (not substring) so
   "Surf" doesn't false-match "Kitesurf"/"Windsurf".
+- `d80786c` **feat**: "Reagendar" button in Aulas Não Realizadas (next to
+  the existing "Descartar", kept) opens a modal with a system-suggested
+  slot — modality detected from the activity name, an instructor who
+  teaches it (`users.sports`) and has no conflicting lesson in the next
+  7 days' 8-17 hourly window, falling back to any active instructor or
+  to fully manual selection when nothing qualifies. Confirming creates
+  the new lesson and cancels the old one via the existing schedule
+  routes, then opens a pre-filled `wa.me` tab with the reschedule
+  message (skipped with an inline note if the student has no WhatsApp
+  on file). Extracted the Brazil country-code backfill into
+  `src/lib/whatsapp.ts`, now shared with Aulas Agendadas.
