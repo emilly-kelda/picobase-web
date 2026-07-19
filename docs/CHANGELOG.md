@@ -419,3 +419,35 @@ their commit message and diff.
   Temporada") moved to `/owner/costs` next to the Simulador de
   Cenários (same real numbers) — Base Camp's column 2 is now just Sala
   de Espera + Aulas Perdidas, both with the full column height.
+- `994ef70`…`a3ee61b` **fix**: dashboard bug-fix pass, root-caused
+  against production data first (`AUDITORIA_DASHBOARD.md`) — two of
+  the four reported bugs turned out to need a different fix than
+  originally assumed. "Confirmada" + "Sem créditos" showing together
+  (Sofia Andersson) wasn't a missing balance check — both lessons were
+  legitimately charged avulsa (`sessions.price` > 0, `payment_method`
+  set); the real bug was `ScheduledLessons.tsx`'s credit badge not
+  checking `lesson.status`, so an already-paid lesson kept showing a
+  stale warning. Blocking confirmation without an active package (the
+  original ask) would've broken the normal pay-per-lesson flow, so
+  that wasn't implemented. "Lucro líquido" showing R$ 0,00 instead of
+  negative: the `Math.max(0, …)` clamp needed for `runwayMonths` was
+  also clamping the displayed net-profit figure — split into
+  `rawNetProfit` (shown, can go negative, red when it does) vs.
+  `adjustedNetProfit` (floored, only feeds runway math). Season-scope
+  mismatch: `getRunwayProjection` always read the most-recent season by
+  `start_date` for partner commissions regardless of the
+  `active_season_id` cookie `getRunwayData` uses, so switching seasons
+  changed half the card's numbers and not the other half — now takes
+  the same `seasonId`. "Duplicação do Jack Ryan" wasn't a duplicate
+  `students` row (there's only one) — it was three `package_sales`
+  with `student_id` null, and both balance readers
+  (`getPackageBalancesForCheckins`, `ScheduledLessons`'
+  `getPackageBadge`) picked just one instead of summing, under-quoting
+  his real balance by ~660 minutes. Both now sum unexhausted sales
+  (FIFO-pinned to the oldest for "Ver histórico"/auto-debit order);
+  migration `20260801000000` backfills `package_sales.student_id`
+  where exactly one matching `students` row exists (additive only, no
+  merge). Also: `AutoRefresh` truncation fix, reworded the ambiguous
+  "Última aula · 1h" badge, and "Ocupação da Equipe" switched from an
+  hours/weekly-capacity ratio to % of instructors with a lesson
+  scheduled today.
