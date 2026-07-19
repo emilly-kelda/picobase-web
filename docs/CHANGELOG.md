@@ -179,3 +179,11 @@ their commit message and diff.
   Software, Marketing, Contador/Legal, Desenvolvimento, Outro) instead of
   freeform text, plus a break-even banner ("X escolas ativas para cobrir
   R$ Y de custo") from total costs ÷ average revenue per active school.
+- `838f736` **feat**: "Notificações Automáticas e Gatilhos" card in
+  `/owner/settings` — three toggles (`notify_student_before_class`,
+  `notify_payment_and_waiver`, `notify_instructor_on_checkin`), all
+  default `false`. No dispatch service (Z-API, Evolution API, etc.) is
+  wired up yet — TODO comments mark the real future trigger points in
+  `api/checkin`, `api/owner/bookings` PATCH, and `api/owner/schedule`
+  (the last needs a time-based cron/queue job, not an inline check, since
+  scheduling happens well before the 2h-before-class window).
