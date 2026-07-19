@@ -170,3 +170,12 @@ their commit message and diff.
   with a view-only "Visualizar Termo de Responsabilidade (PDF)" link —
   the student still checks the existing agree/GDPR boxes and signs the
   existing canvas; only the waiver text display itself changes.
+- `4702cfc` **feat**: `/master/status` infra panel — DB size, Storage
+  bucket usage, active/max Postgres connections, and API health/latency,
+  backed by a new `get_infra_status()` SECURITY DEFINER RPC over
+  `pg_catalog`/`storage.objects` (no Supabase Management API token exists
+  in this project, so pg_catalog metadata is the only real source).
+  Centro de Custos: category is now a fixed select (Infraestrutura/
+  Software, Marketing, Contador/Legal, Desenvolvimento, Outro) instead of
+  freeform text, plus a break-even banner ("X escolas ativas para cobrir
+  R$ Y de custo") from total costs ÷ average revenue per active school.
