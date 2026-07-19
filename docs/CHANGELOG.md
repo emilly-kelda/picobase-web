@@ -312,3 +312,10 @@ their commit message and diff.
   yet, surfaced honestly in the confirm modal ("taxa padrão da escola")
   rather than presented as live — one change, shared by both the
   preview and the actual persisted commission.
+- `89777f7` **feat**: the dashboard's check-in link already sent
+  `?student=`, but the public form never read any query params at all
+  (confirmed via grep — a real, complete gap). Now also sends
+  `?instructor=&activity=` (names); `CheckinForm.tsx` resolves them to
+  `activity_id`/`instructor_id` in its initial state, so whichever step
+  the student reaches already shows that option selected. No `?level=`
+  — the check-in form has no skill-level field anywhere to bind it to.
