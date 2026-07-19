@@ -241,3 +241,12 @@ their commit message and diff.
   needed no change — it already sums `sessions.commission_amount`,
   computed once at confirm time and stored, so it reflects whichever
   model was active per lesson automatically.
+- `b401b93` **feat**: AwesomeAPI FX integration already existed
+  end-to-end (`src/lib/fx.ts`, `api/fx`, `confirm-lesson`'s
+  `convertToBRL`) — checked before touching anything. Two real gaps
+  closed: the client preview's rate was fetched once on mount instead
+  of per modal-open (could go stale on a long-open tab; the actual
+  server-side conversion on confirm was never affected), and there was
+  no "Convertido: R$ X (Cotação: ...)" line for the raw total price.
+  Kept the "Taxa de câmbio indisponível" message (a real conditional
+  error, not a static one) but gave it a "Tentar novamente" action.
