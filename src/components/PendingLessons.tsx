@@ -30,6 +30,8 @@ type Checkin = {
   student_nationality: string | null
   student_email: string | null
   student_whatsapp: string | null
+  document_number: string | null
+  document_type: string | null
   health_condition: string | null
   emergency_name: string | null
   emergency_phone: string | null
@@ -1300,6 +1302,10 @@ export default function PendingLessons({
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {[
                 { label: 'Nacionalidade', value: fichaModal.student_nationality },
+                {
+                  label: fichaModal.document_type === 'cpf' ? 'CPF' : fichaModal.document_type === 'passport' ? 'Passaporte' : 'Documento',
+                  value: fichaModal.document_number,
+                },
                 { label: 'Data de nascimento', value: fmtBirthdate(fichaModal.birthdate) },
                 { label: 'Email', value: fichaModal.student_email },
                 { label: 'WhatsApp', value: fichaModal.student_whatsapp },

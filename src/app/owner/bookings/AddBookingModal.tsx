@@ -11,6 +11,12 @@ type FoundStudent = {
   id: string
   name: string
   whatsapp: string | null
+  document_number?: string | null
+  document_type?: string | null
+}
+
+function documentLabel(type: string | null | undefined) {
+  return type === 'cpf' ? 'CPF' : type === 'passport' ? 'Passaporte' : 'Documento'
 }
 
 function generateHourlySlots(startHour: number, endHour: number): string[] {
@@ -176,7 +182,7 @@ export default function AddBookingModal({
 
           {!manualMode ? (
             <div>
-              <label style={labelStyle}>Buscar cliente cadastrado</label>
+              <label style={labelStyle}>Buscar cliente cadastrado (Nome ou CPF/Passaporte)</label>
 
               {selectedStudent ? (
                 <div style={{
@@ -190,6 +196,9 @@ export default function AddBookingModal({
                     </div>
                     <div style={{ fontSize: '12px', color: 'var(--glacial-dark)' }}>
                       {selectedStudent.whatsapp || 'Sem WhatsApp cadastrado'}
+                      {selectedStudent.document_number && (
+                        <> · {documentLabel(selectedStudent.document_type)}: {selectedStudent.document_number}</>
+                      )}
                     </div>
                   </div>
                   <button
@@ -213,7 +222,7 @@ export default function AddBookingModal({
                     onChange={e => setQuery(e.target.value)}
                     onFocus={() => { if (results.length > 0) setShowResults(true) }}
                     onBlur={() => setTimeout(() => setShowResults(false), 200)}
-                    placeholder="Nome do cliente..."
+                    placeholder="Nome ou CPF/Passaporte..."
                     autoFocus
                   />
                   {searching && (
@@ -246,6 +255,9 @@ export default function AddBookingModal({
                           </div>
                           <div style={{ fontSize: '11px', color: 'var(--mist)' }}>
                             {s.whatsapp || 'Sem WhatsApp cadastrado'}
+                            {s.document_number && (
+                              <> · {documentLabel(s.document_type)}: {s.document_number}</>
+                            )}
                           </div>
                         </button>
                       ))}

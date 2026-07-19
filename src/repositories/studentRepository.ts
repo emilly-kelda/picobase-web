@@ -13,13 +13,18 @@ export async function getStudents(schoolId: string, search?: string) {
       nationality,
       skill_level,
       health_conditions,
+      document_number,
+      document_type,
       created_at
     `)
     .eq('school_id', schoolId)
     .order('created_at', { ascending: false })
 
+  // Matches name OR document_number (CPF/passport, from the public
+  // check-in form) — lets AddBookingModal's reception search find a
+  // customer by either, same field the ficha itself was filled with.
   if (search) {
-    query = query.ilike('name', `%${search}%`)
+    query = query.or(`name.ilike.%${search}%,document_number.ilike.%${search}%`)
   }
 
   const { data, error } = await query

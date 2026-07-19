@@ -252,6 +252,28 @@ const NATIONALITY_FLAGS: Array<{ code: string; flag: string }> = [
   { code: 'OTHER', flag: '+' },
 ]
 
+function formatCPF(raw: string): string {
+  const d = raw.replace(/\D/g, '').slice(0, 11)
+  if (d.length <= 3) return d
+  if (d.length <= 6) return `${d.slice(0, 3)}.${d.slice(3)}`
+  if (d.length <= 9) return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6)}`
+  return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`
+}
+
+/** Standard CPF check-digit algorithm — catches typos before they end up
+ *  on a signed waiver, not just a format check. */
+function isValidCPF(masked: string): boolean {
+  const d = masked.replace(/\D/g, '')
+  if (d.length !== 11 || /^(\d)\1{10}$/.test(d)) return false
+  const checkDigit = (len: number) => {
+    let sum = 0
+    for (let i = 0; i < len; i++) sum += parseInt(d[i], 10) * (len + 1 - i)
+    const rem = (sum * 10) % 11
+    return rem === 10 ? 0 : rem
+  }
+  return checkDigit(9) === parseInt(d[9], 10) && checkDigit(10) === parseInt(d[10], 10)
+}
+
 function activityIcon(name: string) {
   const n = name.toLowerCase()
   if (n.includes('kite'))            return '🪁'
@@ -515,6 +537,7 @@ export default function CheckinForm({
     student_email:       '',
     student_whatsapp:    '',
     student_nationality: '',
+    document_number:     '',
     date_of_birth:       '',
     activity_id:         activities.find(a => a.name.toLowerCase() === prefillActivityName?.toLowerCase())?.id ?? '',
     instructor_id:       instructors.find(i => i.name.toLowerCase() === prefillInstructorName?.toLowerCase())?.id ?? '',
@@ -659,6 +682,7 @@ export default function CheckinForm({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...form,
+          document_type:    form.student_nationality === 'BR' ? 'cpf' : 'passport',
           school_id:        school.id,
           partner_id:       (source === 'hotel' || source === 'agencia') ? partnerId : null,
           source:           source ?? null,
@@ -759,7 +783,10 @@ export default function CheckinForm({
   const canSubmitWaiver = agreed && gdpr && form.signature_data !== '' && !submitting
     && (!isMinor || (guardianName.trim().length > 2 && guardianConsent))
 
-  const canAdvanceName = form.student_name.trim().length >= 2 && form.student_nationality !== ''
+  const canAdvanceName = form.student_name.trim().length >= 2
+    && form.student_nationality !== ''
+    && form.document_number.trim().length > 0
+    && (form.student_nationality !== 'BR' || isValidCPF(form.document_number))
   const canAdvanceActivity = form.activity_id !== ''
 
   return (
@@ -862,6 +889,40 @@ export default function CheckinForm({
                 })}
               </div>
             </div>
+
+            {form.student_nationality !== '' && (
+              <div>
+                <label style={labelStyle}>
+                  {form.student_nationality === 'BR' ? 'CPF *'
+                    : lang === 'pt' ? 'Passaporte *'
+                    : lang === 'fr' ? 'Passeport *'
+                    : lang === 'es' ? 'Pasaporte *'
+                    : 'Passport *'}
+                </label>
+                <input
+                  style={inputStyle}
+                  type="text"
+                  inputMode={form.student_nationality === 'BR' ? 'numeric' : 'text'}
+                  value={form.document_number}
+                  onChange={e => {
+                    const val = form.student_nationality === 'BR'
+                      ? formatCPF(e.target.value)
+                      : e.target.value.toUpperCase()
+                    setForm(f => ({ ...f, document_number: val }))
+                  }}
+                  placeholder={form.student_nationality === 'BR' ? '000.000.000-00' : 'AB1234567'}
+                  maxLength={form.student_nationality === 'BR' ? 14 : 20}
+                />
+                {form.student_nationality === 'BR' && form.document_number.replace(/\D/g, '').length === 11 && !isValidCPF(form.document_number) && (
+                  <div style={{ fontSize: '11px', color: '#C0392B', marginTop: '4px' }}>
+                    {lang === 'pt' ? 'CPF inválido — confira os números.'
+                      : lang === 'fr' ? 'CPF invalide — vérifiez les chiffres.'
+                      : lang === 'es' ? 'CPF inválido — revise los números.'
+                      : 'Invalid CPF — please check the digits.'}
+                  </div>
+                )}
+              </div>
+            )}
 
             <div>
               <label style={labelStyle}>{t.dob}</label>

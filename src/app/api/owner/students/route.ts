@@ -8,8 +8,9 @@ const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
 /** Backs AddBookingModal.tsx's customer search — reception looks up a
  *  student who already filled the public check-in/waiver form (that flow
  *  find-or-creates the students row) instead of re-typing their contact
- *  info. Reuses getStudents' existing name-search, just capped for a
- *  live-typing dropdown rather than the full paginated students list. */
+ *  info. Reuses getStudents' existing name-or-document search, just
+ *  capped for a live-typing dropdown rather than the full paginated
+ *  students list. */
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const q = searchParams.get('q')?.trim()
@@ -17,7 +18,10 @@ export async function GET(request: Request) {
 
   const students = await getStudents(SCHOOL_ID, q)
   return NextResponse.json({
-    students: students.slice(0, 8).map(s => ({ id: s.id, name: s.name, whatsapp: s.whatsapp })),
+    students: students.slice(0, 8).map(s => ({
+      id: s.id, name: s.name, whatsapp: s.whatsapp,
+      document_number: s.document_number, document_type: s.document_type,
+    })),
   })
 }
 

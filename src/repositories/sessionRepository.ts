@@ -15,6 +15,8 @@ export async function getPendingLessons(schoolId: string) {
       student_nationality,
       student_email,
       student_whatsapp,
+      document_number,
+      document_type,
       health_condition,
       emergency_name,
       emergency_phone,

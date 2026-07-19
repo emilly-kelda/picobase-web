@@ -78,6 +78,8 @@ export async function POST(request: Request) {
       student_email:       body.student_email || null,
       student_whatsapp:    body.student_whatsapp || null,
       student_nationality: body.student_nationality || null,
+      document_number:     body.document_number || null,
+      document_type:       body.document_type || null,
       activity_id:         body.activity_id || null,
       instructor_id:       body.instructor_id || null,
       partner_id:          body.partner_id ?? null,
@@ -125,7 +127,7 @@ export async function POST(request: Request) {
   const normalizedName = (body.student_name as string).trim()
   const { data: existing } = await supabase
     .from('students')
-    .select('id')
+    .select('id, document_number')
     .eq('school_id', body.school_id)
     .ilike('name', normalizedName)
     .limit(1)
@@ -139,7 +141,17 @@ export async function POST(request: Request) {
       whatsapp:          body.student_whatsapp || null,
       nationality:       body.student_nationality || null,
       health_conditions: encryptedHealthCondition,
+      document_number:   body.document_number || null,
+      document_type:     body.document_type || null,
     })
+  } else if (!existing.document_number && body.document_number) {
+    // Backfills an existing student who checked in before this field
+    // existed (or skipped it) — otherwise they'd stay permanently
+    // unsearchable by document even after providing one here.
+    await supabase
+      .from('students')
+      .update({ document_number: body.document_number, document_type: body.document_type || null })
+      .eq('id', existing.id)
   }
 
   return NextResponse.json({ ok: true, id: data.id })
