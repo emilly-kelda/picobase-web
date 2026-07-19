@@ -216,3 +216,7 @@ their commit message and diff.
   message (skipped with an inline note if the student has no WhatsApp
   on file). Extracted the Brazil country-code backfill into
   `src/lib/whatsapp.ts`, now shared with Aulas Agendadas.
+- `a9177c3` **feat**: Aulas Agendadas' WhatsApp/check-in icons are now
+  labeled pills ("Confirmar Aula" / "Check-in") instead of bare 32x32
+  icon squares — the links themselves were already correct (verified
+  again), they were just easy to miss as icon-only decoration.
