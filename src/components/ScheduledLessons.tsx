@@ -234,9 +234,9 @@ export default function ScheduledLessons({
   const [studentSuggestions, setStudentSuggestions] = useState<
     Array<{
       student_name: string
-      package_sale_id: string
-      package_name: string
-      activity_name: string
+      package_sale_id: string | null
+      package_name: string | null
+      activity_name: string | null
       minutes_purchased: number
       minutes_used: number
       minutes_remaining: number
@@ -394,6 +394,34 @@ export default function ScheduledLessons({
       activity_id:     activity?.id ?? f.activity_id,
     }))
     setShowSuggestions(false)
+  }
+
+  /** Suggestion-row click. Students with no package sale (walk-ins,
+   *  booking-only contacts) have package_sale_id: null — nothing to
+   *  select against, so this just fills the name and leaves the form's
+   *  package_sale_id null, same as if the owner had typed the name
+   *  manually with no matching package. Scheduling with no package_sale_id
+   *  already works (api/owner/schedule POST defaults it to null). */
+  function onSelectSuggestion(student: {
+    student_name: string
+    package_sale_id: string | null
+    package_name: string | null
+    activity_name: string | null
+    minutes_remaining: number
+  }) {
+    if (!student.package_sale_id) {
+      setSelectedPackage(null)
+      setForm(f => ({ ...f, student_name: student.student_name, package_sale_id: null }))
+      setShowSuggestions(false)
+      return
+    }
+    onSelectPackage({
+      student_name:      student.student_name,
+      package_sale_id:   student.package_sale_id,
+      package_name:      student.package_name ?? '—',
+      activity_name:     student.activity_name ?? '—',
+      minutes_remaining: student.minutes_remaining,
+    })
   }
 
   function toggleWeekday(day: number) {
@@ -1268,9 +1296,9 @@ export default function ScheduledLessons({
                           s.student_name.toLowerCase().includes(form.student_name.toLowerCase()))
                         .map(s => (
                           <button
-                            key={s.package_sale_id}
+                            key={s.package_sale_id ?? `no-package-${s.student_name}`}
                             type="button"
-                            onMouseDown={() => onSelectPackage(s)}
+                            onMouseDown={() => onSelectSuggestion(s)}
                             style={{
                               width: '100%',
                               padding: '10px 14px', cursor: 'pointer',
@@ -1285,19 +1313,32 @@ export default function ScheduledLessons({
                               <div style={{ fontSize: '13px', fontWeight: '500', color: 'var(--slate)', marginBottom: '2px' }}>
                                 {s.student_name}
                               </div>
-                              <div style={{ fontSize: '11px', color: 'var(--mist)' }}>
-                                {s.activity_name} — {s.package_name}
+                              {s.package_sale_id && (
+                                <div style={{ fontSize: '11px', color: 'var(--mist)' }}>
+                                  {s.activity_name} — {s.package_name}
+                                </div>
+                              )}
+                            </div>
+                            {s.package_sale_id ? (
+                              <div style={{
+                                flexShrink: 0,
+                                fontSize: '11px', fontWeight: '600',
+                                color: s.minutes_remaining <= 0 ? '#DC2626' : s.minutes_remaining < 60 ? '#92400E' : 'var(--glacial-dark)',
+                                background: s.minutes_remaining <= 0 ? '#FEE2E2' : s.minutes_remaining < 60 ? '#FEF3C7' : 'var(--glacial-light)',
+                                padding: '2px 8px', borderRadius: '99px',
+                              }}>
+                                {s.minutes_remaining <= 0 ? 'Esgotado' : `${formatHours(s.minutes_remaining)} restantes`}
                               </div>
-                            </div>
-                            <div style={{
-                              flexShrink: 0,
-                              fontSize: '11px', fontWeight: '600',
-                              color: s.minutes_remaining <= 0 ? '#DC2626' : s.minutes_remaining < 60 ? '#92400E' : 'var(--glacial-dark)',
-                              background: s.minutes_remaining <= 0 ? '#FEE2E2' : s.minutes_remaining < 60 ? '#FEF3C7' : 'var(--glacial-light)',
-                              padding: '2px 8px', borderRadius: '99px',
-                            }}>
-                              {s.minutes_remaining <= 0 ? 'Esgotado' : `${formatHours(s.minutes_remaining)} restantes`}
-                            </div>
+                            ) : (
+                              <div style={{
+                                flexShrink: 0,
+                                fontSize: '11px', fontWeight: '500',
+                                color: 'var(--mist)', background: 'var(--powder)',
+                                padding: '2px 8px', borderRadius: '99px',
+                              }}>
+                                Sem pacote
+                              </div>
+                            )}
                           </button>
                         ))}
                     </div>
