@@ -8,6 +8,7 @@ import LevelPicker from '@/components/LevelPicker'
 import StudentPackageHistoryModal from '@/components/StudentPackageHistoryModal'
 import CheckinQRButton from '@/components/CheckinQRButton'
 import SellPackageFlowModal, { type PackageOption } from '@/components/SellPackageFlowModal'
+import ScheduleFromCheckinModal from '@/components/ScheduleFromCheckinModal'
 import type { VariableCostInfo } from '@/lib/commission'
 
 type ActivityRef = {
@@ -160,6 +161,7 @@ export default function PendingLessons({
   const [historyModal, setHistoryModal] = useState<{ studentName: string; packageSaleId: string } | null>(null)
   const [fichaModal, setFichaModal]     = useState<Checkin | null>(null)
   const [sellModal, setSellModal]       = useState<Checkin | null>(null)
+  const [scheduleModal, setScheduleModal] = useState<Checkin | null>(null)
   const [selected, setSelected]         = useState<Checkin | null>(null)
   const [activityId, setActivityId]     = useState('')
   const [duration, setDuration]         = useState(60)
@@ -601,22 +603,48 @@ export default function PendingLessons({
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flexShrink: 0 }}>
-                  <button
-                    onClick={() => open(checkin)}
-                    style={{
-                      padding: '8px 18px',
-                      background: 'var(--slate)',
-                      color: '#fff',
-                      border: 'none',
-                      borderRadius: 'var(--radius-md)',
-                      fontSize: '13px', fontWeight: '500',
-                      cursor: 'pointer',
-                      fontFamily: 'var(--font-sans)',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    Confirmar →
-                  </button>
+                  {checkin.scheduled_lesson ? (
+                    // Arrived for a lesson already booked in advance — ready
+                    // to go right now, so this stays the one-step
+                    // confirm+charge action (pre-filled from that booking).
+                    <button
+                      onClick={() => open(checkin)}
+                      style={{
+                        padding: '8px 18px',
+                        background: 'var(--slate)',
+                        color: '#fff',
+                        border: 'none',
+                        borderRadius: 'var(--radius-md)',
+                        fontSize: '13px', fontWeight: '500',
+                        cursor: 'pointer',
+                        fontFamily: 'var(--font-sans)',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      Confirmar →
+                    </button>
+                  ) : (
+                    // Walk-in with nothing pre-arranged — gets slotted into
+                    // an instructor/time instead of being charged on the
+                    // spot; "Confirmar / Iniciar Aula" happens later from
+                    // Aulas Agendadas once the lesson actually starts.
+                    <button
+                      onClick={() => setScheduleModal(checkin)}
+                      style={{
+                        padding: '8px 18px',
+                        background: 'var(--slate)',
+                        color: '#fff',
+                        border: 'none',
+                        borderRadius: 'var(--radius-md)',
+                        fontSize: '13px', fontWeight: '500',
+                        cursor: 'pointer',
+                        fontFamily: 'var(--font-sans)',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      Agendar Aula
+                    </button>
+                  )}
                   <button
                     onClick={() => setFichaModal(checkin)}
                     style={{
@@ -1303,6 +1331,19 @@ export default function PendingLessons({
           initialStudentName={sellModal.student_name}
           onClose={() => setSellModal(null)}
           onSold={() => { setSellModal(null); router.refresh() }}
+        />
+      )}
+
+      {scheduleModal && (
+        <ScheduleFromCheckinModal
+          checkinId={scheduleModal.id}
+          studentName={scheduleModal.student_name}
+          activities={activities}
+          instructors={instructors}
+          initialActivityId={scheduleModal.activity_id}
+          initialInstructorId={scheduleModal.instructor_id}
+          onClose={() => setScheduleModal(null)}
+          onScheduled={() => { setScheduleModal(null); router.refresh() }}
         />
       )}
 

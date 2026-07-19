@@ -35,6 +35,30 @@ export async function POST(request: Request) {
         .single()
     : { data: null }
 
+  // A checkin-derived link takes priority, but group confirms — and now
+  // Aulas Agendadas' individual "Confirmar / Iniciar Aula" — have no
+  // checkin and pass the scheduled_lessons row id directly instead.
+  const linkedScheduledLessonId = checkin?.scheduled_lesson_id ?? scheduled_lesson_id ?? null
+
+  // Without a checkin, the student's name (for variable-cost lookup and the
+  // package auto-debit below) has to come from the scheduled_lessons row
+  // instead — this used to only ever come from checkin?.student_name, so
+  // confirming directly from a scheduled lesson (no checkin in scope)
+  // silently skipped both. scheduledLesson.package_sale_id, if set, is
+  // whichever specific sale was linked at schedule time (either picked
+  // explicitly in the "+ Agendar" autocomplete, or carried over from the
+  // originating checkin by schedule-from-checkin) — preferred over the
+  // general FIFO-by-name lookup when it still has balance.
+  const { data: scheduledLesson } = (!checkin && linkedScheduledLessonId)
+    ? await supabase
+        .from('scheduled_lessons')
+        .select('student_name, package_sale_id')
+        .eq('id', linkedScheduledLessonId)
+        .single()
+    : { data: null }
+
+  const studentName = checkin?.student_name ?? scheduledLesson?.student_name ?? null
+
   // Re-derive from the instructor's saved rate rather than trusting whatever
   // commission_pct the client last loaded — that value never reflects fixed
   // hourly-rate instructors, and can go stale between page load and confirm.
@@ -78,7 +102,7 @@ export async function POST(request: Request) {
   // commission base — the school still collects the full price, but the
   // instructor's cut is computed on what's left after that cost. The cost
   // itself is always a BRL figure, so it's subtracted after conversion.
-  const variableCost      = await getVariableCostForStudent(supabase, SCHOOL_ID, checkin?.student_name)
+  const variableCost      = await getVariableCostForStudent(supabase, SCHOOL_ID, studentName)
   const costDeduction     = variableCost.variableCostAmount
   const netRevenue        = Math.max(0, priceBRL - costDeduction)
 
@@ -143,9 +167,6 @@ export async function POST(request: Request) {
     }
   }
 
-  // A checkin-derived link takes priority, but group confirms have no
-  // checkin and pass the scheduled_lessons row id directly instead.
-  const linkedScheduledLessonId = checkin?.scheduled_lesson_id ?? scheduled_lesson_id ?? null
   if (linkedScheduledLessonId) {
     await supabase
       .from('scheduled_lessons')
@@ -158,21 +179,29 @@ export async function POST(request: Request) {
   // FIFO: the oldest sale that still has balance is debited first, same
   // resolution getPackageBalancesForCheckins now uses for the badges (see
   // AUDITORIA_DASHBOARD.md item 4 — this used to order sold_at descending,
-  // debiting the newest package first instead). Only wired for the checkin
-  // flow (checkin_id is how we know the student's name here) — group
-  // confirms have no student name in scope on this route, same "checkin
-  // flow only" boundary the partner-commission auto-wiring already draws.
-  if (checkin?.student_name) {
+  // debiting the newest package first instead). Works from studentName now
+  // (checkin- or scheduled_lesson-derived), not just checkin?.student_name —
+  // group confirms and Aulas Agendadas' individual confirm both have no
+  // checkin in scope, and used to silently skip this block entirely.
+  if (studentName) {
     const { data: packageSales } = await supabase
       .from('package_sales')
       .select('id, minutes_purchased, minutes_used')
       .eq('school_id', SCHOOL_ID)
-      .ilike('student_name', checkin.student_name)
+      .ilike('student_name', studentName)
       .order('sold_at', { ascending: true })
 
-    const activeSale = (packageSales ?? []).find(
-      s => (s.minutes_purchased ?? 0) - (s.minutes_used ?? 0) > 0
-    )
+    // Prefer the sale explicitly linked on the scheduled_lessons row (picked
+    // in the "+ Agendar" autocomplete, or carried over by
+    // schedule-from-checkin) while it still has balance, before falling
+    // back to the general FIFO-oldest-active lookup.
+    const linkedSale = scheduledLesson?.package_sale_id
+      ? (packageSales ?? []).find(s => s.id === scheduledLesson.package_sale_id)
+      : null
+    const activeSale = (linkedSale && (linkedSale.minutes_purchased ?? 0) - (linkedSale.minutes_used ?? 0) > 0)
+      ? linkedSale
+      : (packageSales ?? []).find(s => (s.minutes_purchased ?? 0) - (s.minutes_used ?? 0) > 0)
+
     if (activeSale) {
       const newMinutesUsed = (activeSale.minutes_used ?? 0) + duration_min
       await supabase

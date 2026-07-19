@@ -40,6 +40,12 @@ export async function getPendingLessons(schoolId: string) {
     `)
     .eq('school_id', schoolId)
     .eq('status', 'checked_in')
+    // A checkin whose lesson got deferred to a later scheduled slot (the
+    // "Agendar Aula" action) isn't waiting on anything right now — it'll
+    // reappear as a scheduled_lessons row in Aulas Agendadas instead. A
+    // checkin that arrived already matched to a pre-existing booking keeps
+    // deferred_to_schedule = false and still shows here, ready to confirm.
+    .eq('deferred_to_schedule', false)
     .gte('checkin_at', `${today}T00:00:00`)
     .order('checkin_at', { ascending: true })
 

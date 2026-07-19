@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { LEVEL_LABELS, isLevel } from '@/lib/levels'
 import LevelPicker from '@/components/LevelPicker'
+import ConfirmLessonModal from '@/components/ConfirmLessonModal'
 import { whatsappDigitsWithCountryCode } from '@/lib/whatsapp'
 
 type Lesson = {
@@ -246,6 +247,8 @@ export default function ScheduledLessons({
   activePackages = [],
   schoolName = 'Pico Base',
   schoolSlug = '',
+  payoutModel = 'percentage',
+  fixedPayoutValue = null,
 }: {
   todayLessons: Lesson[]
   tomorrowLessons: Lesson[]
@@ -254,9 +257,12 @@ export default function ScheduledLessons({
   activePackages?: PackageSale[]
   schoolName?: string
   schoolSlug?: string
+  payoutModel?: string
+  fixedPayoutValue?: number | null
 }) {
   const router = useRouter()
   const [showModal, setShowModal]   = useState(false)
+  const [confirmLessonModal, setConfirmLessonModal] = useState<Lesson | null>(null)
   const [deleting, setDeleting]     = useState<string | null>(null)
   const [saving, setSaving]         = useState(false)
   const [activeTab, setActiveTab]   = useState<'today' | 'tomorrow'>('today')
@@ -907,6 +913,20 @@ export default function ScheduledLessons({
                       : lesson.status === 'checked_in' ? 'Check-in'
                       : 'Agendada'}
                   </span>
+                  {lesson.status !== 'confirmed' && (
+                    <button
+                      onClick={() => setConfirmLessonModal(lesson)}
+                      style={{
+                        padding: '5px 12px', background: 'var(--signal)', color: '#fff',
+                        border: 'none', borderRadius: '99px',
+                        fontSize: '11px', fontWeight: '600',
+                        cursor: 'pointer', fontFamily: 'var(--font-sans)', flexShrink: 0,
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      ✓ Confirmar / Iniciar Aula
+                    </button>
+                  )}
                   <a
                     href={lesson.student_whatsapp ? buildWhatsAppUrl(lesson) : undefined}
                     target="_blank"
@@ -930,13 +950,13 @@ export default function ScheduledLessons({
                     onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'rgba(37,211,102,0.1)' }}
                   >
                     <WhatsAppIcon />
-                    Confirmar Aula
+                    Lembrete
                   </a>
                   <a
                     href={schoolSlug ? buildCheckinUrl(schoolSlug, lesson) : undefined}
                     target="_blank"
                     rel="noopener noreferrer"
-                    title="Abrir check-in público"
+                    title="Abrir check-in público (para alunos novos, que ainda não assinaram o termo)"
                     aria-disabled={!schoolSlug}
                     style={{
                       display: 'flex', alignItems: 'center', gap: '5px', flexShrink: 0,
@@ -1925,6 +1945,18 @@ export default function ScheduledLessons({
             </div>
           </div>
         </div>
+      )}
+
+      {confirmLessonModal && (
+        <ConfirmLessonModal
+          lesson={confirmLessonModal}
+          activities={activities}
+          instructors={instructors}
+          payoutModel={payoutModel}
+          fixedPayoutValue={fixedPayoutValue}
+          onClose={() => setConfirmLessonModal(null)}
+          onConfirmed={() => { setConfirmLessonModal(null); router.refresh() }}
+        />
       )}
 
       {/* Group confirm modal */}
