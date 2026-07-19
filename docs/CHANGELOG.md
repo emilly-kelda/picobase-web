@@ -404,3 +404,18 @@ their commit message and diff.
   student row if they checked in before without one. `getStudents()`
   now matches name OR document_number; `AddBookingModal` shows it in
   results and the selected-customer summary.
+- `b1f9b71` **feat**: restructured Base Camp's top-right region for
+  counter operations. Added a compact QR-code button to the "Sala de
+  Espera" header (reuses `api/owner/qr`) — kept outside the
+  `checkins.length === 0` guard, since that's exactly when reception
+  needs to hand a new arrival the code. Replaced "Mural de Avisos"
+  with a "Venda Rápida" card and gave each Sala de Espera card with no
+  active package credits a "Vender Pacote" button — both open a new
+  unified `SellPackageFlowModal` (name search or avulsa entry +
+  package picker) posting to the existing `api/owner/sell-package`.
+  "Mural de Avisos" (`DailyNoticeEditor`) moved to Settings rather
+  than being deleted, since `/instructor/[school]` still reads
+  `school.daily_notice`. `RunwaySummary` ("Reserva de Baixa
+  Temporada") moved to `/owner/costs` next to the Simulador de
+  Cenários (same real numbers) — Base Camp's column 2 is now just Sala
+  de Espera + Aulas Perdidas, both with the full column height.
