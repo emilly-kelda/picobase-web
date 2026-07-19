@@ -38,11 +38,23 @@ export async function POST(request: Request) {
   // Re-derive from the instructor's saved rate rather than trusting whatever
   // commission_pct the client last loaded — that value never reflects fixed
   // hourly-rate instructors, and can go stale between page load and confirm.
-  const { data: instructor } = await supabase
-    .from('users')
-    .select('role, commission_pct, commission_mode, fixed_per_hour')
-    .eq('id', instructor_id)
-    .single()
+  const [{ data: instructor }, { data: schoolRow }] = await Promise.all([
+    supabase
+      .from('users')
+      .select('role, commission_pct, commission_mode, fixed_per_hour')
+      .eq('id', instructor_id)
+      .single(),
+    // payout_model: 'fixed' is a school-wide override that ignores every
+    // instructor's own commission_pct/fixed_per_hour entirely, paying the
+    // same flat fixed_payout_value (already BRL — no currency conversion
+    // applies to it, unlike the percentage path below) for any lesson.
+    supabase
+      .from('schools')
+      .select('payout_model, fixed_payout_value')
+      .eq('id', SCHOOL_ID)
+      .single(),
+  ])
+  const usesFixedPayout = schoolRow?.payout_model === 'fixed'
 
   // The owner doesn't pay themselves a commission when they teach a lesson —
   // the session is still recorded (price, duration) for revenue/stats, but
@@ -70,12 +82,16 @@ export async function POST(request: Request) {
   const costDeduction     = variableCost.variableCostAmount
   const netRevenue        = Math.max(0, priceBRL - costDeduction)
 
-  const commission_pct    = isOwner ? 0 : (instructor?.commission_pct ?? null)
-  const commission_amount = isOwner ? 0 : computeCommissionAmount(
-    instructor ?? { commission_pct: null },
-    netRevenue,
-    duration_min
-  )
+  const commission_pct    = isOwner ? 0 : (usesFixedPayout ? null : (instructor?.commission_pct ?? null))
+  const commission_amount = isOwner
+    ? 0
+    : usesFixedPayout
+      ? (schoolRow?.fixed_payout_value ?? 0)
+      : computeCommissionAmount(
+          instructor ?? { commission_pct: null },
+          netRevenue,
+          duration_min
+        )
 
   const { data: newSession, error: sessionError } = await supabase
     .from('sessions')

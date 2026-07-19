@@ -106,11 +106,15 @@ export default function PendingLessons({
   instructors,
   activities = [],
   packageBalances = {},
+  payoutModel = 'percentage',
+  fixedPayoutValue = null,
 }: {
   checkins: Checkin[]
   instructors: Instructor[]
   activities?: ActivityRef[]
   packageBalances?: Record<string, { minutesRemaining: number; hasPackage: boolean; packageSaleId?: string }>
+  payoutModel?: string
+  fixedPayoutValue?: number | null
 }) {
   const router = useRouter()
   const [checkins, setCheckins]         = useState(initialCheckins)
@@ -210,6 +214,7 @@ export default function PendingLessons({
       .catch(() => {})
   }, [selected, activityId])
 
+  const usesFixedPayout    = payoutModel === 'fixed'
   const selectedInstructor = instructors.find(i => i.id === instructorId)
   const commissionPct      = selectedInstructor?.commission_pct ?? 0.38
   const finalDuration      = useCustom ? parseInt(custom) || 0 : duration
@@ -230,7 +235,12 @@ export default function PendingLessons({
   const fxRate           = currency === 'BRL' ? 1 : fxRates?.[currency] ?? null
   const totalPriceBRL    = fxRate != null ? totalPrice * fxRate : null
   const netRevenueBRL    = totalPriceBRL != null ? Math.max(0, totalPriceBRL - costDeduction) : null
-  const commissionBRL    = netRevenueBRL != null ? netRevenueBRL * commissionPct : null
+  // Fixed payout is already BRL and duration/price-independent — no fx
+  // conversion applies to it, unlike the percentage path (which needs
+  // netRevenueBRL, hence waits on the fx rate fetch same as before).
+  const commissionBRL    = usesFixedPayout
+    ? (fixedPayoutValue ?? 0)
+    : (netRevenueBRL != null ? netRevenueBRL * commissionPct : null)
 
   async function confirm() {
     if (!selected || !instructorId) return
@@ -940,7 +950,9 @@ export default function PendingLessons({
                 </div>
               )}
               <div style={{ fontSize: '13px', color: 'var(--mist)', marginTop: '4px' }}>
-                → comissão {commissionBRL != null ? fmt(commissionBRL, 'BRL') : '—'}
+                {usesFixedPayout
+                  ? `→ repasse do instrutor ${fmt(commissionBRL ?? 0, 'BRL')} (fixo)`
+                  : `→ comissão ${commissionBRL != null ? fmt(commissionBRL, 'BRL') : '—'}`}
               </div>
             </div>
 

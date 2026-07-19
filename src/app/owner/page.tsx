@@ -311,6 +311,8 @@ export default async function OwnerPage() {
             instructors={instructorList}
             activities={activities}
             packageBalances={packageBalances}
+            payoutModel={(school as any)?.payout_model ?? 'percentage'}
+            fixedPayoutValue={(school as any)?.fixed_payout_value ?? null}
           />
 
           <RunwaySummary

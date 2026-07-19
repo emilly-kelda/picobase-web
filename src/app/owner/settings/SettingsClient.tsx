@@ -27,6 +27,8 @@ type School = {
   notify_student_before_class: boolean
   notify_payment_and_waiver: boolean
   notify_instructor_on_checkin: boolean
+  payout_model: string
+  fixed_payout_value: number | null
 }
 
 type Season = {
