@@ -1,5 +1,6 @@
 ﻿import { createServiceClient } from '@/lib/supabase-server'
 import { getSessionsByStudentName } from './studentRepository'
+import { normalizeStudentName } from '@/lib/text'
 
 export async function getPackageDashboard(schoolId: string) {
   const supabase = createServiceClient()
@@ -95,8 +96,22 @@ export async function getPackageDashboard(schoolId: string) {
 }
 
 /** One-shot balance map for all students with any package at this school.
- *  Keyed by lower-cased trimmed student_name.
- *  For students with multiple sales, prefers the most-recent unexhausted one. */
+ *  Keyed by normalizeStudentName(student_name) (accent/case/whitespace
+ *  insensitive — same key convention used everywhere else names get
+ *  cross-matched without a real FK).
+ *
+ *  A student can hold several active package_sales at once (bought another
+ *  before finishing the last one — package_sales.student_id is rarely
+ *  populated, so nothing stops a second sale from being recorded against
+ *  the same name). This used to keep only ONE sale (the most recent, or the
+ *  most recent still-unexhausted one) and report just its balance — real
+ *  case found in production: a student with three separate packages
+ *  (600+60+60 min, all unused) was shown with 60min remaining, ~660min
+ *  under their actual balance. Sums remaining minutes across every
+ *  unexhausted sale instead. packageSaleId stays pinned to the OLDEST sale
+ *  that still has balance — FIFO, the one confirm-lesson's auto-debit
+ *  draws down first — so "Ver histórico" points at the sale actually being
+ *  consumed next, not just whichever happens to be newest. */
 export async function getPackageBalancesForCheckins(
   schoolId: string
 ): Promise<Record<string, { minutesRemaining: number; hasPackage: boolean; packageSaleId: string }>> {
@@ -105,22 +120,34 @@ export async function getPackageBalancesForCheckins(
     .from('package_sales')
     .select('id, student_name, minutes_purchased, minutes_used, sold_at')
     .eq('school_id', schoolId)
-    .order('sold_at', { ascending: false })
+    .order('sold_at', { ascending: true })
 
-  const map: Record<string, { minutesRemaining: number; hasPackage: boolean; packageSaleId: string }> = {}
+  const map: Record<string, { minutesRemaining: number; packageSaleId: string; activeSaleId: string | null }> = {}
   for (const sale of data ?? []) {
-    const key = (sale.student_name ?? '').trim().toLowerCase()
+    const key = normalizeStudentName(sale.student_name)
     if (!key) continue
-    const minutesRemaining = (sale.minutes_purchased ?? 0) - (sale.minutes_used ?? 0)
+    const remaining = Math.max(0, (sale.minutes_purchased ?? 0) - (sale.minutes_used ?? 0))
     const existing = map[key]
     if (!existing) {
-      map[key] = { minutesRemaining, hasPackage: true, packageSaleId: sale.id }
-    } else if (existing.minutesRemaining <= 0 && minutesRemaining > 0) {
-      // Replace exhausted entry with a fresh unexhausted one
-      map[key] = { minutesRemaining, hasPackage: true, packageSaleId: sale.id }
+      map[key] = {
+        minutesRemaining: remaining,
+        packageSaleId: sale.id,
+        activeSaleId: remaining > 0 ? sale.id : null,
+      }
+    } else {
+      map[key] = {
+        minutesRemaining: existing.minutesRemaining + remaining,
+        packageSaleId: existing.activeSaleId ?? sale.id,
+        activeSaleId: existing.activeSaleId ?? (remaining > 0 ? sale.id : null),
+      }
     }
   }
-  return map
+
+  const result: Record<string, { minutesRemaining: number; hasPackage: boolean; packageSaleId: string }> = {}
+  for (const [key, v] of Object.entries(map)) {
+    result[key] = { minutesRemaining: v.minutesRemaining, hasPackage: true, packageSaleId: v.packageSaleId }
+  }
+  return result
 }
 
 export async function getPackages(schoolId: string) {

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { isLevel, LEVEL_LABELS, type Level } from '@/lib/levels'
+import { normalizeStudentName } from '@/lib/text'
 import LevelPicker from '@/components/LevelPicker'
 import StudentPackageHistoryModal from '@/components/StudentPackageHistoryModal'
 import CheckinQRButton from '@/components/CheckinQRButton'
@@ -407,7 +408,7 @@ export default function PendingLessons({
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {checkins.map(checkin => {
             const instructor = unwrapInstructor(checkin.instructor)
-            const balanceKey = checkin.student_name.trim().toLowerCase()
+            const balanceKey = normalizeStudentName(checkin.student_name)
             const balance    = packageBalances[balanceKey]
             const exhausted  = balance?.hasPackage && balance.minutesRemaining <= 0
             const lastLesson = balance?.hasPackage && balance.minutesRemaining > 0 && balance.minutesRemaining <= 60

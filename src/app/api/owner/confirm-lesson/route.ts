@@ -154,19 +154,21 @@ export async function POST(request: Request) {
   }
 
   // Auto-debit package credits — if this student has an unexhausted package,
-  // this lesson's duration comes off its remaining balance automatically,
-  // same "most recent unexhausted sale" resolution getPackageBalancesForCheckins
-  // already uses for the badges. Only wired for the checkin flow (checkin_id
-  // is how we know the student's name here) — group confirms have no student
-  // name in scope on this route, same "checkin flow only" boundary the
-  // partner-commission auto-wiring already draws.
+  // this lesson's duration comes off its remaining balance automatically.
+  // FIFO: the oldest sale that still has balance is debited first, same
+  // resolution getPackageBalancesForCheckins now uses for the badges (see
+  // AUDITORIA_DASHBOARD.md item 4 — this used to order sold_at descending,
+  // debiting the newest package first instead). Only wired for the checkin
+  // flow (checkin_id is how we know the student's name here) — group
+  // confirms have no student name in scope on this route, same "checkin
+  // flow only" boundary the partner-commission auto-wiring already draws.
   if (checkin?.student_name) {
     const { data: packageSales } = await supabase
       .from('package_sales')
       .select('id, minutes_purchased, minutes_used')
       .eq('school_id', SCHOOL_ID)
       .ilike('student_name', checkin.student_name)
-      .order('sold_at', { ascending: false })
+      .order('sold_at', { ascending: true })
 
     const activeSale = (packageSales ?? []).find(
       s => (s.minutes_purchased ?? 0) - (s.minutes_used ?? 0) > 0

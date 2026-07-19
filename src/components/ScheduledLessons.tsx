@@ -39,6 +39,7 @@ type PackageSale = {
   student_name: string
   minutes_purchased: number
   minutes_used: number
+  sold_at: string
   packages: { name: string } | null
 }
 
@@ -111,15 +112,21 @@ function buildCheckinUrl(schoolSlug: string, lesson: Lesson): string {
  *  substring) case-insensitive match against activePackages, since both
  *  sides here are already-complete names, not partial typed input (unlike
  *  the schedule modal's autocomplete matching further down this file,
- *  which does want substring matches while the owner is still typing). */
+ *  which does want substring matches while the owner is still typing).
+ *
+ *  Sums every unexhausted sale for this student instead of taking the
+ *  first match — a student can hold several active packages at once
+ *  (package_sales.student_id is rarely populated, so nothing merges them),
+ *  and picking just one under-reported real balance by hundreds of minutes
+ *  in production (see AUDITORIA_DASHBOARD.md item 4). */
 function getPackageBadge(
   studentName: string | null,
   activePackages: PackageSale[]
 ): { label: string; tone: 'ok' | 'warn' } | null {
   if (!studentName) return null
-  const pkg = activePackages.find(p => p.student_name.toLowerCase() === studentName.toLowerCase())
-  if (!pkg) return { label: 'Aula Avulsa', tone: 'warn' }
-  const remaining = pkg.minutes_purchased - pkg.minutes_used
+  const sales = activePackages.filter(p => p.student_name.toLowerCase() === studentName.toLowerCase())
+  if (sales.length === 0) return { label: 'Aula Avulsa', tone: 'warn' }
+  const remaining = sales.reduce((sum, p) => sum + Math.max(0, p.minutes_purchased - p.minutes_used), 0)
   if (remaining <= 0) return { label: 'Sem créditos', tone: 'warn' }
   const label = remaining === 60 ? `${formatHours(remaining)} restante` : `${formatHours(remaining)} restantes`
   return { label, tone: 'ok' }
@@ -384,9 +391,14 @@ export default function ScheduledLessons({
     // only applies while the name matches what was explicitly clicked.
     setSelectedPackage(null)
     setForm(f => ({ ...f, student_name: name, package_sale_id: null }))
-    const pkg = activePackages.find(p =>
-      p.student_name.toLowerCase().includes(name.toLowerCase()) && name.length > 2
-    )
+    // Prefer the oldest sale that still has balance (FIFO — the one that'll
+    // actually get drawn down first) over whichever happens to come first
+    // in activePackages' sold_at-desc order, which would otherwise suggest
+    // the newest package even when an older one is the one really in use.
+    const pkg = activePackages
+      .filter(p => p.student_name.toLowerCase().includes(name.toLowerCase()) && name.length > 2)
+      .filter(p => p.minutes_purchased - p.minutes_used > 0)
+      .sort((a, b) => a.sold_at.localeCompare(b.sold_at))[0]
     if (pkg) {
       const activity = activities.find(a =>
         (pkg.packages as any)?.name?.toLowerCase().includes(a.name.split(' ')[0].toLowerCase())
