@@ -187,3 +187,10 @@ their commit message and diff.
   `api/checkin`, `api/owner/bookings` PATCH, and `api/owner/schedule`
   (the last needs a time-based cron/queue job, not an inline check, since
   scheduling happens well before the 2h-before-class window).
+- `046cde8` **fix**: WhatsApp reminder links on Aulas Agendadas now backfill
+  Brazil's country code (55) when a student's saved number is just
+  DDD+phone (10-11 digits) — the check-in form's WhatsApp field has no
+  format hint, so numbers without a country code were opening `wa.me` to
+  an invalid or wrong contact (the icons themselves were already
+  correctly wired, verified end-to-end — no dead click, no z-index/
+  pointer-events issue).
