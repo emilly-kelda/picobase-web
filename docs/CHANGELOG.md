@@ -287,3 +287,11 @@ their commit message and diff.
   at all. Reused `activePackages`, already fetched and passed into
   `ScheduledLessons` for the `+Agendar` modal's autocomplete — no new
   query needed, just surfaced on the list rows too.
+- `09f929b` **feat**: Payments tabs renamed to Instrutores/Parceiros
+  (kept the count suffix); added a derived "Atrasado" badge (period
+  fully past, still not paid — not a stored column, an honest
+  computed state) and two closing KPI cards below the Instrutores
+  table (Participação na Receita bars, Resumo do Mês). Declined again
+  to add "Estrutura de Comissão"/"Compliance" tabs — re-confirmed zero
+  matches for either concept anywhere in the app, same conclusion as
+  the earlier payments redesign this session.
