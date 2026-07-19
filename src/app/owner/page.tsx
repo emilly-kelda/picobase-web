@@ -37,6 +37,7 @@ function fmtDate(d: string) {
 export default async function OwnerPage() {
   const cookieStore = await cookies()
   const seasonId = cookieStore.get('active_season_id')?.value
+  const weatherSpotId = cookieStore.get('weather_spot')?.value
 
   const [
     runway, sessions, alerts, today, lang,
@@ -58,7 +59,7 @@ export default async function OwnerPage() {
     getMissedLessons(SCHOOL_ID),
     getPackageBalancesForCheckins(SCHOOL_ID),
     getMonthComparison(SCHOOL_ID),
-    getWeather(),
+    getWeather(weatherSpotId),
     getSchool(SCHOOL_ID),
     getPackages(SCHOOL_ID),
   ])
