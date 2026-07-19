@@ -94,6 +94,13 @@ export async function POST(request: Request) {
       .eq('id', scheduledLesson.id)
   }
 
+  // TODO(notify_instructor_on_checkin): once a message-dispatch service
+  // (Z-API, Evolution API, or similar) is wired up, check
+  // schools.notify_instructor_on_checkin here before sending — if true and
+  // body.instructor_id is set, notify that instructor (email/WhatsApp) that
+  // this student just checked in for their lesson. No dispatch exists yet;
+  // this is the correct trigger point for it.
+
   // Find-or-create student row so every checked-in person is searchable
   const normalizedName = (body.student_name as string).trim()
   const { data: existing } = await supabase

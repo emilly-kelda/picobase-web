@@ -3,6 +3,15 @@ import { NextResponse } from 'next/server'
 
 const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
 
+// TODO(notify_student_before_class): the reminder needs to fire 2h before
+// scheduled_at, which is almost never when this route runs (lessons are
+// usually scheduled days ahead) — so this isn't the trigger point. Once a
+// message-dispatch service (Z-API, Evolution API, or similar) exists, it
+// needs its own time-based job (cron/queue worker) that polls
+// scheduled_lessons where scheduled_at is ~2h out and status = 'scheduled',
+// checks schools.notify_student_before_class, and only then sends the
+// WhatsApp reminder with wind/sea conditions. No such job exists yet.
+
 export async function POST(request: Request) {
   const body = await request.json()
   const supabase = createServiceClient()

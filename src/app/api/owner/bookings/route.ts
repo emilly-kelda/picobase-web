@@ -17,5 +17,13 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: message }, { status: 500 })
   }
 
+  // TODO(notify_payment_and_waiver): once a message-dispatch service
+  // (Z-API, Evolution API, or similar) is wired up, check
+  // schools.notify_payment_and_waiver here before sending — if true and
+  // status === 'confirmed', send the student their payment receipt plus
+  // the waiver link (schools.waiver_type === 'file' ? waiver_file_*_url :
+  // the /checkin/[school] waiver step). No dispatch exists yet; this is
+  // the correct trigger point for it.
+
   return NextResponse.json({ ok: true })
 }

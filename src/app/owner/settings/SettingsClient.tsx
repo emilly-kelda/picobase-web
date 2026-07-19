@@ -6,6 +6,7 @@ import GeneralSettingsModal from './GeneralSettingsModal'
 import FinancialSettingsModal from './FinancialSettingsModal'
 import SeasonsModal from './SeasonsModal'
 import WaiverModal from './WaiverModal'
+import NotificationsModal from './NotificationsModal'
 
 type School = {
   id: string
@@ -23,6 +24,9 @@ type School = {
   waiver_type: string | null
   waiver_file_global_url: string | null
   waiver_files_by_lang: Record<string, string> | null
+  notify_student_before_class: boolean
+  notify_payment_and_waiver: boolean
+  notify_instructor_on_checkin: boolean
 }
 
 type Season = {
@@ -33,7 +37,7 @@ type Season = {
   burn_rate: number
 }
 
-type ModalKey = 'general' | 'financial' | 'seasons' | 'waiver'
+type ModalKey = 'general' | 'financial' | 'seasons' | 'waiver' | 'notifications'
 
 function fmt(n: number) {
   return new Intl.NumberFormat('pt-BR', {
@@ -82,6 +86,12 @@ export default function SettingsClient({
     ? `${waiverFileCount} arquivo${waiverFileCount !== 1 ? 's' : ''}`
     : `${waiverCount}/4 idiomas`
 
+  const notificationsOnCount = [
+    school.notify_student_before_class,
+    school.notify_payment_and_waiver,
+    school.notify_instructor_on_checkin,
+  ].filter(Boolean).length
+
   const cards: Array<{ key: ModalKey; title: string; summary: string; sub: string }> = [
     {
       key: 'general',
@@ -106,6 +116,12 @@ export default function SettingsClient({
       title: 'Waiver',
       summary: waiverSummary,
       sub: 'Termo de responsabilidade',
+    },
+    {
+      key: 'notifications',
+      title: 'Notificações',
+      summary: `${notificationsOnCount}/3 ativos`,
+      sub: 'Mensagens automáticas e gatilhos',
     },
   ]
 
@@ -174,6 +190,18 @@ export default function SettingsClient({
             waiver_type: school.waiver_type,
             waiver_file_global_url: school.waiver_file_global_url,
             waiver_files_by_lang: school.waiver_files_by_lang,
+          }}
+          onClose={() => setActiveModal(null)}
+          onSaved={patch => { setSchool(s => ({ ...s, ...patch })); closeAndRefresh() }}
+        />
+      )}
+
+      {activeModal === 'notifications' && (
+        <NotificationsModal
+          flags={{
+            notify_student_before_class: school.notify_student_before_class,
+            notify_payment_and_waiver: school.notify_payment_and_waiver,
+            notify_instructor_on_checkin: school.notify_instructor_on_checkin,
           }}
           onClose={() => setActiveModal(null)}
           onSaved={patch => { setSchool(s => ({ ...s, ...patch })); closeAndRefresh() }}
