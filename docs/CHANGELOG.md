@@ -357,3 +357,17 @@ their commit message and diff.
   add a link to a fabricated privacy policy document — added an
   optional `privacy_policy_url` column instead (Settings > Geral), the
   checkin form only shows the link when the owner has actually set one.
+- `7b3d99f` **fix**: the public check-in form fetched and displayed the
+  *entire day's* scheduled roster (names, activities, instructors) as a
+  browsable dropdown under the name field — focusing the field with
+  nothing typed showed everyone scheduled that day, no authentication,
+  a real LGPD data-minimization violation. Not literally the `students`
+  table as the reporting task assumed (it was `scheduled_lessons`
+  scoped to today), but the exposure was real. Removed the dropdown,
+  the client-side list fetch, and deleted the backend route entirely
+  (an unauthenticated endpoint reachable by URL, so leaving it in place
+  would've kept the leak alive even with the frontend not calling it).
+  Replaced with `api/checkin/today-match`, a single-match lookup
+  (mirrors `api/checkin/package-balance`) that silently pre-fills
+  activity/instructor for the exact name already typed — never returns
+  a list.
