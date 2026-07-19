@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import MaskableValue from './MaskableValue'
 
 type Props = {
   runwayMonths: number
@@ -108,15 +109,15 @@ export default function RunwaySummary({
                 Receita da temporada
               </span>
               <span style={{ fontSize: '13px', fontWeight: '500', color: 'rgba(255,255,255,0.7)', fontVariantNumeric: 'tabular-nums' }}>
-                {fmt(seasonRevenue)}
+                <MaskableValue>{fmt(seasonRevenue)}</MaskableValue>
               </span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', letterSpacing: '0.06em' }}>
                 Comissões pagas
               </span>
-              <span style={{ fontSize: '13px', fontWeight: '500', color: 'rgba(220,100,100,0.8)', fontVariantNumeric: 'tabular-nums' }}>
-                − {fmt(commissions)}
+              <span style={{ fontSize: '13px', fontWeight: '500', color: 'rgba(255,255,255,0.7)', fontVariantNumeric: 'tabular-nums' }}>
+                <MaskableValue>{fmt(commissions)}</MaskableValue>
               </span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '8px', borderTop: '0.5px solid rgba(255,255,255,0.08)' }}>
@@ -124,7 +125,7 @@ export default function RunwaySummary({
                 Lucro líquido
               </span>
               <span style={{ fontSize: '14px', fontWeight: '700', color: '#fff', fontVariantNumeric: 'tabular-nums' }}>
-                {fmt(netProfit)}
+                <MaskableValue>{fmt(netProfit)}</MaskableValue>
               </span>
             </div>
             {monthlyBurn > 0 && (
@@ -133,21 +134,37 @@ export default function RunwaySummary({
                   Custo operacional mensal
                 </span>
                 <span style={{ fontSize: '13px', fontWeight: '500', color: '#fff', fontVariantNumeric: 'tabular-nums' }}>
-                  {fmt(monthlyBurn)}
+                  <MaskableValue>{fmt(monthlyBurn)}</MaskableValue>
                 </span>
               </div>
             )}
           </div>
 
-          {runwayMonths < 6 && gapToTarget > 0 && (
-            <div style={{
-              marginTop: '16px', padding: '10px 14px',
-              background: 'rgba(255,255,255,0.06)',
-              borderRadius: '8px',
-              fontSize: '12px', color: 'var(--warning)',
-              lineHeight: '1.5',
-            }}>
-              Faltam {fmt(gapToTarget)} para 6 meses
+          {runwayMonths < 6 && (
+            <div style={{ marginTop: '16px' }}>
+              <div style={{
+                height: '6px', background: 'rgba(255,255,255,0.1)',
+                borderRadius: '99px', overflow: 'hidden', marginBottom: '8px',
+              }}>
+                <div style={{
+                  height: '100%',
+                  width: `${Math.min(100, Math.max(0, (runwayMonths / 6) * 100))}%`,
+                  background: safetyScore.color,
+                  borderRadius: '99px',
+                  transition: 'width 0.4s ease',
+                }} />
+              </div>
+              {gapToTarget > 0 && (
+                <div style={{
+                  padding: '10px 14px',
+                  background: 'rgba(255,255,255,0.06)',
+                  borderRadius: '8px',
+                  fontSize: '12px', color: 'rgba(255,255,255,0.6)',
+                  lineHeight: '1.5',
+                }}>
+                  Faltam <MaskableValue>{fmt(gapToTarget)}</MaskableValue> para 6 meses de reserva
+                </div>
+              )}
             </div>
           )}
 

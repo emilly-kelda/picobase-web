@@ -14,6 +14,9 @@ import RunwaySummary from '@/components/RunwaySummary'
 import AlertsDrawer from '@/components/AlertsDrawer'
 import WeatherWidget from '@/components/WeatherWidget'
 import DailyNoticeEditor from '@/components/DailyNoticeEditor'
+import { ReceptionModeProvider } from '@/components/ReceptionModeContext'
+import ReceptionModeToggle from '@/components/ReceptionModeToggle'
+import MaskableValue from '@/components/MaskableValue'
 import { getWeather } from '@/lib/weather'
 import { getPortalLang } from '@/lib/language'
 import { getT } from '@/lib/i18n'
@@ -106,20 +109,25 @@ export default async function OwnerPage() {
 
       <AlertsDrawer alerts={alerts} />
 
+      <ReceptionModeProvider>
+
       {/* Page title */}
-      <div style={{ marginBottom: '24px' }}>
-        <h1 style={{
-          fontSize: '22px', fontWeight: '600',
-          color: 'var(--slate)', letterSpacing: '-0.02em',
-          marginBottom: '4px',
-        }}>
-          Base Camp
-        </h1>
-        <div style={{ fontSize: '12px', color: 'var(--mist)', lineHeight: '1.5' }}>
-          {runway.school_name
-            ? `${runway.school_name}${runway.current_season ? ' · ' + runway.current_season : ''}`
-            : (runway.current_season ?? t.basecamp_season)}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
+        <div>
+          <h1 style={{
+            fontSize: '22px', fontWeight: '600',
+            color: 'var(--slate)', letterSpacing: '-0.02em',
+            marginBottom: '4px',
+          }}>
+            Base Camp
+          </h1>
+          <div style={{ fontSize: '12px', color: 'var(--mist)', lineHeight: '1.5' }}>
+            {runway.school_name
+              ? `${runway.school_name}${runway.current_season ? ' · ' + runway.current_season : ''}`
+              : (runway.current_season ?? t.basecamp_season)}
+          </div>
         </div>
+        <ReceptionModeToggle />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
@@ -180,7 +188,7 @@ export default async function OwnerPage() {
                   Receita
                 </div>
                 <div style={{ fontSize: '18px', fontWeight: '600', color: 'var(--slate)', fontVariantNumeric: 'tabular-nums' }}>
-                  {fmt(today.revenue ?? 0)}
+                  <MaskableValue>{fmt(today.revenue ?? 0)}</MaskableValue>
                 </div>
                 {monthComparison.thisMonthRevenue === 0 ? (
                   <div style={{ fontSize: '12px', color: 'var(--mist)', marginTop: '4px' }}>
@@ -212,7 +220,7 @@ export default async function OwnerPage() {
                   Comissões
                 </div>
                 <div style={{ fontSize: '18px', fontWeight: '600', color: 'var(--slate)', fontVariantNumeric: 'tabular-nums' }}>
-                  {fmt(today.commissions ?? 0)}
+                  <MaskableValue>{fmt(today.commissions ?? 0)}</MaskableValue>
                 </div>
               </div>
             </div>
@@ -258,6 +266,8 @@ export default async function OwnerPage() {
         </div>
 
       </div>
+
+      </ReceptionModeProvider>
 
       {/* ════════════════════════════════════════════════════════════
           Recent sessions — full width, below the two columns
