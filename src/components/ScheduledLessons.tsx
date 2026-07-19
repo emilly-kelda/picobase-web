@@ -105,6 +105,26 @@ function formatHours(minutes: number): string {
   return `${h}h${m}min`
 }
 
+const SPORT_FILTERS = ['all', 'kitesurf', 'wingfoil', 'kitefoil', 'surf', 'windsurf'] as const
+type SportFilter = typeof SPORT_FILTERS[number]
+const SPORT_FILTER_LABELS: Record<SportFilter, string> = {
+  all: 'Todos', kitesurf: 'Kitesurf', wingfoil: 'Wingfoil',
+  kitefoil: 'Kitefoil', surf: 'Surf', windsurf: 'Windsurf',
+}
+
+/** Matches this row's activity name against a modality filter. Strips
+ *  spaces/punctuation and checks a prefix, not a plain substring — "Surf"
+ *  and "Kitesurf"/"Windsurf" would otherwise cross-match (kitesurf
+ *  contains the substring "surf"), since a prefix check doesn't have that
+ *  problem (kitesurf/windsurf never start with "surf"). Tolerates suffixes
+ *  like "Kitesurf - Avançado" since schools type activity names freely
+ *  (no fixed catalog/enum backs this). */
+function activityMatchesSport(activityName: string | null | undefined, sport: SportFilter): boolean {
+  if (sport === 'all') return true
+  const normalized = (activityName ?? '').toLowerCase().replace(/[^a-z]/g, '')
+  return normalized.startsWith(sport)
+}
+
 /** package_sales has no FK to activities — match the package's free-text
  *  sport field against the activity catalog by name, same fuzzy approach
  *  already used elsewhere in this file for the free-typed student name path. */
@@ -213,6 +233,7 @@ export default function ScheduledLessons({
   const [deleting, setDeleting]     = useState<string | null>(null)
   const [saving, setSaving]         = useState(false)
   const [activeTab, setActiveTab]   = useState<'today' | 'tomorrow'>('today')
+  const [activeSportFilter, setActiveSportFilter] = useState<SportFilter>('all')
   const [mode, setMode]             = useState<'single' | 'daily' | 'custom'>('single')
   const [weekdays, setWeekdays]     = useState<number[]>([1, 3, 5])
   // Individual vs. group scheduling — separate from `mode` above, which is
@@ -536,7 +557,8 @@ export default function ScheduledLessons({
     router.refresh()
   }
 
-  const displayLessons = activeTab === 'today' ? todayLessons : tomorrowLessons
+  const displayLessons = (activeTab === 'today' ? todayLessons : tomorrowLessons)
+    .filter(l => activityMatchesSport(l.activities?.name, activeSportFilter))
   const todayCount     = todayLessons.length
   const tomorrowCount  = tomorrowLessons.length
 
@@ -686,6 +708,30 @@ export default function ScheduledLessons({
           </button>
         </div>
 
+        {/* Sport filter */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '12px' }}>
+          {SPORT_FILTERS.map(sport => {
+            const active = activeSportFilter === sport
+            return (
+              <button
+                key={sport}
+                onClick={() => setActiveSportFilter(sport)}
+                style={{
+                  padding: '4px 12px',
+                  borderRadius: 'var(--radius-full)',
+                  fontSize: '11px', fontWeight: '500',
+                  border: 'none', cursor: 'pointer',
+                  fontFamily: 'var(--font-sans)',
+                  background: active ? 'var(--slate)' : 'var(--powder)',
+                  color: active ? '#fff' : 'var(--mist)',
+                }}
+              >
+                {SPORT_FILTER_LABELS[sport]}
+              </button>
+            )
+          })}
+        </div>
+
         {/* Lessons list */}
         {totalRows === 0 ? (
           <div style={{
@@ -701,7 +747,9 @@ export default function ScheduledLessons({
               <line x1="3" y1="10" x2="21" y2="10" />
             </svg>
             <div style={{ fontSize: '13px', color: 'var(--mist)' }}>
-              Nenhuma aula agendada para {activeTab === 'today' ? 'hoje' : 'amanhã'}.
+              {activeSportFilter === 'all'
+                ? `Nenhuma aula agendada para ${activeTab === 'today' ? 'hoje' : 'amanhã'}.`
+                : `Nenhuma aula agendada para este esporte (${SPORT_FILTER_LABELS[activeSportFilter]}).`}
             </div>
           </div>
         ) : (

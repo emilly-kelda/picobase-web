@@ -88,6 +88,37 @@ export default async function OwnerPage() {
     commission_pct: (i as any).commission_pct ?? null,
   }))
 
+  // Team occupancy for today — hours of lessons scheduled today ÷ today's
+  // instructor capacity. Group lessons share one instructor/duration across
+  // N students, so they're deduped by group_id first — same collapse
+  // ScheduledLessons.tsx uses for its own rows — otherwise a 3-student group
+  // would triple-count as 3x the instructor-hours it actually costs.
+  const todayLessonsForOccupancy = todayLessons as any[]
+  const individualDurations = todayLessonsForOccupancy
+    .filter(l => !l.group_id)
+    .map(l => l.duration_min ?? 0)
+  const groupDurations = Array.from(
+    new Map(
+      todayLessonsForOccupancy.filter(l => l.group_id).map(l => [l.group_id, l.duration_min ?? 0])
+    ).values()
+  )
+  const hoursScheduledToday = [...individualDurations, ...groupDurations]
+    .reduce((sum, min) => sum + min, 0) / 60
+
+  // weekly_capacity_hours is set per instructor (Crew page) — daily capacity
+  // spreads it evenly across the week. Falls back to a friendly default
+  // (6h/instructor/day) only when nobody has capacity configured at all,
+  // rather than showing a broken 0%/blank stat.
+  const FALLBACK_DAILY_HOURS_PER_INSTRUCTOR = 6
+  const instructorsWithCapacity = instructors.filter(i => (i as any).weekly_capacity_hours != null)
+  const dailyCapacityHours = instructorsWithCapacity.length > 0
+    ? instructorsWithCapacity.reduce((sum, i) => sum + ((i as any).weekly_capacity_hours ?? 0), 0) / 7
+    : instructors.length * FALLBACK_DAILY_HOURS_PER_INSTRUCTOR
+
+  const occupancyPct = dailyCapacityHours > 0
+    ? Math.round((hoursScheduledToday / dailyCapacityHours) * 100)
+    : null
+
   const colHeaders = ['Data', 'Aluno', 'Atividade', 'Instrutor', 'Duração', 'Valor']
 
   return (
@@ -229,6 +260,26 @@ export default async function OwnerPage() {
                   <MaskableValue>{fmt(today.commissions ?? 0)}</MaskableValue>
                 </div>
               </div>
+            </div>
+
+            <div style={{ height: '1px', background: 'var(--border)', margin: '16px 0 12px' }} />
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '8px' }}>
+              <span style={{ fontSize: '11px', color: 'var(--mist)', fontWeight: '500' }}>
+                Ocupação da Equipe
+              </span>
+              <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--slate)', fontVariantNumeric: 'tabular-nums' }}>
+                {occupancyPct === null ? '—' : `${occupancyPct}%`}
+              </span>
+            </div>
+            <div style={{ height: '6px', background: 'var(--powder)', borderRadius: '99px', overflow: 'hidden' }}>
+              <div style={{
+                height: '100%',
+                width: `${occupancyPct === null ? 0 : Math.min(100, Math.max(0, occupancyPct))}%`,
+                background: 'var(--glacial-dark)',
+                borderRadius: '99px',
+                transition: 'width 0.4s ease',
+              }} />
             </div>
           </div>
 
