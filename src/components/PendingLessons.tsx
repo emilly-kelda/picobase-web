@@ -417,14 +417,22 @@ export default function PendingLessons({
 
             let packageBadge: React.ReactNode = null
             if (!balance) {
+              // No package ever bought — flagged the same red as "esgotado"
+              // (not the old neutral gray "Sem pacote"), since Sala de
+              // Espera's primary action is now "Agendar Aula" rather than an
+              // immediate charge (see ScheduleFromCheckinModal): reception
+              // needs a loud reminder that a sale still needs to happen for
+              // this student, before or during scheduling, or it's easy to
+              // schedule someone with zero credit and never follow up.
               packageBadge = (
                 <span style={{
-                  fontSize: '10px', fontWeight: '500',
-                  color: 'var(--mist)',
-                  padding: '2px 8px', borderRadius: '99px',
-                  background: 'var(--powder)',
+                  fontSize: '11px', fontWeight: '700',
+                  color: '#fff',
+                  padding: '3px 10px', borderRadius: '99px',
+                  background: '#DC2626',
+                  letterSpacing: '0.01em',
                 }}>
-                  Sem pacote
+                  ⚠ Sem Créditos
                 </span>
               )
             } else if (exhausted) {

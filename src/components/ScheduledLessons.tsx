@@ -55,16 +55,6 @@ function WhatsAppIcon() {
   )
 }
 
-function CheckinIcon() {
-  return (
-    <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
-      <rect x="5" y="4" width="14" height="17" rx="2" />
-      <path d="M9 3.5h6a1 1 0 0 1 1 1V6a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1z" />
-      <path d="M8.5 13l2 2 4-4" />
-    </svg>
-  )
-}
-
 function fmtTime(iso: string) {
   return new Date(iso).toLocaleTimeString('pt-BR', {
     hour: '2-digit', minute: '2-digit', timeZone: 'America/Fortaleza',
@@ -93,20 +83,6 @@ function formatHours(minutes: number): string {
   const m = minutes % 60
   if (m === 0) return `${h}h`
   return `${h}h${m}min`
-}
-
-/** Carries the lesson's known context into the public check-in form so the
- *  student doesn't have to re-select their instructor/activity there —
- *  CheckinForm.tsx resolves these names back to activity_id/instructor_id
- *  against its own school-scoped lists. No `level` param: the check-in
- *  form has no skill-level field at all (that's set later by the owner/
- *  instructor via ProgressionEditor, never collected at check-in), so
- *  there's nothing on the other end to bind it to. */
-function buildCheckinUrl(schoolSlug: string, lesson: Lesson): string {
-  const params = new URLSearchParams({ student: lesson.student_name ?? '' })
-  if (lesson.instructor?.name) params.set('instructor', lesson.instructor.name)
-  if (lesson.activities?.name) params.set('activity', lesson.activities.name)
-  return `/checkin/${schoolSlug}?${params.toString()}`
 }
 
 /** Package-balance badge for a scheduled-lesson row — exact (not
@@ -913,7 +889,15 @@ export default function ScheduledLessons({
                       : lesson.status === 'checked_in' ? 'Check-in'
                       : 'Agendada'}
                   </span>
-                  {lesson.status !== 'confirmed' && (
+                  {/* One primary action, not two competing ones — this used
+                      to sit next to a separate "Check-in" link that opened
+                      the public waiver form, which was really just another
+                      way of saying "start this lesson". The public form is
+                      still reachable (Sala de Espera's QR button, or the
+                      link itself), just not duplicated here. Only offered
+                      for today's lessons — starting one scheduled for
+                      tomorrow doesn't make sense yet. */}
+                  {lesson.status !== 'confirmed' && activeTab === 'today' && (
                     <button
                       onClick={() => setConfirmLessonModal(lesson)}
                       style={{
@@ -924,7 +908,7 @@ export default function ScheduledLessons({
                         whiteSpace: 'nowrap',
                       }}
                     >
-                      ✓ Confirmar / Iniciar Aula
+                      ✓ Iniciar Aula / Check-in
                     </button>
                   )}
                   <a
@@ -951,31 +935,6 @@ export default function ScheduledLessons({
                   >
                     <WhatsAppIcon />
                     Lembrete
-                  </a>
-                  <a
-                    href={schoolSlug ? buildCheckinUrl(schoolSlug, lesson) : undefined}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    title="Abrir check-in público (para alunos novos, que ainda não assinaram o termo)"
-                    aria-disabled={!schoolSlug}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: '5px', flexShrink: 0,
-                      padding: '5px 10px',
-                      borderRadius: 'var(--radius-md)',
-                      background: 'var(--powder)',
-                      color: 'var(--slate)',
-                      fontSize: '11px', fontWeight: '500', fontFamily: 'var(--font-sans)',
-                      opacity: schoolSlug ? 1 : 0.35,
-                      pointerEvents: schoolSlug ? 'auto' : 'none',
-                      cursor: schoolSlug ? 'pointer' : 'not-allowed',
-                      textDecoration: 'none', whiteSpace: 'nowrap',
-                      transition: 'background-color 0.15s',
-                    }}
-                    onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'var(--border)' }}
-                    onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'var(--powder)' }}
-                  >
-                    <CheckinIcon />
-                    Check-in
                   </a>
                 </div>
                 <button
