@@ -29,8 +29,8 @@ type CrewMember = {
   stats: Stats
 }
 
-const MODALITIES = ['kitesurf', 'wingfoil', 'kitefoil', 'surf'] as const
-const LANG_OPTIONS = ['PT', 'EN', 'ES'] as const
+const MODALITIES = ['kitesurf', 'wingfoil', 'kitefoil', 'surf', 'windsurf'] as const
+const LANG_OPTIONS = ['PT', 'EN', 'ES', 'FR', 'IT'] as const
 
 function fmt(n: number) {
   return new Intl.NumberFormat('pt-BR', {
