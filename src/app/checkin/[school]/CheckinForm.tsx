@@ -25,10 +25,10 @@ const LANGS = {
     emergency_name: 'Contact name',
     emergency_phone: 'Contact phone',
     waiver_title: 'Terms and conditions',
-    waiver_text: 'I understand that water sports involve inherent risks including injury or death. I voluntarily participate and release the school, instructors, and staff from liability for accidents or injuries during my participation. I confirm that I am physically fit to participate and that all information provided is accurate.',
+    waiver_text: 'I understand that water sports involve inherent risks including injury or death. I voluntarily participate and release the school, instructors, and staff from liability for accidents or injuries during my participation. I confirm that I am physically fit to participate and that all information provided is accurate. I agree to follow the school\'s safety rules and the instructors\' guidance throughout the activity.',
     sign_below: 'Sign below',
     clear: 'Clear',
-    i_agree: 'I have read and agree to the waiver above',
+    i_agree: 'I have read, understood, and fully agree to the terms of the Assumption of Risk and Liability Waiver described above.',
     submit: 'Complete check-in ✓',
     submitting: 'Submitting...',
     success_title: 'Check-in complete!',
@@ -36,7 +36,7 @@ const LANGS = {
     next: 'Next',
     back: 'Back',
     dob: 'Date of birth',
-    gdpr: 'I consent to my personal data being processed for the purpose of this activity.',
+    gdpr: 'I consent to the processing of my personal data for the purpose of scheduling, safety, and instruction in this activity, in accordance with applicable data protection law (LGPD/GDPR).',
     waiver_points: ['Water sports involve inherent risks', 'Participation is voluntary', 'I am physically fit to participate', 'All information provided is accurate'],
     package_active: 'Active package',
     package_left: 'left',
@@ -65,10 +65,10 @@ const LANGS = {
     emergency_name: 'Nome do contato',
     emergency_phone: 'Telefone do contato',
     waiver_title: 'Termos e condições',
-    waiver_text: 'Compreendo que os esportes aquáticos envolvem riscos inerentes, incluindo lesões ou morte. Participo voluntariamente e isento a escola, instrutores e equipe de responsabilidade por acidentes durante minha participação. Confirmo que estou fisicamente apto a participar e que todas as informações fornecidas são verdadeiras.',
+    waiver_text: 'Compreendo que os esportes aquáticos envolvem riscos inerentes, incluindo lesões ou morte. Participo voluntariamente e isento a escola, instrutores e equipe de responsabilidade por acidentes durante minha participação. Confirmo que estou fisicamente apto a participar e que todas as informações fornecidas são verdadeiras. Comprometo-me a seguir as regras de segurança e as orientações da escola e dos instrutores durante toda a atividade.',
     sign_below: 'Assine abaixo',
     clear: 'Limpar',
-    i_agree: 'Li e concordo com o termo acima',
+    i_agree: 'Li, compreendi e concordo integralmente com as cláusulas do Termo de Assunção de Risco e Responsabilidade acima descritas.',
     submit: 'Fazer check-in ✓',
     submitting: 'Enviando...',
     success_title: 'Check-in feito!',
@@ -76,7 +76,7 @@ const LANGS = {
     next: 'Próximo',
     back: 'Voltar',
     dob: 'Data de nascimento',
-    gdpr: 'Consinto com o tratamento dos meus dados pessoais para a finalidade desta atividade (LGPD).',
+    gdpr: 'Consinto com o tratamento dos meus dados pessoais para a finalidade de agendamento, segurança e instrução nesta atividade, em conformidade com a Lei Geral de Proteção de Dados (LGPD).',
     waiver_points: ['Esportes aquáticos envolvem riscos inerentes', 'Participo voluntariamente', 'Estou fisicamente apto a participar', 'Todas as informações fornecidas são verdadeiras'],
     package_active: 'Pacote ativo',
     package_left: 'restantes',
@@ -105,10 +105,10 @@ const LANGS = {
     emergency_name: 'Nom du contact',
     emergency_phone: 'Téléphone du contact',
     waiver_title: 'Conditions générales',
-    waiver_text: "Je comprends que les sports nautiques comportent des risques inhérents incluant des blessures ou la mort. Je participe volontairement et décharge l'école, les instructeurs et le personnel de toute responsabilité. Je confirme être physiquement apte à participer et que toutes les informations fournies sont exactes.",
+    waiver_text: "Je comprends que les sports nautiques comportent des risques inhérents incluant des blessures ou la mort. Je participe volontairement et décharge l'école, les instructeurs et le personnel de toute responsabilité. Je confirme être physiquement apte à participer et que toutes les informations fournies sont exactes. Je m'engage à suivre les règles de sécurité de l'école et les consignes des instructeurs pendant toute l'activité.",
     sign_below: 'Signez ci-dessous',
     clear: 'Effacer',
-    i_agree: "J'ai lu et accepte la décharge ci-dessus",
+    i_agree: "J'ai lu, compris et j'accepte pleinement les clauses de la décharge de responsabilité et d'acceptation des risques décrites ci-dessus.",
     submit: 'Terminer le check-in ✓',
     submitting: 'Envoi en cours...',
     success_title: 'Check-in terminé!',
@@ -116,7 +116,7 @@ const LANGS = {
     next: 'Suivant',
     back: 'Retour',
     dob: 'Date de naissance',
-    gdpr: 'Je consens au traitement de mes données personnelles aux fins de cette activité (RGPD).',
+    gdpr: "Je consens au traitement de mes données personnelles aux fins de planification, de sécurité et d'instruction pour cette activité, conformément à la réglementation applicable en matière de protection des données (LGPD/RGPD).",
     waiver_points: ["Les sports nautiques comportent des risques inhérents", "La participation est volontaire", "Je suis physiquement apte à participer", "Toutes les informations fournies sont exactes"],
     package_active: 'Forfait actif',
     package_left: 'restantes',
@@ -145,10 +145,10 @@ const LANGS = {
     emergency_name: 'Nombre del contacto',
     emergency_phone: 'Teléfono del contacto',
     waiver_title: 'Términos y condiciones',
-    waiver_text: 'Entiendo que los deportes acuáticos implican riesgos inherentes incluyendo lesiones o muerte. Participo voluntariamente y eximo a la escuela, instructores y personal de responsabilidad por accidentes. Confirmo que estoy físicamente apto para participar y que toda la información proporcionada es veraz.',
+    waiver_text: 'Entiendo que los deportes acuáticos implican riesgos inherentes incluyendo lesiones o muerte. Participo voluntariamente y eximo a la escuela, instructores y personal de responsabilidad por accidentes. Confirmo que estoy físicamente apto para participar y que toda la información proporcionada es veraz. Me comprometo a seguir las normas de seguridad de la escuela y las indicaciones de los instructores durante toda la actividad.',
     sign_below: 'Firme abajo',
     clear: 'Borrar',
-    i_agree: 'He leído y acepto el descargo anterior',
+    i_agree: 'He leído, comprendido y acepto íntegramente las cláusulas del Descargo de Responsabilidad y Asunción de Riesgos descritas anteriormente.',
     submit: 'Completar el check-in ✓',
     submitting: 'Enviando...',
     success_title: '¡Check-in listo!',
@@ -156,7 +156,7 @@ const LANGS = {
     next: 'Siguiente',
     back: 'Volver',
     dob: 'Fecha de nacimiento',
-    gdpr: 'Consiento el tratamiento de mis datos personales para el propósito de esta actividad.',
+    gdpr: 'Consiento el tratamiento de mis datos personales para la finalidad de programación, seguridad e instrucción en esta actividad, de conformidad con la normativa aplicable de protección de datos (LGPD/RGPD).',
     waiver_points: ['Los deportes acuáticos implican riesgos inherentes', 'La participación es voluntaria', 'Estoy físicamente apto para participar', 'Toda la información proporcionada es veraz'],
     package_active: 'Paquete activo',
     package_left: 'restantes',
@@ -180,6 +180,7 @@ type School = {
   waiver_type?: string | null
   waiver_file_global_url?: string | null
   waiver_files_by_lang?: Record<string, string> | null
+  privacy_policy_url?: string | null
 }
 
 type Activity = {
@@ -320,19 +321,23 @@ function ConsentCheckbox({
   onChange,
   accent,
   children,
+  disabled = false,
 }: {
   checked: boolean
   onChange: (v: boolean) => void
   accent: string
   children: React.ReactNode
+  disabled?: boolean
 }) {
   return (
     <div
-      onClick={() => onChange(!checked)}
+      onClick={() => { if (!disabled) onChange(!checked) }}
       style={{
-        display: 'flex', gap: '12px', alignItems: 'flex-start', cursor: 'pointer',
+        display: 'flex', gap: '12px', alignItems: 'flex-start',
+        cursor: disabled ? 'not-allowed' : 'pointer',
         padding: '14px 16px', background: '#fff', borderRadius: '12px',
         border: `1.5px solid ${checked ? accent : '#E4E0D8'}`,
+        opacity: disabled ? 0.5 : 1,
       }}
     >
       <div style={{
@@ -492,6 +497,29 @@ export default function CheckinForm({
   const [gdpr, setGdpr]             = useState(false)
   const [hasHealth, setHasHealth]   = useState(false)
 
+  // Waiver scroll gate — only meaningful for the inline typed-text waiver
+  // (waiver_type !== 'file'); starts unlocked there too until the ref
+  // effect below checks whether the box actually overflows. If the text
+  // is short enough to show in full already, there's nothing to scroll
+  // to, so the checkbox shouldn't stay permanently disabled.
+  const [waiverScrolledToEnd, setWaiverScrolledToEnd] = useState(school.waiver_type === 'file')
+  const waiverBoxRef = useRef<HTMLDivElement>(null)
+
+  // If the waiver text is short enough to render without overflow, there's
+  // nothing to scroll to — checked whenever the waiver step becomes
+  // visible or the language (and therefore the text) changes. Only ever
+  // sets true: once genuinely unlocked (by this check or by scrolling),
+  // switching language shouldn't re-lock and punish the student for
+  // re-reading in a different language.
+  useEffect(() => {
+    if (waiverScrolledToEnd) return
+    const el = waiverBoxRef.current
+    if (el && el.scrollHeight <= el.clientHeight + 4) {
+      setWaiverScrolledToEnd(true)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, lang])
+
   const [form, setForm] = useState({
     student_name:        prefillStudentName ?? '',
     student_email:       '',
@@ -634,6 +662,9 @@ export default function CheckinForm({
           is_minor:         isMinor,
           guardian_name:    isMinor ? guardianName.trim() : null,
           guardian_consent: isMinor ? guardianConsent : false,
+          waiver_agreed:    agreed,
+          gdpr_consent:     gdpr,
+          accepted_at:      new Date().toISOString(),
         }),
       })
       const data = await res.json()
@@ -1262,12 +1293,31 @@ export default function CheckinForm({
               const waiverKey = `waiver_${lang}` as keyof typeof school
               const dbWaiver = school[waiverKey] as string | null
               return (
-                <div style={{
-                  background: '#fff', borderRadius: '14px', padding: '16px',
-                  fontSize: '13px', color: '#4A4C58', lineHeight: '1.7',
-                  border: '0.5px solid #E4E0D8', maxHeight: '120px', overflowY: 'auto',
-                }}>
-                  {dbWaiver || t.waiver_text}
+                <div>
+                  <div
+                    ref={waiverBoxRef}
+                    onScroll={e => {
+                      const el = e.currentTarget
+                      if (el.scrollTop + el.clientHeight >= el.scrollHeight - 4) {
+                        setWaiverScrolledToEnd(true)
+                      }
+                    }}
+                    style={{
+                      background: '#fff', borderRadius: '14px', padding: '16px',
+                      fontSize: '13px', color: '#4A4C58', lineHeight: '1.7',
+                      border: '0.5px solid #E4E0D8', maxHeight: '192px', overflowY: 'auto',
+                    }}
+                  >
+                    {dbWaiver || t.waiver_text}
+                  </div>
+                  {!waiverScrolledToEnd && (
+                    <div style={{ fontSize: '11px', color: '#8A8C98', marginTop: '6px', textAlign: 'center' }}>
+                      {lang === 'pt' ? '↓ Role até o final para habilitar a concordância'
+                        : lang === 'fr' ? "↓ Faites défiler jusqu'en bas pour continuer"
+                        : lang === 'es' ? '↓ Desplázate hasta el final para continuar'
+                        : '↓ Scroll to the end to continue'}
+                    </div>
+                  )}
                 </div>
               )
             })()}
@@ -1385,12 +1435,26 @@ export default function CheckinForm({
               </div>
             )}
 
-            <ConsentCheckbox checked={agreed} onChange={setAgreed} accent="#00A896">
+            <ConsentCheckbox checked={agreed} onChange={setAgreed} accent="#00A896" disabled={!waiverScrolledToEnd}>
               {t.i_agree}
             </ConsentCheckbox>
 
             <ConsentCheckbox checked={gdpr} onChange={setGdpr} accent="#00A896">
-              {t.gdpr}
+              {t.gdpr}{' '}
+              {school.privacy_policy_url && (
+                <a
+                  href={school.privacy_policy_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={e => e.stopPropagation()}
+                  style={{ color: '#00A896', fontWeight: 600, textDecoration: 'underline' }}
+                >
+                  {lang === 'pt' ? '(Ver Política de Privacidade)'
+                    : lang === 'fr' ? '(Voir la politique de confidentialité)'
+                    : lang === 'es' ? '(Ver política de privacidad)'
+                    : '(View Privacy Policy)'}
+                </a>
+              )}
             </ConsentCheckbox>
 
             {submitError && (

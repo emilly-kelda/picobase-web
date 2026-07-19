@@ -12,6 +12,7 @@ type School = {
   country: string | null
   payout_model: string
   fixed_payout_value: number | null
+  privacy_policy_url: string | null
 }
 
 const inputStyle: React.CSSProperties = {
@@ -45,6 +46,7 @@ export default function GeneralSettingsModal({
   const [language, setLanguage] = useState(school.language)
   const [payoutModel, setPayoutModel] = useState(school.payout_model ?? 'percentage')
   const [fixedPayoutValue, setFixedPayoutValue] = useState(String(school.fixed_payout_value ?? ''))
+  const [privacyPolicyUrl, setPrivacyPolicyUrl] = useState(school.privacy_policy_url ?? '')
   const [saving, setSaving]     = useState(false)
   const [error, setError]       = useState<string | null>(null)
   const [portalLangSaving, setPortalLangSaving] = useState(false)
@@ -65,6 +67,7 @@ export default function GeneralSettingsModal({
           type: 'school', name, country, language,
           payout_model: payoutModel,
           fixed_payout_value: payoutModel === 'fixed' ? Number(fixedPayoutValue) : null,
+          privacy_policy_url: privacyPolicyUrl.trim() || null,
         }),
       })
       const data = await res.json()
@@ -73,6 +76,7 @@ export default function GeneralSettingsModal({
           name, country, language,
           payout_model: payoutModel,
           fixed_payout_value: payoutModel === 'fixed' ? Number(fixedPayoutValue) : null,
+          privacy_policy_url: privacyPolicyUrl.trim() || null,
         })
       } else {
         setError(data.error ?? 'Não foi possível salvar.')
@@ -177,6 +181,21 @@ export default function GeneralSettingsModal({
                 />
               </div>
             )}
+          </div>
+
+          <div>
+            <label style={labelStyle}>Link da Política de Privacidade (LGPD)</label>
+            <input
+              style={inputStyle} type="url"
+              value={privacyPolicyUrl}
+              placeholder="https://..."
+              onChange={e => setPrivacyPolicyUrl(e.target.value)}
+            />
+            <div style={{ fontSize: '11px', color: 'var(--mist)', marginTop: '4px' }}>
+              Opcional. Quando preenchido, aparece como um link ao lado do consentimento
+              de dados no check-in público. Este app não gera nem assume um texto de
+              política — use o documento revisado pelo seu jurídico.
+            </div>
           </div>
         </div>
 

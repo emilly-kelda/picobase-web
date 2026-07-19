@@ -44,6 +44,22 @@ export async function POST(request: Request) {
   const ip = headersList.get('x-forwarded-for') ?? 'unknown'
   const ua = headersList.get('user-agent') ?? 'unknown'
 
+  // The client already disables submission unless both boxes are checked
+  // (canSubmitWaiver in CheckinForm.tsx) — this re-validates server-side
+  // rather than trusting that gate alone, same "never trust client-side
+  // enforcement for what gets persisted" posture as the rest of this app.
+  // Previously this route wrote lgpd_consent/gdpr_consent as hardcoded
+  // `true` regardless of what was actually submitted (or even sent at
+  // all — the client never included these fields), which meant every
+  // check-in row claimed full consent independent of reality — the
+  // opposite of what an audit trail needs to be worth anything.
+  if (body.waiver_agreed !== true || body.gdpr_consent !== true) {
+    return NextResponse.json(
+      { error: 'É necessário aceitar o termo e o consentimento de dados para continuar.' },
+      { status: 400 }
+    )
+  }
+
   const supabase = createServiceClient()
 
   const scheduledLesson = await findNearestScheduledLesson(
@@ -72,8 +88,12 @@ export async function POST(request: Request) {
       is_minor:            body.is_minor ?? false,
       guardian_name:       body.guardian_name ?? null,
       guardian_consent:    body.guardian_consent ?? false,
-      lgpd_consent:        true,
-      gdpr_consent:        true,
+      // Both already validated true above — this records the real
+      // submitted values rather than an assumption, so the audit trail
+      // reflects what actually happened even if that validation is ever
+      // relaxed later.
+      lgpd_consent:        body.gdpr_consent === true,
+      gdpr_consent:        body.gdpr_consent === true,
       waiver_signed_at:    new Date().toISOString(),
       signature_data:      body.signature_data || null,
       ip_address:          ip,

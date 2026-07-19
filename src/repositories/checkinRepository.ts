@@ -5,7 +5,7 @@ export async function getSchoolBySlug(slug: string) {
   const supabase = createServiceClient()
   const { data, error } = await supabase
     .from('schools')
-    .select('id, name, slug, language, sport_types, waiver_en, waiver_pt, waiver_fr, waiver_es, daily_notice, waiver_type, waiver_file_global_url, waiver_files_by_lang')
+    .select('id, name, slug, language, sport_types, waiver_en, waiver_pt, waiver_fr, waiver_es, daily_notice, waiver_type, waiver_file_global_url, waiver_files_by_lang, privacy_policy_url')
     .eq('slug', slug)
     .single()
   if (error) return null

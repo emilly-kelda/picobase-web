@@ -33,6 +33,7 @@ type School = {
   notify_post_class_feedback: boolean
   payout_model: string
   fixed_payout_value: number | null
+  privacy_policy_url: string | null
 }
 
 type Season = {

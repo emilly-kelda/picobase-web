@@ -20,7 +20,7 @@ export async function PATCH(request: Request) {
       'waiver_type', 'waiver_file_global_url', 'waiver_files_by_lang',
       'notify_student_before_class', 'notify_payment_and_waiver', 'notify_instructor_on_checkin',
       'notify_package_low', 'notify_late_cancellation', 'notify_post_class_feedback',
-      'payout_model', 'fixed_payout_value',
+      'payout_model', 'fixed_payout_value', 'privacy_policy_url',
     ]
     const update: Record<string, unknown> = { updated_at: new Date().toISOString() }
     for (const key of schoolFields) {
