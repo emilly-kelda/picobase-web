@@ -512,3 +512,20 @@ their commit message and diff.
   to one column stacks the two column `<div>`s in DOM order for free —
   operational column fully first, weather/KPIs last — so no extra
   responsive logic was needed for that ordering.
+- `5d332a2` **feat**: `WeatherWidget.tsx` became interactive — a 📍
+  icon in its header opens a popover to switch which spot's forecast
+  is shown, and wind direction is now a 16-point compass with full
+  Portuguese names ("Leste-Sudeste") instead of the old 8-point
+  abbreviations. Deviated from the literal spec, which asked for "a
+  list of the school's registered locations" — no multi-location/
+  "sedes" concept exists anywhere in the schema (single hardcoded
+  `SCHOOL_ID` throughout), so that's a curated, hardcoded list of real
+  Ceará coastal wind/kite spots (Fortaleza, Cumbuco, Taíba, Icaraí de
+  Amontada, Jericoacoara) instead of something read from a database
+  table. Selection persists via a `weather_spot` cookie, same direct
+  `document.cookie` + `router.refresh()` pattern `OwnerNav.tsx` already
+  uses for the season switcher. `getWeather()` now takes a spot id.
+  Tide data (also asked for, hedged "se possível") was researched and
+  skipped: no free, keyless tide API covers Brazil (NOAA is US-only;
+  WorldTides/Stormglass/TidesAtlas all require a paid signup) — didn't
+  fabricate a fake reading rather than leave it for later.
