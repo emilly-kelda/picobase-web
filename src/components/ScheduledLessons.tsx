@@ -541,6 +541,24 @@ export default function ScheduledLessons({
     setGroupStudents(['', ''])
   }
 
+  // "+ Agendar Próxima" — retention nudge once a lesson is done (confirmed)
+  // or its slot has passed: reopens the same scheduling modal used by the
+  // header's "+ Agendar" button (real scheduled_lessons row, not
+  // AddBookingModal's `bookings`/leads table — same reasoning as
+  // ScheduleFromCheckinModal's own "why not AddBookingModal" note),
+  // pre-filled with this student's name/activity/instructor so only date
+  // and time are left for reception to fill in with the client.
+  function openRebookModal(lesson: Lesson) {
+    resetForm()
+    setForm(f => ({
+      ...f,
+      student_name:  lesson.student_name ?? '',
+      activity_id:   lesson.activities?.id ?? '',
+      instructor_id: lesson.instructor?.id ?? '',
+    }))
+    setShowModal(true)
+  }
+
   async function cancel(id: string) {
     setDeleting(id)
     await fetch('/api/owner/schedule', {
@@ -895,21 +913,40 @@ export default function ScheduledLessons({
                       way of saying "start this lesson". The public form is
                       still reachable (Sala de Espera's QR button, or the
                       link itself), just not duplicated here. Only offered
-                      for today's lessons — starting one scheduled for
-                      tomorrow doesn't make sense yet. */}
-                  {lesson.status !== 'confirmed' && activeTab === 'today' && (
-                    <button
-                      onClick={() => setConfirmLessonModal(lesson)}
-                      style={{
-                        padding: '5px 12px', background: 'var(--signal)', color: '#fff',
-                        border: 'none', borderRadius: '99px',
-                        fontSize: '11px', fontWeight: '600',
-                        cursor: 'pointer', fontFamily: 'var(--font-sans)', flexShrink: 0,
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      ✓ Iniciar Aula / Check-in
-                    </button>
+                      for today's lessons — starting/rebooking off a
+                      lesson scheduled for tomorrow doesn't make sense yet.
+                      Once the lesson is done (confirmed) or its slot has
+                      already passed, the action flips from starting THIS
+                      lesson to a retention nudge: book the student's NEXT
+                      one before they leave the counter. */}
+                  {activeTab === 'today' && (
+                    lesson.status === 'confirmed' || new Date(lesson.scheduled_at).getTime() < Date.now() ? (
+                      <button
+                        onClick={() => openRebookModal(lesson)}
+                        style={{
+                          padding: '5px 12px', background: '#007868', color: '#fff',
+                          border: 'none', borderRadius: '99px',
+                          fontSize: '11px', fontWeight: '600',
+                          cursor: 'pointer', fontFamily: 'var(--font-sans)', flexShrink: 0,
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        + Agendar Próxima
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => setConfirmLessonModal(lesson)}
+                        style={{
+                          padding: '5px 12px', background: 'var(--signal)', color: '#fff',
+                          border: 'none', borderRadius: '99px',
+                          fontSize: '11px', fontWeight: '600',
+                          cursor: 'pointer', fontFamily: 'var(--font-sans)', flexShrink: 0,
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        Iniciar Aula
+                      </button>
+                    )
                   )}
                   <a
                     href={lesson.student_whatsapp ? buildWhatsAppUrl(lesson) : undefined}
