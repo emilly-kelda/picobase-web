@@ -28,7 +28,12 @@ type Checkin = {
   id: string
   student_name: string
   student_nationality: string | null
+  student_email: string | null
+  student_whatsapp: string | null
   health_condition: string | null
+  emergency_name: string | null
+  emergency_phone: string | null
+  birthdate: string | null
   checkin_at: string
   activity_id: string | null
   instructor_id: string | null
@@ -101,6 +106,19 @@ function fmtMinutes(min: number) {
   return `${h}h${m}min`
 }
 
+function fmtRelative(iso: string) {
+  const minutesAgo = Math.round((Date.now() - new Date(iso).getTime()) / 60000)
+  if (minutesAgo < 1) return 'agora mesmo'
+  if (minutesAgo < 60) return `há ${minutesAgo}min`
+  const hoursAgo = Math.floor(minutesAgo / 60)
+  return `há ${hoursAgo}h`
+}
+
+function fmtBirthdate(iso: string | null) {
+  if (!iso) return null
+  return new Date(iso + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+}
+
 export default function PendingLessons({
   checkins: initialCheckins,
   instructors,
@@ -129,6 +147,7 @@ export default function PendingLessons({
   // `checkins`, so a background sync here can't reset an open modal.
   useEffect(() => { setCheckins(initialCheckins) }, [initialCheckins])
   const [historyModal, setHistoryModal] = useState<{ studentName: string; packageSaleId: string } | null>(null)
+  const [fichaModal, setFichaModal]     = useState<Checkin | null>(null)
   const [selected, setSelected]         = useState<Checkin | null>(null)
   const [activityId, setActivityId]     = useState('')
   const [duration, setDuration]         = useState(60)
@@ -329,7 +348,7 @@ export default function PendingLessons({
             color: 'var(--mist)',
             display: 'flex', alignItems: 'center', gap: '8px',
           }}>
-            Aulas pendentes
+            Sala de Espera
             <span style={{
               background: 'var(--signal)',
               color: '#fff',
@@ -494,9 +513,25 @@ export default function PendingLessons({
                     {' · '}
                     {instructor?.name ?? 'Sem instrutor'}
                     {' · '}
-                    {fmtTime(checkin.checkin_at)}
+                    <span title={fmtTime(checkin.checkin_at)}>{fmtRelative(checkin.checkin_at)}</span>
                   </div>
                   <div style={{ marginTop: '6px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    {checkin.student_nationality && (
+                      <span style={{
+                        fontSize: '10px', fontWeight: '500',
+                        color: 'var(--mist)', background: 'var(--powder)',
+                        padding: '2px 8px', borderRadius: 'var(--radius-full)',
+                      }}>
+                        {checkin.student_nationality}
+                      </span>
+                    )}
+                    <span style={{
+                      fontSize: '10px', fontWeight: '500',
+                      color: '#007868', background: '#E0F8F5',
+                      padding: '2px 8px', borderRadius: 'var(--radius-full)',
+                    }}>
+                      ✓ Termo Assinado
+                    </span>
                     {balance?.hasPackage && balance.packageSaleId ? (
                       <button
                         type="button"
@@ -539,23 +574,40 @@ export default function PendingLessons({
                   </div>
                 </div>
 
-                <button
-                  onClick={() => open(checkin)}
-                  style={{
-                    padding: '8px 18px',
-                    background: 'var(--slate)',
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: 'var(--radius-md)',
-                    fontSize: '13px', fontWeight: '500',
-                    cursor: 'pointer',
-                    fontFamily: 'var(--font-sans)',
-                    flexShrink: 0,
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  Confirmar →
-                </button>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flexShrink: 0 }}>
+                  <button
+                    onClick={() => open(checkin)}
+                    style={{
+                      padding: '8px 18px',
+                      background: 'var(--slate)',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: 'var(--radius-md)',
+                      fontSize: '13px', fontWeight: '500',
+                      cursor: 'pointer',
+                      fontFamily: 'var(--font-sans)',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    Confirmar →
+                  </button>
+                  <button
+                    onClick={() => setFichaModal(checkin)}
+                    style={{
+                      padding: '6px 18px',
+                      background: 'transparent',
+                      color: 'var(--mist)',
+                      border: '0.5px solid var(--border-strong)',
+                      borderRadius: 'var(--radius-md)',
+                      fontSize: '12px', fontWeight: '500',
+                      cursor: 'pointer',
+                      fontFamily: 'var(--font-sans)',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    Ver Ficha
+                  </button>
+                </div>
               </div>
             )
           })}
@@ -1198,6 +1250,92 @@ export default function PendingLessons({
           packageSaleId={historyModal.packageSaleId}
           onClose={() => setHistoryModal(null)}
         />
+      )}
+
+      {fichaModal && (
+        <div
+          style={{
+            position: 'fixed', inset: 0,
+            background: 'rgba(0,0,0,0.45)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 200, padding: '24px',
+          }}
+          onClick={e => { if (e.target === e.currentTarget) setFichaModal(null) }}
+        >
+          <div style={{
+            background: '#fff', borderRadius: 'var(--radius-xl)',
+            width: '100%', maxWidth: '440px',
+            padding: '28px', maxHeight: '90vh', overflowY: 'auto',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
+              <div>
+                <div style={{ fontSize: '18px', fontWeight: '500', color: 'var(--slate)', marginBottom: '2px' }}>
+                  {fichaModal.student_name}
+                </div>
+                <div style={{ fontSize: '12px', color: 'var(--mist)' }}>
+                  Check-in {fmtTime(fichaModal.checkin_at)} · {fmtRelative(fichaModal.checkin_at)}
+                </div>
+              </div>
+              <button
+                onClick={() => setFichaModal(null)}
+                style={{
+                  background: 'var(--powder)', border: 'none', borderRadius: '99px',
+                  width: '30px', height: '30px', cursor: 'pointer',
+                  fontSize: '14px', color: 'var(--mist)', flexShrink: 0,
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            <div style={{
+              display: 'inline-flex', alignItems: 'center', gap: '6px',
+              fontSize: '11px', fontWeight: '500', color: '#007868',
+              background: '#E0F8F5', padding: '4px 10px', borderRadius: 'var(--radius-full)',
+              marginBottom: '18px',
+            }}>
+              ✓ Termo de Responsabilidade Assinado
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {[
+                { label: 'Nacionalidade', value: fichaModal.student_nationality },
+                { label: 'Data de nascimento', value: fmtBirthdate(fichaModal.birthdate) },
+                { label: 'Email', value: fichaModal.student_email },
+                { label: 'WhatsApp', value: fichaModal.student_whatsapp },
+                { label: 'Contato de emergência', value: fichaModal.emergency_name },
+                { label: 'Telefone de emergência', value: fichaModal.emergency_phone },
+                { label: 'Condições de saúde', value: fichaModal.health_condition },
+                { label: 'Responsável (menor de idade)', value: fichaModal.is_minor ? (fichaModal.guardian_name ?? '—') : null },
+                { label: 'Origem', value: fichaModal.source ? (SOURCE_ICON[fichaModal.source] ? `${SOURCE_ICON[fichaModal.source]} ${fichaModal.source}` : fichaModal.source) : null },
+              ].filter(row => row.value).map(row => (
+                <div key={row.label}>
+                  <div style={{
+                    fontSize: '10px', fontWeight: '500', letterSpacing: '0.08em',
+                    textTransform: 'uppercase', color: 'var(--mist)', marginBottom: '3px',
+                  }}>
+                    {row.label}
+                  </div>
+                  <div style={{ fontSize: '13px', color: 'var(--slate)' }}>
+                    {row.value}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <button
+              onClick={() => setFichaModal(null)}
+              style={{
+                width: '100%', marginTop: '24px', padding: '11px',
+                background: '#fff', color: 'var(--mist)',
+                border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)',
+                fontSize: '14px', cursor: 'pointer', fontFamily: 'var(--font-sans)',
+              }}
+            >
+              Fechar
+            </button>
+          </div>
+        </div>
       )}
     </>
   )
