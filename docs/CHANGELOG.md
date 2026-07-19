@@ -381,3 +381,14 @@ their commit message and diff.
   trusting the client. "Cadastrar novo cliente manualmente" stays as
   the fallback. Search is name-only — this app doesn't collect CPF
   anywhere yet, so a CPF search field would have nothing to query.
+- `0025f2e` **feat**: renamed the pending-checkins widget to "Sala de
+  Espera" and added nationality/"Termo Assinado" badges, relative
+  arrival time (exact time on hover), and a "Ver Ficha" detail modal
+  (nationality, birthdate, email, WhatsApp, emergency contact, health
+  conditions, guardian, source). Confirmed this data already maps to
+  the existing `checkins.status = 'checked_in'` list before building
+  anything separate — kept its existing "Confirmar" action (creates a
+  real session now) rather than routing through `AddBookingModal`
+  (needless pending-request step for someone already at the counter),
+  and skipped a hard 30-minute filter since hiding older checkins
+  could hide someone genuinely still waiting.
