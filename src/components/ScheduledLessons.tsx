@@ -93,6 +93,24 @@ function formatHours(minutes: number): string {
   return `${h}h${m}min`
 }
 
+/** Package-balance badge for a scheduled-lesson row — exact (not
+ *  substring) case-insensitive match against activePackages, since both
+ *  sides here are already-complete names, not partial typed input (unlike
+ *  the schedule modal's autocomplete matching further down this file,
+ *  which does want substring matches while the owner is still typing). */
+function getPackageBadge(
+  studentName: string | null,
+  activePackages: PackageSale[]
+): { label: string; tone: 'ok' | 'warn' } | null {
+  if (!studentName) return null
+  const pkg = activePackages.find(p => p.student_name.toLowerCase() === studentName.toLowerCase())
+  if (!pkg) return { label: 'Aula Avulsa', tone: 'warn' }
+  const remaining = pkg.minutes_purchased - pkg.minutes_used
+  if (remaining <= 0) return { label: 'Sem créditos', tone: 'warn' }
+  const label = remaining === 60 ? `${formatHours(remaining)} restante` : `${formatHours(remaining)} restantes`
+  return { label, tone: 'ok' }
+}
+
 const SPORT_FILTERS = ['all', 'kitesurf', 'wingfoil', 'kitefoil', 'surf', 'windsurf'] as const
 type SportFilter = typeof SPORT_FILTERS[number]
 const SPORT_FILTER_LABELS: Record<SportFilter, string> = {
@@ -793,7 +811,7 @@ export default function ScheduledLessons({
                   borderRadius: '1px', flexShrink: 0,
                 }} />
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ marginBottom: '2px' }}>
+                  <div style={{ marginBottom: '2px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     {lesson.student_name ? (
                       <Link
                         href={`/owner/students/name/${encodeURIComponent(lesson.student_name)}`}
@@ -811,6 +829,21 @@ export default function ScheduledLessons({
                     ) : (
                       <span style={{ fontSize: '14px', fontWeight: '500', color: 'var(--slate)' }}>—</span>
                     )}
+                    {(() => {
+                      const badge = getPackageBadge(lesson.student_name, activePackages)
+                      if (!badge) return null
+                      return (
+                        <span style={{
+                          fontSize: '10px', fontWeight: '600',
+                          padding: '2px 7px', borderRadius: 'var(--radius-full)',
+                          whiteSpace: 'nowrap',
+                          background: badge.tone === 'ok' ? 'var(--glacial-light)' : 'var(--amber-light)',
+                          color: badge.tone === 'ok' ? 'var(--glacial-dark)' : 'var(--amber)',
+                        }}>
+                          {badge.label}
+                        </span>
+                      )
+                    })()}
                   </div>
                   <div style={{ fontSize: '12px', color: 'var(--mist)' }}>
                     {lesson.activities?.name ?? 'Atividade não definida'}
