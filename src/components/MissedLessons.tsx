@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 
 type MissedLesson = {
   id: string
@@ -94,11 +95,20 @@ export default function MissedLessons({
               }}
             >
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{
-                  fontSize: '13px', fontWeight: '500',
-                  color: 'var(--slate)', marginBottom: '2px',
-                }}>
-                  {lesson.student_name}
+                <div style={{ marginBottom: '2px' }}>
+                  <Link
+                    href={`/owner/students/name/${encodeURIComponent(lesson.student_name)}`}
+                    style={{
+                      fontSize: '13px', fontWeight: '500',
+                      color: 'var(--slate)', textDecoration: 'none',
+                      borderBottom: '1px solid transparent',
+                      transition: 'border-color 0.15s',
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.borderBottomColor = 'var(--glacial)' }}
+                    onMouseLeave={e => { e.currentTarget.style.borderBottomColor = 'transparent' }}
+                  >
+                    {lesson.student_name}
+                  </Link>
                 </div>
                 <div style={{ fontSize: '11px', color: 'var(--mist)' }}>
                   {lesson.activities?.name ?? '—'}

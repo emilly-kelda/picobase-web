@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { LEVEL_LABELS, isLevel } from '@/lib/levels'
 import LevelPicker from '@/components/LevelPicker'
 
@@ -715,11 +716,24 @@ export default function ScheduledLessons({
                   borderRadius: '1px', flexShrink: 0,
                 }} />
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{
-                    fontSize: '14px', fontWeight: '500',
-                    color: 'var(--slate)', marginBottom: '2px',
-                  }}>
-                    {lesson.student_name ?? '—'}
+                  <div style={{ marginBottom: '2px' }}>
+                    {lesson.student_name ? (
+                      <Link
+                        href={`/owner/students/name/${encodeURIComponent(lesson.student_name)}`}
+                        style={{
+                          fontSize: '14px', fontWeight: '500',
+                          color: 'var(--slate)', textDecoration: 'none',
+                          borderBottom: '1px solid transparent',
+                          transition: 'border-color 0.15s',
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.borderBottomColor = 'var(--glacial)' }}
+                        onMouseLeave={e => { e.currentTarget.style.borderBottomColor = 'transparent' }}
+                      >
+                        {lesson.student_name}
+                      </Link>
+                    ) : (
+                      <span style={{ fontSize: '14px', fontWeight: '500', color: 'var(--slate)' }}>—</span>
+                    )}
                   </div>
                   <div style={{ fontSize: '12px', color: 'var(--mist)' }}>
                     {lesson.activities?.name ?? 'Atividade não definida'}
@@ -876,7 +890,25 @@ export default function ScheduledLessons({
                       </span>
                     </div>
                     <div style={{ fontSize: '12px', color: 'var(--slate)', fontWeight: '500' }}>
-                      {group.map(l => l.student_name ?? '—').join(' · ')}
+                      {group.map((l, gi) => (
+                        <span key={l.id}>
+                          {gi > 0 && ' · '}
+                          {l.student_name ? (
+                            <Link
+                              href={`/owner/students/name/${encodeURIComponent(l.student_name)}`}
+                              style={{
+                                color: 'var(--slate)', textDecoration: 'none',
+                                borderBottom: '1px solid transparent',
+                                transition: 'border-color 0.15s',
+                              }}
+                              onMouseEnter={e => { e.currentTarget.style.borderBottomColor = 'var(--glacial)' }}
+                              onMouseLeave={e => { e.currentTarget.style.borderBottomColor = 'transparent' }}
+                            >
+                              {l.student_name}
+                            </Link>
+                          ) : '—'}
+                        </span>
+                      ))}
                     </div>
                   </div>
                   {group.every(l => l.status === 'confirmed') ? (
