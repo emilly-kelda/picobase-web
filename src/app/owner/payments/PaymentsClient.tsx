@@ -86,6 +86,17 @@ const STATUS: Record<string, { label: string; bg: string; color: string }> = {
   pending:  { label: 'Pendente',  bg: '#FFF8E8', color: '#8A5E00' },
   approved: { label: 'Aprovado',  bg: '#E0F8F5', color: '#007868' },
   paid:     { label: 'Pago',      bg: '#E8F5E9', color: '#2E7D32' },
+  overdue:  { label: 'Atrasado',  bg: '#FEE2E2', color: '#DC2626' },
+}
+
+/** "Atrasado" isn't a stored status — there's no such column anywhere in
+ *  this data model — but it's an honest derived state: a payment for a
+ *  period that's already fully in the past and still isn't 'paid' really
+ *  is overdue. Only overrides the badge, not the underlying status value
+ *  (approve/pay actions still work exactly as before). */
+function effectiveStatus(status: string, isPeriodPast: boolean) {
+  if (isPeriodPast && status !== 'paid') return STATUS.overdue
+  return STATUS[status] ?? STATUS.pending
 }
 
 export default function PaymentsClient({
@@ -141,6 +152,7 @@ export default function PaymentsClient({
   }, [period])
 
   const pending = payments.filter(p => p.status === 'pending')
+  const isPeriodPast = period < new Date().toISOString().slice(0, 7)
 
   const partnerTotalPending  = partnerData.filter(p => p.status === 'pending').reduce((s, p) => s + p.commission, 0)
 
@@ -508,8 +520,8 @@ export default function PaymentsClient({
             marginBottom: '16px',
           }}>
             {([
-              { key: 'team' as const,     label: `Comissões da Equipe (${payments.length})` },
-              { key: 'partners' as const, label: `Comissões de Parceiros (${partnerData.length})` },
+              { key: 'team' as const,     label: `Instrutores (${payments.length})` },
+              { key: 'partners' as const, label: `Parceiros (${partnerData.length})` },
             ]).map(t => (
               <button
                 key={t.key}
@@ -571,7 +583,7 @@ export default function PaymentsClient({
             )}
           </div>
 
-          {/* Comissões da Equipe — minimalist table */}
+          {/* Instrutores — minimalist table */}
           {tab === 'team' && (
             <div style={{
               background: '#fff', border: '0.5px solid var(--border)',
@@ -601,7 +613,7 @@ export default function PaymentsClient({
                   <tbody>
                     {payments.map((p, idx) => {
                       const user    = p.users as any
-                      const st      = STATUS[p.status] ?? STATUS.pending
+                      const st      = effectiveStatus(p.status, isPeriodPast)
                       const hasPix  = !!user?.pix_key
                       const hasWise = !!user?.wise_email
                       return (
@@ -726,6 +738,100 @@ export default function PaymentsClient({
             </div>
           )}
 
+          {/* Closing KPIs — Instrutores tab only, computed from the same
+              payments/summary data already loaded for the table above. */}
+          {tab === 'team' && payments.length > 0 && (() => {
+            const marginAfterInstructors = totalRevenueGenerated > 0
+              ? ((totalRevenueGenerated - summary.total) / totalRevenueGenerated) * 100
+              : null
+            const byRevenue = [...payments].sort((a, b) => b.revenue_generated - a.revenue_generated)
+            const maxRevenue = byRevenue[0]?.revenue_generated ?? 0
+
+            return (
+              <div style={{
+                display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px',
+                marginTop: '20px',
+              }}>
+                {/* Participação na Receita */}
+                <div style={{
+                  background: '#fff', border: '0.5px solid var(--border)',
+                  borderRadius: 'var(--radius-lg)', padding: '20px',
+                }}>
+                  <div style={{
+                    fontSize: '11px', fontWeight: '600', letterSpacing: '0.08em',
+                    textTransform: 'uppercase', color: 'var(--mist)', marginBottom: '16px',
+                  }}>
+                    Participação na Receita
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {byRevenue.map(p => {
+                      const user = p.users as any
+                      const pct = maxRevenue > 0 ? (p.revenue_generated / maxRevenue) * 100 : 0
+                      return (
+                        <div key={p.id}>
+                          <div style={{
+                            display: 'flex', justifyContent: 'space-between',
+                            fontSize: '12px', marginBottom: '4px',
+                          }}>
+                            <span style={{ color: 'var(--slate)', fontWeight: '500' }}>{user?.name ?? '—'}</span>
+                            <span style={{ color: 'var(--mist)', fontVariantNumeric: 'tabular-nums' }}>
+                              {fmt(p.revenue_generated)}
+                            </span>
+                          </div>
+                          <div style={{
+                            height: '6px', background: 'var(--powder)',
+                            borderRadius: '99px', overflow: 'hidden',
+                          }}>
+                            <div style={{
+                              height: '100%', width: `${pct}%`,
+                              background: 'var(--glacial)', borderRadius: '99px',
+                            }} />
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* Resumo do Mês */}
+                <div style={{
+                  background: '#fff', border: '0.5px solid var(--border)',
+                  borderRadius: 'var(--radius-lg)', padding: '20px',
+                }}>
+                  <div style={{
+                    fontSize: '11px', fontWeight: '600', letterSpacing: '0.08em',
+                    textTransform: 'uppercase', color: 'var(--mist)', marginBottom: '16px',
+                  }}>
+                    Resumo do Mês
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {[
+                      { label: 'Receita total gerada',        value: fmt(totalRevenueGenerated) },
+                      { label: 'Total comissões',              value: fmt(summary.total) },
+                      { label: 'Margem após instrutores',      value: marginAfterInstructors != null ? `${marginAfterInstructors.toFixed(1)}%` : '—' },
+                      { label: 'Já pagos',                     value: fmt(summary.totalPaid), color: '#2E7D32' },
+                      { label: 'Pendentes',                    value: fmt(summary.totalPending), color: '#8A5E00' },
+                    ].map(row => (
+                      <div key={row.label} style={{
+                        display: 'flex', justifyContent: 'space-between',
+                        fontSize: '13px', paddingBottom: '10px',
+                        borderBottom: '0.5px solid var(--border)',
+                      }}>
+                        <span style={{ color: 'var(--mist)' }}>{row.label}</span>
+                        <span style={{
+                          fontWeight: '600', fontVariantNumeric: 'tabular-nums',
+                          color: row.color ?? 'var(--slate)',
+                        }}>
+                          {row.value}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )
+          })()}
+
           {/* Comissões de Parceiros — minimalist table */}
           {tab === 'partners' && (
             <div style={{
@@ -755,7 +861,7 @@ export default function PaymentsClient({
                   </thead>
                   <tbody>
                     {partnerData.map((p, idx) => {
-                      const st   = STATUS[p.status] ?? STATUS.pending
+                      const st   = effectiveStatus(p.status, isPeriodPast)
                       const icon = p.partner.type === 'hotel' ? '🏨'
                         : p.partner.type === 'agency' ? '✈️' : '🤝'
                       return (
