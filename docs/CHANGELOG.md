@@ -392,3 +392,15 @@ their commit message and diff.
   (needless pending-request step for someone already at the counter),
   and skipped a hard 30-minute filter since hiding older checkins
   could hide someone genuinely still waiting.
+- `64dbff2` **feat**: CPF (Brazilian nationals) or Passport (everyone
+  else) capture on the real waiver form, `checkin/[school]/
+  CheckinForm.tsx` — branches on the nationality already selected
+  there, live-masked CPF with real check-digit validation, required to
+  advance. New `document_number`/`document_type` columns on both
+  `checkins` and `students` (migration `20260731000000`), plaintext
+  (not encrypted like `health_conditions`/`pix_key` — this field's
+  purpose is to be searchable, which an encrypted column can't
+  support). `api/checkin/route.ts` backfills it onto an existing
+  student row if they checked in before without one. `getStudents()`
+  now matches name OR document_number; `AddBookingModal` shows it in
+  results and the selected-customer summary.
