@@ -227,46 +227,83 @@ export default async function StudentDetailPage({
         )
       })()}
 
-      {/* Completed packages — certificate download */}
-      {completedPackages.length > 0 && (
+      {/* Certificate — always visible; per-package button is only enabled
+          once that package is actually fully consumed (server-side route
+          returns 404 for an incomplete one, so a clickable-but-broken link
+          would be worse than showing it disabled with an explanation). */}
+      <div style={{
+        background: '#fff',
+        border: '0.5px solid var(--border)',
+        borderRadius: 'var(--radius-lg)',
+        padding: '16px 20px', marginBottom: '24px',
+        display: 'flex', flexDirection: 'column', gap: '10px',
+      }}>
         <div style={{
-          background: '#fff',
-          border: '0.5px solid var(--border)',
-          borderRadius: 'var(--radius-lg)',
-          padding: '16px 20px', marginBottom: '24px',
-          display: 'flex', flexDirection: 'column', gap: '10px',
+          fontSize: '11px', fontWeight: '500',
+          letterSpacing: '0.1em', textTransform: 'uppercase',
+          color: 'var(--mist)',
         }}>
-          <div style={{
-            fontSize: '11px', fontWeight: '500',
-            letterSpacing: '0.1em', textTransform: 'uppercase',
-            color: 'var(--mist)',
-          }}>
-            Pacotes concluídos
-          </div>
-          {completedPackages.map(p => (
-            <div key={p.id} style={{
-              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            }}>
-              <span style={{ fontSize: '13px', color: 'var(--slate)' }}>
-                {(p.packages as any)?.name ?? 'Pacote'}
-              </span>
-              <a
-                href={`/api/owner/certificate/${p.id}`}
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: '6px',
-                  padding: '6px 14px',
-                  background: 'var(--slate)', color: '#fff',
-                  borderRadius: '99px',
-                  fontSize: '12px', fontWeight: '500',
-                  textDecoration: 'none',
-                }}
-              >
-                🎓 Gerar certificado
-              </a>
-            </div>
-          ))}
+          Certificado de conclusão
         </div>
-      )}
+        {packageSales.length === 0 ? (
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '13px', color: 'var(--mist)' }}>Nenhum pacote registrado ainda</span>
+            <span
+              title="Disponível após a conclusão de um pacote"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: '6px',
+                padding: '6px 14px', background: 'var(--border)', color: 'var(--mist)',
+                borderRadius: '99px', fontSize: '12px', fontWeight: '500',
+                cursor: 'not-allowed',
+              }}
+            >
+              🎓 Gerar Certificado (PDF)
+            </span>
+          </div>
+        ) : (
+          packageSales.map(p => {
+            const isComplete = (p.minutes_used ?? 0) >= (p.minutes_purchased ?? 0) && (p.minutes_purchased ?? 0) > 0
+            return (
+              <div key={p.id} style={{
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              }}>
+                <span style={{ fontSize: '13px', color: 'var(--slate)' }}>
+                  {(p.packages as any)?.name ?? 'Pacote'}
+                </span>
+                {isComplete ? (
+                  <a
+                    href={`/api/owner/certificate/${p.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: '6px',
+                      padding: '6px 14px',
+                      background: 'var(--slate)', color: '#fff',
+                      borderRadius: '99px',
+                      fontSize: '12px', fontWeight: '500',
+                      textDecoration: 'none',
+                    }}
+                  >
+                    🎓 Gerar Certificado (PDF)
+                  </a>
+                ) : (
+                  <span
+                    title="Disponível após a conclusão do pacote"
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: '6px',
+                      padding: '6px 14px', background: 'var(--border)', color: 'var(--mist)',
+                      borderRadius: '99px', fontSize: '12px', fontWeight: '500',
+                      cursor: 'not-allowed',
+                    }}
+                  >
+                    🎓 Gerar Certificado (PDF)
+                  </span>
+                )}
+              </div>
+            )
+          })
+        )}
+      </div>
 
       {/* Contact & health */}
       <div style={{
