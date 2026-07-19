@@ -371,3 +371,13 @@ their commit message and diff.
   (mirrors `api/checkin/package-balance`) that silently pre-fills
   activity/instructor for the exact name already typed — never returns
   a list.
+- `2af8712` **feat**: `AddBookingModal.tsx` now leads with a debounced
+  search against registered students (new `student_id` FK on
+  `bookings`) instead of retyping name/WhatsApp — reflects that the
+  QR-code check-in form already collects that info and find-or-creates
+  a `students` row. New `POST /api/owner/bookings` (separate from the
+  public, unauthenticated `/api/book`) re-derives name/whatsapp from
+  the real student row server-side when `student_id` is sent, never
+  trusting the client. "Cadastrar novo cliente manualmente" stays as
+  the fallback. Search is name-only — this app doesn't collect CPF
+  anywhere yet, so a CPF search field would have nothing to query.
