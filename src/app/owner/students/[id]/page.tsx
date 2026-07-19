@@ -2,6 +2,7 @@
 import { getStudentById, getSessionsByStudent, getActivePackagesByStudent, getPackageSalesByStudentName } from '@/repositories/studentRepository'
 import ProgressionEditor from '@/components/ProgressionEditor'
 import ProgressionHistory from '@/components/ProgressionHistory'
+import StudentProfileHeader from './StudentProfileHeader'
 
 const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
 
@@ -70,41 +71,17 @@ export default async function StudentDetailPage({
   return (
     <div>
 
-      {/* Header */}
-      <div style={{ marginBottom: '32px' }}>
-        <a href="/owner/students" style={{
-          fontSize: '13px', color: 'var(--mist)', textDecoration: 'none',
-          display: 'inline-flex', alignItems: 'center', gap: '4px',
-          marginBottom: '16px',
-        }}>
-          ← Alunos
-        </a>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <div style={{
-            width: '48px', height: '48px',
-            borderRadius: 'var(--radius-full)',
-            background: 'var(--glacial-light)',
-            color: 'var(--glacial-dark)',
-            display: 'flex', alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '15px', fontWeight: '600',
-            flexShrink: 0,
-          }}>
-            {student.name.split(' ').slice(0, 2).map((n: string) => n[0]).join('').toUpperCase()}
-          </div>
-          <div>
-            <h1 style={{
-              fontSize: '22px', fontWeight: '500',
-              color: 'var(--slate)', marginBottom: '4px',
-            }}>
-              {student.name}
-            </h1>
-            <p style={{ fontSize: '13px', color: 'var(--mist)' }}>
-              {student.nationality ?? 'Nacionalidade desconhecida'} · Aluno desde {fmtDate(student.created_at)}
-            </p>
-          </div>
-        </div>
-      </div>
+      <StudentProfileHeader
+        student={{
+          id: student.id,
+          name: student.name,
+          email: student.email,
+          whatsapp: student.whatsapp,
+          nationality: student.nationality,
+          health_conditions: student.health_conditions,
+          created_at: student.created_at,
+        }}
+      />
 
       {/* Stats */}
       <div style={{
@@ -303,37 +280,6 @@ export default async function StudentDetailPage({
             )
           })
         )}
-      </div>
-
-      {/* Contact & health */}
-      <div style={{
-        background: '#fff',
-        border: '0.5px solid var(--border)',
-        borderRadius: 'var(--radius-lg)',
-        padding: '20px 24px',
-        marginBottom: '24px',
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-        gap: '16px',
-      }}>
-        {[
-          { label: 'Email',    value: student.email             },
-          { label: 'WhatsApp', value: student.whatsapp          },
-          { label: 'Condições de saúde', value: student.health_conditions },
-        ].map(item => (
-          <div key={item.label}>
-            <div style={{
-              fontSize: '10px', fontWeight: '500',
-              letterSpacing: '0.1em', textTransform: 'uppercase',
-              color: 'var(--mist)', marginBottom: '4px',
-            }}>
-              {item.label}
-            </div>
-            <div style={{ fontSize: '13px', color: item.value ? 'var(--slate)' : 'var(--mist)' }}>
-              {item.value ?? '—'}
-            </div>
-          </div>
-        ))}
       </div>
 
       {/* Progression editor */}
