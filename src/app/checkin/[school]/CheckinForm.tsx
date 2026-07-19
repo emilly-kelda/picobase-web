@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState, useEffect } from 'react'
+import { useRef, useState, useEffect, useMemo } from 'react'
 
 const LANGS = {
   en: {
@@ -193,6 +193,7 @@ type Activity = {
 type Instructor = {
   id: string
   name: string
+  sports: string[] | null
 }
 
 type Partner = {
@@ -282,6 +283,20 @@ function activityIcon(name: string) {
   if (n.includes('sup') || n.includes('stand')) return '🛶'
   if (n.includes('surf'))            return '🏄'
   return '🌊'
+}
+
+// Same canonical modality list + prefix-match convention as
+// scheduledLessonRepository.ts's detectModality and ScheduledLessons.tsx's
+// activityMatchesSport (duplicated locally rather than shared, matching how
+// those two already duplicate it rather than importing a common helper —
+// this file has no access to server-only repository code anyway). Prefix
+// match, not substring: "Surf" is a substring of both "Kitesurf" and
+// "Windsurf" but a prefix of neither.
+const MODALITY_KEYWORDS = ['kitesurf', 'wingfoil', 'kitefoil', 'surf', 'windsurf'] as const
+
+function detectModality(activityName: string | null | undefined): string | null {
+  const normalized = (activityName ?? '').toLowerCase().replace(/[^a-z]/g, '')
+  return MODALITY_KEYWORDS.find(m => normalized.startsWith(m)) ?? null
 }
 
 function PartnerButton({
@@ -566,6 +581,32 @@ export default function CheckinForm({
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const drawing   = useRef(false)
   const t = LANGS[lang]
+
+  // Narrows the instructor list to whoever teaches the selected modality —
+  // falls back to the full list when nobody has a matching sports tag (or
+  // the activity's modality can't be detected), same fallback the owner
+  // dashboard's reschedule suggester already uses for this exact reason: a
+  // school that hasn't filled in instructor specialties yet shouldn't lose
+  // instructor selection entirely.
+  const selectedActivityName = activities.find(a => a.id === form.activity_id)?.name
+  const selectedModality = detectModality(selectedActivityName)
+  const filteredInstructors = useMemo(() => {
+    if (!selectedModality) return instructors
+    const compatible = instructors.filter(i => (i.sports ?? []).includes(selectedModality))
+    return compatible.length > 0 ? compatible : instructors
+  }, [instructors, selectedModality])
+
+  // If the modality changes and the previously picked instructor doesn't
+  // teach it, drop back to "Sem preferência" instead of silently submitting
+  // a mismatched instructor_id.
+  useEffect(() => {
+    setForm(f => {
+      if (f.instructor_id && !filteredInstructors.some(i => i.id === f.instructor_id)) {
+        return { ...f, instructor_id: '' }
+      }
+      return f
+    })
+  }, [filteredInstructors])
 
   async function checkPackageBalance(name: string) {
     if (name.trim().length < 2) {
@@ -1056,7 +1097,7 @@ export default function CheckinForm({
                   <span style={{ flex: 1 }}>{t.no_preference}</span>
                   {form.instructor_id === '' && <span style={{ color: '#00A896', fontSize: '16px' }}>✓</span>}
                 </button>
-                {instructors.map(i => {
+                {filteredInstructors.map(i => {
                   const active = form.instructor_id === i.id
                   return (
                     <button

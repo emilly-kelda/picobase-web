@@ -27,7 +27,7 @@ export async function getInstructorsForCheckin(schoolId: string) {
   const supabase = createServiceClient()
   const { data } = await supabase
     .from('users')
-    .select('id, name')
+    .select('id, name, sports')
     .eq('school_id', schoolId)
     .in('role', ['instructor', 'owner'])
     .eq('active', true)
