@@ -26,6 +26,7 @@ export default function ReceptionModeToggle() {
   const { isReceptionMode, toggle } = useReceptionMode()
   return (
     <button
+      type="button"
       onClick={toggle}
       title={isReceptionMode ? 'Modo Recepção ativo — clique para mostrar os valores' : 'Ocultar valores (Modo Recepção)'}
       style={{
@@ -36,7 +37,10 @@ export default function ReceptionModeToggle() {
         background: isReceptionMode ? 'var(--slate)' : '#fff',
         color: isReceptionMode ? '#fff' : 'var(--mist)',
         cursor: 'pointer', fontFamily: 'var(--font-sans)',
+        transition: 'background-color 0.15s, border-color 0.15s',
       }}
+      onMouseEnter={e => { if (!isReceptionMode) e.currentTarget.style.background = 'var(--powder)' }}
+      onMouseLeave={e => { if (!isReceptionMode) e.currentTarget.style.background = '#fff' }}
     >
       {isReceptionMode ? <EyeOffIcon /> : <EyeIcon />}
     </button>

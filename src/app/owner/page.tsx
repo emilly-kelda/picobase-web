@@ -111,23 +111,29 @@ export default async function OwnerPage() {
 
       <ReceptionModeProvider>
 
-      {/* Page title */}
+      {/* Page title — the Reception Mode toggle sits inline right next to
+          "Base Camp", not pushed to the row's far-right edge. That corner
+          also holds AlertsDrawer's bell trigger (position: fixed, top:
+          20px, right: 24px, independent of this row's layout), and a
+          right-aligned toggle here lands squarely inside the bell's
+          44x44px hit zone whenever there's at least one active alert. */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
         <div>
-          <h1 style={{
-            fontSize: '22px', fontWeight: '600',
-            color: 'var(--slate)', letterSpacing: '-0.02em',
-            marginBottom: '4px',
-          }}>
-            Base Camp
-          </h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
+            <h1 style={{
+              fontSize: '22px', fontWeight: '600',
+              color: 'var(--slate)', letterSpacing: '-0.02em',
+            }}>
+              Base Camp
+            </h1>
+            <ReceptionModeToggle />
+          </div>
           <div style={{ fontSize: '12px', color: 'var(--mist)', lineHeight: '1.5' }}>
             {runway.school_name
               ? `${runway.school_name}${runway.current_season ? ' · ' + runway.current_season : ''}`
               : (runway.current_season ?? t.basecamp_season)}
           </div>
         </div>
-        <ReceptionModeToggle />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
