@@ -3,27 +3,33 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import RescheduleModal from '@/components/RescheduleModal'
 
 type MissedLesson = {
   id: string
   student_name: string
+  student_whatsapp?: string | null
   scheduled_at: string
   duration_min: number | null
-  activities: { name: string } | null
+  activities: { id: string; name: string } | null
   instructor: { name: string } | null
 }
 
 export default function MissedLessons({
   lessons,
+  instructors = [],
+  schoolName = 'Pico Base',
 }: {
   lessons: MissedLesson[]
+  instructors?: Array<{ id: string; name: string }>
+  schoolName?: string
 }) {
   const router = useRouter()
   const [dismissed, setDismissed] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState<string | null>(null)
+  const [rescheduling, setRescheduling] = useState<MissedLesson | null>(null)
 
   const visible = lessons.filter(l => !dismissed.has(l.id))
-  if (visible.length === 0) return null
 
   async function dismiss(id: string) {
     setLoading(id)
@@ -32,6 +38,14 @@ export default function MissedLessons({
     setLoading(null)
     router.refresh()
   }
+
+  function onRescheduleDone() {
+    if (rescheduling) setDismissed(prev => new Set([...prev, rescheduling.id]))
+    setRescheduling(null)
+    router.refresh()
+  }
+
+  if (visible.length === 0) return null
 
   return (
     <div style={{ marginBottom: '28px' }}>
@@ -131,6 +145,25 @@ export default function MissedLessons({
                 </span>
 
                 <button
+                  onClick={() => setRescheduling(lesson)}
+                  style={{
+                    padding: '5px 12px',
+                    background: 'var(--glacial-light)',
+                    color: 'var(--glacial-dark)',
+                    border: 'none',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: '11px', fontWeight: '500',
+                    cursor: 'pointer',
+                    fontFamily: 'var(--font-sans)',
+                    transition: 'background-color 0.15s',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'var(--glacial)' }}
+                  onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'var(--glacial-light)' }}
+                >
+                  Reagendar
+                </button>
+
+                <button
                   onClick={() => dismiss(lesson.id)}
                   disabled={loading === lesson.id}
                   style={{
@@ -152,6 +185,16 @@ export default function MissedLessons({
           )
         })}
       </div>
+
+      {rescheduling && (
+        <RescheduleModal
+          lesson={rescheduling}
+          instructors={instructors}
+          schoolName={schoolName}
+          onClose={() => setRescheduling(null)}
+          onDone={onRescheduleDone}
+        />
+      )}
     </div>
   )
 }

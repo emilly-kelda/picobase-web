@@ -301,7 +301,11 @@ export default async function OwnerPage() {
         ════════════════════════════════════════════════════════════ */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '28px', minWidth: 0 }}>
 
-          <MissedLessons lessons={missedLessons as any} />
+          <MissedLessons
+            lessons={missedLessons as any}
+            instructors={instructorList}
+            schoolName={runway.school_name ?? 'Pico Base'}
+          />
           <PendingLessons
             checkins={pending as any}
             instructors={instructorList}
