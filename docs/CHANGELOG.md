@@ -281,3 +281,9 @@ their commit message and diff.
   (API already validated it) to `SeasonsModal.tsx`, and gave the Aulas
   KPI the same "Início do período" empty-state text the Receita KPI
   next to it already had.
+- `a91a371` **feat**: package-balance badge on each Aulas Agendadas row
+  — "Xh restante(s)" (blue) with a positive balance, "Sem créditos"
+  (amber) when exhausted, "Aula Avulsa" (amber) with no active package
+  at all. Reused `activePackages`, already fetched and passed into
+  `ScheduledLessons` for the `+Agendar` modal's autocomplete — no new
+  query needed, just surfaced on the list rows too.
