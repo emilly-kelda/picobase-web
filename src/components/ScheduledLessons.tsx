@@ -844,6 +844,14 @@ export default function ScheduledLessons({
                       <span style={{ fontSize: '14px', fontWeight: '500', color: 'var(--slate)' }}>—</span>
                     )}
                     {(() => {
+                      // Only meaningful before confirmation — it's a heads-up
+                      // for reception ("this one has no credit, charge it
+                      // avulsa") ahead of the decision. A lesson that's
+                      // already status: 'confirmed' has already been paid
+                      // for one way or another (session row + payment_method
+                      // exist by then), so re-showing "Sem créditos" on it
+                      // reads as an open billing problem that isn't real.
+                      if (lesson.status === 'confirmed') return null
                       const badge = getPackageBadge(lesson.student_name, activePackages)
                       if (!badge) return null
                       return (
