@@ -330,3 +330,16 @@ their commit message and diff.
   same closed `payments` row the table renders from, so the on-screen
   total, the PDF, and the WhatsApp message can never disagree. Old
   route left untouched (still used by `close-month/page.tsx`).
+- `479a01d` **feat**: 30s background auto-refresh on Base Camp,
+  `/owner/sessions`, and Payments via a new shared `AutoRefresh`
+  component (`router.refresh()` inside a `startTransition`, one
+  instance per page). Found a real gap while implementing it: this app
+  has no SWR/React Query, and `PendingLessons`/`PaymentsClient` copy
+  their data prop into local `useState` once at mount with no sync
+  effect — without fixing that, the timer would've refetched
+  server-side but the screen would never visibly update. Added the
+  missing sync effects to both; confirmed `ScheduledLessons`,
+  `MissedLessons`, and `RunwaySummary` already read their props
+  directly and needed no change. Open modals in both fixed components
+  hold their own state, never derived from the refreshed list, so a
+  background sync can't close them or reset in-progress fields.
