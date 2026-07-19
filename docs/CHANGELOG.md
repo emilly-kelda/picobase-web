@@ -220,3 +220,15 @@ their commit message and diff.
   labeled pills ("Confirmar Aula" / "Check-in") instead of bare 32x32
   icon squares — the links themselves were already correct (verified
   again), they were just easy to miss as icon-only decoration.
+- `9290455` **fix**: check-in link on Aulas Agendadas was permanently
+  disabled — `schoolSlug` was read from `runway.slug`, but the backing
+  `get_runway_by_season` RPC has no slug column at all (confirmed by
+  querying it directly). Switched to `school?.slug`, from the
+  already-fetched `getSchool()` call (same source `QRCodeDisplay` uses).
+- `286a021` **feat**: student profile edit mode — confirmed (again)
+  there's no intermediate preview drawer anywhere in the app before
+  building anything. Added an "Editar ficha" toggle to
+  `/owner/students/[id]` for name/email/whatsapp/nationality/health
+  status, via a new PATCH `/api/owner/students` route. Scoped to
+  columns that actually exist on `students` — no languages/sports
+  fields, since those are instructor-only (`users.sports/languages`).
