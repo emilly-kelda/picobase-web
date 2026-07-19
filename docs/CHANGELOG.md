@@ -302,3 +302,13 @@ their commit message and diff.
   bilingual-portal pages (confirmed via `season_commissions`), so the
   new labels went into both `i18n.ts` blocks rather than hardcoded
   Portuguese.
+- `1d156f8` **fix**: found the real cause of "Tentar novamente" looking
+  broken — `api/fx/route.ts` had no dynamic function calls, so Next.js
+  could cache its response (including a cached failure) and keep
+  serving it regardless of client retries. Fixed with
+  `dynamic = 'force-dynamic'` + `Cache-Control: no-store`. Also added a
+  hardcoded last-resort fallback rate (`src/lib/fx.ts`, degrades live ->
+  stale cache -> fallback) for when AwesomeAPI is down with no cache
+  yet, surfaced honestly in the confirm modal ("taxa padrão da escola")
+  rather than presented as live — one change, shared by both the
+  preview and the actual persisted commission.
