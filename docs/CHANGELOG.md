@@ -194,3 +194,8 @@ their commit message and diff.
   an invalid or wrong contact (the icons themselves were already
   correctly wired, verified end-to-end — no dead click, no z-index/
   pointer-events issue).
+- `6f6db51` **fix**: Modo Recepção toggle was right-aligned in the Base
+  Camp title row, landing inside AlertsDrawer's fixed bell trigger's
+  44x44px hit zone (top:20px/right:24px, independent of page layout)
+  whenever there was at least one active alert. Moved inline next to the
+  "Base Camp" text itself, clear of that corner.
