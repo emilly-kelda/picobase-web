@@ -199,3 +199,9 @@ their commit message and diff.
   44x44px hit zone (top:20px/right:24px, independent of page layout)
   whenever there was at least one active alert. Moved inline next to the
   "Base Camp" text itself, clear of that corner.
+- `0247b74` **feat**: "Ocupação da Equipe" metric in Base Camp's Hoje
+  card (hours scheduled today ÷ instructor capacity, group lessons
+  deduped by `group_id` so they don't triple-count) plus quick sport-
+  filter badges (Todos/Kitesurf/Wingfoil/Kitefoil/Surf/Windsurf) above
+  Aulas Agendadas, matched by a prefix check (not substring) so
+  "Surf" doesn't false-match "Kitesurf"/"Windsurf".
