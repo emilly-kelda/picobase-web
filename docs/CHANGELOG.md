@@ -264,3 +264,10 @@ their commit message and diff.
   extracted from CrewClient's inline pattern). TODO comments mark the
   real trigger points in `api/owner/confirm-lesson` (package balance
   update, session insert) and `api/owner/schedule`'s DELETE handler.
+- `ca3816d` **fix**: `+Agendar`'s student autocomplete
+  (`api/owner/students-with-packages`) only ever queried `package_sales`,
+  so any student with no package — a booking-only contact, a partner
+  agency — never appeared in the suggestion dropdown, even though
+  scheduling with no `package_sale_id` already worked fine underneath.
+  Now merges in every student with no matching sale, shown with a
+  neutral "Sem pacote" badge instead of the minutes-remaining pill.
