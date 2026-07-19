@@ -819,29 +819,23 @@ export default function ScheduledLessons({
                     title={lesson.student_whatsapp ? 'Enviar lembrete no WhatsApp' : 'Aluno sem WhatsApp cadastrado'}
                     aria-disabled={!lesson.student_whatsapp}
                     style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      width: '32px', height: '32px', flexShrink: 0,
+                      display: 'flex', alignItems: 'center', gap: '5px', flexShrink: 0,
+                      padding: '5px 10px',
                       borderRadius: 'var(--radius-md)',
-                      color: 'var(--mist)',
+                      background: 'rgba(37,211,102,0.1)',
+                      color: '#128C4A',
+                      fontSize: '11px', fontWeight: '500', fontFamily: 'var(--font-sans)',
                       opacity: lesson.student_whatsapp ? 1 : 0.35,
                       pointerEvents: lesson.student_whatsapp ? 'auto' : 'none',
                       cursor: lesson.student_whatsapp ? 'pointer' : 'not-allowed',
-                      textDecoration: 'none',
-                      transform: 'scale(1)',
-                      transition: 'color 0.15s, transform 0.15s, background-color 0.15s',
+                      textDecoration: 'none', whiteSpace: 'nowrap',
+                      transition: 'background-color 0.15s',
                     }}
-                    onMouseEnter={e => {
-                      e.currentTarget.style.color = '#25D366'
-                      e.currentTarget.style.transform = 'scale(1.1)'
-                      e.currentTarget.style.backgroundColor = 'var(--powder)'
-                    }}
-                    onMouseLeave={e => {
-                      e.currentTarget.style.color = 'var(--mist)'
-                      e.currentTarget.style.transform = 'scale(1)'
-                      e.currentTarget.style.backgroundColor = 'transparent'
-                    }}
+                    onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'rgba(37,211,102,0.18)' }}
+                    onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'rgba(37,211,102,0.1)' }}
                   >
                     <WhatsAppIcon />
+                    Confirmar Aula
                   </a>
                   <a
                     href={schoolSlug ? `/checkin/${schoolSlug}?student=${encodeURIComponent(lesson.student_name ?? '')}` : undefined}
@@ -850,29 +844,23 @@ export default function ScheduledLessons({
                     title="Abrir check-in público"
                     aria-disabled={!schoolSlug}
                     style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      width: '32px', height: '32px', flexShrink: 0,
+                      display: 'flex', alignItems: 'center', gap: '5px', flexShrink: 0,
+                      padding: '5px 10px',
                       borderRadius: 'var(--radius-md)',
-                      color: 'var(--mist)',
+                      background: 'var(--powder)',
+                      color: 'var(--slate)',
+                      fontSize: '11px', fontWeight: '500', fontFamily: 'var(--font-sans)',
                       opacity: schoolSlug ? 1 : 0.35,
                       pointerEvents: schoolSlug ? 'auto' : 'none',
                       cursor: schoolSlug ? 'pointer' : 'not-allowed',
-                      textDecoration: 'none',
-                      transform: 'scale(1)',
-                      transition: 'color 0.15s, transform 0.15s, background-color 0.15s',
+                      textDecoration: 'none', whiteSpace: 'nowrap',
+                      transition: 'background-color 0.15s',
                     }}
-                    onMouseEnter={e => {
-                      e.currentTarget.style.color = 'var(--glacial-dark)'
-                      e.currentTarget.style.transform = 'scale(1.1)'
-                      e.currentTarget.style.backgroundColor = 'var(--powder)'
-                    }}
-                    onMouseLeave={e => {
-                      e.currentTarget.style.color = 'var(--mist)'
-                      e.currentTarget.style.transform = 'scale(1)'
-                      e.currentTarget.style.backgroundColor = 'transparent'
-                    }}
+                    onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'var(--border)' }}
+                    onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'var(--powder)' }}
                   >
                     <CheckinIcon />
+                    Check-in
                   </a>
                 </div>
                 <button
