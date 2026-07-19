@@ -295,3 +295,10 @@ their commit message and diff.
   to add "Estrutura de Comissão"/"Compliance" tabs — re-confirmed zero
   matches for either concept anywhere in the app, same conclusion as
   the earlier payments redesign this session.
+- `230a2bd` **feat**: Ticket Médio card (filtered revenue ÷ filtered
+  session count) and Todos/Direto/Parceiros origin quick filters on
+  `/owner/sessions` — plain GET links, consistent with this page's
+  existing server-rendered filtering. This is one of the five
+  bilingual-portal pages (confirmed via `season_commissions`), so the
+  new labels went into both `i18n.ts` blocks rather than hardcoded
+  Portuguese.
