@@ -96,7 +96,7 @@ export default async function OwnerPage() {
         .tbl-link:hover { border-bottom-color: var(--glacial); }
         .dash-grid-2col {
           display: grid;
-          grid-template-columns: 1fr 1fr;
+          grid-template-columns: 1.6fr 1fr;
           gap: 28px;
           align-items: start;
         }
@@ -135,17 +135,62 @@ export default async function OwnerPage() {
         <AutoRefresh />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
-        <WeatherWidget weather={weather} />
-        <QuickSaleCard packageTypes={packageTypes as any} />
-      </div>
-
       <div className="dash-grid-2col">
 
         {/* ════════════════════════════════════════════════════════════
-            COLUMN 1 — KPIs + today's/tomorrow's agenda
+            COLUMN 1 (left, wider) — operational: what reception acts on.
+            Venda Rápida + Sala de Espera stacked at the top, right above
+            Aulas Agendadas — this is the column someone working the
+            counter actually looks at all day, so it gets the extra width.
         ════════════════════════════════════════════════════════════ */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '28px', minWidth: 0 }}>
+
+          <QuickSaleCard packageTypes={packageTypes as any} />
+
+          <PendingLessons
+            checkins={pending as any}
+            instructors={instructorList}
+            activities={activities}
+            packageBalances={packageBalances}
+            payoutModel={(school as any)?.payout_model ?? 'percentage'}
+            fixedPayoutValue={(school as any)?.fixed_payout_value ?? null}
+            packageTypes={packageTypes as any}
+            schoolSlug={(school as any)?.slug ?? runway.slug ?? ''}
+            schoolName={runway.school_name ?? 'Pico Base'}
+          />
+
+          <MissedLessons
+            lessons={missedLessons as any}
+            instructors={instructorList}
+            schoolName={runway.school_name ?? 'Pico Base'}
+          />
+
+          <ScheduledLessons
+            todayLessons={todayLessons as any}
+            tomorrowLessons={tomorrowLessons as any}
+            activities={activities}
+            instructors={instructorList}
+            activePackages={(activePackages as any).filter((p: any) => p.status === 'active')}
+            schoolName={runway.school_name ?? 'Pico Base'}
+            schoolSlug={(school as any)?.slug ?? runway.slug ?? ''}
+            payoutModel={(school as any)?.payout_model ?? 'percentage'}
+            fixedPayoutValue={(school as any)?.fixed_payout_value ?? null}
+          />
+
+        </div>
+
+        {/* ════════════════════════════════════════════════════════════
+            COLUMN 2 (right, narrower) — context, not action: weather and
+            today's KPIs are useful at a glance but nobody clicks anything
+            here. Sized down to fit the narrower sidebar (see WeatherWidget's
+            own compacted padding/gap — this is its only call site).
+            The Reserva de Baixa Temporada card used to sit in this area
+            too — moved to /owner/costs (next to the interactive Simulador
+            de Cenários, same real numbers).
+        ════════════════════════════════════════════════════════════ */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', minWidth: 0 }}>
+
+          <WeatherWidget weather={weather} />
 
           {/* Today stats */}
           <div style={{
@@ -153,21 +198,21 @@ export default async function OwnerPage() {
             border: '0.5px solid var(--border)',
             borderRadius: 'var(--radius-xl)',
             boxShadow: 'var(--shadow-sm)',
-            padding: '20px',
+            padding: '16px',
           }}>
             <div style={{
               fontSize: '10px', fontWeight: '600',
               letterSpacing: '0.14em', textTransform: 'uppercase',
-              color: 'var(--mist)', marginBottom: '16px',
+              color: 'var(--mist)', marginBottom: '14px',
             }}>
               {t.today_label}
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
               <div>
                 <div style={{ fontSize: '11px', color: 'var(--mist)', marginBottom: '4px', fontWeight: '500' }}>
                   Alunos
                 </div>
-                <div style={{ fontSize: '18px', fontWeight: '600', color: 'var(--slate)', fontVariantNumeric: 'tabular-nums' }}>
+                <div style={{ fontSize: '17px', fontWeight: '600', color: 'var(--slate)', fontVariantNumeric: 'tabular-nums' }}>
                   {today.students}
                 </div>
               </div>
@@ -175,7 +220,7 @@ export default async function OwnerPage() {
                 <div style={{ fontSize: '11px', color: 'var(--mist)', marginBottom: '4px', fontWeight: '500' }}>
                   Aulas
                 </div>
-                <div style={{ fontSize: '18px', fontWeight: '600', color: 'var(--slate)', fontVariantNumeric: 'tabular-nums' }}>
+                <div style={{ fontSize: '17px', fontWeight: '600', color: 'var(--slate)', fontVariantNumeric: 'tabular-nums' }}>
                   {today.sessions}
                   {monthComparison.lessonDelta !== null && monthComparison.thisMonthLessons > 0 && (
                     <span style={{
@@ -197,7 +242,7 @@ export default async function OwnerPage() {
                 <div style={{ fontSize: '11px', color: 'var(--mist)', marginBottom: '4px', fontWeight: '500' }}>
                   Receita
                 </div>
-                <div style={{ fontSize: '18px', fontWeight: '600', color: 'var(--slate)', fontVariantNumeric: 'tabular-nums' }}>
+                <div style={{ fontSize: '17px', fontWeight: '600', color: 'var(--slate)', fontVariantNumeric: 'tabular-nums' }}>
                   <MaskableValue>{fmt(today.revenue ?? 0)}</MaskableValue>
                 </div>
                 {monthComparison.thisMonthRevenue === 0 ? (
@@ -207,7 +252,7 @@ export default async function OwnerPage() {
                 ) : monthComparison.revenueDelta !== null ? (
                   <div style={{
                     display: 'flex', alignItems: 'center', gap: '6px',
-                    fontSize: '12px', marginTop: '4px',
+                    fontSize: '12px', marginTop: '4px', flexWrap: 'wrap',
                   }}>
                     <span style={{
                       color: monthComparison.revenueDelta >= 0 ? '#007868' : '#DC2626',
@@ -229,13 +274,13 @@ export default async function OwnerPage() {
                 <div style={{ fontSize: '11px', color: 'var(--mist)', marginBottom: '4px', fontWeight: '500' }}>
                   Comissões
                 </div>
-                <div style={{ fontSize: '18px', fontWeight: '600', color: 'var(--slate)', fontVariantNumeric: 'tabular-nums' }}>
+                <div style={{ fontSize: '17px', fontWeight: '600', color: 'var(--slate)', fontVariantNumeric: 'tabular-nums' }}>
                   <MaskableValue>{fmt(today.commissions ?? 0)}</MaskableValue>
                 </div>
               </div>
             </div>
 
-            <div style={{ height: '1px', background: 'var(--border)', margin: '16px 0 12px' }} />
+            <div style={{ height: '1px', background: 'var(--border)', margin: '14px 0 10px' }} />
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '8px' }}>
               <span style={{ fontSize: '11px', color: 'var(--mist)', fontWeight: '500' }}>
@@ -255,47 +300,6 @@ export default async function OwnerPage() {
               }} />
             </div>
           </div>
-
-          {/* Agenda */}
-          <ScheduledLessons
-            todayLessons={todayLessons as any}
-            tomorrowLessons={tomorrowLessons as any}
-            activities={activities}
-            instructors={instructorList}
-            activePackages={(activePackages as any).filter((p: any) => p.status === 'active')}
-            schoolName={runway.school_name ?? 'Pico Base'}
-            schoolSlug={(school as any)?.slug ?? runway.slug ?? ''}
-            payoutModel={(school as any)?.payout_model ?? 'percentage'}
-            fixedPayoutValue={(school as any)?.fixed_payout_value ?? null}
-          />
-
-        </div>
-
-        {/* ════════════════════════════════════════════════════════════
-            COLUMN 2 — pending items
-            The Reserva de Baixa Temporada card used to sit here too — moved
-            to /owner/costs (next to the interactive Simulador de Cenários,
-            same real numbers) so Sala de Espera and Aulas Agendadas get the
-            full column height for a receptionist working the counter.
-        ════════════════════════════════════════════════════════════ */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '28px', minWidth: 0 }}>
-
-          <MissedLessons
-            lessons={missedLessons as any}
-            instructors={instructorList}
-            schoolName={runway.school_name ?? 'Pico Base'}
-          />
-          <PendingLessons
-            checkins={pending as any}
-            instructors={instructorList}
-            activities={activities}
-            packageBalances={packageBalances}
-            payoutModel={(school as any)?.payout_model ?? 'percentage'}
-            fixedPayoutValue={(school as any)?.fixed_payout_value ?? null}
-            packageTypes={packageTypes as any}
-            schoolSlug={(school as any)?.slug ?? runway.slug ?? ''}
-            schoolName={runway.school_name ?? 'Pico Base'}
-          />
 
         </div>
 
