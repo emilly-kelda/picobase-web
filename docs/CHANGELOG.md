@@ -781,3 +781,11 @@ their commit message and diff.
   `id=student_id` also wasn't reliable to begin with: `checkins` has no
   FK to `students` (the same name-as-key limitation documented elsewhere
   in this codebase), so there's no guaranteed `student_id` to put there.
+- `312ad82` **fix**: explicit product decision, reverting part of
+  `359bbbe` above — a Venda Rápida sale to a student with zero prior
+  checkins no longer skips creating today's check-in. It's now created
+  with `lgpd_consent`/`gdpr_consent` forced `true` and `waiver_signed_at`
+  set to now, since the sale and registration happen in person at the
+  counter. (`termo_responsabilidade`, named in the instruction, doesn't
+  exist as a column — `waiver_signed_at` is the real field that records
+  waiver acceptance.)
