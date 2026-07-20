@@ -805,3 +805,27 @@ their commit message and diff.
   button; "+ Agendar Próxima Aula" (retention nudge) moved to a secondary
   outline style on the same row, since it only makes sense once the
   current lesson is actually confirmed.
+- `61880a3` **feat**: every row in `/owner/students` (registered and
+  "só via check-in" alike) gained "[ Agendar ]" and "[ Cobrar/Vender ]"
+  quick actions, reusing `ScheduleFromCheckinModal`/`SellPackageFlowModal`
+  rather than new UI — `ScheduleFromCheckinModal` gained an optional
+  `checkinId`, posting straight to `/api/owner/schedule` with
+  `student_name` when absent (the Students-page case) instead of going
+  through `/api/owner/schedule-from-checkin`'s checkin-linking step. The
+  "auto check-in on package sale" half of this request needed no new
+  code: "[ Cobrar/Vender ]" hits the same `/api/owner/sell-package` that
+  already auto-checks-in as of `312ad82` above, so selling from a
+  student's row already gets it for free. Deliberately did *not* wire
+  auto-check-in into plain "add a new student" (`AddStudentModal`, no
+  package involved) — registering someone's profile from the desk
+  shouldn't make them appear in today's Sala de Espera when they're not
+  actually there. Also added `'aluguel'`, `'supervis'`, `'downwind'` to
+  Aulas Agendadas' `SPORT_FILTERS` (the filter bar already maps that
+  array dynamically, so this was the whole change) — `'supervis'` rather
+  than `'supervisao'`, since the existing normalization strips accented
+  characters outright instead of transliterating them ("ã" in
+  "Supervisão" disappears rather than becoming "a"), so a shorter,
+  accent-free prefix is the only way that's guaranteed to match. Same as
+  the other 5 filters, these only show lessons once a matching
+  `activities` row exists (via `/owner/activities`) — none created here,
+  that's the owner's catalog to manage.
