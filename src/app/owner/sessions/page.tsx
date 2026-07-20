@@ -32,6 +32,20 @@ function fmtPct(n: number) {
   return `${Math.round(n * 100)}%`
 }
 
+// Same canonical modality list + prefix-match convention used elsewhere
+// (scheduledLessonRepository.ts's detectModality, ScheduledLessons.tsx's
+// activityMatchesSport) — normalize then .startsWith(), not a substring
+// check, since "Surf" is a substring of both "Kitesurf" and "Windsurf".
+const MODALITY_KEYWORDS = ['kitesurf', 'wingfoil', 'kitefoil', 'surf', 'windsurf'] as const
+const MODALITY_LABELS: Record<string, string> = {
+  kitesurf: 'Kitesurf', wingfoil: 'Wingfoil', kitefoil: 'Kitefoil',
+  surf: 'Surf', windsurf: 'Windsurf',
+}
+function detectModality(activityName: string | null | undefined): string | null {
+  const normalized = (activityName ?? '').toLowerCase().replace(/[^a-z]/g, '')
+  return MODALITY_KEYWORDS.find(m => normalized.startsWith(m)) ?? null
+}
+
 const PAYMENT_LABELS: Record<string, { label: string; icon: string }> = {
   pix:       { label: 'PIX',       icon: '⚡' },
   dinheiro:  { label: 'Dinheiro',  icon: '💵' },
@@ -110,6 +124,35 @@ export default async function SessionsPage({
   const forecastRevenue = scheduledLessons.reduce(
     (sum, l) => sum + (((l.activities as any)?.default_price as number | null) ?? 0), 0
   )
+
+  // Origin mix — binary Partner vs. everything-else ("Direct"), matching
+  // the same two buckets the quick filters above offer, not the full
+  // direct/partner/online/referral vocabulary ORIGIN_LABELS has.
+  const partnerCount = sessions.filter(s => (s.origin ?? 'direct') === 'partner').length
+  const directCount  = sessions.length - partnerCount
+  const partnerPct   = sessions.length > 0 ? (partnerCount / sessions.length) * 100 : 0
+  const directPct    = 100 - partnerPct
+
+  // Market share by sport — bucketed from the free-text activity name via
+  // the same modality-detection convention used elsewhere in the app,
+  // since sessions/activities carry no dedicated sport column.
+  const sportBuckets = new Map<string, { count: number; revenue: number }>()
+  for (const s of sessions) {
+    const modality = detectModality((s.activities as any)?.name) ?? 'outros'
+    const label = MODALITY_LABELS[modality] ?? 'Outros'
+    const bucket = sportBuckets.get(label) ?? { count: 0, revenue: 0 }
+    bucket.count += 1
+    bucket.revenue += s.price ?? 0
+    sportBuckets.set(label, bucket)
+  }
+  const sportShare = Array.from(sportBuckets.entries())
+    .map(([label, b]) => ({
+      label,
+      count: b.count,
+      revenue: b.revenue,
+      pct: totals.revenue > 0 ? (b.revenue / totals.revenue) * 100 : 0,
+    }))
+    .sort((a, b) => b.revenue - a.revenue)
 
   const monthOptions = Array.from({ length: 12 }, (_, i) => {
     const d = new Date()
@@ -275,7 +318,7 @@ export default async function SessionsPage({
       {/* Totals bar */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(4, 1fr)',
+        gridTemplateColumns: 'repeat(5, 1fr)',
         gap: '12px',
         marginBottom: '20px',
       }}>
@@ -284,6 +327,7 @@ export default async function SessionsPage({
           { label: t.season_revenue,    value: fmt(totals.revenue)     },
           { label: t.season_commissions,value: fmt(totals.commissions) },
           { label: t.avg_ticket,        value: fmt(totals.avgTicket)   },
+          { label: t.avg_duration,      value: `${totals.avgDuration}min` },
         ].map(card => (
           <div key={card.label} style={{
             background: '#fff',
@@ -310,6 +354,91 @@ export default async function SessionsPage({
           </div>
         ))}
       </div>
+
+      {/* Distribution panel — origin mix + sport market share, both derived
+          from the same filtered `sessions` array the totals bar and table
+          already use, so they react to month/instructor/origin exactly like
+          everything else on this page. Realizadas only: distribution by
+          revenue doesn't mean anything for scheduled-but-unconfirmed lessons. */}
+      {activeTab === 'realizadas' && sessions.length > 0 && (
+        <div style={{
+          display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px',
+          marginBottom: '20px',
+        }}>
+          {/* Mix de Origem */}
+          <div style={{
+            background: '#fff', border: '0.5px solid var(--border)',
+            borderRadius: 'var(--radius-lg)', padding: '20px',
+          }}>
+            <div style={{
+              fontSize: '11px', fontWeight: '600', letterSpacing: '0.08em',
+              textTransform: 'uppercase', color: 'var(--mist)', marginBottom: '14px',
+            }}>
+              {t.origin_mix_title}
+            </div>
+            <div style={{
+              display: 'flex', height: '10px', borderRadius: '99px',
+              overflow: 'hidden', marginBottom: '10px',
+            }}>
+              <div style={{ width: `${partnerPct}%`, background: 'var(--glacial)' }} />
+              <div style={{ width: `${directPct}%`, background: 'var(--slate)' }} />
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ width: '8px', height: '8px', borderRadius: '99px', background: 'var(--glacial)', display: 'inline-block' }} />
+                <span style={{ color: 'var(--slate)' }}>{t.origin_partners}</span>
+                <span style={{ color: 'var(--mist)', fontVariantNumeric: 'tabular-nums' }}>
+                  {partnerCount} · {Math.round(partnerPct)}%
+                </span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ width: '8px', height: '8px', borderRadius: '99px', background: 'var(--slate)', display: 'inline-block' }} />
+                <span style={{ color: 'var(--slate)' }}>{t.origin_direct}</span>
+                <span style={{ color: 'var(--mist)', fontVariantNumeric: 'tabular-nums' }}>
+                  {directCount} · {Math.round(directPct)}%
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Market Share por Esporte */}
+          <div style={{
+            background: '#fff', border: '0.5px solid var(--border)',
+            borderRadius: 'var(--radius-lg)', padding: '20px',
+          }}>
+            <div style={{
+              fontSize: '11px', fontWeight: '600', letterSpacing: '0.08em',
+              textTransform: 'uppercase', color: 'var(--mist)', marginBottom: '14px',
+            }}>
+              {t.sport_share_title}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {sportShare.map(row => (
+                <div key={row.label}>
+                  <div style={{
+                    display: 'flex', justifyContent: 'space-between',
+                    fontSize: '12px', marginBottom: '4px',
+                  }}>
+                    <span style={{ color: 'var(--slate)', fontWeight: '500' }}>{row.label}</span>
+                    <span style={{ color: 'var(--mist)', fontVariantNumeric: 'tabular-nums' }}>
+                      {row.count} · {Math.round(row.pct)}%
+                    </span>
+                  </div>
+                  <div style={{
+                    height: '6px', background: 'var(--powder)',
+                    borderRadius: '99px', overflow: 'hidden',
+                  }}>
+                    <div style={{
+                      height: '100%', width: `${row.pct}%`,
+                      background: 'var(--glacial)', borderRadius: '99px',
+                    }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Discreet forecast — scheduled lessons aren't confirmed revenue, so
           this stays visually secondary to the totals bar above rather than

@@ -281,7 +281,9 @@ export async function getSessionTotals(
   // count — so it moves with whatever month/instructor/origin filter is
   // active, same as the other totals cards.
   const avgTicket = sessions.length > 0 ? revenue / sessions.length : 0
-  return { count: sessions.length, revenue, commissions, avgTicket }
+  const totalDuration = sessions.reduce((s, r) => s + (r.duration_min ?? 0), 0)
+  const avgDuration = sessions.length > 0 ? Math.round(totalDuration / sessions.length) : 0
+  return { count: sessions.length, revenue, commissions, avgTicket, avgDuration }
 }
 
 export async function getPendingCheckins(schoolId: string, instructorId: string) {

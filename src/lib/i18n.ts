@@ -98,9 +98,12 @@ export const translations = {
     scheduled_forecast:   'Forecasted revenue (scheduled)',
     status_scheduled:     'Scheduled',
     avg_ticket:           'Average Ticket',
+    avg_duration:         'Average Duration',
     origin_all:           'All',
     origin_direct:        'Direct',
     origin_partners:      'Partners',
+    origin_mix_title:     'Origin Mix',
+    sport_share_title:    'Revenue by Sport',
 
     // Crew
     crew_title:          'Crew',
@@ -271,9 +274,12 @@ export const translations = {
     scheduled_forecast:   'Previsão de receita (agendadas)',
     status_scheduled:     'Agendada',
     avg_ticket:           'Ticket Médio',
+    avg_duration:         'Duração Média',
     origin_all:           'Todos',
     origin_direct:        'Direto',
     origin_partners:      'Parceiros',
+    origin_mix_title:     'Mix de Origem',
+    sport_share_title:    'Faturamento por Esporte',
 
     // Crew
     crew_title:          'Equipe',
