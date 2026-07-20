@@ -943,3 +943,27 @@ their commit message and diff.
   "infinite scroll" complaint (the footer's "Aulas recentes" table was
   already capped at 8). Verified with a clean production build before
   committing, given the recent outage.
+- `c8a6cd1` **feat**: end-to-end i18n for `ScheduledLessons.tsx`,
+  `PendingLessons.tsx`, and `ConfirmLessonModal.tsx` — the root cause of
+  the reported "mixed language" bug: all three had always rendered
+  hardcoded PT-BR regardless of the Settings language toggle, because
+  `lang`/`t` were simply never threaded down into them from
+  `owner/page.tsx` (which already called `getT(lang)` for its own
+  strings). Added ~50 new `en`/`pt` keys to `src/lib/i18n.ts` covering
+  Aulas Agendadas (tabs, sport filters, status/empty-state text),
+  Sala de Espera (Termo Assinado, Sem Créditos, package badges, action
+  buttons), and the entire Confirmar Aula modal (activity/instructor/
+  duration pickers, currency and FX conversion, variable cost,
+  commission preview, PIX/Dinheiro/Cartão/A receber payment methods) —
+  reusing pre-existing keys (`duration_label`, `today_label`,
+  `status_scheduled`, `health_label`) instead of duplicating. New
+  `src/lib/modality.ts` translates free-text activity names from the
+  DB (Kitesurf, Aluguel, Supervisão, Downwind, …) via the same
+  prefix-match convention already duplicated across the codebase
+  (`detectModality`, `activityMatchesSport`) — most modality names are
+  loanwords identical in both languages, only Aluguel/Supervisão
+  actually differ. Deliberately left untouched: `MissedLessons.tsx`,
+  the student "Ficha" detail modal, and `ScheduledLessons.tsx`'s
+  create/edit-lesson modals — none were named in the request and each
+  is a large enough surface to warrant its own pass. Verified with
+  `tsc --noEmit` and a clean production build before committing.
