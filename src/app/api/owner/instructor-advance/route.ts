@@ -23,6 +23,34 @@ export async function POST(request: Request) {
     })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // Advances are real cash out the door, so they should also land in Custos
+  // — same money, different screen. recurrence is 'unico' (one-time), not
+  // 'mensal', on purpose: getMonthlyCostTotal() only excludes 'unico' from
+  // the recurring burn-rate sum, so tagging this 'mensal' would make a
+  // single advance permanently inflate every future month's burn
+  // calculation instead of counting once, in the month it was actually
+  // given. Best-effort — the advance record above (the source of truth for
+  // the payroll deduction) already succeeded, so a failure here shouldn't
+  // fail the whole request.
+  try {
+    const { data: instructor } = await supabase
+      .from('users')
+      .select('name')
+      .eq('id', instructor_id)
+      .single()
+
+    await supabase.from('operational_costs').insert({
+      school_id:   SCHOOL_ID,
+      description: `Adiantamento - ${instructor?.name ?? 'Instrutor'}`,
+      amount,
+      cost_type:   'variavel',
+      recurrence:  'unico',
+      due_date:    new Date().toISOString().slice(0, 10),
+      category:    'Adiantamentos',
+    })
+  } catch {}
+
   return NextResponse.json({ ok: true })
 }
 

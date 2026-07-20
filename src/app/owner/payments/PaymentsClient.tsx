@@ -690,8 +690,19 @@ export default function PaymentsClient({
                               </div>
                             </div>
                           </td>
-                          <td style={{ padding: '14px 20px', textAlign: 'right', fontSize: '13px', color: 'var(--mist)' }}>
-                            {p.sessions_count}
+                          <td style={{ padding: '14px 20px', textAlign: 'right' }}>
+                            <button
+                              onClick={() => fetchBreakdown(user?.id)}
+                              title="Ver aulas deste período"
+                              style={{
+                                background: 'none', border: 'none', padding: '0',
+                                cursor: 'pointer', fontFamily: 'inherit', fontSize: '13px',
+                                color: 'var(--glacial-dark)', fontWeight: '600',
+                                textDecoration: 'underline dotted', textUnderlineOffset: '3px',
+                              }}
+                            >
+                              {p.sessions_count}
+                            </button>
                           </td>
                           <td style={{ padding: '14px 20px', textAlign: 'right', fontSize: '13px', color: 'var(--slate)', fontVariantNumeric: 'tabular-nums' }}>
                             {fmt(p.revenue_generated)}

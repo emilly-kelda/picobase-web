@@ -94,6 +94,22 @@ export default async function OwnerPage() {
     ? Math.round((instructorIdsScheduledToday.size / instructors.length) * 100)
     : null
 
+  // "Alunos na água agora" — each scheduled_lessons row is one student (group
+  // lessons are N rows sharing a group_id, per ScheduledLessons.tsx's own
+  // collapsing logic), so counting rows whose [scheduled_at, scheduled_at +
+  // duration_min) window contains the current instant already gives a
+  // correct headcount without needing to dedupe by group. todayLessons only
+  // ever has status 'scheduled'/'confirmed' (the query excludes 'cancelled',
+  // and scheduled_lessons has no other status value), so no extra filter
+  // is needed there.
+  const now = Date.now()
+  const studentsInWaterNow = (todayLessons as any[]).filter(l => {
+    if (!l.scheduled_at) return false
+    const start = new Date(l.scheduled_at).getTime()
+    const end   = start + (l.duration_min ?? 0) * 60000
+    return now >= start && now < end
+  }).length
+
   const colHeaders = ['Data', 'Aluno', 'Atividade', 'Instrutor', 'Duração', 'Valor']
 
   return (
@@ -199,12 +215,28 @@ export default async function OwnerPage() {
 
           {/* Today stats */}
           <div style={{
+            position: 'relative',
             background: 'var(--surface)',
             border: '0.5px solid var(--border)',
             borderRadius: 'var(--radius-xl)',
             boxShadow: 'var(--shadow-sm)',
             padding: '16px',
           }}>
+            {studentsInWaterNow > 0 && (
+              <div
+                title="Alunos com aula em andamento agora, com base no horário e duração agendados"
+                style={{
+                  position: 'absolute', top: '-8px', right: '12px',
+                  display: 'flex', alignItems: 'center', gap: '5px',
+                  padding: '4px 10px', borderRadius: '99px',
+                  background: '#E8F5E9', border: '0.5px solid #A5D6A7',
+                  color: '#2E7D32', fontSize: '11px', fontWeight: '600',
+                  boxShadow: 'var(--shadow-sm)', whiteSpace: 'nowrap',
+                }}
+              >
+                🌊 {studentsInWaterNow} na água agora
+              </div>
+            )}
             <div style={{
               fontSize: '10px', fontWeight: '600',
               letterSpacing: '0.14em', textTransform: 'uppercase',
