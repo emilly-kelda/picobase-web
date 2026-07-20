@@ -656,3 +656,21 @@ their commit message and diff.
   handler on the red "− adiant." total opening a read-only history modal
   (date/value/motivo) sourced from `instructor_advances` data
   `getPayments()` already loaded — no new query needed.
+- `be348a9` **feat**: Pagamentos' "Sessões" count is now clickable,
+  reusing the existing `fetchBreakdown`/"Recibo" popover instead of
+  building a second one. Base Camp's "HOJE" card gained a floating green
+  "🌊 N na água agora" badge — counts today's `scheduled_lessons` rows
+  whose `[scheduled_at, scheduled_at + duration_min)` window contains the
+  current instant (each row is one student, including group lessons,
+  matching `ScheduledLessons.tsx`'s own grouping convention); refreshes
+  for free via the page's existing 30s `AutoRefresh`, no new client
+  polling. Registering an instructor advance now also inserts a matching
+  `operational_costs` row ("Adiantamento - [Nome]") — `recurrence: 'unico'`
+  rather than `'mensal'` on purpose, since `getMonthlyCostTotal()` only
+  excludes `'unico'` from the recurring burn-rate sum and tagging it
+  `'mensal'` would make a single advance permanently inflate every future
+  month's burn calculation instead of counting once, in the month it was
+  actually given; best-effort insert, doesn't fail the advance itself if
+  it errors. Corrected an instruction premise mismatch along the way:
+  Base Camp's real dashboard is `src/app/owner/page.tsx`, there's no
+  `/owner/dashboard/page.tsx` in this codebase.
