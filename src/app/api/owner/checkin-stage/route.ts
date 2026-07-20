@@ -19,19 +19,38 @@ const VALID_STAGES: Stage[] = ['sala_de_espera', 'na_agua', 'concluido']
  *  SellPackageFlowModal (no new backend needed — hasCredit is derived from
  *  package balances the caller already refetches), and onFinishAndCharge's
  *  na_agua -> concluido happens inside confirm-lesson/route.ts, alongside
- *  the checkins.status update it was already making. */
+ *  the checkins.status update it was already making.
+ *
+ *  Also carries ChameleonButton's "Check-in" action (checked_in: true) —
+ *  added alongside `stage` here rather than as a separate route, since it's
+ *  the same "PATCH one field on a checkin row" shape. `stage` and
+ *  `checked_in` are independent facts (see 20260806000000_checkin_checked_
+ *  in.sql), so either can be sent alone. */
 export async function PATCH(request: Request) {
   const body = await request.json()
-  const { id, stage } = body
+  const { id, stage, checked_in } = body
 
-  if (!id || typeof stage !== 'string' || !VALID_STAGES.includes(stage as Stage)) {
-    return NextResponse.json({ error: 'id e um stage valido sao obrigatorios' }, { status: 400 })
+  if (!id) {
+    return NextResponse.json({ error: 'id e obrigatorio' }, { status: 400 })
   }
+  if (stage !== undefined && !VALID_STAGES.includes(stage as Stage)) {
+    return NextResponse.json({ error: 'stage invalido' }, { status: 400 })
+  }
+  if (checked_in !== undefined && typeof checked_in !== 'boolean') {
+    return NextResponse.json({ error: 'checked_in deve ser boolean' }, { status: 400 })
+  }
+  if (stage === undefined && checked_in === undefined) {
+    return NextResponse.json({ error: 'stage ou checked_in e obrigatorio' }, { status: 400 })
+  }
+
+  const update: { stage?: Stage; checked_in?: boolean } = {}
+  if (stage !== undefined) update.stage = stage as Stage
+  if (checked_in !== undefined) update.checked_in = checked_in
 
   const supabase = createServiceClient()
   const { error } = await supabase
     .from('checkins')
-    .update({ stage })
+    .update(update)
     .eq('id', id)
     .eq('school_id', SCHOOL_ID)
 

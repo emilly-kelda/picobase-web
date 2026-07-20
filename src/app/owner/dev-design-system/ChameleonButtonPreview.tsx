@@ -12,6 +12,7 @@ const STAGES: Stage[] = ['sala_de_espera', 'na_agua', 'checkout', 'concluido']
  *  combinações possíveis") without needing a real checkin row. */
 export default function ChameleonButtonPreview() {
   const [stage, setStage] = useState<Stage>('sala_de_espera')
+  const [checkedIn, setCheckedIn] = useState(false)
   const [hasCredit, setHasCredit] = useState(true)
 
   return (
@@ -24,6 +25,10 @@ export default function ChameleonButtonPreview() {
         >
           {STAGES.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
+        <label className="flex items-center gap-1.5">
+          <input type="checkbox" checked={checkedIn} onChange={e => setCheckedIn(e.target.checked)} />
+          checkedIn
+        </label>
         {stage === 'sala_de_espera' && (
           <label className="flex items-center gap-1.5">
             <input type="checkbox" checked={hasCredit} onChange={e => setHasCredit(e.target.checked)} />
@@ -34,7 +39,9 @@ export default function ChameleonButtonPreview() {
       <div className="flex max-w-xs items-center gap-2">
         <ChameleonButton
           stage={stage}
+          checkedIn={checkedIn}
           hasCredit={hasCredit}
+          onCheckIn={() => setCheckedIn(true)}
           onSendToWater={() => setStage('na_agua')}
           onFinishAndCharge={() => setStage('checkout')}
           onSellPackage={() => setHasCredit(true)}

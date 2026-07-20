@@ -12,6 +12,7 @@ import ScheduleFromCheckinModal from '@/components/ScheduleFromCheckinModal'
 import type { VariableCostInfo } from '@/lib/commission'
 import { translateModalityName } from '@/lib/modality'
 import Badge from '@/components/ui/Badge'
+import Button from '@/components/ui/Button'
 import ChameleonButton from '@/components/ui/ChameleonButton'
 import OverflowMenu from '@/components/ui/OverflowMenu'
 import type { Stage } from '@/lib/stage'
@@ -53,6 +54,7 @@ type Checkin = {
   source: string | null
   partner_id: string | null
   stage: Stage | null
+  checked_in: boolean
   activities: ActivityRef | null
   instructor: { id: string; name: string } | { id: string; name: string }[] | null
   partner: { id: string; name: string; type: string } | { id: string; name: string; type: string }[] | null
@@ -276,6 +278,20 @@ export default function PendingLessons({
   }
 
   function close() { setSelected(null) }
+
+  // ChameleonButton's onCheckIn — desk confirms this student is physically
+  // present, independent of stage/hasCredit (see checkedIn gate added to
+  // ChameleonButton). Optimistic same as sendToWater below.
+  async function checkIn(checkin: Checkin) {
+    setCheckins(prev => prev.map(c => c.id === checkin.id ? { ...c, checked_in: true } : c))
+    try {
+      await fetch('/api/owner/checkin-stage', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: checkin.id, checked_in: true }),
+      })
+    } catch {}
+  }
 
   // ChameleonButton's onSendToWater (picobase_chameleon_button_dossie.md
   // Fase 3/4): sala_de_espera -> na_agua. Optimistic — the row's button
@@ -573,23 +589,29 @@ export default function PendingLessons({
                   )}
                 </div>
 
-                {/* Button row — picobase_chameleon_button_dossie.md Fase 4:
-                    [ChameleonButton] [⋮ OverflowMenu], replacing the
-                    Check-in/Agendar aula/Vender pacote/Ver ficha row Fase 4
-                    of the design-system dossiê had just built. 'checkout'
-                    is derived, not stored — true only while this exact
-                    checkin's confirm modal (selected) is open. */}
+                {/* Button row — picobase_chameleon_button_dossie.md Fase 4,
+                    corrected per urgent fix: [ChameleonButton] [Agendar
+                    aula] [⋮ OverflowMenu]. "Agendar aula" moved out of the
+                    overflow menu — frequent enough to deserve its own
+                    visible secondary button, leaving the menu for genuinely
+                    secondary actions only. 'checkout' is derived, not
+                    stored — true only while this exact checkin's confirm
+                    modal (selected) is open. */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <ChameleonButton
                     stage={selected?.id === checkin.id ? 'checkout' : (checkin.stage ?? 'sala_de_espera')}
+                    checkedIn={checkin.checked_in}
                     hasCredit={hasCredit}
+                    onCheckIn={() => checkIn(checkin)}
                     onSendToWater={() => sendToWater(checkin)}
                     onFinishAndCharge={() => open(checkin)}
                     onSellPackage={() => setSellModal(checkin)}
                   />
+                  <Button variant="secondary" onClick={() => setScheduleModal(checkin)}>
+                    {t.schedule_lesson_btn}
+                  </Button>
                   <OverflowMenu items={[
                     { label: t.view_ficha_full_btn, onClick: () => setFichaModal(checkin) },
-                    { label: t.schedule_lesson_btn, onClick: () => setScheduleModal(checkin) },
                   ]} />
                 </div>
               </div>
