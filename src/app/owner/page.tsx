@@ -248,8 +248,11 @@ export default async function OwnerPage() {
             }}>
               {t.today_label}
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-              <div>
+            {/* pb-powder metric cells inside this white card, per
+                picobase_design_system_dossie.md Fase 4's "metric cards
+                usam pb-powder de fundo dentro de card branco". */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+              <div style={{ background: 'var(--color-pb-powder)', borderRadius: 'var(--radius-md)', padding: '10px 12px' }}>
                 <div style={{ fontSize: '11px', color: 'var(--mist)', marginBottom: '4px', fontWeight: '500' }}>
                   Alunos
                 </div>
@@ -257,7 +260,7 @@ export default async function OwnerPage() {
                   {today.students}
                 </div>
               </div>
-              <div>
+              <div style={{ background: 'var(--color-pb-powder)', borderRadius: 'var(--radius-md)', padding: '10px 12px' }}>
                 <div style={{ fontSize: '11px', color: 'var(--mist)', marginBottom: '4px', fontWeight: '500' }}>
                   Aulas
                 </div>
@@ -266,7 +269,7 @@ export default async function OwnerPage() {
                   {monthComparison.lessonDelta !== null && monthComparison.thisMonthLessons > 0 && (
                     <span style={{
                       fontSize: '11px',
-                      color: monthComparison.lessonDelta >= 0 ? '#007868' : '#DC2626',
+                      color: monthComparison.lessonDelta >= 0 ? 'var(--color-pb-glacial-dark)' : '#DC2626',
                       marginLeft: '6px',
                     }}>
                       {monthComparison.lessonDelta >= 0 ? '▲' : '▼'}{Math.abs(monthComparison.lessonDelta).toFixed(0)}%
@@ -279,7 +282,7 @@ export default async function OwnerPage() {
                   </div>
                 )}
               </div>
-              <div>
+              <div style={{ background: 'var(--color-pb-powder)', borderRadius: 'var(--radius-md)', padding: '10px 12px' }}>
                 <div style={{ fontSize: '11px', color: 'var(--mist)', marginBottom: '4px', fontWeight: '500' }}>
                   Receita
                 </div>
@@ -296,7 +299,7 @@ export default async function OwnerPage() {
                     fontSize: '12px', marginTop: '4px', flexWrap: 'wrap',
                   }}>
                     <span style={{
-                      color: monthComparison.revenueDelta >= 0 ? '#007868' : '#DC2626',
+                      color: monthComparison.revenueDelta >= 0 ? 'var(--color-pb-glacial-dark)' : '#DC2626',
                       fontWeight: '600',
                     }}>
                       {monthComparison.revenueDelta >= 0 ? '▲' : '▼'} {Math.abs(monthComparison.revenueDelta).toFixed(1)}%
@@ -311,7 +314,7 @@ export default async function OwnerPage() {
                   </div>
                 )}
               </div>
-              <div>
+              <div style={{ background: 'var(--color-pb-powder)', borderRadius: 'var(--radius-md)', padding: '10px 12px' }}>
                 <div style={{ fontSize: '11px', color: 'var(--mist)', marginBottom: '4px', fontWeight: '500' }}>
                   Comissões
                 </div>

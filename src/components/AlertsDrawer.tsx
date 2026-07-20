@@ -2,6 +2,9 @@
 
 import { useState } from 'react'
 import type { Alert } from '@/repositories/alertRepository'
+import Badge from '@/components/ui/Badge'
+
+const ALERT_LABEL: Record<Alert['type'], string> = { error: 'Erro', warning: 'Atenção', info: 'Info' }
 
 function BellIcon({ size = 18 }: { size?: number }) {
   return (
@@ -110,12 +113,9 @@ export default function AlertsDrawer({ alerts }: { alerts: Alert[] }) {
                   borderBottom: i < alerts.length - 1 ? '0.5px solid var(--border)' : 'none',
                 }}
               >
-                <span style={{
-                  display: 'inline-block',
-                  width: '6px', height: '6px', borderRadius: '50%',
-                  background: alert.type === 'error' ? 'var(--error)' : 'var(--warning)',
-                  flexShrink: 0,
-                }} />
+                <Badge variant={alert.type === 'error' ? 'danger' : 'neutral'} className="flex-shrink-0">
+                  {ALERT_LABEL[alert.type]}
+                </Badge>
                 <span style={{ flex: 1, fontSize: '13px', color: 'var(--slate)', lineHeight: '1.5' }}>
                   {alert.message}
                 </span>

@@ -72,6 +72,8 @@ export const translations = {
     view_package_history_title: 'View package history',
     minor_badge:          'Minor',
     medal_tooltip:        '10h+ of lessons completed — may be the final assessment session (IKO/VDWS Autonomy Certificate)',
+    view_ficha_full_btn:  'View file',
+    sell_package_full_btn:'Sell package',
 
     // ConfirmLessonModal.tsx
     scheduled_for_label:  'Scheduled for',
@@ -320,6 +322,8 @@ export const translations = {
     view_package_history_title: 'Ver histórico do pacote',
     minor_badge:          'Menor',
     medal_tooltip:        '10h+ de aula concluídas — pode ser a sessão de avaliação final (Certificado de Autonomia IKO/VDWS)',
+    view_ficha_full_btn:  'Ver ficha',
+    sell_package_full_btn:'Vender pacote',
 
     // ConfirmLessonModal.tsx
     scheduled_for_label:  'Agendada para',

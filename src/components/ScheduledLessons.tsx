@@ -9,6 +9,8 @@ import { whatsappDigitsWithCountryCode } from '@/lib/whatsapp'
 import { Toast, useToast } from '@/components/Toast'
 import ConfirmLessonModal from '@/components/ConfirmLessonModal'
 import { translateModalityName } from '@/lib/modality'
+import Button from '@/components/ui/Button'
+import Badge from '@/components/ui/Badge'
 
 type Lesson = {
   id: string
@@ -1051,25 +1053,17 @@ export default function ScheduledLessons({
                   </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-                  <span style={{
-                    padding: '3px 10px',
-                    borderRadius: 'var(--radius-full)',
-                    fontSize: '11px', fontWeight: '500',
-                    background: lesson.status === 'confirmed'
-                      ? 'var(--glacial-light)'
-                      : lesson.status === 'checked_in'
-                        ? 'var(--amber-light)'
-                        : 'var(--powder)',
-                    color: lesson.status === 'confirmed'
-                      ? 'var(--glacial-dark)'
-                      : lesson.status === 'checked_in'
-                        ? 'var(--amber)'
-                        : 'var(--mist)',
-                  }}>
+                  {/* picobase_design_system_dossie.md Fase 4: status badge
+                      via the shared Badge component. checked_in has no
+                      dedicated variant in the 3-color Fase 2 palette — it's
+                      not the fully-confirmed/paid state ("success"), so it
+                      folds into neutral alongside "scheduled" rather than
+                      overloading success with a different meaning. */}
+                  <Badge variant={lesson.status === 'confirmed' ? 'success' : 'neutral'}>
                     {lesson.status === 'confirmed' ? t.status_confirmed
                       : lesson.status === 'checked_in' ? t.status_checked_in
                       : t.status_scheduled}
-                  </span>
+                  </Badge>
                   {/* Restored as the primary action: reception needs a
                       direct way to confirm/start an individual lesson from
                       this list, not just from Sala de Espera's checkin flow
@@ -1077,51 +1071,27 @@ export default function ScheduledLessons({
                       checkin got deferred_to_schedule) has no checkin card
                       left to confirm it from. Reuses the group-confirm
                       modal/flow for a single lesson (see
-                      openGroupConfirmModal's comment). */}
-                  <button
-                    onClick={() => openRebookModal(lesson)}
-                    style={{
-                      padding: '5px 12px', background: 'transparent', color: '#007868',
-                      border: '0.5px solid #007868', borderRadius: '99px',
-                      fontSize: '11px', fontWeight: '600',
-                      cursor: 'pointer', fontFamily: 'var(--font-sans)', flexShrink: 0,
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
+                      openGroupConfirmModal's comment). Secondary, not
+                      primary: this row's primary is "Confirmar Aula" below
+                      when present (Fase 4's "at most one primary per row"). */}
+                  <Button variant="secondary" onClick={() => openRebookModal(lesson)} className="px-3 py-1.5 text-xs">
                     + Agendar Próxima Aula
-                  </button>
+                  </Button>
                   {/* Primary action, positioned immediately before the
                       WhatsApp button — the only hiding rule is status
                       'confirmed' (shown as the "Confirmada" badge above
                       instead); anything else ('scheduled' or 'checked_in')
                       always renders this. */}
                   {lesson.status !== 'confirmed' && (
-                    <button
-                      onClick={() => setConfirmLessonModal(lesson)}
-                      style={{
-                        padding: '5px 12px', background: '#007868', color: '#fff',
-                        border: 'none', borderRadius: '99px',
-                        fontSize: '11px', fontWeight: '600',
-                        cursor: 'pointer', fontFamily: 'var(--font-sans)', flexShrink: 0,
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
+                    <Button variant="primary" onClick={() => setConfirmLessonModal(lesson)} className="px-3 py-1.5 text-xs">
                       ✓ Confirmar Aula
-                    </button>
+                    </Button>
                   )}
                   <WhatsAppActionButton lesson={lesson} dayLabel={dayLabel} schoolName={schoolName} />
                 </div>
-                <button
-                  onClick={() => openEditModal(lesson)}
-                  style={{
-                    background: 'transparent', border: 'none',
-                    fontSize: '12px', color: 'var(--mist)',
-                    cursor: 'pointer', padding: '4px 8px',
-                    fontFamily: 'var(--font-sans)',
-                  }}
-                >
+                <Button variant="tertiary" onClick={() => openEditModal(lesson)} className="px-2 py-1 text-xs">
                   Editar
-                </button>
+                </Button>
                 {lesson.status === 'scheduled' && (
                   <button
                     onClick={() => cancel(lesson.id)}
@@ -1197,26 +1167,13 @@ export default function ScheduledLessons({
                     </div>
                   </div>
                   {group.every(l => l.status === 'confirmed') ? (
-                    <span style={{
-                      padding: '3px 10px', borderRadius: 'var(--radius-full)',
-                      fontSize: '11px', fontWeight: '500',
-                      background: 'var(--glacial-light)', color: 'var(--glacial-dark)',
-                      flexShrink: 0,
-                    }}>
-                      Confirmada
-                    </span>
+                    <Badge variant="success" className="flex-shrink-0">
+                      {t.status_confirmed}
+                    </Badge>
                   ) : (
-                    <button
-                      onClick={() => openGroupConfirmModal(group)}
-                      style={{
-                        padding: '5px 12px', background: 'var(--signal)', color: '#fff',
-                        border: 'none', borderRadius: '99px',
-                        fontSize: '11px', fontWeight: '600',
-                        cursor: 'pointer', fontFamily: 'var(--font-sans)', flexShrink: 0,
-                      }}
-                    >
+                    <Button variant="primary" onClick={() => openGroupConfirmModal(group)} className="px-3 py-1.5 text-xs flex-shrink-0">
                       Confirmar grupo →
-                    </button>
+                    </Button>
                   )}
                 </div>
               )

@@ -18,6 +18,7 @@ type NavIcon = (props: { size?: number }) => React.ReactElement
 const EXPANDED_WIDTH  = 216
 const COLLAPSED_WIDTH = 68
 const COLLAPSE_STORAGE_KEY = 'pb-sidebar-collapsed'
+const THEME_STORAGE_KEY    = 'pb-sidebar-theme'
 
 type Props = {
   seasons?: Season[]
@@ -53,6 +54,26 @@ export default function OwnerNav({
       return next
     })
   }
+
+  // Dark (pb-storm) is the new default per picobase_design_system_dossie.md
+  // Fase 4 — light is the previous white sidebar, kept as a toggle rather
+  // than removed outright. Same SSR-can't-see-localStorage tradeoff as
+  // `collapsed` above: starts dark, corrects itself post-mount.
+  const [sidebarTheme, setSidebarTheme] = useState<'dark' | 'light'>('dark')
+  useEffect(() => {
+    const saved = localStorage.getItem(THEME_STORAGE_KEY)
+    if (saved === 'light' || saved === 'dark') setSidebarTheme(saved)
+  }, [])
+
+  function toggleTheme() {
+    setSidebarTheme(prev => {
+      const next = prev === 'dark' ? 'light' : 'dark'
+      localStorage.setItem(THEME_STORAGE_KEY, next)
+      return next
+    })
+  }
+
+  const dark = sidebarTheme === 'dark'
 
   const navItems: Array<{ href: string; label: string; icon: NavIcon; badge?: number }> = [
     { href: '/owner',           label: t.nav_basecamp, icon: HomeIcon    },
@@ -100,14 +121,28 @@ export default function OwnerNav({
           padding: 9px ${collapsed ? '0' : '12px'};
           justify-content: ${collapsed ? 'center' : 'flex-start'};
           border-radius: var(--radius-md);
-          color: var(--mist);
+          color: ${dark ? 'rgba(255,255,255,0.6)' : 'var(--mist)'};
           text-decoration: none;
           white-space: nowrap;
           transition: background 0.15s, color 0.15s;
         }
-        .nav-row:hover { color: var(--slate); background: var(--powder); }
-        .nav-row.active { color: var(--slate); font-weight: 500; background: var(--powder); }
+        .nav-row:hover {
+          color: ${dark ? '#fff' : 'var(--slate)'};
+          background: ${dark ? 'rgba(255,255,255,0.06)' : 'var(--powder)'};
+        }
+        .nav-row.active {
+          color: ${dark ? '#fff' : 'var(--slate)'};
+          font-weight: 500;
+          background: ${dark ? 'var(--color-pb-slate)' : 'var(--powder)'};
+        }
         .nav-row svg { flex-shrink: 0; }
+        .nav-active-dot {
+          display: ${dark ? 'inline-block' : 'none'};
+          width: 6px; height: 6px; border-radius: 999px;
+          background: var(--color-pb-glacial);
+          margin-left: auto;
+          flex-shrink: 0;
+        }
         .nav-label {
           font-size: 13px;
           opacity: ${collapsed ? 0 : 1};
@@ -148,15 +183,15 @@ export default function OwnerNav({
       <aside style={{
         width: `${sidebarWidth}px`,
         flexShrink: 0,
-        background: '#fff',
-        borderRight: '1px solid var(--border)',
+        background: dark ? 'var(--color-pb-storm)' : '#fff',
+        borderRight: dark ? 'none' : '1px solid var(--border)',
         position: 'sticky',
         top: 0,
         height: '100vh',
         overflowY: 'auto',
         display: 'flex',
         flexDirection: 'column',
-        transition: 'width 0.2s ease',
+        transition: 'width 0.2s ease, background 0.2s ease',
         zIndex: 50,
       }}>
         {/* Logo + collapse toggle */}
@@ -170,14 +205,14 @@ export default function OwnerNav({
           flexShrink: 0,
         }}>
           <Link href="/owner" style={{ textDecoration: 'none', flexShrink: 0 }}>
-            <Logo size={collapsed ? 14 : 17} variant={collapsed ? 'mark' : 'full'} />
+            <Logo size={collapsed ? 14 : 17} variant={collapsed ? 'mark' : 'full'} theme={dark ? 'dark' : 'light'} />
           </Link>
           <button
             onClick={toggleCollapsed}
             title={collapsed ? 'Expandir menu' : 'Recolher menu'}
             style={{
               width: '26px', height: '26px', borderRadius: 'var(--radius-md)',
-              border: 'none', background: 'transparent', color: 'var(--mist)',
+              border: 'none', background: 'transparent', color: dark ? 'rgba(255,255,255,0.6)' : 'var(--mist)',
               cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
               transform: collapsed ? 'rotate(180deg)' : 'none',
               transition: 'transform 0.2s ease',
@@ -217,20 +252,42 @@ export default function OwnerNav({
                 )}
               </span>
               <span className="nav-label">{item.label}</span>
+              {isActive(item.href) && !collapsed && <span className="nav-active-dot" />}
             </Link>
           ))}
         </nav>
 
-        {/* Season selector + sign-out */}
+        {/* Theme toggle + season selector + sign-out */}
         <div style={{
-          padding: '12px 10px', borderTop: '0.5px solid var(--border)',
+          padding: '12px 10px',
+          borderTop: dark ? '0.5px solid rgba(255,255,255,0.1)' : '0.5px solid var(--border)',
           display: 'flex', flexDirection: 'column', gap: '6px', flexShrink: 0,
         }}>
+          <button
+            onClick={toggleTheme}
+            title={dark ? 'Sidebar clara' : 'Sidebar escura'}
+            style={{
+              fontSize: '11px', fontWeight: '500',
+              color: dark ? 'rgba(255,255,255,0.6)' : 'var(--mist)',
+              background: dark ? 'rgba(255,255,255,0.06)' : 'var(--powder)',
+              border: dark ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--border)',
+              padding: collapsed ? '7px' : '7px 10px',
+              borderRadius: 'var(--radius-md)', cursor: 'pointer', fontFamily: 'var(--font-sans)',
+              display: 'flex', alignItems: 'center',
+              justifyContent: collapsed ? 'center' : 'flex-start', gap: '6px',
+              transition: 'color 0.15s, background 0.15s',
+            }}
+          >
+            <span>{dark ? '🌙' : '☀️'}</span>
+            {!collapsed && <span>{dark ? 'Escura' : 'Clara'}</span>}
+          </button>
+
           {seasons.length > 0 && (
             <div className="season-group">
               <div style={{
-                fontSize: '11px', fontWeight: '500', color: 'var(--mist)',
-                background: 'var(--powder)', border: '1px solid var(--border)',
+                fontSize: '11px', fontWeight: '500', color: dark ? 'rgba(255,255,255,0.6)' : 'var(--mist)',
+                background: dark ? 'rgba(255,255,255,0.06)' : 'var(--powder)',
+                border: dark ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--border)',
                 padding: collapsed ? '7px' : '7px 10px',
                 borderRadius: 'var(--radius-md)', cursor: 'pointer',
                 display: 'flex', alignItems: 'center',
@@ -264,15 +321,21 @@ export default function OwnerNav({
             onClick={signOut}
             title="Sair"
             style={{
-              fontSize: '12px', fontWeight: '500', color: 'var(--mist)',
+              fontSize: '12px', fontWeight: '500', color: dark ? 'rgba(255,255,255,0.6)' : 'var(--mist)',
               background: 'none', border: 'none', cursor: 'pointer',
               padding: collapsed ? '7px' : '7px 10px',
               borderRadius: 'var(--radius-md)', fontFamily: 'var(--font-sans)',
               transition: 'color 0.15s, background 0.15s',
               textAlign: collapsed ? 'center' : 'left',
             }}
-            onMouseEnter={e => { e.currentTarget.style.color = 'var(--slate)'; e.currentTarget.style.background = 'var(--powder)' }}
-            onMouseLeave={e => { e.currentTarget.style.color = 'var(--mist)'; e.currentTarget.style.background = 'transparent' }}
+            onMouseEnter={e => {
+              e.currentTarget.style.color = dark ? '#fff' : 'var(--slate)'
+              e.currentTarget.style.background = dark ? 'rgba(255,255,255,0.06)' : 'var(--powder)'
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.color = dark ? 'rgba(255,255,255,0.6)' : 'var(--mist)'
+              e.currentTarget.style.background = 'transparent'
+            }}
           >
             Sair
           </button>

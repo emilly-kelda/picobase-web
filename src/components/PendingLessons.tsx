@@ -12,6 +12,7 @@ import ScheduleFromCheckinModal from '@/components/ScheduleFromCheckinModal'
 import type { VariableCostInfo } from '@/lib/commission'
 import { translateModalityName } from '@/lib/modality'
 import Button from '@/components/ui/Button'
+import Badge from '@/components/ui/Badge'
 
 type ActivityRef = {
   id: string
@@ -431,267 +432,159 @@ export default function PendingLessons({
             const exhausted  = balance?.hasPackage && balance.minutesRemaining <= 0
             const lastLesson = balance?.hasPackage && balance.minutesRemaining > 0 && balance.minutesRemaining <= 60
 
-            let packageBadge: React.ReactNode = null
-            if (!balance) {
-              // No package ever bought — flagged the same red as "esgotado"
-              // (not the old neutral gray "Sem pacote"), since Sala de
-              // Espera's primary action is now "Agendar Aula" rather than an
-              // immediate charge (see ScheduleFromCheckinModal): reception
-              // needs a loud reminder that a sale still needs to happen for
-              // this student, before or during scheduling, or it's easy to
-              // schedule someone with zero credit and never follow up.
-              packageBadge = (
-                <span style={{
-                  fontSize: '11px', fontWeight: '700',
-                  color: '#fff',
-                  padding: '3px 10px', borderRadius: '99px',
-                  background: '#DC2626',
-                  letterSpacing: '0.01em',
-                }}>
-                  ⚠ {t.no_credits_badge}
-                </span>
-              )
-            } else if (exhausted) {
-              packageBadge = (
-                <span style={{
-                  fontSize: '11px', fontWeight: '700',
-                  color: '#fff',
-                  padding: '3px 10px', borderRadius: '99px',
-                  background: '#DC2626',
-                  letterSpacing: '0.01em',
-                }}>
-                  ⚠ {t.package_exhausted_badge}
-                </span>
-              )
-            } else if (lastLesson) {
-              packageBadge = (
-                <span style={{
-                  fontSize: '11px', fontWeight: '600',
-                  color: '#92400E',
-                  padding: '3px 10px', borderRadius: '99px',
-                  background: '#FEF3C7',
-                }}>
-                  ⚠ {t.package_last_lesson_badge} · {fmtMinutes(balance.minutesRemaining)} {t.package_remaining_singular}
-                </span>
-              )
-            } else {
-              packageBadge = (
-                <span style={{
-                  fontSize: '11px', fontWeight: '500',
-                  color: '#007868',
-                  padding: '3px 10px', borderRadius: '99px',
-                  background: '#E0F8F5',
-                }}>
-                  ✓ {fmtMinutes(balance.minutesRemaining)} {t.package_remaining_badge}
-                </span>
-              )
-            }
+            // Card layout follows picobase_design_system_dossie.md Fase 4's
+            // exact Sala de Espera spec: avatar row (10px to badges) →
+            // badge row (12px to buttons) → button row (8px between
+            // buttons), 16px card padding throughout. The 4-tier package
+            // badge (never-bought vs exhausted vs last-lesson vs healthy)
+            // collapses into the spec's 2 outcomes — success "Termo
+            // assinado" plus either a neutral "Xh restantes" or a danger
+            // "Sem créditos" — losing the never-bought/exhausted distinction
+            // in this compact view specifically (still resolvable via "Ver
+            // ficha"). Health-condition and minor-student flags are kept
+            // (real safety data, not a style choice the dossiê spoke to);
+            // so is the activity name in the subtitle, alongside the
+            // instructor/time-ago the spec calls for literally.
+            //
+            // The old scheduled-lesson "Confirmar →" shortcut has no slot
+            // in the spec's fixed 2-3 button row and is dropped from this
+            // card — Aulas Agendadas already has an equivalent "Confirmar
+            // Aula" primary now (this same session's work). Its inline
+            // confirm-modal state (open(), selected, activityId... below)
+            // is intentionally left in place rather than torn out as a
+            // side effect of a layout change; picobase_chameleon_button_
+            // dossie.md's Fase 2 overflow menu is a natural place to
+            // resurface it later if still wanted.
+            const hasCredit = !!balance?.hasPackage && !exhausted
+            const creditBadgeText = lastLesson
+              ? `${t.package_last_lesson_badge} · ${fmtMinutes(balance!.minutesRemaining)} ${t.package_remaining_singular}`
+              : `${fmtMinutes(balance!.minutesRemaining)} ${t.package_remaining_badge}`
 
-            // Compact row: name+badges on the left (Nome, Termo Assinado,
-            // Créditos Restantes — the three the layout task called out by
-            // name), actions in a single horizontal row on the right,
-            // instead of the old 3-line info block + stacked action
-            // column. Nationality and the "📅 Agendado" tag dropped from
-            // this compact view (still visible in "Ver Ficha") — neither
-            // was on the must-keep list, and the primary button already
-            // signals scheduled-vs-walk-in via its own label.
             return (
               <div
                 key={checkin.id}
                 style={{
                   background: '#fff',
-                  border: checkin.health_condition
-                    ? '0.5px solid var(--signal)'
-                    : exhausted
-                    ? '1.5px solid #DC2626'
-                    : '0.5px solid var(--border)',
+                  border: checkin.health_condition ? '0.5px solid var(--signal)' : '0.5px solid var(--border)',
                   borderRadius: 'var(--radius-md)',
-                  padding: '10px 14px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
+                  padding: '16px',
                 }}
               >
-                <div style={{
-                  width: '28px', height: '28px',
-                  borderRadius: 'var(--radius-full)',
-                  background: checkin.health_condition
-                    ? 'var(--signal-light)'
-                    : 'var(--glacial-light)',
-                  color: checkin.health_condition
-                    ? 'var(--signal-dark)'
-                    : 'var(--glacial-dark)',
-                  display: 'flex', alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '10px', fontWeight: '600',
-                  flexShrink: 0,
-                }}
-                  title={checkin.student_nationality ?? undefined}
-                >
-                  {getInitials(checkin.student_name)}
+                {/* Avatar row */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+                  <div style={{
+                    width: '36px', height: '36px',
+                    borderRadius: 'var(--radius-full)',
+                    background: checkin.health_condition ? 'var(--signal-light)' : 'var(--color-pb-glacial-light)',
+                    color: checkin.health_condition ? 'var(--signal-dark)' : 'var(--color-pb-glacial-dark)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '12px', fontWeight: '500',
+                    flexShrink: 0,
+                  }}
+                    title={checkin.student_nationality ?? undefined}
+                  >
+                    {getInitials(checkin.student_name)}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{
+                      fontSize: '13px', fontWeight: '500',
+                      color: 'var(--slate)',
+                      display: 'flex', alignItems: 'center', gap: '6px',
+                    }}>
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {checkin.student_name}
+                      </span>
+                      {(hoursMap?.get(checkin.student_name) ?? 0) >= 10 * 60 && (
+                        <span title={t.medal_tooltip} style={{ fontSize: '12px' }}>🏅</span>
+                      )}
+                      {checkin.source && (
+                        <span title={checkin.source} style={{ fontSize: '12px' }}>{SOURCE_ICON[checkin.source] ?? ''}</span>
+                      )}
+                      {checkin.is_minor && (
+                        <span style={{
+                          display: 'inline-flex', alignItems: 'center',
+                          padding: '1px 6px', borderRadius: 'var(--radius-full)',
+                          background: '#FEF3C7', color: '#92400E',
+                          fontSize: '10px', fontWeight: '600', flexShrink: 0,
+                        }}>
+                          ⚠ {t.minor_badge}
+                        </span>
+                      )}
+                      {checkin.health_condition && (
+                        <span style={{
+                          fontSize: '9px', fontWeight: '500',
+                          color: 'var(--signal-dark)', background: 'var(--signal-light)',
+                          padding: '1px 6px', borderRadius: 'var(--radius-full)', flexShrink: 0,
+                        }}>
+                          ⚠ {t.health_label}
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ fontSize: '11px', color: 'var(--mist)', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {checkin.activities?.name ? translateModalityName(checkin.activities.name, lang) : t.no_activity_label}
+                      {' · '}
+                      {instructor?.name ?? t.no_instructor_label}
+                      {' · '}
+                      <span title={fmtTime(checkin.checkin_at)}>{fmtRelative(checkin.checkin_at)}</span>
+                    </div>
+                  </div>
                 </div>
 
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{
-                    fontSize: '13px', fontWeight: '500',
-                    color: 'var(--slate)', marginBottom: '3px',
-                    display: 'flex', alignItems: 'center', gap: '6px',
-                  }}>
-                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {checkin.student_name}
-                    </span>
-                    {(hoursMap?.get(checkin.student_name) ?? 0) >= 10 * 60 && (
-                      <span title={t.medal_tooltip} style={{ fontSize: '12px' }}>🏅</span>
-                    )}
-                    {checkin.source && (
-                      <span title={checkin.source} style={{ fontSize: '12px' }}>{SOURCE_ICON[checkin.source] ?? ''}</span>
-                    )}
-                    {checkin.is_minor && (
-                      <span style={{
-                        display: 'inline-flex', alignItems: 'center',
-                        padding: '1px 6px', borderRadius: 'var(--radius-full)',
-                        background: '#FEF3C7', color: '#92400E',
-                        fontSize: '10px', fontWeight: '600', flexShrink: 0,
-                      }}>
-                        ⚠ {t.minor_badge}
-                      </span>
-                    )}
-                    {checkin.health_condition && (
-                      <span style={{
-                        fontSize: '9px', fontWeight: '500',
-                        color: 'var(--signal-dark)', background: 'var(--signal-light)',
-                        padding: '1px 6px', borderRadius: 'var(--radius-full)', flexShrink: 0,
-                      }}>
-                        ⚠ {t.health_label}
-                      </span>
-                    )}
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                    <span style={{
-                      fontSize: '10px', fontWeight: '500',
-                      color: '#007868', background: '#E0F8F5',
-                      padding: '1px 7px', borderRadius: 'var(--radius-full)', whiteSpace: 'nowrap',
-                    }}>
-                      ✓ {t.waiver_signed_badge}
-                    </span>
-                    {balance?.hasPackage && balance.packageSaleId ? (
+                {/* Badge row */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginBottom: '12px' }}>
+                  <Badge variant="success">✓ {t.waiver_signed_badge}</Badge>
+                  {hasCredit ? (
+                    balance?.packageSaleId ? (
                       <button
                         type="button"
                         onClick={() => setHistoryModal({
                           studentName: checkin.student_name,
                           packageSaleId: balance.packageSaleId!,
                         })}
-                        style={{
-                          background: 'none', border: 'none', padding: 0,
-                          cursor: 'pointer', transition: 'opacity 0.15s', lineHeight: 0,
-                        }}
+                        style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', transition: 'opacity 0.15s', lineHeight: 0 }}
                         onMouseEnter={e => { e.currentTarget.style.opacity = '0.8' }}
                         onMouseLeave={e => { e.currentTarget.style.opacity = '1' }}
                         title={t.view_package_history_title}
                       >
-                        {packageBadge}
+                        <Badge variant="neutral">{creditBadgeText}</Badge>
                       </button>
-                    ) : packageBadge}
-                    <span style={{ fontSize: '11px', color: 'var(--mist)', whiteSpace: 'nowrap' }}>
-                      {checkin.activities?.name ? translateModalityName(checkin.activities.name, lang) : t.no_activity_label}
-                      {' · '}
-                      {instructor?.name ?? t.no_instructor_label}
-                      {' · '}
-                      <span title={fmtTime(checkin.checkin_at)}>{fmtRelative(checkin.checkin_at)}</span>
-                      {checkin.scheduled_lesson && ` · 📅 ${t.scheduled_badge}`}
-                    </span>
-                  </div>
+                    ) : (
+                      <Badge variant="neutral">{creditBadgeText}</Badge>
+                    )
+                  ) : (
+                    <Badge variant="danger">⚠ {t.no_credits_badge}</Badge>
+                  )}
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-                  {checkin.scheduled_lesson ? (
-                    // Arrived for a lesson already booked in advance — ready
-                    // to go right now, so this stays the one-step
-                    // confirm+charge action (pre-filled from that booking).
-                    <button
-                      onClick={() => open(checkin)}
-                      style={{
-                        padding: '6px 14px',
-                        background: 'var(--slate)',
-                        color: '#fff',
-                        border: 'none',
-                        borderRadius: 'var(--radius-md)',
-                        fontSize: '12px', fontWeight: '500',
-                        cursor: 'pointer',
-                        fontFamily: 'var(--font-sans)',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {t.confirm_arrow_btn}
-                    </button>
+                {/* Button row */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  {hasCredit ? (
+                    <>
+                      <CheckinQRButton
+                        slug={schoolSlug}
+                        schoolName={schoolName}
+                        studentName={checkin.student_name}
+                        activityName={checkin.activities?.name}
+                        compact
+                        className="flex-1"
+                      />
+                      <Button variant="secondary" onClick={() => setScheduleModal(checkin)} className="px-3 py-1.5 text-xs">
+                        {t.schedule_lesson_btn}
+                      </Button>
+                      <Button variant="tertiary" onClick={() => setFichaModal(checkin)} className="px-2 py-1.5 text-xs">
+                        {t.view_ficha_full_btn}
+                      </Button>
+                    </>
                   ) : (
-                    // Walk-in with nothing pre-arranged — gets slotted into
-                    // an instructor/time instead of being charged on the
-                    // spot; "Confirmar / Iniciar Aula" happens later from
-                    // Aulas Agendadas once the lesson actually starts.
-                    <button
-                      onClick={() => setScheduleModal(checkin)}
-                      style={{
-                        padding: '6px 14px',
-                        background: 'var(--slate)',
-                        color: '#fff',
-                        border: 'none',
-                        borderRadius: 'var(--radius-md)',
-                        fontSize: '12px', fontWeight: '500',
-                        cursor: 'pointer',
-                        fontFamily: 'var(--font-sans)',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {t.schedule_btn}
-                    </button>
+                    <>
+                      <Button variant="danger" onClick={() => setSellModal(checkin)} className="flex-1 py-1.5 text-xs">
+                        {t.sell_package_full_btn}
+                      </Button>
+                      <Button variant="tertiary" onClick={() => setFichaModal(checkin)} className="px-2 py-1.5 text-xs">
+                        {t.view_ficha_full_btn}
+                      </Button>
+                    </>
                   )}
-                  <button
-                    onClick={() => setFichaModal(checkin)}
-                    title={t.view_file_btn}
-                    style={{
-                      padding: '6px 10px',
-                      background: 'transparent',
-                      color: 'var(--mist)',
-                      border: '0.5px solid var(--border-strong)',
-                      borderRadius: 'var(--radius-md)',
-                      fontSize: '12px', fontWeight: '500',
-                      cursor: 'pointer',
-                      fontFamily: 'var(--font-sans)',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {t.view_file_btn}
-                  </button>
-                  {/* Individual QR — unique link per student (?student=&
-                      activity=), not the school-wide one that used to sit
-                      in this card's header. Fase 3 of
-                      picobase_design_system_dossie.md: only the card's
-                      primary action when the student actually has credit to
-                      use it on — hidden (not disabled) once exhausted, so
-                      "Vender pacote" is the one clear next step instead of
-                      a check-in button that would just fail. Full row
-                      reordering/sizing per the dossiê's exact Sala de
-                      Espera spec is Fase 4's job, not done here. */}
-                  {(!exhausted && balance?.hasPackage) && (
-                    <CheckinQRButton
-                      slug={schoolSlug}
-                      schoolName={schoolName}
-                      studentName={checkin.student_name}
-                      activityName={checkin.activities?.name}
-                      compact
-                    />
-                  )}
-                  {!balance?.hasPackage || exhausted ? (
-                    <Button
-                      variant="danger"
-                      onClick={() => setSellModal(checkin)}
-                      title={t.sell_package_btn}
-                      className="px-2.5 py-1.5 text-xs"
-                    >
-                      💳 {t.sell_package_btn}
-                    </Button>
-                  ) : null}
                 </div>
               </div>
             )
@@ -1408,8 +1301,8 @@ export default function PendingLessons({
 
             <div style={{
               display: 'inline-flex', alignItems: 'center', gap: '6px',
-              fontSize: '11px', fontWeight: '500', color: '#007868',
-              background: '#E0F8F5', padding: '4px 10px', borderRadius: 'var(--radius-full)',
+              fontSize: '11px', fontWeight: '500', color: 'var(--color-pb-glacial-dark)',
+              background: 'var(--color-pb-glacial-light)', padding: '4px 10px', borderRadius: 'var(--radius-full)',
               marginBottom: '18px',
             }}>
               ✓ Termo de Responsabilidade Assinado
