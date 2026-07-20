@@ -1055,6 +1055,23 @@ export default function ScheduledLessons({
                       left to confirm it from. Reuses the group-confirm
                       modal/flow for a single lesson (see
                       openGroupConfirmModal's comment). */}
+                  <button
+                    onClick={() => openRebookModal(lesson)}
+                    style={{
+                      padding: '5px 12px', background: 'transparent', color: '#007868',
+                      border: '0.5px solid #007868', borderRadius: '99px',
+                      fontSize: '11px', fontWeight: '600',
+                      cursor: 'pointer', fontFamily: 'var(--font-sans)', flexShrink: 0,
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    + Agendar Próxima Aula
+                  </button>
+                  {/* Primary action, positioned immediately before the
+                      WhatsApp button — the only hiding rule is status
+                      'confirmed' (shown as the "Confirmada" badge above
+                      instead); anything else ('scheduled' or 'checked_in')
+                      always renders this. */}
                   {lesson.status !== 'confirmed' && (
                     <button
                       onClick={() => openGroupConfirmModal([lesson])}
@@ -1069,18 +1086,6 @@ export default function ScheduledLessons({
                       ✓ Confirmar Aula
                     </button>
                   )}
-                  <button
-                    onClick={() => openRebookModal(lesson)}
-                    style={{
-                      padding: '5px 12px', background: 'transparent', color: '#007868',
-                      border: '0.5px solid #007868', borderRadius: '99px',
-                      fontSize: '11px', fontWeight: '600',
-                      cursor: 'pointer', fontFamily: 'var(--font-sans)', flexShrink: 0,
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    + Agendar Próxima Aula
-                  </button>
                   <WhatsAppActionButton lesson={lesson} dayLabel={dayLabel} schoolName={schoolName} />
                 </div>
                 <button
