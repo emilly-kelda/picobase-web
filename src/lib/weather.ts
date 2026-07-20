@@ -4,12 +4,12 @@ export type WeatherSpot = { id: string; label: string; lat: number; lon: number 
 
 // Small curated list of real, well-known wind/kite spots along the Ceará
 // coast (the school itself, Taíba Kites, is named after one of them) — a
-// plausible set of places an operator wants to quick-check regardless of
-// where the school is actually based. The school's OWN location (set via
-// Nominatim search in Settings → Geral, schools.spot_name/latitude/
-// longitude) is prepended ahead of these by buildWeatherSpots() below and
-// used as the default — these presets are just extra quick-swap options in
-// WeatherWidget's popover, not the primary source of "where is my school".
+// fallback for a school that hasn't configured its own location yet
+// (Settings → Geral, schools.spot_name/latitude/longitude). Once a school
+// has one saved, buildWeatherSpots() below returns ONLY that spot — no
+// picker, no quick-swap to Cumbuco/Taíba/etc. — the school's own location
+// is authoritative, not one option among several. This list only exists
+// to give a new school something to look at before they've set anything.
 const CURATED_WEATHER_SPOTS: WeatherSpot[] = [
   { id: 'fortaleza',     label: 'Fortaleza',         lat: -3.7319, lon: -38.5267 },
   { id: 'cumbuco',       label: 'Cumbuco',           lat: -3.6167, lon: -38.7333 },
@@ -18,11 +18,15 @@ const CURATED_WEATHER_SPOTS: WeatherSpot[] = [
   { id: 'jericoacoara',  label: 'Jericoacoara',      lat: -2.7967, lon: -40.5136 },
 ]
 
-/** Builds the spot list for a given school: its own configured location
- *  first (if set), then the curated presets. Called server-side (owner/
- *  page.tsx) with the school row already fetched — the result gets passed
- *  to both getWeather() (to resolve which one to fetch) and WeatherWidget
- *  (to render the popover), so the two always agree on the same list. */
+/** Builds the spot list for a given school. A configured school gets a
+ *  single-item list (its own location) — WeatherWidget uses spots.length
+ *  <= 1 as the signal to hide the picker entirely, since there's nothing
+ *  to switch to. A school with nothing configured yet gets the curated
+ *  Ceará list instead, picker included, purely as a placeholder until
+ *  they set a real one in Settings → Geral. Called server-side (owner/
+ *  page.tsx) with the school row already fetched — the result feeds both
+ *  getWeather() (which spot to fetch) and WeatherWidget (what to render),
+ *  so the two always agree. */
 export function buildWeatherSpots(school?: {
   spot_name?: string | null
   latitude?: number | null
@@ -31,7 +35,6 @@ export function buildWeatherSpots(school?: {
   if (school?.latitude != null && school?.longitude != null) {
     return [
       { id: 'school', label: school.spot_name || 'Localização da escola', lat: school.latitude, lon: school.longitude },
-      ...CURATED_WEATHER_SPOTS,
     ]
   }
   return CURATED_WEATHER_SPOTS

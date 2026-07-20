@@ -36,6 +36,13 @@ export default function WeatherWidget({ weather, spots }: { weather: WeatherData
 
   if (!weather) return null
 
+  // Nothing to switch to once the school has its own configured location —
+  // buildWeatherSpots() collapses to a single-item list in that case (see
+  // src/lib/weather.ts). The picker only exists as a placeholder for a
+  // school that hasn't set one yet, where spots still has the curated
+  // Ceará fallback list.
+  const hasPicker = spots.length > 1
+
   return (
     <div ref={wrapRef} style={{ position: 'relative' }}>
       <div style={{
@@ -49,6 +56,7 @@ export default function WeatherWidget({ weather, spots }: { weather: WeatherData
           <div style={{ fontSize: '10px', fontWeight: '500', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--mist)' }}>
             {weather.spotLabel}
           </div>
+          {hasPicker && (
           <button
             type="button"
             onClick={() => setOpen(o => !o)}
@@ -65,6 +73,7 @@ export default function WeatherWidget({ weather, spots }: { weather: WeatherData
           >
             📍
           </button>
+          )}
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -95,7 +104,7 @@ export default function WeatherWidget({ weather, spots }: { weather: WeatherData
         </div>
       </div>
 
-      {open && (
+      {hasPicker && open && (
         <div style={{
           position: 'absolute', top: 'calc(100% + 6px)', right: 0, zIndex: 60,
           background: '#fff', border: '0.5px solid var(--border)',
