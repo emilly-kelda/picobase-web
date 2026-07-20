@@ -37,7 +37,13 @@ function nowPlus(minutes: number) {
  *  instructor/time instead of being confirmed (charged) immediately.
  *  Deliberately lightweight: no pricing/payment fields here — that
  *  decision moves to "Confirmar / Iniciar Aula" on the resulting Aulas
- *  Agendadas row once the student actually starts the lesson. */
+ *  Agendadas row once the student actually starts the lesson.
+ *
+ *  checkinId is optional: the Students page's "[ Agendar ]" quick action
+ *  opens this same modal for a student with no checkin in play at all
+ *  (just scheduling ahead from their profile row) — in that case this
+ *  posts straight to /api/owner/schedule with student_name instead of
+ *  going through /api/owner/schedule-from-checkin's checkin-linking step. */
 export default function ScheduleFromCheckinModal({
   checkinId,
   studentName,
@@ -48,7 +54,7 @@ export default function ScheduleFromCheckinModal({
   onClose,
   onScheduled,
 }: {
-  checkinId: string
+  checkinId?: string
   studentName: string
   activities: ActivityRef[]
   instructors: Instructor[]
@@ -76,11 +82,11 @@ export default function ScheduleFromCheckinModal({
     setSaving(true)
     setError(null)
 
-    const res = await fetch('/api/owner/schedule-from-checkin', {
+    const res = await fetch(checkinId ? '/api/owner/schedule-from-checkin' : '/api/owner/schedule', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        checkin_id:    checkinId,
+        ...(checkinId ? { checkin_id: checkinId } : { student_name: studentName }),
         activity_id:   activityId || null,
         instructor_id: instructorId || null,
         scheduled_at:  `${date}T${time}:00-03:00`,

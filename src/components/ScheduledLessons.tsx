@@ -219,11 +219,17 @@ function getPackageBadge(
   return { label, tone: 'ok' }
 }
 
-const SPORT_FILTERS = ['all', 'kitesurf', 'wingfoil', 'kitefoil', 'surf', 'windsurf'] as const
+// 'supervis' (not 'supervisao') deliberately — normalization below strips
+// accented characters entirely rather than transliterating them ("ã" in
+// "Supervisão" is dropped, not turned into "a"), so a key with an "a"
+// where the accent was would never actually match. A shorter, accent-free
+// prefix matches regardless of how the accent lands after stripping.
+const SPORT_FILTERS = ['all', 'kitesurf', 'wingfoil', 'kitefoil', 'surf', 'windsurf', 'aluguel', 'supervis', 'downwind'] as const
 type SportFilter = typeof SPORT_FILTERS[number]
 const SPORT_FILTER_LABELS: Record<SportFilter, string> = {
   all: 'Todos', kitesurf: 'Kitesurf', wingfoil: 'Wingfoil',
   kitefoil: 'Kitefoil', surf: 'Surf', windsurf: 'Windsurf',
+  aluguel: 'Aluguel', supervis: 'Supervisão', downwind: 'Downwind',
 }
 
 /** Matches this row's activity name against a modality filter. Strips
@@ -232,7 +238,11 @@ const SPORT_FILTER_LABELS: Record<SportFilter, string> = {
  *  contains the substring "surf"), since a prefix check doesn't have that
  *  problem (kitesurf/windsurf never start with "surf"). Tolerates suffixes
  *  like "Kitesurf - Avançado" since schools type activity names freely
- *  (no fixed catalog/enum backs this). */
+ *  (no fixed catalog/enum backs this). Same matching applies to the
+ *  operational categories (Aluguel/Supervisão/Downwind) — these still
+ *  need a matching `activities` row to exist (created via /owner/
+ *  activities) for the filter to actually show anything, same as every
+ *  other filter here. */
 function activityMatchesSport(activityName: string | null | undefined, sport: SportFilter): boolean {
   if (sport === 'all') return true
   const normalized = (activityName ?? '').toLowerCase().replace(/[^a-z]/g, '')

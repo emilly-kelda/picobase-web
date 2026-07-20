@@ -4,6 +4,8 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import AddStudentModal from './AddStudentModal'
+import ScheduleFromCheckinModal from '@/components/ScheduleFromCheckinModal'
+import SellPackageFlowModal, { type PackageOption } from '@/components/SellPackageFlowModal'
 
 const SKILL_LABELS: Record<string, string> = {
   beginner:     'Beginner',
@@ -28,6 +30,42 @@ function getInitials(name: string) {
   return name.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase()
 }
 
+function RowActions({
+  name, t, onSchedule, onSell,
+}: {
+  name: string
+  t: Record<string, string>
+  onSchedule: (name: string) => void
+  onSell: (name: string) => void
+}) {
+  return (
+    <div style={{ display: 'flex', gap: '6px' }}>
+      <button
+        onClick={() => onSchedule(name)}
+        style={{
+          padding: '5px 12px', background: 'transparent', color: '#007868',
+          border: '0.5px solid #007868', borderRadius: 'var(--radius-md)',
+          fontSize: '11px', fontWeight: '600', cursor: 'pointer',
+          fontFamily: 'var(--font-sans)', whiteSpace: 'nowrap',
+        }}
+      >
+        [ {t.action_schedule} ]
+      </button>
+      <button
+        onClick={() => onSell(name)}
+        style={{
+          padding: '5px 12px', background: 'var(--slate)', color: '#fff',
+          border: 'none', borderRadius: 'var(--radius-md)',
+          fontSize: '11px', fontWeight: '600', cursor: 'pointer',
+          fontFamily: 'var(--font-sans)', whiteSpace: 'nowrap',
+        }}
+      >
+        [ {t.action_charge} ]
+      </button>
+    </div>
+  )
+}
+
 export default function StudentsClient({
   students,
   total,
@@ -35,6 +73,9 @@ export default function StudentsClient({
   checkinOnly,
   search,
   t,
+  activities,
+  instructors,
+  packageTypes,
 }: {
   students: any[]
   total: number
@@ -42,14 +83,37 @@ export default function StudentsClient({
   checkinOnly: any[]
   search?: string
   t: Record<string, string>
+  activities: { id: string; name: string }[]
+  instructors: { id: string; name: string }[]
+  packageTypes: PackageOption[]
 }) {
   const router = useRouter()
   const [showAddModal, setShowAddModal] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
+  // Student name is enough to drive both modals (SellPackageFlowModal locks
+  // on initialStudentName, ScheduleFromCheckinModal posts straight to
+  // /api/owner/schedule with it when there's no checkinId) — no need to
+  // carry a full student object around just for these two quick actions.
+  const [scheduleTarget, setScheduleTarget] = useState<string | null>(null)
+  const [sellTarget,     setSellTarget]     = useState<string | null>(null)
 
   function onStudentSaved() {
     setShowAddModal(false)
     setToast('✓ Aluno criado com sucesso')
+    setTimeout(() => setToast(null), 4000)
+    router.refresh()
+  }
+
+  function onScheduled() {
+    setScheduleTarget(null)
+    setToast('✓ Aula agendada com sucesso')
+    setTimeout(() => setToast(null), 4000)
+    router.refresh()
+  }
+
+  function onSold() {
+    setSellTarget(null)
+    setToast('✓ Venda registrada com sucesso')
     setTimeout(() => setToast(null), 4000)
     router.refresh()
   }
@@ -157,7 +221,7 @@ export default function StudentsClient({
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr>
-              {[t.th_student, t.th_nationality, t.th_contact, t.th_skill, t.th_package, t.th_health, t.th_since].map(h => (
+              {[t.th_student, t.th_nationality, t.th_contact, t.th_skill, t.th_package, t.th_health, t.th_since, t.th_actions].map(h => (
                 <th key={h} style={{
                   padding: '10px 24px',
                   textAlign: 'left',
@@ -178,7 +242,7 @@ export default function StudentsClient({
           <tbody>
             {students.length === 0 && checkinOnly.length === 0 ? (
               <tr>
-                <td colSpan={7} style={{
+                <td colSpan={8} style={{
                   padding: '48px 24px',
                   textAlign: 'center',
                   fontSize: '13px',
@@ -292,6 +356,9 @@ export default function StudentsClient({
                       <td style={{ padding: '14px 24px', fontSize: '13px', color: 'var(--mist)', whiteSpace: 'nowrap' }}>
                         {fmtDate(s.created_at)}
                       </td>
+                      <td style={{ padding: '14px 24px' }}>
+                        <RowActions name={s.name} t={t} onSchedule={setScheduleTarget} onSell={setSellTarget} />
+                      </td>
                     </tr>
                   )
                 })}
@@ -299,7 +366,7 @@ export default function StudentsClient({
                 {/* Separator between registered and check-in-only */}
                 {checkinOnly.length > 0 && students.length > 0 && (
                   <tr>
-                    <td colSpan={7} style={{
+                    <td colSpan={8} style={{
                       padding: '6px 24px',
                       fontSize: '10px', fontWeight: '500',
                       letterSpacing: '0.1em', textTransform: 'uppercase',
@@ -380,6 +447,9 @@ export default function StudentsClient({
                     <td style={{ padding: '14px 24px', fontSize: '13px', color: 'var(--mist)', whiteSpace: 'nowrap' }}>
                       {fmtDate(s.first_seen)}
                     </td>
+                    <td style={{ padding: '14px 24px' }}>
+                      <RowActions name={s.name} t={t} onSchedule={setScheduleTarget} onSell={setSellTarget} />
+                    </td>
                   </tr>
                 ))}
               </>
@@ -392,6 +462,25 @@ export default function StudentsClient({
         <AddStudentModal
           onClose={() => setShowAddModal(false)}
           onSaved={onStudentSaved}
+        />
+      )}
+
+      {scheduleTarget && (
+        <ScheduleFromCheckinModal
+          studentName={scheduleTarget}
+          activities={activities}
+          instructors={instructors}
+          onClose={() => setScheduleTarget(null)}
+          onScheduled={onScheduled}
+        />
+      )}
+
+      {sellTarget && (
+        <SellPackageFlowModal
+          packageTypes={packageTypes}
+          initialStudentName={sellTarget}
+          onClose={() => setSellTarget(null)}
+          onSold={onSold}
         />
       )}
 
