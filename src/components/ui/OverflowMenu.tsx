@@ -44,7 +44,10 @@ export default function OverflowMenu({ items }: { items: OverflowMenuItem[] }) {
         onClick={() => setOpen(o => !o)}
         aria-label="Mais ações"
         aria-expanded={open}
-        className="flex h-8 w-8 items-center justify-center rounded-lg text-pb-mist hover:bg-pb-powder hover:text-pb-slate"
+        // 18px glyph — exact size from the approved mockup, which calls
+        // out the kebab alongside the WhatsApp icon explicitly (both
+        // "font-size: 18px; color: #8A8C98; sem fundo, sem borda").
+        className="flex h-8 w-8 items-center justify-center rounded-lg text-[18px] text-pb-mist hover:bg-pb-powder hover:text-pb-slate"
       >
         ⋮
       </button>

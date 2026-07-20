@@ -14,7 +14,6 @@ import { translateModalityName } from '@/lib/modality'
 import Badge from '@/components/ui/Badge'
 import Button from '@/components/ui/Button'
 import ChameleonButton from '@/components/ui/ChameleonButton'
-import OverflowMenu from '@/components/ui/OverflowMenu'
 import type { Stage } from '@/lib/stage'
 
 type ActivityRef = {
@@ -498,8 +497,10 @@ export default function PendingLessons({
                 key={checkin.id}
                 style={{
                   background: '#fff',
-                  border: checkin.health_condition ? '0.5px solid var(--signal)' : '0.5px solid var(--border)',
-                  borderRadius: 'var(--radius-md)',
+                  // #E4E2DB (pb-border), not --border (#E6E5E2) — exact hex
+                  // from the approved mockup, a subtly different gray.
+                  border: checkin.health_condition ? '0.5px solid var(--signal)' : '0.5px solid var(--color-pb-border)',
+                  borderRadius: '10px',
                   padding: '16px',
                 }}
               >
@@ -508,10 +509,15 @@ export default function PendingLessons({
                   <div style={{
                     width: '36px', height: '36px',
                     borderRadius: 'var(--radius-full)',
-                    background: checkin.health_condition ? 'var(--signal-light)' : 'var(--color-pb-glacial-light)',
-                    color: checkin.health_condition ? 'var(--signal-dark)' : 'var(--color-pb-glacial-dark)',
+                    // Avatar color reflects health-condition alert first,
+                    // then hasCredit — a student with no active package
+                    // gets the neutral powder/slate pair, not the
+                    // "termo assinado" green (that color means status, not
+                    // decoration, per the approved mockup).
+                    background: checkin.health_condition ? 'var(--signal-light)' : hasCredit ? 'var(--color-pb-glacial-light)' : 'var(--color-pb-powder)',
+                    color: checkin.health_condition ? 'var(--signal-dark)' : hasCredit ? 'var(--color-pb-glacial-dark)' : 'var(--color-pb-slate)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '12px', fontWeight: '500',
+                    fontSize: '13px', fontWeight: '500',
                     flexShrink: 0,
                   }}
                     title={checkin.student_nationality ?? undefined}
@@ -520,8 +526,10 @@ export default function PendingLessons({
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{
-                      fontSize: '13px', fontWeight: '500',
-                      color: 'var(--slate)',
+                      fontSize: '14px', fontWeight: '500',
+                      // pb-slate (#1A1C22), not the older --slate (#0D0F14)
+                      // — exact hex from the approved mockup.
+                      color: 'var(--color-pb-slate)',
                       display: 'flex', alignItems: 'center', gap: '6px',
                     }}>
                       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -553,7 +561,7 @@ export default function PendingLessons({
                         </span>
                       )}
                     </div>
-                    <div style={{ fontSize: '11px', color: 'var(--mist)', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <div style={{ fontSize: '12px', color: 'var(--color-pb-mist)', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {checkin.activities?.name ? translateModalityName(checkin.activities.name, lang) : t.no_activity_label}
                       {' · '}
                       {instructor?.name ?? t.no_instructor_label}
@@ -589,14 +597,15 @@ export default function PendingLessons({
                   )}
                 </div>
 
-                {/* Button row — picobase_chameleon_button_dossie.md Fase 4,
-                    corrected per urgent fix: [ChameleonButton] [Agendar
-                    aula] [⋮ OverflowMenu]. "Agendar aula" moved out of the
-                    overflow menu — frequent enough to deserve its own
-                    visible secondary button, leaving the menu for genuinely
-                    secondary actions only. 'checkout' is derived, not
-                    stored — true only while this exact checkin's confirm
-                    modal (selected) is open. */}
+                {/* Button row — corrected per the approved literal visual
+                    spec: [ChameleonButton] [Agendar aula secondary] [Ver
+                    ficha tertiary], all always visible. No overflow menu
+                    here — Sala de Espera has no rare action (Editar,
+                    Remover) to hide behind a "⋮" today; "Ver ficha" is
+                    exactly as frequent as the other two, so it stays a
+                    plain visible button instead. 'checkout' is derived,
+                    not stored — true only while this exact checkin's
+                    confirm modal (selected) is open. */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <ChameleonButton
                     stage={selected?.id === checkin.id ? 'checkout' : (checkin.stage ?? 'sala_de_espera')}
@@ -607,12 +616,12 @@ export default function PendingLessons({
                     onFinishAndCharge={() => open(checkin)}
                     onSellPackage={() => setSellModal(checkin)}
                   />
-                  <Button variant="secondary" onClick={() => setScheduleModal(checkin)}>
+                  <Button variant="secondary" size="sm" onClick={() => setScheduleModal(checkin)}>
                     {t.schedule_lesson_btn}
                   </Button>
-                  <OverflowMenu items={[
-                    { label: t.view_ficha_full_btn, onClick: () => setFichaModal(checkin) },
-                  ]} />
+                  <Button variant="tertiary" size="sm" onClick={() => setFichaModal(checkin)}>
+                    {t.view_ficha_full_btn}
+                  </Button>
                 </div>
               </div>
             )

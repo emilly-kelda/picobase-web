@@ -53,8 +53,9 @@ export default function ChameleonButton({
 
   if (!checkedIn) {
     return (
-      <Button variant="primary" onClick={onCheckIn} className={className}>
-        🔲 Check-in
+      <Button variant="primary" size="sm" onClick={onCheckIn} className={className}>
+        {/* Icon at 15px against 13px body text — exact mockup spec. */}
+        <span className="text-[15px]">🔲</span> Check-in
       </Button>
     )
   }
@@ -62,13 +63,13 @@ export default function ChameleonButton({
   if (stage === 'sala_de_espera') {
     if (!hasCredit) {
       return (
-        <Button variant="danger" onClick={onSellPackage} className={className}>
+        <Button variant="danger" size="sm" onClick={onSellPackage} className={className}>
           Vender pacote
         </Button>
       )
     }
     return (
-      <Button variant="primary" onClick={onSendToWater} className={className}>
+      <Button variant="primary" size="sm" onClick={onSendToWater} className={className}>
         🌊 Enviar para a água
       </Button>
     )
@@ -77,7 +78,7 @@ export default function ChameleonButton({
   // na_agua | checkout
   const closing = stage === 'checkout'
   return (
-    <Button variant="dark" onClick={onFinishAndCharge} disabled={closing} className={className}>
+    <Button variant="dark" size="sm" onClick={onFinishAndCharge} disabled={closing} className={className}>
       🏁 {closing ? 'Fechando...' : 'Finalizar e cobrar'}
     </Button>
   )

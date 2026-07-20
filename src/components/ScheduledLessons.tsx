@@ -870,35 +870,34 @@ export default function ScheduledLessons({
           </div>
         ) : (
           <div style={{
-            background: '#fff', border: '0.5px solid var(--border)',
-            borderRadius: 'var(--radius-lg)',
+            display: 'flex', flexDirection: 'column', gap: '8px',
             // Past 8 rows this scrolls internally instead of the page
             // itself growing without bound — an unbounded list here was
             // the main driver of the left column running far past the
             // right one (the "rolagem infinita" complaint).
             ...(totalRows > 8
               ? { maxHeight: '640px', overflowY: 'auto' as const, overflowX: 'hidden' as const }
-              : { overflow: 'hidden' as const }),
+              : {}),
           }}>
-            {individualLessons.map((lesson, i) => (
+            {individualLessons.map(lesson => (
               <div key={lesson.id} style={{
-                display: 'flex', alignItems: 'center', gap: '16px',
-                padding: '14px 20px',
-                borderBottom: i < totalRows - 1
-                  ? '0.5px solid var(--border)' : 'none',
+                background: '#fff',
+                // #E4E2DB (pb-border) — exact hex from the approved
+                // mockup, not --border (#E6E5E2, a subtly different gray).
+                border: '0.5px solid var(--color-pb-border)',
+                borderRadius: '10px',
+                display: 'flex', alignItems: 'center', gap: '14px',
+                padding: '12px 16px',
               }}>
                 <div style={{
-                  fontSize: '15px', fontWeight: '600',
-                  color: 'var(--slate)', fontVariantNumeric: 'tabular-nums',
-                  width: '44px', flexShrink: 0,
+                  fontSize: '14px', fontWeight: '500',
+                  // pb-slate (#1A1C22), not the older --slate (#0D0F14) —
+                  // exact hex from the approved mockup.
+                  color: 'var(--color-pb-slate)', fontVariantNumeric: 'tabular-nums',
+                  minWidth: '52px', flexShrink: 0,
                 }}>
                   {fmtTime(lesson.scheduled_at)}
                 </div>
-                <div style={{
-                  width: '2px', height: '32px',
-                  background: 'var(--glacial)',
-                  borderRadius: '1px', flexShrink: 0,
-                }} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ marginBottom: '2px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     {lesson.student_name ? (
@@ -906,17 +905,17 @@ export default function ScheduledLessons({
                         href={`/owner/students/name/${encodeURIComponent(lesson.student_name)}`}
                         style={{
                           fontSize: '14px', fontWeight: '500',
-                          color: 'var(--slate)', textDecoration: 'none',
+                          color: 'var(--color-pb-slate)', textDecoration: 'none',
                           borderBottom: '1px solid transparent',
                           transition: 'border-color 0.15s',
                         }}
-                        onMouseEnter={e => { e.currentTarget.style.borderBottomColor = 'var(--glacial)' }}
+                        onMouseEnter={e => { e.currentTarget.style.borderBottomColor = 'var(--color-pb-glacial)' }}
                         onMouseLeave={e => { e.currentTarget.style.borderBottomColor = 'transparent' }}
                       >
                         {lesson.student_name}
                       </Link>
                     ) : (
-                      <span style={{ fontSize: '14px', fontWeight: '500', color: 'var(--slate)' }}>—</span>
+                      <span style={{ fontSize: '14px', fontWeight: '500', color: 'var(--color-pb-slate)' }}>—</span>
                     )}
                     {(() => {
                       // Only meaningful before confirmation — it's a heads-up
@@ -929,20 +928,24 @@ export default function ScheduledLessons({
                       if (lesson.status === 'confirmed') return null
                       const badge = getPackageBadge(lesson.student_name, activePackages, t)
                       if (!badge) return null
+                      // Plain inline text per the approved mockup
+                      // ("· 6h restantes"), not a pill. 'warn' keeps
+                      // pb-signal (an approved token) rather than the old
+                      // amber, which isn't in the 11-color palette — the
+                      // mockup only shows the 'ok' case, this is the
+                      // closest in-palette equivalent for the other one.
                       return (
                         <span style={{
-                          fontSize: '10px', fontWeight: '600',
-                          padding: '2px 7px', borderRadius: 'var(--radius-full)',
+                          fontSize: '12px', fontWeight: '400',
+                          color: badge.tone === 'ok' ? 'var(--color-pb-mist)' : 'var(--signal)',
                           whiteSpace: 'nowrap',
-                          background: badge.tone === 'ok' ? 'var(--glacial-light)' : 'var(--amber-light)',
-                          color: badge.tone === 'ok' ? 'var(--glacial-dark)' : 'var(--amber)',
                         }}>
-                          {badge.label}
+                          · {badge.label}
                         </span>
                       )
                     })()}
                   </div>
-                  <div style={{ fontSize: '12px', color: 'var(--mist)' }}>
+                  <div style={{ fontSize: '12px', color: 'var(--color-pb-mist)' }}>
                     {lesson.activities?.name ?? 'Atividade não definida'}
                     {isLevel(lesson.level) && <> · {LEVEL_LABELS[lesson.level].pt}</>}
                     {lesson.instructor && (
@@ -956,40 +959,48 @@ export default function ScheduledLessons({
                       dedicated variant in the 3-color Fase 2 palette — it's
                       not the fully-confirmed/paid state ("success"), so it
                       folds into neutral alongside "scheduled" rather than
-                      overloading success with a different meaning. */}
-                  <Badge variant={lesson.status === 'confirmed' ? 'success' : 'neutral'}>
+                      overloading success with a different meaning. size="md"
+                      per the approved mockup's "Agendada" spec (10px/12px,
+                      distinct from Sala de Espera's 8px/11px default). */}
+                  <Badge variant={lesson.status === 'confirmed' ? 'success' : 'neutral'} size="md">
                     {lesson.status === 'confirmed' ? t.status_confirmed
                       : lesson.status === 'checked_in' ? t.status_checked_in
                       : t.status_scheduled}
                   </Badge>
-                  {/* Primary action — the only hiding rule is status
-                      'confirmed' (shown as the "Confirmada" badge above
-                      instead); anything else ('scheduled' or 'checked_in')
-                      always renders this. */}
+                  {/* Reagendar + Confirmar are both frequent actions — the
+                      approved mockup requires neither to hide behind "⋮".
+                      Same hide rule as before: only status 'confirmed'
+                      (shown as the "Confirmada" badge instead) drops them. */}
                   {lesson.status !== 'confirmed' && (
-                    <Button variant="primary" onClick={() => setConfirmLessonModal(lesson)} className="px-3 py-1.5 text-xs">
-                      ✓ Confirmar Aula
-                    </Button>
+                    <>
+                      <Button variant="secondary" size="xs" onClick={() => openRebookModal(lesson)}>
+                        Reagendar
+                      </Button>
+                      <Button variant="primary" size="xs" onClick={() => setConfirmLessonModal(lesson)}>
+                        Confirmar
+                      </Button>
+                    </>
                   )}
-                  {/* picobase_chameleon_button_dossie.md Fase 4 asked to
-                      evaluate whether this row should also become
-                      [info][ChameleonButton][⋮] like Sala de Espera.
-                      ChameleonButton itself doesn't fit: it's driven by
-                      checkins.stage (Fase 0), and scheduled_lessons has no
-                      such column by design (Fase 0's own scope decision —
-                      one source of truth, not two that can diverge). The
-                      row still gets the same shape in spirit though: one
-                      clear primary ("Confirmar Aula") plus everything else
-                      — Agendar Próxima Aula, WhatsApp, Editar, Cancelar —
-                      behind the same OverflowMenu component Sala de Espera
-                      uses, instead of 4-5 buttons competing for attention. */}
+                  {/* WhatsApp Aluno promoted to a visible glyph-only icon
+                      per the mockup (18px, pb-mist, no background/border) —
+                      WhatsApp Instrutor stays in the overflow alongside the
+                      genuinely rare actions (Editar, Cancelar). */}
+                  {lesson.student_whatsapp ? (
+                    <a
+                      href={buildApiWhatsAppUrl(lesson.student_whatsapp, studentConfirmationMessage(lesson, dayLabel, schoolName))}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title={`WhatsApp Aluno${lesson.student_name ? ` (${lesson.student_name})` : ''}`}
+                      style={{ fontSize: '18px', color: 'var(--color-pb-mist)', lineHeight: 1 }}
+                    >
+                      💬
+                    </a>
+                  ) : (
+                    <span style={{ fontSize: '18px', color: 'var(--color-pb-mist)', lineHeight: 1, opacity: 0.4 }}>
+                      💬
+                    </span>
+                  )}
                   <OverflowMenu items={[
-                    { label: '+ Agendar Próxima Aula', onClick: () => openRebookModal(lesson) },
-                    {
-                      label: `WhatsApp Aluno${lesson.student_name ? ` (${lesson.student_name})` : ''}`,
-                      href: lesson.student_whatsapp ? buildApiWhatsAppUrl(lesson.student_whatsapp, studentConfirmationMessage(lesson, dayLabel, schoolName)) : '#',
-                      disabled: !lesson.student_whatsapp,
-                    },
                     {
                       label: `WhatsApp Instrutor${lesson.instructor?.name ? ` (${lesson.instructor.name})` : ''}`,
                       href: lesson.instructor?.whatsapp ? buildApiWhatsAppUrl(lesson.instructor.whatsapp, instructorConfirmationMessage(lesson, dayLabel)) : '#',
@@ -1004,14 +1015,15 @@ export default function ScheduledLessons({
               </div>
             ))}
 
-            {groupLessons.map((group, gi) => {
+            {groupLessons.map(group => {
               const first = group[0]
               return (
                 <div key={first.group_id} style={{
+                  background: '#fff',
+                  border: '0.5px solid var(--color-pb-border)',
+                  borderRadius: '10px',
                   display: 'flex', alignItems: 'flex-start', gap: '12px',
                   padding: '14px 20px',
-                  borderBottom: individualLessons.length + gi < totalRows - 1
-                    ? '0.5px solid var(--border)' : 'none',
                 }}>
                   <div style={{
                     fontSize: '15px', fontWeight: '600',
