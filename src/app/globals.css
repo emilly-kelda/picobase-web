@@ -3,27 +3,38 @@
 
 :root {
   /* ── Neutrals ─────────────────────────────────────────────────────── */
-  --slate:         #0D0F14;   /* primary text, headings, primary buttons */
-  --storm:         #1E2430;   /* secondary dark */
-  --mist:          #6E7180;   /* secondary text, labels, metadata */
+  /* Muted/premium SaaS repaint — aligned with tokens.css's pb-* values
+     (same reasoning: names unchanged, hex repainted, cascades everywhere
+     this var() is already used inline). */
+  --slate:         #0F172A;   /* was #0D0F14 — slate-900. primary text, headings, primary buttons */
+  --storm:         #334155;   /* was #1E2430 — slate-700. secondary dark */
+  --mist:          #9CA3AF;   /* was #6E7180 — gray-400. secondary text, labels, metadata */
 
   /* ── Surface & background ─────────────────────────────────────────── */
   --surface:       #FFFFFF;   /* card / panel backgrounds */
-  --powder:        #F8F8F6;   /* page background (warm off-white) */
-  --powder-dark:   #EDECEA;   /* inset sections, table heads, projection cards */
+  --powder:        #F8FAFC;   /* was #F8F8F6 — slate-50. page background */
+  --powder-dark:   #F1F5F9;   /* was #EDECEA — slate-100. inset sections, table heads, projection cards */
 
-  /* ── Primary accent — ocean teal ──────────────────────────────────── */
-  /* active nav, CTA buttons, focus rings, key metrics, chart lines      */
-  --glacial:       #1A6B7A;
-  --glacial-light: #E4F3F6;
-  --glacial-dark:  #0D4A58;
+  /* ── Primary accent — was ocean teal, now muted slate-navy ─────────── */
+  /* active nav, CTA buttons, focus rings, key metrics, chart lines. Used
+     across ~38 files as light/dark TINTS of this same accent (selected
+     states, active tabs, focus highlights) — kept as slate tints rather
+     than repainted to emerald, unlike pb-glacial-light/dark below, which
+     I control narrowly (Badge.tsx's "success" variant + this session's
+     own inline styles) and know are specifically success/confirmation
+     semantics, not generic primary-tint usage. Doing the same emerald
+     swap here would mismatch every one of those 38 files' selected/hover
+     states against a now-slate --glacial. */
+  --glacial:       #1E293B;   /* was #1A6B7A — slate-800 */
+  --glacial-light: #F1F5F9;   /* was #E4F3F6 — slate-100 (tint of --glacial, not emerald) */
+  --glacial-dark:  #0F172A;   /* was #0D4A58 — slate-900 (tint of --glacial, not emerald) */
   --ocean-deep:    #1A4855;   /* dark card backgrounds (off-season runway) */
 
   /* ── Brand coral — logo / wordmark only ───────────────────────────── */
   /* do NOT use for functional UI states — use --error for that          */
-  --signal:        #E8471A;
-  --signal-light:  #FDF0EC;
-  --signal-dark:   #B83010;
+  --signal:        #E11D48;   /* was #E8471A — rose-600 */
+  --signal-light:  #FFF1F2;   /* was #FDF0EC — rose-50 */
+  --signal-dark:   #BE123C;   /* was #B83010 — rose-700 */
 
   /* ── Status: error ────────────────────────────────────────────────── */
   --error:         #C53030;
@@ -35,8 +46,8 @@
   --amber:         #8A5E00;   /* warning text (high contrast on amber-light) */
 
   /* ── Borders ──────────────────────────────────────────────────────── */
-  --border:        #E6E5E2;
-  --border-strong: #C8C6C0;
+  --border:        #E2E8F0;   /* was #E6E5E2 — slate-200 */
+  --border-strong: #CBD5E1;   /* was #C8C6C0 — slate-300 */
 
   /* ── Elevation ────────────────────────────────────────────────────── */
   --shadow-sm:  0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.04);

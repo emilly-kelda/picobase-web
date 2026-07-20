@@ -1,21 +1,27 @@
 /* Pico Base design system — pb-* color tokens (picobase_design_system_dossie.md, Fase 0).
  * Tailwind v4 is CSS-first (no tailwind.config.ts in this project), so @theme is what
  * generates the bg-pb-, text-pb- and border-pb- utility classes — the v4-native equivalent
- * of the dossiê's theme.extend.colors.pb block. Deliberately a separate namespace from
- * the pre-existing --slate/--storm/--glacial/... tokens in globals.css (used inline via
- * var() across the whole app): this dossiê only re-skins Spot, Aulas Agendadas, and
- * Aguardando Vento (Fase 4), so the rest of the app keeps its current palette until a later
- * pass extends pb-* everywhere. */
+ * of the dossiê's theme.extend.colors.pb block.
+ *
+ * Values below are the muted/premium SaaS repaint (slate + rose + emerald) that replaced
+ * the original saturated teal/coral palette — token NAMES are unchanged (pb-glacial still
+ * means "primary action color", pb-signal still means "alert/danger"), only what they
+ * resolve to. This is deliberate: every component (Button, Badge, ChameleonButton,
+ * OverflowMenu, CheckinQRButton) already reads color through these names, so repainting
+ * here cascades everywhere instantly without touching component code. The equivalent
+ * legacy --slate/--mist/--powder/--glacial/--signal tokens in globals.css got the same
+ * hex values for the same reason (that system backs the rest of the app, outside Spot/
+ * Aulas Agendadas/Aguardando Vento) — the two systems are intentionally aligned now. */
 @theme {
-  --color-pb-slate:         #1A1C22;
-  --color-pb-storm:         #2B3340;
-  --color-pb-glacial:       #00A896;
-  --color-pb-signal:        #E8471A;
-  --color-pb-powder:        #F0EEE9;
+  --color-pb-slate:         #0F172A; /* was #1A1C22 — slate-900 */
+  --color-pb-storm:         #334155; /* was #2B3340 — slate-700 */
+  --color-pb-glacial:       #1E293B; /* was #00A896 (teal) — muted slate-navy, slate-800 */
+  --color-pb-signal:        #E11D48; /* was #E8471A (coral) — rose-600 */
+  --color-pb-powder:        #F8FAFC; /* was #F0EEE9 — slate-50 */
   --color-pb-white:         #FFFFFF;
-  --color-pb-glacial-light: #E0F8F5;
-  --color-pb-glacial-dark:  #007868;
-  --color-pb-signal-light:  #FDF0EC;
-  --color-pb-mist:          #8A8C98;
-  --color-pb-border:        #E4E2DB;
+  --color-pb-glacial-light: #ECFDF5; /* was #E0F8F5 — emerald-50 (success bg, distinct from primary) */
+  --color-pb-glacial-dark:  #047857; /* was #007868 — emerald-700 (success text) */
+  --color-pb-signal-light:  #FFF1F2; /* was #FDF0EC — rose-50 */
+  --color-pb-mist:          #9CA3AF; /* was #8A8C98 — gray-400 */
+  --color-pb-border:        #E2E8F0; /* was #E4E2DB — slate-200 */
 }
