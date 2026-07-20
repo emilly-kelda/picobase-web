@@ -1,6 +1,7 @@
 import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
 import ChameleonButtonPreview from './ChameleonButtonPreview'
+import OverflowMenu from '@/components/ui/OverflowMenu'
 
 /** Isolated preview of the shared design-system components
  *  (picobase_design_system_dossie.md) — not linked from the sidebar,
@@ -36,6 +37,19 @@ export default function DesignSystemPreviewPage() {
       <section className="space-y-3">
         <h2 className="text-xs font-medium uppercase tracking-wider text-pb-mist">ChameleonButton</h2>
         <ChameleonButtonPreview />
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-xs font-medium uppercase tracking-wider text-pb-mist">OverflowMenu</h2>
+        <div className="flex max-w-xs items-center gap-2 rounded-lg border border-pb-border p-2">
+          <span className="flex-1 text-sm text-pb-slate">Nome do aluno</span>
+          <OverflowMenu items={[
+            { label: 'Ver ficha', onClick: () => {} },
+            { label: 'Enviar WhatsApp', onClick: () => {} },
+            { label: 'Editar', onClick: () => {} },
+            { label: 'Remover', onClick: () => {}, danger: true },
+          ]} />
+        </div>
       </section>
     </div>
   )
