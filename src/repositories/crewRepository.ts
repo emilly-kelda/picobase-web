@@ -51,11 +51,25 @@ export async function getCrewMembers(schoolId: string) {
   }))
 }
 
-export async function getPayments(schoolId: string, period?: string) {
+/** Idempotent UPSERT (see migration 20260617000001_fix_close_month_idempotent.sql)
+ *  that recomputes every instructor's `payments` row for a period straight
+ *  from `sessions`, preserving approved/paid status unless the amount
+ *  actually changed. `payments` is a snapshot, not a live view — nothing
+ *  re-runs this automatically when a session is confirmed/edited/deleted,
+ *  so callers that need fresh numbers (not just whatever was last manually
+ *  recalculated) should call this before reading getPayments(). */
+export async function closeMonth(schoolId: string, period: string) {
+  const supabase = createServiceClient()
+  const { data, error } = await supabase.rpc('close_month', { p_school_id: schoolId, p_period: period })
+  if (error) throw error
+  return data
+}
+
+export async function getPayments(schoolId: string, period?: string, instructorId?: string) {
   const supabase = createServiceClient()
   const currentPeriod = period ?? new Date().toISOString().slice(0, 7)
 
-  const { data, error } = await supabase
+  let query = supabase
     .from('payments')
     .select(`
       id, period, sessions_count, revenue_generated,
@@ -68,7 +82,10 @@ export async function getPayments(schoolId: string, period?: string) {
     `)
     .eq('school_id', schoolId)
     .eq('period', currentPeriod)
-    .order('total_to_pay', { ascending: false })
+
+  if (instructorId) query = query.eq('instructor_id', instructorId)
+
+  const { data, error } = await query.order('total_to_pay', { ascending: false })
 
   if (error) throw error
 

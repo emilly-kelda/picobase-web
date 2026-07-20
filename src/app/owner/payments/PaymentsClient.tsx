@@ -107,12 +107,16 @@ export default function PaymentsClient({
   summary: initialSummary,
   monthOptions,
   partnerCommissions,
+  instructors,
+  activeInstructor,
 }: {
   payments: Payment[]
   period: string
   summary: Summary
   monthOptions: { value: string; label: string }[]
   partnerCommissions: PartnerRow[]
+  instructors: { id: string; name: string }[]
+  activeInstructor: string
 }) {
   const router  = useRouter()
   const [payments,    setPayments]    = useState(initialPayments)
@@ -143,6 +147,10 @@ export default function PaymentsClient({
   const [advanceAmount, setAdvanceAmount] = useState('')
   const [advanceNote, setAdvanceNote] = useState('')
   const [savingAdvance, setSavingAdvance] = useState(false)
+  const [advanceHistoryFor, setAdvanceHistoryFor] = useState<{
+    instructorName: string
+    advances: Advance[]
+  } | null>(null)
   const [tab, setTab] = useState<'team' | 'partners'>('team')
   const [showPaymentMethods, setShowPaymentMethods] = useState(false)
 
@@ -359,7 +367,7 @@ export default function PaymentsClient({
           >
             {closing ? 'Calculando...' : '↻ Recalcular período'}
           </button>
-          <form method="GET">
+          <form method="GET" style={{ display: 'flex', gap: '10px' }}>
             <select
               name="period"
               defaultValue={period}
@@ -375,6 +383,24 @@ export default function PaymentsClient({
             >
               {monthOptions.map(o => (
                 <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+            <select
+              name="instructor"
+              defaultValue={activeInstructor}
+              onChange={e => (e.target.closest('form') as HTMLFormElement)?.submit()}
+              style={{
+                padding: '8px 14px',
+                border: '0.5px solid var(--border-strong)',
+                borderRadius: 'var(--radius-md)',
+                fontSize: '13px', color: 'var(--slate)',
+                background: '#fff', cursor: 'pointer',
+                fontFamily: 'var(--font-sans)', outline: 'none',
+              }}
+            >
+              <option value="">Todos os instrutores</option>
+              {instructors.map(ins => (
+                <option key={ins.id} value={ins.id}>{ins.name}</option>
               ))}
             </select>
           </form>
@@ -447,7 +473,13 @@ export default function PaymentsClient({
       {(payments.length > 0 || partnerData.length > 0) && (() => {
         const totalRevenueGenerated = payments.reduce((s, p) => s + p.revenue_generated, 0)
         const partnerTotalCommission = partnerData.reduce((s, p) => s + p.commission, 0)
-        const netRevenue = totalRevenueGenerated - summary.total - partnerTotalCommission
+        // With an instructor filter active, `payments`/totalRevenueGenerated is
+        // already scoped to just that person — subtracting the school-wide
+        // partner commission total from a single instructor's revenue would
+        // produce a misleading (often deeply negative) "net" figure, since
+        // partners aren't tied to any one instructor. Only net out partner
+        // commissions in the unfiltered, whole-school view.
+        const netRevenue = totalRevenueGenerated - summary.total - (activeInstructor ? 0 : partnerTotalCommission)
         const totalPendingAll = summary.totalPending + partnerTotalPending
 
         const PM_LABELS: Record<string, { label: string; icon: string }> = {
@@ -672,7 +704,14 @@ export default function PaymentsClient({
                               {fmt(p.netPayout)}
                             </div>
                             {p.totalAdvances > 0 && (
-                              <div style={{ fontSize: '10px', color: '#DC2626' }}>
+                              <div
+                                onClick={() => setAdvanceHistoryFor({ instructorName: user?.name ?? '—', advances: p.advances })}
+                                title="Ver histórico de adiantamentos"
+                                style={{
+                                  fontSize: '10px', color: '#DC2626', cursor: 'pointer',
+                                  textDecoration: 'underline dotted', textUnderlineOffset: '2px',
+                                }}
+                              >
                                 − {fmt(p.totalAdvances)} adiant.
                               </div>
                             )}
@@ -1283,6 +1322,92 @@ export default function PaymentsClient({
             >
               {savingAdvance ? 'Salvando...' : 'Registrar adiantamento'}
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Advance history — read-only list, opened by clicking the red
+          "− R$X adiant." total in the table (distinct from the modal
+          above, which is the add-new-advance form). */}
+      {advanceHistoryFor && (
+        <div
+          style={{
+            position: 'fixed', inset: 0,
+            background: 'rgba(0,0,0,0.4)',
+            zIndex: 100,
+            display: 'flex', alignItems: 'flex-end',
+          }}
+          onClick={e => { if (e.target === e.currentTarget) setAdvanceHistoryFor(null) }}
+        >
+          <div style={{
+            background: '#fff', width: '100%', maxWidth: '480px', margin: '0 auto',
+            borderRadius: '20px 20px 0 0', overflow: 'hidden',
+            padding: '20px 24px 28px', maxHeight: '70vh',
+            display: 'flex', flexDirection: 'column',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '12px' }}>
+              <div style={{ width: '40px', height: '4px', background: 'var(--border)', borderRadius: '99px' }} />
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <div>
+                <div style={{ fontSize: '16px', fontWeight: '600', color: 'var(--slate)', marginBottom: '2px' }}>
+                  Adiantamentos — {advanceHistoryFor.instructorName}
+                </div>
+                <div style={{ fontSize: '12px', color: 'var(--mist)' }}>{period}</div>
+              </div>
+              <button
+                onClick={() => setAdvanceHistoryFor(null)}
+                style={{
+                  background: 'var(--powder)', border: 'none', borderRadius: '99px',
+                  width: '32px', height: '32px', cursor: 'pointer',
+                  fontSize: '16px', color: 'var(--mist)', flexShrink: 0,
+                }}
+              >×</button>
+            </div>
+
+            <div style={{ overflowY: 'auto', flex: 1 }}>
+              {advanceHistoryFor.advances.length === 0 ? (
+                <div style={{ padding: '32px', textAlign: 'center', fontSize: '13px', color: 'var(--mist)' }}>
+                  Nenhum adiantamento registrado.
+                </div>
+              ) : (
+                advanceHistoryFor.advances.map(a => (
+                  <div key={a.id} style={{
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
+                    padding: '10px 0', borderBottom: '0.5px solid var(--border)',
+                  }}>
+                    <div>
+                      <div style={{ fontSize: '13px', color: 'var(--slate)', fontWeight: '500' }}>
+                        {fmtDate(a.created_at)}
+                      </div>
+                      {a.note && (
+                        <div style={{ fontSize: '11px', color: 'var(--mist)', marginTop: '2px' }}>
+                          {a.note}
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ fontSize: '13px', fontWeight: '600', color: '#DC2626', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+                      − {fmt(a.amount)}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {advanceHistoryFor.advances.length > 0 && (
+              <div style={{
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                paddingTop: '12px', marginTop: '4px', borderTop: '0.5px solid var(--border)',
+              }}>
+                <span style={{ fontSize: '11px', fontWeight: '600', color: 'var(--mist)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                  Total
+                </span>
+                <span style={{ fontSize: '15px', fontWeight: '700', color: '#DC2626', fontVariantNumeric: 'tabular-nums' }}>
+                  − {fmt(advanceHistoryFor.advances.reduce((s, a) => s + (a.amount ?? 0), 0))}
+                </span>
+              </div>
+            )}
           </div>
         </div>
       )}
