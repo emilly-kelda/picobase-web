@@ -101,11 +101,20 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, group_id: group.id })
   }
 
+  // RescheduleModal creates the replacement lesson before deleting the
+  // missed one it's replacing (safer order — if creation fails, nothing's
+  // lost) and passes that old lesson's id back so it doesn't get
+  // double-counted against itself here: same package_sale_id carried
+  // forward, same duration, so without this both checks would see the
+  // not-yet-deleted original as still "using" that time/capacity.
+  const rescheduleFromId: string | undefined = body.reschedule_from_id || undefined
+
   const { instructorConflict, studentConflict } = await checkSchedulingConflicts(SCHOOL_ID, {
-    instructorId: body.instructor_id || null,
-    studentName:  body.student_name,
-    scheduledAt:  body.scheduled_at,
-    durationMin:  body.duration_min || 60,
+    instructorId:    body.instructor_id || null,
+    studentName:     body.student_name,
+    scheduledAt:     body.scheduled_at,
+    durationMin:     body.duration_min || 60,
+    excludeLessonId: rescheduleFromId,
   })
   if (studentConflict) {
     return NextResponse.json({ error: STUDENT_CLASH_ERROR }, { status: 409 })
@@ -116,8 +125,9 @@ export async function POST(request: Request) {
 
   if (body.package_sale_id) {
     const capacity = await checkPackageCapacity(SCHOOL_ID, {
-      packageSaleId: body.package_sale_id,
-      durationMin:   body.duration_min || 60,
+      packageSaleId:   body.package_sale_id,
+      durationMin:     body.duration_min || 60,
+      excludeLessonId: rescheduleFromId,
     })
     if (!capacity.ok) {
       return NextResponse.json({ error: INSUFFICIENT_CREDIT_ERROR }, { status: 409 })
@@ -150,25 +160,81 @@ export async function DELETE(request: Request) {
   const id = searchParams.get('id')
   if (!id) return NextResponse.json({ error: 'id é obrigatório' }, { status: 400 })
 
+  // Set by RescheduleModal: it deletes the old (missed, always in-the-past)
+  // lesson right after creating its replacement with the same
+  // package_sale_id carried over — the student isn't losing the lesson,
+  // just moving it, so the penalty below would otherwise always fire
+  // (a missed lesson's scheduled_at is by definition already past) and
+  // forfeit a credit that's actually still being used.
+  const skipPenalty = searchParams.get('skip_penalty') === '1'
+
   const supabase = createServiceClient()
 
-  // TODO(notify_late_cancellation): once a message-dispatch service
-  // (Z-API, Evolution API, or similar) is wired up, check
-  // schools.notify_late_cancellation here before sending — this is the
-  // correct trigger point (a cancellation always goes through this DELETE),
-  // but it needs the row's scheduled_at first (not currently selected
-  // here) to know whether "now" is within 24h of it. If so, notify the
-  // student that the hour is debited / the refund is forfeited. No
-  // dispatch exists yet.
+  // Regra 4 — cancellation-window penalty: cancellation always proceeds
+  // (frees the instructor's slot either way), but if it lands inside the
+  // school's configured penalty window, the linked package's credit is
+  // forfeited (minutes_used bumped by this lesson's duration) instead of
+  // staying available, same as debiting it for a no-show.
+  const { data: lesson } = await supabase
+    .from('scheduled_lessons')
+    .select('scheduled_at, duration_min, package_sale_id, notes')
+    .eq('id', id)
+    .eq('school_id', SCHOOL_ID)
+    .maybeSingle()
+
+  let creditForfeited = false
+
+  if (lesson && !skipPenalty) {
+    // Falls back to 24h (this route's long-standing assumption — see
+    // notify_late_cancellation's own description copy) if the column isn't
+    // there yet or the fetch fails for any reason, rather than erroring out
+    // of a cancellation over a missing setting.
+    const { data: school } = await supabase
+      .from('schools')
+      .select('cancellation_window_hours')
+      .eq('id', SCHOOL_ID)
+      .maybeSingle()
+
+    const windowHours = school?.cancellation_window_hours ?? 24
+    const hoursUntilStart = (new Date(lesson.scheduled_at).getTime() - Date.now()) / 3600000
+    const withinWindow = hoursUntilStart <= windowHours
+    creditForfeited = withinWindow && !!lesson.package_sale_id
+
+    if (creditForfeited) {
+      const { data: sale } = await supabase
+        .from('package_sales')
+        .select('minutes_used')
+        .eq('id', lesson.package_sale_id!)
+        .maybeSingle()
+      if (sale) {
+        await supabase
+          .from('package_sales')
+          .update({ minutes_used: (sale.minutes_used ?? 0) + (lesson.duration_min ?? 0) })
+          .eq('id', lesson.package_sale_id!)
+      }
+    }
+  }
 
   const { error } = await supabase
     .from('scheduled_lessons')
-    .update({ status: 'cancelled' })
+    .update({
+      status: 'cancelled',
+      ...(creditForfeited ? {
+        notes: `[Falta sem aviso — cancelado dentro da janela de penalidade]${lesson?.notes ? ' ' + lesson.notes : ''}`,
+      } : {}),
+    })
     .eq('id', id)
     .eq('school_id', SCHOOL_ID)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ ok: true })
+
+  return NextResponse.json({
+    ok: true,
+    penalized: creditForfeited,
+    message: creditForfeited
+      ? 'Aviso: Este cancelamento está dentro da janela de penalidade. O crédito da aula será debitado.'
+      : undefined,
+  })
 }
 
 export async function PATCH(request: Request) {

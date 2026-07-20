@@ -5,7 +5,7 @@ export async function getSchool(schoolId: string) {
   const supabase = createServiceClient()
   const { data, error } = await supabase
     .from('schools')
-    .select('id, name, slug, burn_rate, currency, language, sport_types, country, waiver_en, waiver_pt, waiver_fr, waiver_es, daily_notice, waiver_type, waiver_file_global_url, waiver_files_by_lang, notify_student_before_class, notify_payment_and_waiver, notify_instructor_on_checkin, notify_package_low, notify_late_cancellation, notify_post_class_feedback, payout_model, fixed_payout_value, privacy_policy_url, spot_name, latitude, longitude')
+    .select('id, name, slug, burn_rate, currency, language, sport_types, country, waiver_en, waiver_pt, waiver_fr, waiver_es, daily_notice, waiver_type, waiver_file_global_url, waiver_files_by_lang, notify_student_before_class, notify_payment_and_waiver, notify_instructor_on_checkin, notify_package_low, notify_late_cancellation, notify_post_class_feedback, payout_model, fixed_payout_value, privacy_policy_url, spot_name, latitude, longitude, cancellation_window_hours')
     .eq('id', schoolId)
     .single()
   if (error) throw error

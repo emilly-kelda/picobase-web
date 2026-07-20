@@ -113,7 +113,7 @@ export async function getMissedLessons(schoolId: string) {
     supabase
       .from('scheduled_lessons')
       .select(`
-        id, student_name, scheduled_at, duration_min,
+        id, student_name, scheduled_at, duration_min, package_sale_id,
         activities ( id, name ),
         instructor:users!scheduled_lessons_instructor_id_fkey ( name )
       `)

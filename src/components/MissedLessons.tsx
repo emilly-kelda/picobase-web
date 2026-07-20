@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import RescheduleModal from '@/components/RescheduleModal'
+import { Toast, useToast } from '@/components/Toast'
 
 type MissedLesson = {
   id: string
@@ -11,6 +12,7 @@ type MissedLesson = {
   student_whatsapp?: string | null
   scheduled_at: string
   duration_min: number | null
+  package_sale_id: string | null
   activities: { id: string; name: string } | null
   instructor: { name: string } | null
 }
@@ -25,6 +27,7 @@ export default function MissedLessons({
   schoolName?: string
 }) {
   const router = useRouter()
+  const { toast, showToast } = useToast()
   const [dismissed, setDismissed] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState<string | null>(null)
   const [rescheduling, setRescheduling] = useState<MissedLesson | null>(null)
@@ -33,9 +36,17 @@ export default function MissedLessons({
 
   async function dismiss(id: string) {
     setLoading(id)
-    await fetch(`/api/owner/schedule?id=${id}`, { method: 'DELETE' })
+    // A missed lesson is by definition already past scheduled_at, so
+    // Regra 4's penalty window always applies here — if it's tied to a
+    // package, dismissing it forfeits the credit as a no-show (matches
+    // real policy: a lesson nobody showed up for isn't a free cancellation).
+    const res = await fetch(`/api/owner/schedule?id=${id}`, { method: 'DELETE' })
+    const data = await res.json().catch(() => ({}))
     setDismissed(prev => new Set([...prev, id]))
     setLoading(null)
+    if (data.penalized && data.message) {
+      showToast('err', data.message)
+    }
     router.refresh()
   }
 
@@ -45,7 +56,10 @@ export default function MissedLessons({
     router.refresh()
   }
 
-  if (visible.length === 0) return null
+  // Rendered even when the list empties out (e.g. right after dismissing
+  // the last one) so the penalty toast triggered by that dismiss isn't cut
+  // off by this component unmounting to null mid-display.
+  if (visible.length === 0) return <Toast toast={toast} />
 
   return (
     <div style={{ marginBottom: '28px' }}>
@@ -195,6 +209,8 @@ export default function MissedLessons({
           onDone={onRescheduleDone}
         />
       )}
+
+      <Toast toast={toast} />
     </div>
   )
 }

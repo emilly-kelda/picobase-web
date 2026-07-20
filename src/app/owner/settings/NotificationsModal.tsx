@@ -89,14 +89,17 @@ function Switch({ checked, onChange }: { checked: boolean; onChange: (v: boolean
 
 export default function NotificationsModal({
   flags,
+  cancellationWindowHours,
   onClose,
   onSaved,
 }: {
   flags: NotificationFlags
+  cancellationWindowHours: number
   onClose: () => void
-  onSaved: (patch: NotificationFlags) => void
+  onSaved: (patch: NotificationFlags, cancellationWindowHours: number) => void
 }) {
   const [values, setValues] = useState<NotificationFlags>(flags)
+  const [windowHours, setWindowHours] = useState(cancellationWindowHours)
   const [saving, setSaving] = useState(false)
   const [error, setError]   = useState<string | null>(null)
 
@@ -108,11 +111,11 @@ export default function NotificationsModal({
       const res = await fetch('/api/owner/settings', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'school', ...values }),
+        body: JSON.stringify({ type: 'school', ...values, cancellation_window_hours: windowHours }),
       })
       const data = await res.json()
       if (data.ok) {
-        onSaved(values)
+        onSaved(values, windowHours)
       } else {
         setError(data.error ?? 'Não foi possível salvar.')
         setSaving(false)
@@ -181,6 +184,41 @@ export default function NotificationsModal({
                     />
                   </div>
                 ))}
+
+                {/* Grouped with Cancelamento Tardio above — the actual
+                    penalty-free window that toggle's notification fires
+                    against (see /api/owner/schedule DELETE, Regra 4). */}
+                {category.title === 'Operacionais e Logística' && (
+                  <div style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '14px',
+                    padding: '14px 16px',
+                    border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)',
+                  }}>
+                    <div>
+                      <div style={{ fontSize: '14px', fontWeight: '500', color: 'var(--slate)', marginBottom: '4px' }}>
+                        Janela de Cancelamento
+                      </div>
+                      <div style={{ fontSize: '12px', color: 'var(--mist)', lineHeight: '1.5' }}>
+                        Cancelamentos dentro desse prazo antes do início da aula liberam o horário do
+                        instrutor, mas debitam o crédito do aluno como falta sem aviso.
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                      <input
+                        type="number" min={0} step={1}
+                        value={windowHours}
+                        onChange={e => setWindowHours(Math.max(0, Number(e.target.value)))}
+                        style={{
+                          width: '64px', padding: '8px 10px',
+                          border: '0.5px solid var(--border-strong)', borderRadius: 'var(--radius-md)',
+                          fontSize: '14px', color: 'var(--slate)', fontFamily: 'var(--font-sans)',
+                          outline: 'none', textAlign: 'center',
+                        }}
+                      />
+                      <span style={{ fontSize: '12px', color: 'var(--mist)' }}>horas</span>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           ))}

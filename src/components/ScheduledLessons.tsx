@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { LEVEL_LABELS, isLevel } from '@/lib/levels'
 import LevelPicker from '@/components/LevelPicker'
 import { whatsappDigitsWithCountryCode } from '@/lib/whatsapp'
+import { Toast, useToast } from '@/components/Toast'
 
 type Lesson = {
   id: string
@@ -340,6 +341,7 @@ export default function ScheduledLessons({
   schoolName?: string
 }) {
   const router = useRouter()
+  const { toast, showToast }        = useToast()
   const [showModal, setShowModal]   = useState(false)
   const [deleting, setDeleting]     = useState<string | null>(null)
   const [saving, setSaving]         = useState(false)
@@ -680,12 +682,17 @@ export default function ScheduledLessons({
 
   async function cancel(id: string) {
     setDeleting(id)
-    await fetch('/api/owner/schedule', {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id }),
-    })
+    // Was posting { id } in the DELETE body, but the route only ever reads
+    // id from the query string (same contract MissedLessons.tsx and
+    // RescheduleModal.tsx already use correctly against this same route) —
+    // every cancel from here was silently 400-ing and never actually
+    // cancelling anything.
+    const res = await fetch(`/api/owner/schedule?id=${id}`, { method: 'DELETE' })
+    const data = await res.json().catch(() => ({}))
     setDeleting(null)
+    if (data.penalized && data.message) {
+      showToast('err', data.message)
+    }
     router.refresh()
   }
 
@@ -2170,6 +2177,8 @@ export default function ScheduledLessons({
           </div>
         </div>
       )}
+
+      <Toast toast={toast} />
     </>
   )
 }

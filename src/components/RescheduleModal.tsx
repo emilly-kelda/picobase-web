@@ -9,6 +9,7 @@ type MissedLesson = {
   student_whatsapp?: string | null
   scheduled_at: string
   duration_min: number | null
+  package_sale_id: string | null
   activities: { id: string; name: string } | null
 }
 
@@ -109,11 +110,22 @@ export default function RescheduleModal({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          student_name:  lesson.student_name,
-          activity_id:   lesson.activities?.id ?? null,
-          instructor_id: instructorId,
-          scheduled_at:  scheduledAt,
-          duration_min:  durationMin,
+          student_name:    lesson.student_name,
+          activity_id:     lesson.activities?.id ?? null,
+          instructor_id:   instructorId,
+          scheduled_at:    scheduledAt,
+          duration_min:    durationMin,
+          // Carries the credit tracking over to the new slot — without this
+          // the reschedule kept the old row's package_sale_id on a lesson
+          // about to be deleted and dropped it on the new one, so the
+          // rebooked lesson stopped drawing against the student's package
+          // at all (a pre-existing gap, unrelated to the skip_penalty flag
+          // below — that only prevents double-charging on top of it).
+          package_sale_id:    lesson.package_sale_id ?? null,
+          // Tells the capacity/clash checks not to count the old (not yet
+          // deleted) lesson against itself — same package, same duration,
+          // so it would otherwise look like this capacity is already spent.
+          reschedule_from_id: lesson.id,
         }),
       })
       const createData = await createRes.json()
@@ -123,7 +135,12 @@ export default function RescheduleModal({
         return
       }
 
-      await fetch(`/api/owner/schedule?id=${lesson.id}`, { method: 'DELETE' })
+      // skip_penalty: this is a reschedule, not a real cancellation — the
+      // student isn't losing the lesson, just moving it (the replacement
+      // above already carries the same package_sale_id forward). Regra 4's
+      // penalty window would otherwise always trigger here anyway, since a
+      // missed lesson's scheduled_at is by definition already in the past.
+      await fetch(`/api/owner/schedule?id=${lesson.id}&skip_penalty=1`, { method: 'DELETE' })
 
       const instructorName = instructors.find(i => i.id === instructorId)?.name ?? suggestedInstructorName ?? ''
       const sport = lesson.activities?.name ?? 'sua aula'

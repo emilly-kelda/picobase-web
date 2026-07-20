@@ -31,6 +31,7 @@ type School = {
   notify_package_low: boolean
   notify_late_cancellation: boolean
   notify_post_class_feedback: boolean
+  cancellation_window_hours: number
   payout_model: string
   fixed_payout_value: number | null
   privacy_policy_url: string | null
@@ -220,9 +221,10 @@ export default function SettingsClient({
             notify_late_cancellation: school.notify_late_cancellation,
             notify_post_class_feedback: school.notify_post_class_feedback,
           }}
+          cancellationWindowHours={school.cancellation_window_hours}
           onClose={() => setActiveModal(null)}
-          onSaved={patch => {
-            setSchool(s => ({ ...s, ...patch }))
+          onSaved={(patch, cancellationWindowHours) => {
+            setSchool(s => ({ ...s, ...patch, cancellation_window_hours: cancellationWindowHours }))
             closeAndRefresh()
             showToast('ok', 'Notificações atualizadas com sucesso')
           }}
