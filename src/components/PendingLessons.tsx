@@ -365,7 +365,6 @@ export default function PendingLessons({
                     onCheckIn={() => checkIn(checkin)}
                     onSendToWater={() => sendToWater(checkin)}
                     onSellPackage={() => setSellModal(checkin)}
-                    onNeedsSchedule={() => setScheduleModal(checkin)}
                     lang={lang}
                   />
                 </div>

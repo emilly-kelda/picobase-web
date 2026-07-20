@@ -6,8 +6,8 @@ type ChameleonButtonProps = {
   stage: Stage
   checkedIn: boolean
   hasCredit: boolean
-  // Needed only to build the restored check-in QR link (school/student
-  // context for /api/owner/qr) — unused in every other state.
+  // Needed only to build the check-in QR link (school/student context for
+  // /api/owner/qr) — unused in every other state.
   slug: string
   schoolName: string
   studentName?: string
@@ -15,12 +15,6 @@ type ChameleonButtonProps = {
   onCheckIn?: () => void
   onSendToWater?: () => void
   onSellPackage?: () => void
-  // Fires instead of onSendToWater when activityName is empty — sending a
-  // student into the water with no defined activity produced exactly the
-  // bad state this was built to prevent (checkins stuck at na_agua with
-  // "Sem atividade · Sem instrutor", no way back). Reuses the same
-  // "Agendar aula" modal already wired up for the top-right button.
-  onNeedsSchedule?: () => void
   className?: string
   // Only gates the "Iniciar Velejo"/"Start Session" label below — the
   // rest of this component's text is still PT-only, unchanged by this
@@ -29,30 +23,22 @@ type ChameleonButtonProps = {
 }
 
 /** Single action per card, driven by `checkedIn` + `stage` + `hasCredit`
- *  (picobase_chameleon_button_dossie.md, Fase 1; `checkedIn` gate added as
- *  an urgent correction — see 20260806000000_checkin_checked_in.sql) —
- *  replaces the old pile of buttons (Confirmar, Reagendar, WhatsApp,
- *  Editar, Check-in, Vender pacote...) with the one thing a student's row
- *  actually needs right now:
+ *  (picobase_chameleon_button_dossie.md, Fase 1) — the one thing a
+ *  student's row actually needs right now:
  *
- *  - not checked in              -> compact QR trigger (CheckinQRButton,
- *    iconOnly) restoring the check-in QR/link modal that used to be the
- *    primary action here, instead of a plain button. Clicking it both
- *    opens the modal (onOpen) and marks checked_in via onCheckIn — this is
- *    the starting state for EVERY student in Aguardando Vento, regardless
- *    of credit; checked_in and hasCredit are independent facts, so
- *    selling a package must never skip this.
+ *  - not checked in              -> full-width primary "Check-in"
+ *    (CheckinQRButton, `compact` — icon + label, not the icon-only
+ *    square) — clicking opens the QR/link modal and marks checked_in via
+ *    onCheckIn. This is the starting state for EVERY student in
+ *    Aguardando Vento, regardless of credit; checked_in and hasCredit are
+ *    independent facts, so selling a package must never skip this.
  *  - checked in, sala_de_espera + no credit -> danger "Vender pacote"
  *    (doesn't advance stage on its own — that happens once the sale
  *    actually completes)
- *  - checked in, sala_de_espera + credit + no activity -> primary
- *    "Definir atividade →" (onNeedsSchedule, opens the same "Agendar
- *    aula" modal as the top-right button) — sending a student into the
- *    water with nothing scheduled produced a stuck na_agua/"Sem
- *    atividade" state with no way back, so this is gated instead.
- *  - checked in, sala_de_espera + credit + activity defined -> primary
- *    "Iniciar Velejo →" ("Start Session →" in en) — renamed from
- *    "Enviar para a água"
+ *  - checked in, sala_de_espera + credit    -> primary "Iniciar Velejo →"
+ *    ("Start Session →" in en) — renamed from "Enviar para a água".
+ *    Not gated on having an activity defined — reverted deliberately;
+ *    Agendar aula/Ver ficha live in the card's top-right corner instead.
  *  - na_agua                    -> no button, muted "Na água" text.
  *    "Finalizar e cobrar" was removed from this queue entirely per the
  *    approved redesign — closing/charging a session happens only via
@@ -61,9 +47,7 @@ type ChameleonButtonProps = {
  *  - concluido                  -> no button, just muted "Concluído" text
  *
  *  Always meant to be the row's single most prominent element — pass
- *  `flex-1` (the default) so it takes the remaining width. The compact
- *  QR trigger ignores `className` on purpose: it's meant to stay small,
- *  never stretch full-width like the other states. */
+ *  `flex-1` (the default) so it takes the remaining width. */
 export default function ChameleonButton({
   stage,
   checkedIn,
@@ -75,7 +59,6 @@ export default function ChameleonButton({
   onCheckIn,
   onSendToWater,
   onSellPackage,
-  onNeedsSchedule,
   className = 'flex-1',
   lang = 'pt',
 }: ChameleonButtonProps) {
@@ -90,8 +73,9 @@ export default function ChameleonButton({
         schoolName={schoolName}
         studentName={studentName}
         activityName={activityName}
-        iconOnly
+        compact
         onOpen={onCheckIn}
+        className={className}
       />
     )
   }
@@ -101,13 +85,6 @@ export default function ChameleonButton({
       return (
         <Button variant="danger" size="sm" onClick={onSellPackage} className={className}>
           Vender pacote
-        </Button>
-      )
-    }
-    if (!activityName) {
-      return (
-        <Button variant="primary" size="sm" onClick={onNeedsSchedule} className={className}>
-          {lang === 'pt' ? 'Definir atividade →' : 'Set activity →'}
         </Button>
       )
     }

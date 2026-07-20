@@ -103,11 +103,13 @@ export default function CheckinQRButton({
         <Button
           type="button"
           variant="primary"
-          onClick={() => setOpen(true)}
+          size="sm"
+          onClick={() => { onOpen?.(); setOpen(true) }}
           title={studentName ? `QR Code de check-in — ${studentName}` : 'QR Code de check-in'}
           className={className}
         >
-          🔲 Check-in
+          {/* Icon at 15px against 13px body text — exact mockup spec. */}
+          <span className="text-[15px]">🔲</span> Check-in
         </Button>
       ) : (
         <button

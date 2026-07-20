@@ -14,7 +14,6 @@ export default function ChameleonButtonPreview() {
   const [stage, setStage] = useState<Stage>('sala_de_espera')
   const [checkedIn, setCheckedIn] = useState(false)
   const [hasCredit, setHasCredit] = useState(true)
-  const [hasActivity, setHasActivity] = useState(true)
 
   return (
     <div className="space-y-3">
@@ -31,16 +30,10 @@ export default function ChameleonButtonPreview() {
           checkedIn
         </label>
         {stage === 'sala_de_espera' && (
-          <>
-            <label className="flex items-center gap-1.5">
-              <input type="checkbox" checked={hasCredit} onChange={e => setHasCredit(e.target.checked)} />
-              hasCredit
-            </label>
-            <label className="flex items-center gap-1.5">
-              <input type="checkbox" checked={hasActivity} onChange={e => setHasActivity(e.target.checked)} />
-              hasActivity
-            </label>
-          </>
+          <label className="flex items-center gap-1.5">
+            <input type="checkbox" checked={hasCredit} onChange={e => setHasCredit(e.target.checked)} />
+            hasCredit
+          </label>
         )}
       </div>
       <div className="flex max-w-xs items-center gap-2">
@@ -48,14 +41,12 @@ export default function ChameleonButtonPreview() {
           stage={stage}
           checkedIn={checkedIn}
           hasCredit={hasCredit}
-          activityName={hasActivity ? 'Kitesurf' : null}
           slug="preview"
           schoolName="Pico Base"
           studentName="Aluno de teste"
           onCheckIn={() => setCheckedIn(true)}
           onSendToWater={() => setStage('na_agua')}
           onSellPackage={() => setHasCredit(true)}
-          onNeedsSchedule={() => setHasActivity(true)}
         />
       </div>
     </div>
