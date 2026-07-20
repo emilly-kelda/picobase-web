@@ -1,11 +1,12 @@
 import { createServiceClient } from '@/lib/supabase-server'
-import { checkSchedulingConflicts } from '@/repositories/scheduledLessonRepository'
+import { checkSchedulingConflicts, checkPackageCapacity } from '@/repositories/scheduledLessonRepository'
 import { NextResponse } from 'next/server'
 
 const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
 
 const STUDENT_CLASH_ERROR = 'Não é possível agendar: este aluno já possui uma aula marcada para este mesmo horário.'
 const INSTRUCTOR_CLASH_ERROR = 'O instrutor selecionado já possui uma aula agendada para este horário.'
+const INSUFFICIENT_CREDIT_ERROR = 'Saldo de créditos insuficiente. O aluno precisa de adquirir um novo pacote para agendar.'
 
 // TODO(notify_student_before_class): the reminder needs to fire 2h before
 // scheduled_at, which is almost never when this route runs (lessons are
@@ -113,6 +114,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: INSTRUCTOR_CLASH_ERROR }, { status: 409 })
   }
 
+  if (body.package_sale_id) {
+    const capacity = await checkPackageCapacity(SCHOOL_ID, {
+      packageSaleId: body.package_sale_id,
+      durationMin:   body.duration_min || 60,
+    })
+    if (!capacity.ok) {
+      return NextResponse.json({ error: INSUFFICIENT_CREDIT_ERROR }, { status: 409 })
+    }
+  }
+
   const { error, data } = await supabase
     .from('scheduled_lessons')
     .insert({
@@ -171,7 +182,7 @@ export async function PATCH(request: Request) {
   if (updates.scheduled_at && updates.duration_min) {
     const { data: current } = await supabase
       .from('scheduled_lessons')
-      .select('group_id')
+      .select('group_id, package_sale_id')
       .eq('id', id)
       .eq('school_id', SCHOOL_ID)
       .single()
@@ -189,6 +200,17 @@ export async function PATCH(request: Request) {
     }
     if (instructorConflict) {
       return NextResponse.json({ error: INSTRUCTOR_CLASH_ERROR }, { status: 409 })
+    }
+
+    if (current?.package_sale_id) {
+      const capacity = await checkPackageCapacity(SCHOOL_ID, {
+        packageSaleId:   current.package_sale_id,
+        durationMin:     updates.duration_min,
+        excludeLessonId: id,
+      })
+      if (!capacity.ok) {
+        return NextResponse.json({ error: INSUFFICIENT_CREDIT_ERROR }, { status: 409 })
+      }
     }
   }
 

@@ -300,6 +300,67 @@ export async function checkSchedulingConflicts(
   return { instructorConflict, studentConflict }
 }
 
+/** Package credit check, run before creating/editing a scheduled_lessons
+ *  row tied to a specific package_sale_id: (minutes already committed to
+ *  other still-pending lessons drawing on this same package) + this
+ *  lesson's own duration, against what the package actually has left
+ *  (minutes_purchased - minutes_used — same balance math
+ *  getPackageBalancesForCheckins uses). Packages in this app are
+ *  minute-based, not session-count based, so capacity is measured in
+ *  minutes here rather than a raw lesson count — a plain count comparison
+ *  would let two 3h lessons through where a 3h + a 1h wouldn't, despite
+ *  drawing the identical total.
+ *
+ *  Only counts scheduled_lessons rows still in an unconfirmed state
+ *  (excludes 'cancelled' and 'confirmed') — a confirmed lesson's minutes
+ *  are already folded into minutes_used by confirm-lesson's own package
+ *  deduction, so counting it here too would double-charge the same
+ *  minutes against the balance.
+ *
+ *  No packageSaleId means no credit concept to violate (pay-per-lesson/
+ *  avulsa booking, or group scheduling — neither tracks a package here) —
+ *  callers simply don't invoke this in that case. */
+export async function checkPackageCapacity(
+  schoolId: string,
+  params: {
+    packageSaleId: string
+    durationMin: number
+    excludeLessonId?: string
+  }
+): Promise<{ ok: true } | { ok: false }> {
+  const supabase = createServiceClient()
+
+  const { data: sale } = await supabase
+    .from('package_sales')
+    .select('minutes_purchased, minutes_used')
+    .eq('id', params.packageSaleId)
+    .eq('school_id', schoolId)
+    .maybeSingle()
+
+  // Unknown/deleted sale — nothing to enforce a balance against.
+  if (!sale) return { ok: true }
+
+  const remaining = Math.max(0, (sale.minutes_purchased ?? 0) - (sale.minutes_used ?? 0))
+
+  let query = supabase
+    .from('scheduled_lessons')
+    .select('id, duration_min')
+    .eq('school_id', schoolId)
+    .eq('package_sale_id', params.packageSaleId)
+    .neq('status', 'cancelled')
+    .neq('status', 'confirmed')
+
+  if (params.excludeLessonId) query = query.neq('id', params.excludeLessonId)
+
+  const { data: pendingLessons } = await query
+  const alreadyCommitted = (pendingLessons ?? []).reduce((s, l) => s + (l.duration_min ?? 0), 0)
+
+  if (alreadyCommitted + params.durationMin > remaining) {
+    return { ok: false }
+  }
+  return { ok: true }
+}
+
 export async function createScheduledLesson(payload: {
   school_id: string
   student_name: string

@@ -1,5 +1,5 @@
 import { createServiceClient } from '@/lib/supabase-server'
-import { checkSchedulingConflicts } from '@/repositories/scheduledLessonRepository'
+import { checkSchedulingConflicts, checkPackageCapacity } from '@/repositories/scheduledLessonRepository'
 import { NextResponse } from 'next/server'
 
 const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
@@ -53,6 +53,19 @@ export async function POST(request: Request) {
       { error: 'O instrutor selecionado já possui uma aula agendada para este horário.' },
       { status: 409 }
     )
+  }
+
+  if (checkin.package_sale_id) {
+    const capacity = await checkPackageCapacity(SCHOOL_ID, {
+      packageSaleId: checkin.package_sale_id,
+      durationMin:   duration_min || 60,
+    })
+    if (!capacity.ok) {
+      return NextResponse.json(
+        { error: 'Saldo de créditos insuficiente. O aluno precisa de adquirir um novo pacote para agendar.' },
+        { status: 409 }
+      )
+    }
   }
 
   const { data: lesson, error: lessonError } = await supabase
