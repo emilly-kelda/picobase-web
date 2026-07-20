@@ -15,6 +15,12 @@ type ChameleonButtonProps = {
   onCheckIn?: () => void
   onSendToWater?: () => void
   onSellPackage?: () => void
+  // Fires instead of onSendToWater when activityName is empty — sending a
+  // student into the water with no defined activity produced exactly the
+  // bad state this was built to prevent (checkins stuck at na_agua with
+  // "Sem atividade · Sem instrutor", no way back). Reuses the same
+  // "Agendar aula" modal already wired up for the top-right button.
+  onNeedsSchedule?: () => void
   className?: string
   // Only gates the "Iniciar Velejo"/"Start Session" label below — the
   // rest of this component's text is still PT-only, unchanged by this
@@ -39,8 +45,14 @@ type ChameleonButtonProps = {
  *  - checked in, sala_de_espera + no credit -> danger "Vender pacote"
  *    (doesn't advance stage on its own — that happens once the sale
  *    actually completes)
- *  - checked in, sala_de_espera + credit    -> primary "Iniciar Velejo →"
- *    ("Start Session →" in en) — renamed from "Enviar para a água"
+ *  - checked in, sala_de_espera + credit + no activity -> primary
+ *    "Definir atividade →" (onNeedsSchedule, opens the same "Agendar
+ *    aula" modal as the top-right button) — sending a student into the
+ *    water with nothing scheduled produced a stuck na_agua/"Sem
+ *    atividade" state with no way back, so this is gated instead.
+ *  - checked in, sala_de_espera + credit + activity defined -> primary
+ *    "Iniciar Velejo →" ("Start Session →" in en) — renamed from
+ *    "Enviar para a água"
  *  - na_agua                    -> no button, muted "Na água" text.
  *    "Finalizar e cobrar" was removed from this queue entirely per the
  *    approved redesign — closing/charging a session happens only via
@@ -63,6 +75,7 @@ export default function ChameleonButton({
   onCheckIn,
   onSendToWater,
   onSellPackage,
+  onNeedsSchedule,
   className = 'flex-1',
   lang = 'pt',
 }: ChameleonButtonProps) {
@@ -88,6 +101,13 @@ export default function ChameleonButton({
       return (
         <Button variant="danger" size="sm" onClick={onSellPackage} className={className}>
           Vender pacote
+        </Button>
+      )
+    }
+    if (!activityName) {
+      return (
+        <Button variant="primary" size="sm" onClick={onNeedsSchedule} className={className}>
+          {lang === 'pt' ? 'Definir atividade →' : 'Set activity →'}
         </Button>
       )
     }

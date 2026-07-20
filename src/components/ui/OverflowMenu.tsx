@@ -47,14 +47,16 @@ export default function OverflowMenu({ items }: { items: OverflowMenuItem[] }) {
         // 18px glyph — exact size from the approved mockup, which calls
         // out the kebab alongside the WhatsApp icon explicitly (both
         // "font-size: 18px; color: #8A8C98; sem fundo, sem borda").
-        className="flex h-8 w-8 items-center justify-center rounded-lg text-[18px] text-pb-mist hover:bg-pb-powder hover:text-pb-slate"
+        // rounded-[8px], not rounded-lg — see Button.tsx's comment on the
+        // globals.css/Tailwind --radius-lg collision.
+        className="flex h-8 w-8 items-center justify-center rounded-[8px] text-[18px] text-pb-mist hover:bg-pb-powder hover:text-pb-slate"
       >
         ⋮
       </button>
       {open && (
         <div
           role="menu"
-          className="absolute right-0 top-full z-20 mt-1 min-w-[160px] rounded-lg border border-pb-border bg-pb-white py-1 shadow-lg"
+          className="absolute right-0 top-full z-20 mt-1 min-w-[160px] rounded-[8px] border border-pb-border bg-pb-white py-1 shadow-lg"
         >
           {items.map((item, i) => {
             const className = `block w-full px-3 py-2 text-left text-xs whitespace-nowrap hover:bg-pb-powder ${

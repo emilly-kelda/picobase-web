@@ -85,7 +85,9 @@ export default function CheckinQRButton({
           type="button"
           onClick={() => { onOpen?.(); setOpen(true) }}
           title={studentName ? `QR Code de check-in — ${studentName}` : 'QR Code de check-in'}
-          className={`inline-flex items-center justify-center rounded-lg bg-pb-glacial text-pb-white hover:opacity-90 ${className ?? ''}`}
+          // rounded-[8px], not rounded-lg — globals.css/Tailwind
+          // --radius-lg collision, see Button.tsx's comment.
+          className={`inline-flex items-center justify-center rounded-[8px] bg-pb-glacial text-pb-white hover:opacity-90 ${className ?? ''}`}
           style={{ width: '36px', height: '36px', fontSize: '18px', flexShrink: 0, border: 'none', cursor: 'pointer' }}
         >
           🔲

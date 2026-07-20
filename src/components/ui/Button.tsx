@@ -54,7 +54,14 @@ export default function Button({
 }: ButtonProps) {
   return (
     <button
-      className={`inline-flex items-center justify-center gap-2 rounded-lg whitespace-nowrap transition-opacity disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none ${SIZE_CLASSES[size]} ${VARIANT_CLASSES[variant]} ${className}`}
+      // rounded-[8px], not rounded-lg — globals.css's own :root defines a
+      // plain --radius-lg: 12px custom property, which collides with
+      // Tailwind v4's identically-named theme variable and silently wins
+      // (both land on :root; the later declaration overrides). rounded-lg
+      // was quietly rendering at 12px instead of 8px everywhere, which is
+      // why buttons read as too round/pill-ish. An arbitrary value
+      // compiles to a literal border-radius, bypassing the collision.
+      className={`inline-flex items-center justify-center gap-2 rounded-[8px] whitespace-nowrap transition-opacity disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none ${SIZE_CLASSES[size]} ${VARIANT_CLASSES[variant]} ${className}`}
       {...rest}
     >
       {children}

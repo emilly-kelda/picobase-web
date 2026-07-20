@@ -39,7 +39,11 @@ export default function Badge({
 }: BadgeProps) {
   return (
     <span
-      className={`inline-flex items-center rounded-md font-medium whitespace-nowrap ${SIZE_CLASSES[size]} ${VARIANT_CLASSES[variant]} ${className}`}
+      // rounded-[6px], not rounded-md — same globals.css/Tailwind
+      // --radius-md collision as Button.tsx (see its comment); rounded-md
+      // was silently rendering at globals.css's 8px instead of the
+      // approved mockup's 6px.
+      className={`inline-flex items-center rounded-[6px] font-medium whitespace-nowrap ${SIZE_CLASSES[size]} ${VARIANT_CLASSES[variant]} ${className}`}
       {...rest}
     >
       {children}

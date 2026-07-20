@@ -41,7 +41,7 @@ export default function DesignSystemPreviewPage() {
 
       <section className="space-y-3">
         <h2 className="text-xs font-medium uppercase tracking-wider text-pb-mist">OverflowMenu</h2>
-        <div className="flex max-w-xs items-center gap-2 rounded-lg border border-pb-border p-2">
+        <div className="flex max-w-xs items-center gap-2 rounded-[8px] border border-pb-border p-2">
           <span className="flex-1 text-sm text-pb-slate">Nome do aluno</span>
           <OverflowMenu items={[
             { label: 'Ver ficha', onClick: () => {} },
