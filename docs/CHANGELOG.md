@@ -585,3 +585,17 @@ their commit message and diff.
   `getScheduledLessons()` now selects `users.whatsapp` in the instructor
   join (previously only `id, name`). "Editar" and cancel stayed exactly
   where they were.
+- `e8526e0` **refactor**: `/owner/costs` puts the Reserva de Baixa
+  Temporada card and the Simulador de Cenários side by side (1:2 grid,
+  collapses to one column under 1024px) instead of two stacked
+  full-width rows. `RunwayCalculator.tsx`'s internal layout went from a
+  side-by-side sliders/result split to stacked vertical, since that
+  split only made sense at full page width — in the new narrower 2/3
+  column it left empty space on both sides. Deviated from the literal
+  spec (asked for Tailwind `grid grid-cols-1 lg:grid-cols-3`): Tailwind
+  is installed and does work in this project, but nothing else in the
+  codebase uses it — every page is inline `style={{}}` against the CSS
+  custom properties in `globals.css`. Implemented the same responsive
+  1:2/1-column result with a plain `<style>` + media query instead,
+  matching the `.dash-grid-2col` pattern Base Camp already uses, rather
+  than introducing a second styling paradigm in one file.
