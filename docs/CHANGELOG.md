@@ -924,3 +924,22 @@ their commit message and diff.
   restored modal's request body matches what the route already expects,
   and the clash/capacity validation added earlier this session still
   runs for it.
+- `7d99e9f` **refactor**: rebalanced Base Camp's two-column layout. The
+  left column (1.6fr) stacked Venda Rápida, Sala de Espera, Aulas Não
+  Realizadas, and Aulas Agendadas, all unbounded height, while the right
+  (1fr) only had Weather + "Hoje" — leaving heavy right-column whitespace
+  and long left-column scrolling. Moved `MissedLessons` to the right
+  column, right under "Hoje" (styled to match that card visually) and
+  recompacted its rows for the narrower width (stacked name/time then
+  truncated meta, smaller side-by-side action buttons instead of one
+  wide row). Recompacted Sala de Espera's cards (36px→28px avatar,
+  tighter padding, 3 content lines down to 2, action column collapsed
+  into one horizontal row) — dropped the "📅 Agendado" tag and
+  nationality badge from the compact view (still in "Ver Ficha"/avatar
+  tooltip), since neither was on the instruction's explicit
+  keep-visible list (Nome, Termo, Créditos, Ações). Gave Aulas Agendadas'
+  lesson list internal scroll (`max-height: 640px`) past 8 rows instead
+  of letting the page grow unbounded — the actual source of the
+  "infinite scroll" complaint (the footer's "Aulas recentes" table was
+  already capped at 8). Verified with a clean production build before
+  committing, given the recent outage.
