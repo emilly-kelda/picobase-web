@@ -51,6 +51,18 @@ export default async function CostsPage() {
 
   return (
     <div>
+      <style>{`
+        .costs-runway-grid {
+          display: grid;
+          grid-template-columns: 1fr 2fr;
+          gap: 24px;
+          align-items: start;
+        }
+        @media (max-width: 1024px) {
+          .costs-runway-grid { grid-template-columns: 1fr; }
+        }
+      `}</style>
+
       <div style={{ marginBottom: '28px' }}>
         <h1 style={{
           fontSize: '22px', fontWeight: '500',
@@ -93,43 +105,45 @@ export default async function CostsPage() {
         knownCategories={knownCategories}
       />
 
-      {/* ── Reserva de Baixa Temporada ────────────────────────────────────
-          Moved from Base Camp so the dashboard's Sala de Espera / Aulas
-          Agendadas columns get the full height for counter operations —
-          this is a financial deep-dive, not a walk-in workflow. */}
-      <div style={{ marginTop: '40px', maxWidth: '420px' }}>
-        <RunwaySummary
-          runwayMonths={runwayMonths}
-          seasonRevenue={(runway as any).season_revenue ?? 0}
-          commissions={((runway as any).crew_commissions ?? 0) + totalPartnerCommissions}
-          netProfit={rawNetProfit}
-          monthlyBurn={monthlyBurn}
-          gapToTarget={gapToTarget}
-          projectedRunway={projection?.projectedRunway}
-          daysLeft={projection?.daysLeft}
-        />
-      </div>
-
-      {/* ── Simulador de Cenários / Baixa Temporada ──────────────────────
-          The interactive sliders used to live on Base Camp — moved here so
-          the dashboard stays a read-only summary of real numbers, and
-          "what if" scenario-testing lives with the rest of cost planning. */}
-      <div style={{ marginTop: '40px' }}>
-        <div style={{ marginBottom: '16px' }}>
-          <h2 style={{ fontSize: '16px', fontWeight: '600', color: 'var(--slate)', marginBottom: '4px' }}>
-            Simulador de Cenários / Baixa Temporada
-          </h2>
-          <p style={{ fontSize: '13px', color: 'var(--mist)' }}>
-            Ajuste os valores para simular hipóteses — os números acima são os reais.
-          </p>
+      {/* ── Reserva de Baixa Temporada + Simulador de Cenários ────────────
+          Side by side instead of stacked full-width rows — the blue card
+          (real numbers, moved from Base Camp so Sala de Espera/Aulas
+          Agendadas get the full column height there) and the interactive
+          "what if" sliders are the same topic at two different zoom
+          levels, so there's no reason for the simulator to eat a whole
+          row below it. 1:2 split — the card is a fixed-size summary, the
+          simulator has more to lay out (two sliders + result panel). */}
+      <div className="costs-runway-grid" style={{ marginTop: '40px' }}>
+        <div>
+          <RunwaySummary
+            runwayMonths={runwayMonths}
+            seasonRevenue={(runway as any).season_revenue ?? 0}
+            commissions={((runway as any).crew_commissions ?? 0) + totalPartnerCommissions}
+            netProfit={rawNetProfit}
+            monthlyBurn={monthlyBurn}
+            gapToTarget={gapToTarget}
+            projectedRunway={projection?.projectedRunway}
+            daysLeft={projection?.daysLeft}
+          />
         </div>
-        <RunwayCalculator
-          seasonProfit={adjustedNetProfit}
-          burnRate={monthlyCostTotal}
-          daysLeft={projection?.daysLeft}
-          projectedRunway={projection?.projectedRunway}
-          gap={projection?.gap}
-        />
+
+        <div>
+          <div style={{ marginBottom: '16px' }}>
+            <h2 style={{ fontSize: '16px', fontWeight: '600', color: 'var(--slate)', marginBottom: '4px' }}>
+              Simulador de Cenários / Baixa Temporada
+            </h2>
+            <p style={{ fontSize: '13px', color: 'var(--mist)' }}>
+              Ajuste os valores para simular hipóteses — os números ao lado são os reais.
+            </p>
+          </div>
+          <RunwayCalculator
+            seasonProfit={adjustedNetProfit}
+            burnRate={monthlyCostTotal}
+            daysLeft={projection?.daysLeft}
+            projectedRunway={projection?.projectedRunway}
+            gap={projection?.gap}
+          />
+        </div>
       </div>
     </div>
   )

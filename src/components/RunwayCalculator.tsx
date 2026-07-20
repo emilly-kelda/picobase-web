@@ -96,16 +96,20 @@ export default function RunwayCalculator({ seasonProfit, burnRate, currency = 'B
         </span>
       </div>
 
+      {/* Stacked, not side-by-side — this now lives in a narrower column
+          next to the Reserva de Baixa Temporada card (/owner/costs), not
+          spanning the full page width it used to have, so a left/right
+          split left dead horizontal space on both sides instead of using
+          the column's actual width. */}
       <div style={{
-        padding: '24px',
-        display: 'grid',
-        gridTemplateColumns: '1fr 1fr',
-        gap: '32px',
-        alignItems: 'center',
+        padding: '20px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '24px',
       }}>
 
         {/* Inputs */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
 
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
@@ -241,28 +245,31 @@ export default function RunwayCalculator({ seasonProfit, burnRate, currency = 'B
           )}
         </div>
 
-        {/* Result */}
+        {/* Result — divider instead of a side-by-side column boundary,
+            now that inputs and result stack vertically. */}
         <div style={{
+          borderTop: '0.5px solid var(--border)',
+          paddingTop: '20px',
           display: 'flex', flexDirection: 'column',
-          alignItems: 'center', gap: '16px',
+          alignItems: 'center', gap: '14px',
         }}>
           <div style={{ textAlign: 'center' }}>
             <div style={{
               fontSize: '11px', fontWeight: '500',
               letterSpacing: '0.12em', textTransform: 'uppercase',
-              color: 'var(--mist)', marginBottom: '8px',
+              color: 'var(--mist)', marginBottom: '6px',
             }}>
               Off-Season Runway
             </div>
             <div style={{
-              fontSize: '72px', fontWeight: '600',
+              fontSize: '52px', fontWeight: '600',
               color: barColor, lineHeight: '1',
               fontVariantNumeric: 'tabular-nums',
               transition: 'color 0.3s ease',
             }}>
               {runwayMonths.toFixed(1)}
             </div>
-            <div style={{ fontSize: '14px', color: 'var(--mist)', marginTop: '4px' }}>
+            <div style={{ fontSize: '13px', color: 'var(--mist)', marginTop: '4px' }}>
               months covered
             </div>
           </div>
