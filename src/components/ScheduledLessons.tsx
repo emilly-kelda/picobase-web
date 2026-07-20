@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { LEVEL_LABELS, isLevel } from '@/lib/levels'
@@ -11,6 +11,7 @@ import ConfirmLessonModal from '@/components/ConfirmLessonModal'
 import { translateModalityName } from '@/lib/modality'
 import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
+import OverflowMenu from '@/components/ui/OverflowMenu'
 
 type Lesson = {
   id: string
@@ -48,17 +49,6 @@ type PackageSale = {
   packages: { name: string } | null
 }
 
-// Same hand-drawn inline-SVG convention as nav-icons.tsx (24x24 viewBox,
-// stroke=currentColor, no fill) — no icon library installed in this project.
-function WhatsAppIcon() {
-  return (
-    <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 21c5 0 9-3.8 9-8.5S17 4 12 4s-9 3.8-9 8.5c0 1.6.5 3.1 1.3 4.4L3.5 21l4.4-1.3c1.2.8 2.6 1.3 4.1 1.3z" />
-      <path d="M9 9.8c0-.4.3-.8.7-.8h.6c.3 0 .6.2.7.5l.5 1.3c.1.3 0 .6-.2.8l-.5.5c.4.9 1.1 1.6 2 2l.5-.5c.2-.2.5-.3.8-.2l1.3.5c.3.1.5.4.5.7v.6c0 .4-.4.7-.8.7-3 0-5.5-2.5-5.5-5.5z" />
-    </svg>
-  )
-}
-
 function fmtTime(iso: string) {
   return new Date(iso).toLocaleTimeString('pt-BR', {
     hour: '2-digit', minute: '2-digit', timeZone: 'America/Fortaleza',
@@ -81,98 +71,6 @@ function studentConfirmationMessage(lesson: Lesson, dayLabel: string, schoolName
 function instructorConfirmationMessage(lesson: Lesson, dayLabel: string): string {
   const activityName = lesson.activities?.name ?? 'uma aula'
   return `Olá, ${lesson.instructor?.name ?? ''}! Você tem ${activityName} com ${lesson.student_name ?? 'o aluno'} agendada para ${dayLabel} às ${fmtTime(lesson.scheduled_at)}.`
-}
-
-/** Icon-only trigger + popover offering a choice of who to message — the
- *  student (confirmation, mentions the instructor) or the instructor
- *  (heads-up, mentions the student) — instead of a single link that always
- *  went to the student. Each option is a plain <a target="_blank">, not an
- *  onClick + window.open, so it behaves like a normal link (middle-click/
- *  cmd-click to open in background, etc.) and can't be blocked by a
- *  popup blocker the way a script-initiated window.open sometimes is. */
-function WhatsAppActionButton({ lesson, dayLabel, schoolName }: { lesson: Lesson; dayLabel: string; schoolName: string }) {
-  const [open, setOpen] = useState(false)
-  const wrapRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (!open) return
-    function onOutside(e: MouseEvent) {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false)
-    }
-    document.addEventListener('mousedown', onOutside)
-    return () => document.removeEventListener('mousedown', onOutside)
-  }, [open])
-
-  const studentPhone    = lesson.student_whatsapp
-  const instructorPhone = lesson.instructor?.whatsapp
-  const hasAny = !!studentPhone || !!instructorPhone
-
-  return (
-    <div ref={wrapRef} style={{ position: 'relative', flexShrink: 0 }}>
-      <button
-        type="button"
-        onClick={() => setOpen(o => !o)}
-        disabled={!hasAny}
-        title={hasAny ? 'Enviar mensagem no WhatsApp' : 'Sem WhatsApp cadastrado'}
-        style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          width: '28px', height: '28px', flexShrink: 0, padding: 0,
-          borderRadius: 'var(--radius-md)', border: 'none',
-          background: 'rgba(37,211,102,0.1)', color: '#128C4A',
-          cursor: hasAny ? 'pointer' : 'not-allowed',
-          opacity: hasAny ? 1 : 0.35,
-        }}
-      >
-        <WhatsAppIcon />
-      </button>
-
-      {open && (
-        <div style={{
-          position: 'absolute', top: 'calc(100% + 4px)', right: 0, zIndex: 60,
-          background: '#fff', border: '0.5px solid var(--border)',
-          borderRadius: 'var(--radius-md)', boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
-          minWidth: '220px', overflow: 'hidden',
-        }}>
-          <a
-            href={studentPhone ? buildApiWhatsAppUrl(studentPhone, studentConfirmationMessage(lesson, dayLabel, schoolName)) : undefined}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={() => setOpen(false)}
-            aria-disabled={!studentPhone}
-            style={{
-              display: 'block', padding: '10px 14px',
-              fontSize: '13px', color: studentPhone ? 'var(--slate)' : 'var(--mist)',
-              textDecoration: 'none', borderBottom: '0.5px solid var(--border)',
-              opacity: studentPhone ? 1 : 0.5,
-              pointerEvents: studentPhone ? 'auto' : 'none',
-              cursor: studentPhone ? 'pointer' : 'not-allowed',
-              fontFamily: 'var(--font-sans)',
-            }}
-          >
-            Enviar para o Aluno{lesson.student_name ? ` (${lesson.student_name})` : ''}
-          </a>
-          <a
-            href={instructorPhone ? buildApiWhatsAppUrl(instructorPhone, instructorConfirmationMessage(lesson, dayLabel)) : undefined}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={() => setOpen(false)}
-            aria-disabled={!instructorPhone}
-            style={{
-              display: 'block', padding: '10px 14px',
-              fontSize: '13px', color: instructorPhone ? 'var(--slate)' : 'var(--mist)',
-              textDecoration: 'none',
-              opacity: instructorPhone ? 1 : 0.5,
-              pointerEvents: instructorPhone ? 'auto' : 'none',
-              cursor: instructorPhone ? 'pointer' : 'not-allowed',
-              fontFamily: 'var(--font-sans)',
-            }}
-          >
-            Enviar para o Instrutor{lesson.instructor?.name ? ` (${lesson.instructor.name})` : ''}
-          </a>
-        </div>
-      )}
-    </div>
-  )
 }
 
 /** Fortaleza-local date/time parts for pre-filling the edit form's <input type="date">
@@ -1064,21 +962,7 @@ export default function ScheduledLessons({
                       : lesson.status === 'checked_in' ? t.status_checked_in
                       : t.status_scheduled}
                   </Badge>
-                  {/* Restored as the primary action: reception needs a
-                      direct way to confirm/start an individual lesson from
-                      this list, not just from Sala de Espera's checkin flow
-                      — a lesson scheduled straight from here (or one whose
-                      checkin got deferred_to_schedule) has no checkin card
-                      left to confirm it from. Reuses the group-confirm
-                      modal/flow for a single lesson (see
-                      openGroupConfirmModal's comment). Secondary, not
-                      primary: this row's primary is "Confirmar Aula" below
-                      when present (Fase 4's "at most one primary per row"). */}
-                  <Button variant="secondary" onClick={() => openRebookModal(lesson)} className="px-3 py-1.5 text-xs">
-                    + Agendar Próxima Aula
-                  </Button>
-                  {/* Primary action, positioned immediately before the
-                      WhatsApp button — the only hiding rule is status
+                  {/* Primary action — the only hiding rule is status
                       'confirmed' (shown as the "Confirmada" badge above
                       instead); anything else ('scheduled' or 'checked_in')
                       always renders this. */}
@@ -1087,24 +971,36 @@ export default function ScheduledLessons({
                       ✓ Confirmar Aula
                     </Button>
                   )}
-                  <WhatsAppActionButton lesson={lesson} dayLabel={dayLabel} schoolName={schoolName} />
+                  {/* picobase_chameleon_button_dossie.md Fase 4 asked to
+                      evaluate whether this row should also become
+                      [info][ChameleonButton][⋮] like Sala de Espera.
+                      ChameleonButton itself doesn't fit: it's driven by
+                      checkins.stage (Fase 0), and scheduled_lessons has no
+                      such column by design (Fase 0's own scope decision —
+                      one source of truth, not two that can diverge). The
+                      row still gets the same shape in spirit though: one
+                      clear primary ("Confirmar Aula") plus everything else
+                      — Agendar Próxima Aula, WhatsApp, Editar, Cancelar —
+                      behind the same OverflowMenu component Sala de Espera
+                      uses, instead of 4-5 buttons competing for attention. */}
+                  <OverflowMenu items={[
+                    { label: '+ Agendar Próxima Aula', onClick: () => openRebookModal(lesson) },
+                    {
+                      label: `WhatsApp Aluno${lesson.student_name ? ` (${lesson.student_name})` : ''}`,
+                      href: lesson.student_whatsapp ? buildApiWhatsAppUrl(lesson.student_whatsapp, studentConfirmationMessage(lesson, dayLabel, schoolName)) : '#',
+                      disabled: !lesson.student_whatsapp,
+                    },
+                    {
+                      label: `WhatsApp Instrutor${lesson.instructor?.name ? ` (${lesson.instructor.name})` : ''}`,
+                      href: lesson.instructor?.whatsapp ? buildApiWhatsAppUrl(lesson.instructor.whatsapp, instructorConfirmationMessage(lesson, dayLabel)) : '#',
+                      disabled: !lesson.instructor?.whatsapp,
+                    },
+                    { label: 'Editar', onClick: () => openEditModal(lesson) },
+                    ...(lesson.status === 'scheduled'
+                      ? [{ label: 'Cancelar', onClick: () => cancel(lesson.id), danger: true, disabled: deleting === lesson.id }]
+                      : []),
+                  ]} />
                 </div>
-                <Button variant="tertiary" onClick={() => openEditModal(lesson)} className="px-2 py-1 text-xs">
-                  Editar
-                </Button>
-                {lesson.status === 'scheduled' && (
-                  <button
-                    onClick={() => cancel(lesson.id)}
-                    disabled={deleting === lesson.id}
-                    style={{
-                      background: 'transparent', border: 'none',
-                      fontSize: '18px', color: 'var(--border-strong)',
-                      cursor: 'pointer', flexShrink: 0, padding: '0 4px',
-                    }}
-                  >
-                    ×
-                  </button>
-                )}
               </div>
             ))}
 

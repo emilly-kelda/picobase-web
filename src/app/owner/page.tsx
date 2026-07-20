@@ -20,6 +20,7 @@ import { getWeather, buildWeatherSpots, resolveWeatherSpot } from '@/lib/weather
 import { formatCurrency } from '@/lib/currency'
 import { getPortalLang } from '@/lib/language'
 import { getT } from '@/lib/i18n'
+import { normalizeStudentName } from '@/lib/text'
 import Link from 'next/link'
 
 const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
@@ -105,13 +106,34 @@ export default async function OwnerPage() {
   // ever has status 'scheduled'/'confirmed' (the query excludes 'cancelled',
   // and scheduled_lessons has no other status value), so no extra filter
   // is needed there.
+  //
+  // picobase_chameleon_button_dossie.md Fase 4 asked to make this count's
+  // source of truth checkins.stage = 'na_agua' instead. Done as a union
+  // with the existing schedule-window heuristic, not a straight
+  // replacement: ChameleonButton's "Enviar para a água" is a brand-new,
+  // manual action nobody has a habit of clicking yet, so switching this
+  // badge to depend on it alone would make it under-count (likely show 0)
+  // until staff actually adopt the button — a visible regression on the
+  // one number reception glances at most. Counting either signal means the
+  // badge can only go up from what it already showed, while still genuinely
+  // reflecting stage as staff start using it.
   const now = Date.now()
-  const studentsInWaterNow = (todayLessons as any[]).filter(l => {
-    if (!l.scheduled_at) return false
-    const start = new Date(l.scheduled_at).getTime()
-    const end   = start + (l.duration_min ?? 0) * 60000
-    return now >= start && now < end
-  }).length
+  const scheduledWindowNames = new Set(
+    (todayLessons as any[])
+      .filter(l => {
+        if (!l.scheduled_at) return false
+        const start = new Date(l.scheduled_at).getTime()
+        const end   = start + (l.duration_min ?? 0) * 60000
+        return now >= start && now < end
+      })
+      .map(l => normalizeStudentName(l.student_name))
+  )
+  const inWaterStageNames = new Set(
+    (pending as any[])
+      .filter(c => c.stage === 'na_agua')
+      .map(c => normalizeStudentName(c.student_name))
+  )
+  const studentsInWaterNow = new Set([...scheduledWindowNames, ...inWaterStageNames]).size
 
   const colHeaders = ['Data', 'Aluno', 'Atividade', 'Instrutor', 'Duração', 'Valor']
 

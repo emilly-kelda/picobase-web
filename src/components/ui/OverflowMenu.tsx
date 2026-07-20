@@ -4,9 +4,17 @@ import { useEffect, useRef, useState } from 'react'
 
 export type OverflowMenuItem = {
   label: string
-  onClick: () => void
   danger?: boolean
-}
+  disabled?: boolean
+} & (
+  | { onClick: () => void; href?: undefined }
+  // Real <a href target="_blank"> instead of a window.open() from an
+  // onClick — WhatsAppActionButton's own reasoning (see
+  // ScheduledLessons.tsx) applies here too: an actual link survives
+  // middle-click/cmd-click and isn't subject to popup-blocker heuristics
+  // the way a script-triggered window.open() sometimes is.
+  | { href: string; onClick?: undefined }
+)
 
 /** Kebab ("⋮") trigger for a card/row's secondary actions
  *  (picobase_chameleon_button_dossie.md, Fase 2) — Ver ficha, WhatsApp,
@@ -45,17 +53,38 @@ export default function OverflowMenu({ items }: { items: OverflowMenuItem[] }) {
           role="menu"
           className="absolute right-0 top-full z-20 mt-1 min-w-[160px] rounded-lg border border-pb-border bg-pb-white py-1 shadow-lg"
         >
-          {items.map((item, i) => (
-            <button
-              key={i}
-              type="button"
-              role="menuitem"
-              onClick={() => { setOpen(false); item.onClick() }}
-              className={`block w-full px-3 py-2 text-left text-xs whitespace-nowrap hover:bg-pb-powder ${item.danger ? 'text-pb-signal' : 'text-pb-slate'}`}
-            >
-              {item.label}
-            </button>
-          ))}
+          {items.map((item, i) => {
+            const className = `block w-full px-3 py-2 text-left text-xs whitespace-nowrap hover:bg-pb-powder ${
+              item.disabled ? 'text-pb-mist opacity-50 pointer-events-none' : item.danger ? 'text-pb-signal' : 'text-pb-slate'
+            }`
+            if (item.href) {
+              return (
+                <a
+                  key={i}
+                  href={item.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  role="menuitem"
+                  onClick={() => setOpen(false)}
+                  className={className}
+                >
+                  {item.label}
+                </a>
+              )
+            }
+            return (
+              <button
+                key={i}
+                type="button"
+                role="menuitem"
+                disabled={item.disabled}
+                onClick={() => { setOpen(false); item.onClick?.() }}
+                className={className}
+              >
+                {item.label}
+              </button>
+            )
+          })}
         </div>
       )}
     </div>

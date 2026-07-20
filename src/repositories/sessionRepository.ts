@@ -29,6 +29,7 @@ export async function getPendingLessons(schoolId: string) {
       scheduled_lesson_id,
       source,
       partner_id,
+      stage,
       activities ( id, name, default_price, default_duration_min ),
       instructor:users!checkins_instructor_id_fkey ( id, name ),
       partner:partners!checkins_partner_id_fkey ( id, name, type ),

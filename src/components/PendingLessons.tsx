@@ -11,8 +11,10 @@ import SellPackageFlowModal, { type PackageOption } from '@/components/SellPacka
 import ScheduleFromCheckinModal from '@/components/ScheduleFromCheckinModal'
 import type { VariableCostInfo } from '@/lib/commission'
 import { translateModalityName } from '@/lib/modality'
-import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
+import ChameleonButton from '@/components/ui/ChameleonButton'
+import OverflowMenu from '@/components/ui/OverflowMenu'
+import type { Stage } from '@/lib/stage'
 
 type ActivityRef = {
   id: string
@@ -50,6 +52,7 @@ type Checkin = {
   guardian_name: string | null
   source: string | null
   partner_id: string | null
+  stage: Stage | null
   activities: ActivityRef | null
   instructor: { id: string; name: string } | { id: string; name: string }[] | null
   partner: { id: string; name: string; type: string } | { id: string; name: string; type: string }[] | null
@@ -273,6 +276,20 @@ export default function PendingLessons({
   }
 
   function close() { setSelected(null) }
+
+  // ChameleonButton's onSendToWater (picobase_chameleon_button_dossie.md
+  // Fase 3/4): sala_de_espera -> na_agua. Optimistic — the row's button
+  // flips to "Finalizar e cobrar" immediately; the PATCH just persists it.
+  async function sendToWater(checkin: Checkin) {
+    setCheckins(prev => prev.map(c => c.id === checkin.id ? { ...c, stage: 'na_agua' } : c))
+    try {
+      await fetch('/api/owner/checkin-stage', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: checkin.id, stage: 'na_agua' }),
+      })
+    } catch {}
+  }
 
   // Recompute the level default whenever the activity is known — fires on open()
   // and again if the owner manually switches Atividade in the modal. The level
@@ -556,35 +573,24 @@ export default function PendingLessons({
                   )}
                 </div>
 
-                {/* Button row */}
+                {/* Button row — picobase_chameleon_button_dossie.md Fase 4:
+                    [ChameleonButton] [⋮ OverflowMenu], replacing the
+                    Check-in/Agendar aula/Vender pacote/Ver ficha row Fase 4
+                    of the design-system dossiê had just built. 'checkout'
+                    is derived, not stored — true only while this exact
+                    checkin's confirm modal (selected) is open. */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  {hasCredit ? (
-                    <>
-                      <CheckinQRButton
-                        slug={schoolSlug}
-                        schoolName={schoolName}
-                        studentName={checkin.student_name}
-                        activityName={checkin.activities?.name}
-                        compact
-                        className="flex-1"
-                      />
-                      <Button variant="secondary" onClick={() => setScheduleModal(checkin)} className="px-3 py-1.5 text-xs">
-                        {t.schedule_lesson_btn}
-                      </Button>
-                      <Button variant="tertiary" onClick={() => setFichaModal(checkin)} className="px-2 py-1.5 text-xs">
-                        {t.view_ficha_full_btn}
-                      </Button>
-                    </>
-                  ) : (
-                    <>
-                      <Button variant="danger" onClick={() => setSellModal(checkin)} className="flex-1 py-1.5 text-xs">
-                        {t.sell_package_full_btn}
-                      </Button>
-                      <Button variant="tertiary" onClick={() => setFichaModal(checkin)} className="px-2 py-1.5 text-xs">
-                        {t.view_ficha_full_btn}
-                      </Button>
-                    </>
-                  )}
+                  <ChameleonButton
+                    stage={selected?.id === checkin.id ? 'checkout' : (checkin.stage ?? 'sala_de_espera')}
+                    hasCredit={hasCredit}
+                    onSendToWater={() => sendToWater(checkin)}
+                    onFinishAndCharge={() => open(checkin)}
+                    onSellPackage={() => setSellModal(checkin)}
+                  />
+                  <OverflowMenu items={[
+                    { label: t.view_ficha_full_btn, onClick: () => setFichaModal(checkin) },
+                    { label: t.schedule_lesson_btn, onClick: () => setScheduleModal(checkin) },
+                  ]} />
                 </div>
               </div>
             )
@@ -1299,13 +1305,26 @@ export default function PendingLessons({
               </button>
             </div>
 
-            <div style={{
-              display: 'inline-flex', alignItems: 'center', gap: '6px',
-              fontSize: '11px', fontWeight: '500', color: 'var(--color-pb-glacial-dark)',
-              background: 'var(--color-pb-glacial-light)', padding: '4px 10px', borderRadius: 'var(--radius-full)',
-              marginBottom: '18px',
-            }}>
-              ✓ Termo de Responsabilidade Assinado
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '18px' }}>
+              <div style={{
+                display: 'inline-flex', alignItems: 'center', gap: '6px',
+                fontSize: '11px', fontWeight: '500', color: 'var(--color-pb-glacial-dark)',
+                background: 'var(--color-pb-glacial-light)', padding: '4px 10px', borderRadius: 'var(--radius-full)',
+              }}>
+                ✓ Termo de Responsabilidade Assinado
+              </div>
+              {/* Moved here from the compact card's button row when that
+                  row became [ChameleonButton][⋮] only
+                  (picobase_chameleon_button_dossie.md Fase 4) — this is a
+                  less time-critical, per-student utility (re-showing the
+                  waiver/check-in link, e.g. for a companion), not something
+                  that needs to compete for the card's 2-element budget. */}
+              <CheckinQRButton
+                slug={schoolSlug}
+                schoolName={schoolName}
+                studentName={fichaModal.student_name}
+                activityName={fichaModal.activities?.name}
+              />
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>

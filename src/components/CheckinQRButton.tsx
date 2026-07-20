@@ -88,7 +88,7 @@ export default function CheckinQRButton({
             whiteSpace: 'nowrap',
           }}
         >
-          📱 Exibir QR Code de Check-in
+          🔲 Exibir QR Code de Check-in
         </button>
       )}
 
