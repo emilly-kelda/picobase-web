@@ -878,3 +878,22 @@ their commit message and diff.
   related gap: `PendingLessons.tsx` never checked `confirm-lesson`'s
   response for `ok`, so a rejected confirm (now possible) showed no
   error at all.
+- `f89ed18` **feat**: IKO/VDWS 10h autonomy-certificate eligibility
+  tracking. `getCompletedHoursByStudent()` in `studentRepository.ts` sums
+  `duration_min` across `sessions` (already-concluded lessons by
+  construction — there's no separate status column, a lesson only
+  becomes a `sessions` row once actually confirmed), grouped by student
+  via `checkins.session_id`, same join `getSessionsByStudent`/
+  `getSessionsByStudentName` already use for a student's own history.
+  Known, pre-existing gap carried over rather than introduced:
+  group-confirmed lessons have no checkin at all
+  (`confirm-lesson/route.ts`: "Group-confirmed lessons have no
+  checkin"), so their minutes aren't attributed to anyone here either —
+  same limitation those two functions already had. Surfaced in three
+  places: a new "Horas de Velejo" column on the Students list (both
+  registered and check-in-only sections) with a green "[ 📜 Elegível
+  para Certificado ]" badge at 10h+; the same card + badge on both
+  student detail pages, computed directly from the `sessions` array
+  those pages already fetch (no new query there); and a 🏅 icon next to
+  the name on Sala de Espera's checkin cards once a student crosses the
+  threshold, flagging a lesson that might be their final evaluation.
