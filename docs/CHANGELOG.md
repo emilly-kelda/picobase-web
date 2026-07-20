@@ -897,3 +897,30 @@ their commit message and diff.
   those pages already fetch (no new query there); and a 🏅 icon next to
   the name on Sala de Espera's checkin cards once a student crosses the
   threshold, flagging a lesson that might be their final evaluation.
+- `e1a78cb` **fix**: production outage — `getCompletedHoursByStudent()`
+  (above) assumed `checkins.session_id` existed; it doesn't, the real
+  link is `sessions.checkin_id → checkins.id`. Confirmed live via
+  `Error 42703: column checkins.session_id does not exist`, which was
+  crashing every render of `/owner`. The wrong assumption came from
+  `getSessionsByStudent`/`getSessionsByStudentName` (pre-existing code)
+  referencing the same nonexistent column — those never crashed only
+  because they read `.data` without ever checking `.error`, so they
+  silently returned empty session histories instead of throwing. Fixed
+  all three functions to use the correct join; verified against
+  production data before pushing.
+- `4365840` **fix**: restored the actual original `ConfirmLessonModal.tsx`
+  (568 lines, recovered via `git show` from the commit that deleted it
+  two days prior) in place of the simplified single-lesson confirm form
+  built in `66bd220` — that rebuild was a smaller reconstruction, not a
+  restoration, missing: activity selection, the level/progression picker,
+  an editable session date, BRL/EUR/USD currency with live FX conversion
+  (`/api/fx`, with a stale-cache/fallback path), total-vs-per-hour
+  pricing, and a live instructor-commission preview accounting for both
+  variable cost and currency conversion. `ScheduledLessons.tsx` now
+  renders this restored component instead of its own inline modal;
+  `payoutModel`/`fixedPayoutValue` came back as props (removed in the
+  same deletion commit) threaded from `owner/page.tsx`'s already-fetched
+  `school` row. `/api/owner/confirm-lesson` needed no changes — the
+  restored modal's request body matches what the route already expects,
+  and the clash/capacity validation added earlier this session still
+  runs for it.
