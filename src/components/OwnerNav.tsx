@@ -121,7 +121,7 @@ export default function OwnerNav({
           padding: 9px ${collapsed ? '0' : '12px'};
           justify-content: ${collapsed ? 'center' : 'flex-start'};
           border-radius: var(--radius-md);
-          color: ${dark ? 'rgba(255,255,255,0.6)' : 'var(--mist)'};
+          color: ${dark ? '#94A3B8' : 'var(--mist)'};
           text-decoration: none;
           white-space: nowrap;
           transition: background 0.15s, color 0.15s;
@@ -133,7 +133,10 @@ export default function OwnerNav({
         .nav-row.active {
           color: ${dark ? '#fff' : 'var(--slate)'};
           font-weight: 500;
-          background: ${dark ? 'var(--color-pb-slate)' : 'var(--powder)'};
+          /* Translucent white overlay, not a solid fill — against a
+             near-black slate-950 sidebar a solid dark fill barely reads
+             as "highlighted"; a soft overlay does. */
+          background: ${dark ? 'rgba(255,255,255,0.08)' : 'var(--powder)'};
         }
         .nav-row svg { flex-shrink: 0; }
         .nav-active-dot {
@@ -183,7 +186,11 @@ export default function OwnerNav({
       <aside style={{
         width: `${sidebarWidth}px`,
         flexShrink: 0,
-        background: dark ? 'var(--color-pb-storm)' : '#fff',
+        // slate-950, not --color-pb-storm (slate-700, a mid-tone meant for
+        // borders/secondary elements elsewhere) — the "grafite profundo"
+        // ask specifically wants this darker than any other dark surface
+        // in the app.
+        background: dark ? '#020617' : '#fff',
         borderRight: dark ? 'none' : '1px solid var(--border)',
         position: 'sticky',
         top: 0,
