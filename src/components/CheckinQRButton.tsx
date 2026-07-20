@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Button from '@/components/ui/Button'
 
 /** Trigger for the receptionist's counter: opens a QR (same /api/owner/qr
  *  endpoint) right where the walk-in student is being handled — Sala de
@@ -18,12 +19,14 @@ export default function CheckinQRButton({
   studentName,
   activityName,
   compact = false,
+  className,
 }: {
   slug: string
   schoolName: string
   studentName?: string
   activityName?: string | null
   compact?: boolean
+  className?: string
 }) {
   const [open, setOpen]       = useState(false)
   const [imgSrc, setImgSrc]   = useState<string | null>(null)
@@ -53,24 +56,22 @@ export default function CheckinQRButton({
   return (
     <>
       {compact ? (
-        <button
+        // Fase 3 of picobase_design_system_dossie.md: the old icon-only
+        // 📱 trigger read as "phone" — ambiguous with the student's own
+        // device, not obviously "open the check-in QR". No icon library is
+        // installed in this project (every icon in the app is an emoji
+        // glyph), so 🔲 stands in for "QR code" — visually distinct from
+        // the phone glyph it replaces — paired with an always-visible
+        // "Check-in" label per the dossiê's explicit requirement.
+        <Button
           type="button"
+          variant="primary"
           onClick={() => setOpen(true)}
           title={studentName ? `QR Code de check-in — ${studentName}` : 'QR Code de check-in'}
-          style={{
-            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-            width: '30px', height: '30px', padding: 0,
-            background: 'transparent',
-            color: 'var(--mist)',
-            border: '0.5px solid var(--border-strong)',
-            borderRadius: 'var(--radius-md)',
-            fontSize: '14px',
-            cursor: 'pointer', fontFamily: 'var(--font-sans)',
-            flexShrink: 0,
-          }}
+          className={className}
         >
-          📱
-        </button>
+          🔲 Check-in
+        </Button>
       ) : (
         <button
           type="button"

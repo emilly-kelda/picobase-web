@@ -11,6 +11,7 @@ import SellPackageFlowModal, { type PackageOption } from '@/components/SellPacka
 import ScheduleFromCheckinModal from '@/components/ScheduleFromCheckinModal'
 import type { VariableCostInfo } from '@/lib/commission'
 import { translateModalityName } from '@/lib/modality'
+import Button from '@/components/ui/Button'
 
 type ActivityRef = {
   id: string
@@ -664,32 +665,32 @@ export default function PendingLessons({
                   </button>
                   {/* Individual QR — unique link per student (?student=&
                       activity=), not the school-wide one that used to sit
-                      in this card's header. */}
-                  <CheckinQRButton
-                    slug={schoolSlug}
-                    schoolName={schoolName}
-                    studentName={checkin.student_name}
-                    activityName={checkin.activities?.name}
-                    compact
-                  />
+                      in this card's header. Fase 3 of
+                      picobase_design_system_dossie.md: only the card's
+                      primary action when the student actually has credit to
+                      use it on — hidden (not disabled) once exhausted, so
+                      "Vender pacote" is the one clear next step instead of
+                      a check-in button that would just fail. Full row
+                      reordering/sizing per the dossiê's exact Sala de
+                      Espera spec is Fase 4's job, not done here. */}
+                  {(!exhausted && balance?.hasPackage) && (
+                    <CheckinQRButton
+                      slug={schoolSlug}
+                      schoolName={schoolName}
+                      studentName={checkin.student_name}
+                      activityName={checkin.activities?.name}
+                      compact
+                    />
+                  )}
                   {!balance?.hasPackage || exhausted ? (
-                    <button
+                    <Button
+                      variant="danger"
                       onClick={() => setSellModal(checkin)}
                       title={t.sell_package_btn}
-                      style={{
-                        padding: '6px 10px',
-                        background: 'transparent',
-                        color: '#007868',
-                        border: '0.5px solid #007868',
-                        borderRadius: 'var(--radius-md)',
-                        fontSize: '12px', fontWeight: '500',
-                        cursor: 'pointer',
-                        fontFamily: 'var(--font-sans)',
-                        whiteSpace: 'nowrap',
-                      }}
+                      className="px-2.5 py-1.5 text-xs"
                     >
                       💳 {t.sell_package_btn}
-                    </button>
+                    </Button>
                   ) : null}
                 </div>
               </div>
