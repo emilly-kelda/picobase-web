@@ -79,6 +79,10 @@ export default async function StudentNameProfilePage({
 
   const totalRevenue = sessions.reduce((s: number, r: any) => s + (r.price ?? 0), 0)
 
+  // IKO/VDWS autonomy certificate — 10h of completed water time.
+  const totalSailingMinutes = sessions.reduce((s: number, r: any) => s + (r.duration_min ?? 0), 0)
+  const certificateEligible = totalSailingMinutes >= 10 * 60
+
   const initials = displayName
     .split(' ').slice(0, 2).map((n: string) => n[0] ?? '').join('').toUpperCase()
 
@@ -144,14 +148,15 @@ export default async function StudentNameProfilePage({
 
       {/* Stats */}
       <div style={{
-        display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)',
-        gap: '12px', marginBottom: '24px',
+        display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)',
+        gap: '12px', marginBottom: certificateEligible ? '12px' : '24px',
       }}>
         {[
           { label: t.sessions_label, value: String(sessions.length) },
           { label: t.total_spent,    value: fmt(totalRevenue)       },
           { label: t.th_skill,
             value: skillLevel ? (SKILL_LABELS[skillLevel] ?? skillLevel) : '—' },
+          { label: t.th_hours, value: fmtMin(totalSailingMinutes) },
         ].map(card => (
           <div key={card.label} style={{
             background: '#fff',
@@ -176,6 +181,23 @@ export default async function StudentNameProfilePage({
           </div>
         ))}
       </div>
+
+      {/* IKO/VDWS 10h autonomy-certificate eligibility */}
+      {certificateEligible && (
+        <div style={{ marginBottom: '24px' }}>
+          <span
+            title="10h+ de aula concluídas — elegível para o Certificado de Autonomia (IKO/VDWS)"
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: '6px',
+              padding: '6px 14px', borderRadius: '99px',
+              fontSize: '13px', fontWeight: '700',
+              background: '#E8F5E9', color: '#2E7D32',
+            }}
+          >
+            [ 📜 Elegível para Certificado ]
+          </span>
+        </div>
+      )}
 
       {/* Package */}
       {activePkg ? (() => {

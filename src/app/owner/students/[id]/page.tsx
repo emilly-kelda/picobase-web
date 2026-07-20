@@ -68,6 +68,13 @@ export default async function StudentDetailPage({
     p => (p.minutes_used ?? 0) >= (p.minutes_purchased ?? 0) && (p.minutes_purchased ?? 0) > 0
   )
 
+  // IKO/VDWS autonomy certificate — 10h of completed (realized) water time.
+  // sessions here already are "concluded" by construction (getSessionsByStudent
+  // only ever returns rows from the sessions table, which only exists once a
+  // lesson is actually confirmed — there's no separate status to filter on).
+  const totalSailingMinutes = sessions.reduce((s: number, r: any) => s + (r.duration_min ?? 0), 0)
+  const certificateEligible = totalSailingMinutes >= 10 * 60
+
   return (
     <div>
 
@@ -86,9 +93,9 @@ export default async function StudentDetailPage({
       {/* Stats */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(3, 1fr)',
+        gridTemplateColumns: 'repeat(4, 1fr)',
         gap: '12px',
-        marginBottom: '24px',
+        marginBottom: certificateEligible ? '12px' : '24px',
       }}>
         {[
           { label: 'Aulas',    value: String(sessions.length) },
@@ -97,6 +104,7 @@ export default async function StudentDetailPage({
             ? SKILL_LABELS[student.skill_level] ?? student.skill_level
             : '—'
           },
+          { label: 'Horas de Velejo', value: fmtMin(totalSailingMinutes) },
         ].map(card => (
           <div key={card.label} style={{
             background: '#fff',
@@ -123,6 +131,23 @@ export default async function StudentDetailPage({
           </div>
         ))}
       </div>
+
+      {/* IKO/VDWS 10h autonomy-certificate eligibility */}
+      {certificateEligible && (
+        <div style={{ marginBottom: '24px' }}>
+          <span
+            title="10h+ de aula concluídas — elegível para o Certificado de Autonomia (IKO/VDWS)"
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: '6px',
+              padding: '6px 14px', borderRadius: '99px',
+              fontSize: '13px', fontWeight: '700',
+              background: '#E8F5E9', color: '#2E7D32',
+            }}
+          >
+            [ 📜 Elegível para Certificado ]
+          </span>
+        </div>
+      )}
 
       {/* Active package progress */}
       {pkg && (() => {

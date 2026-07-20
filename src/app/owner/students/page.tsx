@@ -1,4 +1,4 @@
-import { getStudents, getStudentCount, getActivePackagesByStudent, getCheckinOnlyStudents, getInstructors } from '@/repositories/studentRepository'
+import { getStudents, getStudentCount, getActivePackagesByStudent, getCheckinOnlyStudents, getInstructors, getCompletedHoursByStudent } from '@/repositories/studentRepository'
 import { getActivitiesForCheckin } from '@/repositories/checkinRepository'
 import { getPackages } from '@/repositories/packageRepository'
 import { getPortalLang } from '@/lib/language'
@@ -13,7 +13,7 @@ export default async function StudentsPage({
   searchParams: Promise<{ search?: string }>
 }) {
   const { search } = await searchParams
-  const [students, total, packageMap, checkinOnly, lang, activities, instructors, packageTypes] = await Promise.all([
+  const [students, total, packageMap, checkinOnly, lang, activities, instructors, packageTypes, hoursMap] = await Promise.all([
     getStudents(SCHOOL_ID, search),
     getStudentCount(SCHOOL_ID),
     getActivePackagesByStudent(SCHOOL_ID),
@@ -25,6 +25,8 @@ export default async function StudentsPage({
     getActivitiesForCheckin(SCHOOL_ID),
     getInstructors(SCHOOL_ID),
     getPackages(SCHOOL_ID),
+    // IKO/VDWS 10h autonomy-certificate eligibility badge.
+    getCompletedHoursByStudent(SCHOOL_ID),
   ])
   const t = getT(lang)
 
@@ -39,6 +41,7 @@ export default async function StudentsPage({
       activities={activities}
       instructors={instructors}
       packageTypes={packageTypes as any}
+      hoursMap={hoursMap}
     />
   )
 }

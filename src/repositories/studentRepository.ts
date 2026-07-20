@@ -127,6 +127,51 @@ export async function getActivePackagesByStudent(schoolId: string) {
   return map
 }
 
+/** Total completed (realized) water-time minutes per student, for the
+ *  IKO/VDWS 10h autonomy-certificate eligibility badge. `sessions` are
+ *  already-confirmed/realized lessons by construction (no separate status
+ *  column — a scheduled-but-not-yet-happened lesson lives in
+ *  scheduled_lessons instead), so every row here counts.
+ *
+ *  Keyed by raw (not normalized) student_name, same convention as
+ *  getActivePackagesByStudent right above — this map is meant to be read
+ *  the same way, via students.name exact lookup, on the same page.
+ *
+ *  Known gap: group-confirmed sessions (see confirm-lesson/route.ts —
+ *  "Group-confirmed lessons have no checkin") have no checkins row at all,
+ *  so there's no student_name to attribute their minutes to here. Same
+ *  limitation getSessionsByStudent/getSessionsByStudentName below already
+ *  have for that student's session history and totals — not a new gap
+ *  introduced by this function specifically. */
+export async function getCompletedHoursByStudent(schoolId: string): Promise<Map<string, number>> {
+  const supabase = createServiceClient()
+  const { data: checkinRows, error } = await supabase
+    .from('checkins')
+    .select('student_name, session_id')
+    .eq('school_id', schoolId)
+    .not('session_id', 'is', null)
+  if (error) throw error
+
+  const sessionIds = [...new Set((checkinRows ?? []).map(c => c.session_id).filter(Boolean))]
+  if (sessionIds.length === 0) return new Map()
+
+  const { data: sessions, error: sessionsError } = await supabase
+    .from('sessions')
+    .select('id, duration_min')
+    .in('id', sessionIds as string[])
+  if (sessionsError) throw sessionsError
+
+  const durationById = new Map((sessions ?? []).map(s => [s.id, s.duration_min ?? 0]))
+
+  const totals = new Map<string, number>()
+  for (const c of checkinRows ?? []) {
+    if (!c.session_id) continue
+    const duration = durationById.get(c.session_id) ?? 0
+    totals.set(c.student_name, (totals.get(c.student_name) ?? 0) + duration)
+  }
+  return totals
+}
+
 /** Fetch sessions for a student by name (case-insensitive). Used for name-keyed profiles. */
 export async function getSessionsByStudentName(schoolId: string, studentName: string) {
   const supabase = createServiceClient()

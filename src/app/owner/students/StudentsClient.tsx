@@ -30,6 +30,40 @@ function getInitials(name: string) {
   return name.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase()
 }
 
+// IKO/VDWS autonomy certificate — 10h of completed (realized) water time.
+const CERTIFICATE_ELIGIBLE_MINUTES = 10 * 60
+
+function fmtHours(minutes: number) {
+  const h = Math.floor(minutes / 60)
+  const m = minutes % 60
+  return m > 0 ? `${h}h${m}` : `${h}h`
+}
+
+function HoursOfSailing({ minutes }: { minutes: number }) {
+  const eligible = minutes >= CERTIFICATE_ELIGIBLE_MINUTES
+  return (
+    <div>
+      <div style={{ fontSize: '13px', color: 'var(--slate)', whiteSpace: 'nowrap' }}>
+        Horas de Velejo: {fmtHours(minutes)}
+      </div>
+      {eligible && (
+        <span
+          title="10h+ de aula concluídas — elegível para o Certificado de Autonomia (IKO/VDWS)"
+          style={{
+            display: 'inline-block', marginTop: '4px',
+            padding: '3px 10px', borderRadius: 'var(--radius-full)',
+            fontSize: '11px', fontWeight: '700',
+            background: '#E8F5E9', color: '#2E7D32',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          [ 📜 Elegível para Certificado ]
+        </span>
+      )}
+    </div>
+  )
+}
+
 function RowActions({
   name, t, onSchedule, onSell,
 }: {
@@ -76,6 +110,7 @@ export default function StudentsClient({
   activities,
   instructors,
   packageTypes,
+  hoursMap,
 }: {
   students: any[]
   total: number
@@ -86,6 +121,7 @@ export default function StudentsClient({
   activities: { id: string; name: string }[]
   instructors: { id: string; name: string }[]
   packageTypes: PackageOption[]
+  hoursMap: Map<string, number>
 }) {
   const router = useRouter()
   const [showAddModal, setShowAddModal] = useState(false)
@@ -221,7 +257,7 @@ export default function StudentsClient({
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr>
-              {[t.th_student, t.th_nationality, t.th_contact, t.th_skill, t.th_package, t.th_health, t.th_since, t.th_actions].map(h => (
+              {[t.th_student, t.th_nationality, t.th_contact, t.th_skill, t.th_package, t.th_hours, t.th_health, t.th_since, t.th_actions].map(h => (
                 <th key={h} style={{
                   padding: '10px 24px',
                   textAlign: 'left',
@@ -242,7 +278,7 @@ export default function StudentsClient({
           <tbody>
             {students.length === 0 && checkinOnly.length === 0 ? (
               <tr>
-                <td colSpan={8} style={{
+                <td colSpan={9} style={{
                   padding: '48px 24px',
                   textAlign: 'center',
                   fontSize: '13px',
@@ -341,6 +377,9 @@ export default function StudentsClient({
                         })()}
                       </td>
                       <td style={{ padding: '14px 24px' }}>
+                        <HoursOfSailing minutes={hoursMap.get(s.name) ?? 0} />
+                      </td>
+                      <td style={{ padding: '14px 24px' }}>
                         {s.health_conditions ? (
                           <span style={{
                             display: 'inline-block', padding: '3px 10px',
@@ -366,7 +405,7 @@ export default function StudentsClient({
                 {/* Separator between registered and check-in-only */}
                 {checkinOnly.length > 0 && students.length > 0 && (
                   <tr>
-                    <td colSpan={8} style={{
+                    <td colSpan={9} style={{
                       padding: '6px 24px',
                       fontSize: '10px', fontWeight: '500',
                       letterSpacing: '0.1em', textTransform: 'uppercase',
@@ -429,7 +468,7 @@ export default function StudentsClient({
                       <span style={{ fontSize: '13px', color: 'var(--mist)' }}>—</span>
                     </td>
                     <td style={{ padding: '14px 24px' }}>
-                      <span style={{ fontSize: '13px', color: 'var(--mist)' }}>—</span>
+                      <HoursOfSailing minutes={hoursMap.get(s.name) ?? 0} />
                     </td>
                     <td style={{ padding: '14px 24px' }}>
                       {s.health_condition ? (

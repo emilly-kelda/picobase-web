@@ -2,7 +2,7 @@ import { cookies } from 'next/headers'
 import { getRunwayData, getSchool } from '@/repositories/runwayRepository'
 import { getRecentSessions, getTodayStats, getPendingLessons, getMonthComparison } from '@/repositories/sessionRepository'
 import { getAlerts } from '@/repositories/alertRepository'
-import { getInstructors } from '@/repositories/studentRepository'
+import { getInstructors, getCompletedHoursByStudent } from '@/repositories/studentRepository'
 import { getActivitiesForCheckin } from '@/repositories/checkinRepository'
 import { getScheduledLessons, getMissedLessons } from '@/repositories/scheduledLessonRepository'
 import { getPackageSales, getPackageBalancesForCheckins, getPackages } from '@/repositories/packageRepository'
@@ -51,7 +51,7 @@ export default async function OwnerPage() {
     runway, sessions, alerts, today, lang,
     pending, instructors, todayLessons, tomorrowLessons,
     activities, activePackages, missedLessons, packageBalances,
-    monthComparison, weather, packageTypes,
+    monthComparison, weather, packageTypes, hoursMap,
   ] = await Promise.all([
     getRunwayData(SCHOOL_ID, seasonId),
     getRecentSessions(SCHOOL_ID),
@@ -69,6 +69,9 @@ export default async function OwnerPage() {
     getMonthComparison(SCHOOL_ID),
     getWeather(selectedWeatherSpot),
     getPackages(SCHOOL_ID),
+    // IKO/VDWS 10h autonomy-certificate eligibility — Sala de Espera's
+    // medal icon next to a student's name.
+    getCompletedHoursByStudent(SCHOOL_ID),
   ])
 
   const t = getT(lang)
@@ -181,6 +184,7 @@ export default async function OwnerPage() {
             packageTypes={packageTypes as any}
             schoolSlug={(school as any)?.slug ?? runway.slug ?? ''}
             schoolName={runway.school_name ?? 'Pico Base'}
+            hoursMap={hoursMap}
           />
 
           <MissedLessons

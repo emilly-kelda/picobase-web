@@ -135,6 +135,7 @@ export default function PendingLessons({
   packageTypes = [],
   schoolSlug,
   schoolName,
+  hoursMap,
 }: {
   checkins: Checkin[]
   instructors: Instructor[]
@@ -145,6 +146,7 @@ export default function PendingLessons({
   packageTypes?: PackageOption[]
   schoolSlug: string
   schoolName: string
+  hoursMap?: Map<string, number>
 }) {
   const router = useRouter()
   const [checkins, setCheckins]         = useState(initialCheckins)
@@ -520,6 +522,14 @@ export default function PendingLessons({
                     display: 'flex', alignItems: 'center', gap: '8px',
                   }}>
                     {checkin.student_name}
+                    {(hoursMap?.get(checkin.student_name) ?? 0) >= 10 * 60 && (
+                      <span
+                        title="10h+ de aula concluídas — pode ser a sessão de avaliação final (Certificado de Autonomia IKO/VDWS)"
+                        style={{ fontSize: '14px' }}
+                      >
+                        🏅
+                      </span>
+                    )}
                     {checkin.source && (
                       <span
                         title={checkin.source}
