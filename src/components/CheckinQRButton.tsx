@@ -2,51 +2,94 @@
 
 import { useState, useEffect } from 'react'
 
-/** Compact trigger for the receptionist's counter: instead of navigating to
- *  Settings to find the full QRCodeDisplay card, this opens the same QR
- *  (same /api/owner/qr endpoint) right where the walk-in student is being
- *  handled — Sala de Espera. */
+/** Trigger for the receptionist's counter: opens a QR (same /api/owner/qr
+ *  endpoint) right where the walk-in student is being handled — Sala de
+ *  Espera. Two shapes: the default pill (school-wide QR, no student
+ *  attached) and `compact` (a small icon-only trigger meant to sit inside a
+ *  single checkin card's action row) — passing studentName/activityName
+ *  makes the generated QR point at that specific student's checkin URL
+ *  (?student=&activity=, the same query params CheckinForm.tsx already
+ *  reads to pre-fill/lock its form — see checkin/[school]/page.tsx), so
+ *  scanning it drops them straight into a form that already knows who they
+ *  are instead of a blank one. */
 export default function CheckinQRButton({
   slug,
   schoolName,
+  studentName,
+  activityName,
+  compact = false,
 }: {
   slug: string
   schoolName: string
+  studentName?: string
+  activityName?: string | null
+  compact?: boolean
 }) {
   const [open, setOpen]       = useState(false)
   const [imgSrc, setImgSrc]   = useState<string | null>(null)
   const [origin, setOrigin]   = useState('')
 
+  const qrParams = new URLSearchParams({ format: 'png' })
+  if (studentName) qrParams.set('student', studentName)
+  if (activityName) qrParams.set('activity', activityName)
+
   useEffect(() => {
     if (!open) return
     setOrigin(window.location.origin)
-    if (imgSrc) return
-    fetch('/api/owner/qr?format=png')
+    fetch(`/api/owner/qr?${qrParams.toString()}`)
       .then(r => r.blob())
       .then(blob => setImgSrc(URL.createObjectURL(blob)))
-  }, [open])
+    // Re-fetch whenever the target student changes, unlike the school-wide
+    // QR (fixed URL, safe to cache once per open).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, studentName, activityName])
 
-  const checkinUrl = origin ? `${origin}/checkin/${slug}` : `/checkin/${slug}`
+  const linkParams = new URLSearchParams()
+  if (studentName) linkParams.set('student', studentName)
+  if (activityName) linkParams.set('activity', activityName)
+  const query = linkParams.toString()
+  const checkinUrl = `${origin || ''}/checkin/${slug}${query ? `?${query}` : ''}`
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        style={{
-          display: 'inline-flex', alignItems: 'center', gap: '6px',
-          padding: '5px 12px',
-          background: '#fff',
-          border: '0.5px solid var(--border-strong)',
-          borderRadius: 'var(--radius-full)',
-          fontSize: '11px', fontWeight: '500',
-          color: 'var(--glacial-dark)',
-          cursor: 'pointer', fontFamily: 'var(--font-sans)',
-          whiteSpace: 'nowrap',
-        }}
-      >
-        📱 Exibir QR Code de Check-in
-      </button>
+      {compact ? (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          title={studentName ? `QR Code de check-in — ${studentName}` : 'QR Code de check-in'}
+          style={{
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+            width: '30px', height: '30px', padding: 0,
+            background: 'transparent',
+            color: 'var(--mist)',
+            border: '0.5px solid var(--border-strong)',
+            borderRadius: 'var(--radius-md)',
+            fontSize: '14px',
+            cursor: 'pointer', fontFamily: 'var(--font-sans)',
+            flexShrink: 0,
+          }}
+        >
+          📱
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: '6px',
+            padding: '5px 12px',
+            background: '#fff',
+            border: '0.5px solid var(--border-strong)',
+            borderRadius: 'var(--radius-full)',
+            fontSize: '11px', fontWeight: '500',
+            color: 'var(--glacial-dark)',
+            cursor: 'pointer', fontFamily: 'var(--font-sans)',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          📱 Exibir QR Code de Check-in
+        </button>
+      )}
 
       {open && (
         <div
@@ -64,10 +107,12 @@ export default function CheckinQRButton({
             padding: '28px', textAlign: 'center',
           }}>
             <div style={{ fontSize: '15px', fontWeight: '500', color: 'var(--slate)', marginBottom: '4px' }}>
-              {schoolName}
+              {studentName ?? schoolName}
             </div>
             <div style={{ fontSize: '12px', color: 'var(--mist)', marginBottom: '20px' }}>
-              Peça para o cliente escanear
+              {studentName
+                ? 'Peça para o cliente escanear — termo já vem com o nome preenchido'
+                : 'Peça para o cliente escanear'}
             </div>
 
             <div style={{

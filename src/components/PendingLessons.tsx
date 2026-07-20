@@ -376,7 +376,6 @@ export default function PendingLessons({
               {checkins.length}
             </span>
           </div>
-          <CheckinQRButton slug={schoolSlug} schoolName={schoolName} />
         </div>
 
         {confirmed && (
@@ -653,22 +652,35 @@ export default function PendingLessons({
                       Agendar Aula
                     </button>
                   )}
-                  <button
-                    onClick={() => setFichaModal(checkin)}
-                    style={{
-                      padding: '6px 18px',
-                      background: 'transparent',
-                      color: 'var(--mist)',
-                      border: '0.5px solid var(--border-strong)',
-                      borderRadius: 'var(--radius-md)',
-                      fontSize: '12px', fontWeight: '500',
-                      cursor: 'pointer',
-                      fontFamily: 'var(--font-sans)',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    Ver Ficha
-                  </button>
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <button
+                      onClick={() => setFichaModal(checkin)}
+                      style={{
+                        flex: 1,
+                        padding: '6px 18px',
+                        background: 'transparent',
+                        color: 'var(--mist)',
+                        border: '0.5px solid var(--border-strong)',
+                        borderRadius: 'var(--radius-md)',
+                        fontSize: '12px', fontWeight: '500',
+                        cursor: 'pointer',
+                        fontFamily: 'var(--font-sans)',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      Ver Ficha
+                    </button>
+                    {/* Individual QR — unique link per student (?student=&
+                        activity=), not the school-wide one that used to sit
+                        in this card's header. */}
+                    <CheckinQRButton
+                      slug={schoolSlug}
+                      schoolName={schoolName}
+                      studentName={checkin.student_name}
+                      activityName={checkin.activities?.name}
+                      compact
+                    />
+                  </div>
                   {!balance?.hasPackage || exhausted ? (
                     <button
                       onClick={() => setSellModal(checkin)}

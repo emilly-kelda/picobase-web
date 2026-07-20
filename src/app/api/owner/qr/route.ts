@@ -7,6 +7,13 @@ const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const format = searchParams.get('format') ?? 'png'
+  // Optional per-student targeting (Sala de Espera's individual QR button):
+  // appended as query params CheckinForm.tsx already reads to pre-fill/lock
+  // its form (see checkin/[school]/page.tsx's ?student=&activity=) — same
+  // mechanism as the manual "send a pre-filled check-in link" flow, just
+  // encoded into a QR instead of typed into a URL.
+  const student  = searchParams.get('student')
+  const activity = searchParams.get('activity')
 
   const supabase = createServiceClient()
   const { data: school } = await supabase
@@ -16,7 +23,11 @@ export async function GET(request: Request) {
     .single()
 
   const slug = school?.slug ?? 'escola'
-  const url  = `${process.env.NEXT_PUBLIC_BASE_URL ?? 'https://picobase.com.br'}/checkin/${slug}`
+  const targetParams = new URLSearchParams()
+  if (student) targetParams.set('student', student)
+  if (activity) targetParams.set('activity', activity)
+  const query = targetParams.toString()
+  const url = `${process.env.NEXT_PUBLIC_BASE_URL ?? 'https://picobase.com.br'}/checkin/${slug}${query ? `?${query}` : ''}`
 
   if (format === 'png') {
     const buffer = await QRCode.toBuffer(url, {
