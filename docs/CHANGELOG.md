@@ -693,3 +693,25 @@ their commit message and diff.
   copying from a real prior waiver was the only compliant option. If a
   student has no prior checkin at all, the sale still succeeds but they
   aren't auto-checked-in — no consented record exists to copy from.
+- `f32167d` **feat**: instructor-clash and student-double-booking
+  validation when scheduling or editing lessons. Two separate instructions
+  asked for what's structurally the same check (interval overlap against
+  active `scheduled_lessons`), so both landed as one shared helper,
+  `checkSchedulingConflicts()`, reusing the same overlap math
+  `getRescheduleSuggestion()` already had. Both instructions named
+  `AddBookingModal` as the target — that component is actually "Nova
+  reserva", which writes to a separate `bookings`/leads table and has no
+  instructor field at all; the real scheduling form is
+  `ScheduledLessons.tsx`'s "+ Agendar" (`/api/owner/schedule` POST/PATCH,
+  plus `/api/owner/schedule-from-checkin` for Sala de Espera's "Agendar
+  Aula"). One instruction also named `sessions` as the table to check —
+  `sessions` are already-realized lessons, not the future calendar;
+  `scheduled_lessons` is the actual source of avoidable conflicts.
+  Group lessons (`group_id`) are the one real "multiple students on
+  purpose" mechanism this codebase has: an instructor clash is skipped
+  only against another row in the *same* group, not group-vs-group or
+  group-vs-individual. Student clashes have no such exception. Also fixed
+  a real gap this depended on: `ScheduledLessons.tsx`'s `save()`/
+  `saveEdit()` never checked the API response for errors — `saveEdit()`
+  even closed the modal and refreshed unconditionally — so a blocked save
+  would have silently looked like it worked.
