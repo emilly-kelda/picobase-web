@@ -6,8 +6,8 @@ import Link from 'next/link'
 import { LEVEL_LABELS, isLevel } from '@/lib/levels'
 import LevelPicker from '@/components/LevelPicker'
 import { whatsappDigitsWithCountryCode } from '@/lib/whatsapp'
-import { formatCurrency } from '@/lib/currency'
 import { Toast, useToast } from '@/components/Toast'
+import ConfirmLessonModal from '@/components/ConfirmLessonModal'
 
 type Lesson = {
   id: string
@@ -273,16 +273,6 @@ const PAYMENT_METHODS = [
   { value: 'a_receber', label: 'A receber' },
 ]
 
-// Same preset set already used inline in the "+ Agendar" create form below
-// and in ScheduleFromCheckinModal.tsx — pulled out to a constant here since
-// the single-lesson confirm modal needs the exact same list.
-const DURATIONS = [
-  { label: '1h',   value: 60  },
-  { label: '1h30', value: 90  },
-  { label: '2h',   value: 120 },
-  { label: '3h',   value: 180 },
-]
-
 const WEEKDAYS = [
   { key: 1, label: 'S' },
   { key: 2, label: 'T' },
@@ -353,6 +343,8 @@ export default function ScheduledLessons({
   instructors,
   activePackages = [],
   schoolName = 'Pico Base',
+  payoutModel = 'percentage',
+  fixedPayoutValue = null,
 }: {
   todayLessons: Lesson[]
   tomorrowLessons: Lesson[]
@@ -360,6 +352,8 @@ export default function ScheduledLessons({
   instructors: Instructor[]
   activePackages?: PackageSale[]
   schoolName?: string
+  payoutModel?: string
+  fixedPayoutValue?: number | null
 }) {
   const router = useRouter()
   const { toast, showToast }        = useToast()
@@ -431,33 +425,13 @@ export default function ScheduledLessons({
   const [confirmProgress, setConfirmProgress] = useState<string | null>(null)
   const [confirmError,    setConfirmError]    = useState<string | null>(null)
 
-  // Individual (non-group) lesson confirm — richer than the group-confirm
-  // modal above on purpose: that one trades depth for speed across N
-  // students at once, this is the real single-lesson "Confirmar / Iniciar
-  // Aula" flow (duration, notes, and a read-only variable-cost preview —
-  // same fields PendingLessons.tsx's own confirm modal has for Sala de
-  // Espera, minus the FX/multi-currency and skill-progression pieces that
-  // don't really apply to a lesson that's already tied to a known,
-  // pre-scheduled student).
-  const [singleConfirmModal, setSingleConfirmModal] = useState<{
-    lessonId: string
-    studentName: string
-    activityId: string | null
-    instructorId: string
-    durationMin: number
-    price: string
-    paymentMethod: string | null
-    notes: string
-    variableCost: {
-      hasVariableCost: boolean
-      variableCostName: string | null
-      variableCostAmount: number
-      variableCostMode: 'per_student' | 'per_trip'
-    } | null
-  } | null>(null)
-  const [singleConfirmCustomDuration, setSingleConfirmCustomDuration] = useState(false)
-  const [singleConfirming, setSingleConfirming] = useState(false)
-  const [singleConfirmError, setSingleConfirmError] = useState<string | null>(null)
+  // Individual (non-group) lesson confirm — restored from git history
+  // (deleted 2026-07-19 in 5c49dd6, alongside its own ConfirmLessonModal.tsx
+  // component — that removal's premise, "check-in already confirms this",
+  // didn't hold once a lesson has no checkin card left to confirm from).
+  // The richer fields (currency/FX, per-hour pricing, session date, level
+  // picker) live in ConfirmLessonModal.tsx itself, not here.
+  const [confirmLessonModal, setConfirmLessonModal] = useState<Lesson | null>(null)
 
   const [form, setForm] = useState({
     student_name:    '',
@@ -876,60 +850,6 @@ export default function ScheduledLessons({
     router.refresh()
   }
 
-  function openConfirmModal(lesson: Lesson) {
-    setSingleConfirmModal({
-      lessonId:     lesson.id,
-      studentName:  lesson.student_name ?? '—',
-      activityId:   lesson.activities?.id ?? null,
-      instructorId: lesson.instructor?.id ?? '',
-      durationMin:  lesson.duration_min || 60,
-      price:        String(lesson.activities?.default_price ?? ''),
-      paymentMethod: null,
-      notes:        '',
-      variableCost: null,
-    })
-    setSingleConfirmCustomDuration(!DURATIONS.some(d => d.value === (lesson.duration_min || 60)))
-    setSingleConfirmError(null)
-
-    if (lesson.student_name) {
-      fetch(`/api/owner/package-variable-cost?student_name=${encodeURIComponent(lesson.student_name)}`)
-        .then(r => r.json())
-        .then(data => setSingleConfirmModal(prev => prev ? { ...prev, variableCost: data } : prev))
-        .catch(() => {})
-    }
-  }
-
-  async function confirmSingleLesson() {
-    if (!singleConfirmModal) return
-    setSingleConfirming(true)
-    setSingleConfirmError(null)
-
-    const res = await fetch('/api/owner/confirm-lesson', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        checkin_id:          null,
-        scheduled_lesson_id: singleConfirmModal.lessonId,
-        instructor_id:       singleConfirmModal.instructorId,
-        activity_id:         singleConfirmModal.activityId,
-        duration_min:        singleConfirmModal.durationMin,
-        price:                Number(singleConfirmModal.price),
-        payment_method:      singleConfirmModal.paymentMethod,
-        notes:               singleConfirmModal.notes || null,
-        currency:            'BRL',
-      }),
-    })
-    const data = await res.json().catch(() => ({}))
-    setSingleConfirming(false)
-
-    if (!data.ok) {
-      setSingleConfirmError(data.error ?? 'Erro ao confirmar aula')
-      return
-    }
-
-    setSingleConfirmModal(null)
-    router.refresh()
-  }
 
   return (
     <>
@@ -1162,7 +1082,7 @@ export default function ScheduledLessons({
                       always renders this. */}
                   {lesson.status !== 'confirmed' && (
                     <button
-                      onClick={() => openConfirmModal(lesson)}
+                      onClick={() => setConfirmLessonModal(lesson)}
                       style={{
                         padding: '5px 12px', background: '#007868', color: '#fff',
                         border: 'none', borderRadius: '99px',
@@ -2303,218 +2223,16 @@ export default function ScheduledLessons({
         </div>
       )}
 
-      {/* Single-lesson confirm — instructor, duration, price, payment
-          method, notes, and a read-only variable-cost preview (same
-          fields PendingLessons.tsx's confirm flow has, see that file's
-          `open()`). Submitting re-validates instructor/student clash and
-          package capacity server-side in /api/owner/confirm-lesson, since
-          instructor and duration can be changed right here — a swap could
-          introduce a conflict that didn't exist when this lesson was
-          originally scheduled. */}
-      {singleConfirmModal && (
-        <div
-          style={{
-            position: 'fixed', inset: 0,
-            background: 'rgba(0,0,0,0.45)',
-            display: 'flex', alignItems: 'center',
-            justifyContent: 'center', zIndex: 200, padding: '24px',
-          }}
-          onClick={e => {
-            if (e.target === e.currentTarget && !singleConfirming) setSingleConfirmModal(null)
-          }}
-        >
-          <div style={{
-            background: '#fff', borderRadius: 'var(--radius-xl)',
-            width: '100%', maxWidth: '440px',
-            padding: '28px', maxHeight: '90vh', overflowY: 'auto',
-          }}>
-            <div style={{ fontSize: '18px', fontWeight: '500', color: 'var(--slate)', marginBottom: '4px' }}>
-              Confirmar aula
-            </div>
-            <div style={{ fontSize: '13px', color: 'var(--mist)', marginBottom: '20px' }}>
-              {singleConfirmModal.studentName}
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div>
-                <label style={labelStyle}>Instrutor</label>
-                <select
-                  style={{ ...inputStyle, cursor: 'pointer' }}
-                  value={singleConfirmModal.instructorId}
-                  onChange={e => setSingleConfirmModal(m => m ? { ...m, instructorId: e.target.value } : m)}
-                >
-                  <option value="">Selecionar instrutor</option>
-                  {instructors.map(i => (
-                    <option key={i.id} value={i.id}>{i.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label style={labelStyle}>Duração</label>
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                  {DURATIONS.map(d => (
-                    <button
-                      key={d.value}
-                      type="button"
-                      onClick={() => {
-                        setSingleConfirmCustomDuration(false)
-                        setSingleConfirmModal(m => m ? { ...m, durationMin: d.value } : m)
-                      }}
-                      style={{
-                        padding: '8px 14px', borderRadius: 'var(--radius-md)',
-                        border: `1.5px solid ${!singleConfirmCustomDuration && singleConfirmModal.durationMin === d.value ? 'var(--glacial)' : 'var(--border)'}`,
-                        background: !singleConfirmCustomDuration && singleConfirmModal.durationMin === d.value ? 'var(--glacial-light)' : '#fff',
-                        color: !singleConfirmCustomDuration && singleConfirmModal.durationMin === d.value ? 'var(--glacial-dark)' : 'var(--slate)',
-                        fontSize: '13px', fontWeight: '500', cursor: 'pointer', fontFamily: 'var(--font-sans)',
-                      }}
-                    >
-                      {d.label}
-                    </button>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={() => setSingleConfirmCustomDuration(true)}
-                    style={{
-                      padding: '8px 14px', borderRadius: 'var(--radius-md)',
-                      border: `1.5px solid ${singleConfirmCustomDuration ? 'var(--glacial)' : 'var(--border)'}`,
-                      background: singleConfirmCustomDuration ? 'var(--glacial-light)' : '#fff',
-                      color: singleConfirmCustomDuration ? 'var(--glacial-dark)' : 'var(--slate)',
-                      fontSize: '13px', fontWeight: '500', cursor: 'pointer', fontFamily: 'var(--font-sans)',
-                    }}
-                  >
-                    Outro
-                  </button>
-                  {singleConfirmCustomDuration && (
-                    <input
-                      type="number" placeholder="Minutos"
-                      value={singleConfirmModal.durationMin}
-                      onChange={e => setSingleConfirmModal(m => m ? { ...m, durationMin: parseInt(e.target.value) || 0 } : m)}
-                      style={{
-                        width: '100px', padding: '8px 12px',
-                        border: '0.5px solid var(--border-strong)', borderRadius: 'var(--radius-md)',
-                        fontSize: '13px', color: 'var(--slate)', fontFamily: 'var(--font-sans)', outline: 'none',
-                      }}
-                    />
-                  )}
-                </div>
-              </div>
-
-              <div>
-                <label style={labelStyle}>Preço</label>
-                <input
-                  type="number" min={0} step={5}
-                  style={inputStyle}
-                  value={singleConfirmModal.price}
-                  onChange={e => setSingleConfirmModal(m => m ? { ...m, price: e.target.value } : m)}
-                />
-              </div>
-
-              <div>
-                <label style={labelStyle}>Forma de pagamento</label>
-                <div style={{ display: 'flex', gap: '6px' }}>
-                  {PAYMENT_METHODS.map(pm => (
-                    <button
-                      key={pm.value}
-                      type="button"
-                      onClick={() => setSingleConfirmModal(m => m ? { ...m, paymentMethod: pm.value } : m)}
-                      style={{
-                        flex: 1, padding: '8px 4px',
-                        borderRadius: 'var(--radius-md)',
-                        border: `1.5px solid ${singleConfirmModal.paymentMethod === pm.value ? 'var(--glacial)' : 'var(--border)'}`,
-                        background: singleConfirmModal.paymentMethod === pm.value ? 'var(--glacial-light)' : '#fff',
-                        color: singleConfirmModal.paymentMethod === pm.value ? 'var(--glacial-dark)' : 'var(--mist)',
-                        fontSize: '12px', fontWeight: '500',
-                        cursor: 'pointer', fontFamily: 'var(--font-sans)',
-                      }}
-                    >
-                      {pm.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label style={labelStyle}>Notas operacionais</label>
-                <input
-                  type="text"
-                  placeholder="Opcional..."
-                  style={inputStyle}
-                  value={singleConfirmModal.notes}
-                  onChange={e => setSingleConfirmModal(m => m ? { ...m, notes: e.target.value } : m)}
-                />
-              </div>
-
-              {singleConfirmModal.variableCost?.hasVariableCost && (
-                <div style={{
-                  background: 'var(--powder)', borderRadius: '10px',
-                  padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: '8px',
-                }}>
-                  <div style={{
-                    fontSize: '10px', fontWeight: '600',
-                    letterSpacing: '0.08em', textTransform: 'uppercase',
-                    color: 'var(--mist)',
-                  }}>
-                    Custo variável · {singleConfirmModal.variableCost.variableCostMode === 'per_trip' ? 'por trip' : 'por aluno'}
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-                    <span style={{ color: 'var(--mist)' }}>
-                      {singleConfirmModal.variableCost.variableCostName ?? 'Custo'}
-                    </span>
-                    <span style={{ color: '#DC2626', fontWeight: '500' }}>
-                      − {formatCurrency(singleConfirmModal.variableCost.variableCostAmount)}
-                    </span>
-                  </div>
-                  <div style={{ fontSize: '11px', color: 'var(--mist)' }}>
-                    Descontado automaticamente da base de comissão do instrutor ao confirmar.
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {singleConfirmError && (
-              <div style={{
-                marginTop: '16px', padding: '10px 14px',
-                background: 'var(--signal-light)', color: 'var(--signal-dark)',
-                borderRadius: 'var(--radius-md)', fontSize: '13px',
-              }}>
-                {singleConfirmError}
-              </div>
-            )}
-
-            <div style={{ display: 'flex', gap: '10px', marginTop: '24px' }}>
-              <button
-                onClick={() => setSingleConfirmModal(null)}
-                disabled={singleConfirming}
-                style={{
-                  flex: 1, padding: '11px',
-                  background: '#fff', color: 'var(--mist)',
-                  border: '0.5px solid var(--border)',
-                  borderRadius: 'var(--radius-md)',
-                  fontSize: '14px', cursor: singleConfirming ? 'not-allowed' : 'pointer',
-                  fontFamily: 'var(--font-sans)',
-                }}
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={confirmSingleLesson}
-                disabled={singleConfirming || !singleConfirmModal.instructorId || !(Number(singleConfirmModal.price) > 0)}
-                style={{
-                  flex: 2, padding: '11px',
-                  background: singleConfirming ? 'var(--border)' : 'var(--slate)',
-                  color: singleConfirming ? 'var(--mist)' : '#fff',
-                  border: 'none', borderRadius: 'var(--radius-md)',
-                  fontSize: '14px', fontWeight: '500',
-                  cursor: singleConfirming ? 'not-allowed' : 'pointer',
-                  fontFamily: 'var(--font-sans)',
-                }}
-              >
-                {singleConfirming ? 'Confirmando...' : 'Confirmar'}
-              </button>
-            </div>
-          </div>
-        </div>
+      {confirmLessonModal && (
+        <ConfirmLessonModal
+          lesson={confirmLessonModal}
+          activities={activities}
+          instructors={instructors}
+          payoutModel={payoutModel}
+          fixedPayoutValue={fixedPayoutValue}
+          onClose={() => setConfirmLessonModal(null)}
+          onConfirmed={() => { setConfirmLessonModal(null); router.refresh() }}
+        />
       )}
 
       <Toast toast={toast} />

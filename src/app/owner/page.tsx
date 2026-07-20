@@ -200,6 +200,8 @@ export default async function OwnerPage() {
             instructors={instructorList}
             activePackages={(activePackages as any).filter((p: any) => p.status === 'active')}
             schoolName={runway.school_name ?? 'Pico Base'}
+            payoutModel={(school as any)?.payout_model ?? 'percentage'}
+            fixedPayoutValue={(school as any)?.fixed_payout_value ?? null}
           />
 
         </div>
