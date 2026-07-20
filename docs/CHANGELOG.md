@@ -856,3 +856,25 @@ their commit message and diff.
   confirm/decline action updated its own local list but never revalidated
   server data, leaving the pending-bookings sidebar badge
   (`getPendingBookingsCount`) stale until an unrelated navigation.
+- `66bd220` **fix**: "Confirmar Aula" was reusing the group-confirm modal
+  (just instructor/price/payment) instead of a proper single-lesson
+  flow — replaced with a dedicated modal matching what Sala de Espera's
+  confirm form (`PendingLessons.tsx`) already has: editable duration
+  (preset + custom, same pattern as the "+ Agendar" form and
+  `ScheduleFromCheckinModal.tsx`), price, payment method, notes, and a
+  read-only variable-cost preview (`/api/owner/package-variable-cost`,
+  only shown when the student's package actually has one configured —
+  it's computed and deducted server-side, not an operator-entered field).
+  Skipped FX/multi-currency and level/progression tracking on purpose —
+  those serve Sala de Espera's walk-in-tourist case, not an
+  already-scheduled lesson with a known student. `/api/owner/confirm-lesson`
+  now runs `checkSchedulingConflicts`/`checkPackageCapacity` before
+  creating the session (using the lesson's original `scheduled_at`,
+  looked up via `scheduled_lesson_id`, now resolved whenever that link
+  exists rather than only when there's no checkin) — instructor and
+  duration can be edited at confirm time, so a swap could introduce a
+  conflict never checked at scheduling time. This also protects Sala de
+  Espera's own confirm flow for free, same route. Found and fixed a
+  related gap: `PendingLessons.tsx` never checked `confirm-lesson`'s
+  response for `ok`, so a rejected confirm (now possible) showed no
+  error at all.
