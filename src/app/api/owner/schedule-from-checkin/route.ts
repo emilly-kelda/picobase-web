@@ -1,4 +1,5 @@
 import { createServiceClient } from '@/lib/supabase-server'
+import { checkSchedulingConflicts } from '@/repositories/scheduledLessonRepository'
 import { NextResponse } from 'next/server'
 
 const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
@@ -33,6 +34,25 @@ export async function POST(request: Request) {
   }
   if (checkin.scheduled_lesson_id) {
     return NextResponse.json({ error: 'Este check-in já está vinculado a uma aula agendada' }, { status: 400 })
+  }
+
+  const { instructorConflict, studentConflict } = await checkSchedulingConflicts(SCHOOL_ID, {
+    instructorId: instructor_id || null,
+    studentName:  checkin.student_name,
+    scheduledAt:  scheduled_at,
+    durationMin:  duration_min || 60,
+  })
+  if (studentConflict) {
+    return NextResponse.json(
+      { error: 'Não é possível agendar: este aluno já possui uma aula marcada para este mesmo horário.' },
+      { status: 409 }
+    )
+  }
+  if (instructorConflict) {
+    return NextResponse.json(
+      { error: 'O instrutor selecionado já possui uma aula agendada para este horário.' },
+      { status: 409 }
+    )
   }
 
   const { data: lesson, error: lessonError } = await supabase

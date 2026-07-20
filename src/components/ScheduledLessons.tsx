@@ -383,6 +383,13 @@ export default function ScheduledLessons({
   const [editCustomDuration, setEditCustomDuration] = useState(false)
   const [editCustomMinutes,  setEditCustomMinutes]  = useState(45)
   const [editSaving,         setEditSaving]         = useState(false)
+  // save()/saveEdit() used to only check res.ok's truthiness on the last
+  // response and otherwise close the modal unconditionally — a failed save
+  // (e.g. the instructor/student clash or package-balance checks below)
+  // silently looked like a success. These surface whatever error the API
+  // actually returned.
+  const [formError,     setFormError]     = useState<string | null>(null)
+  const [editFormError, setEditFormError] = useState<string | null>(null)
 
   const [groupConfirmModal, setGroupConfirmModal] = useState<{
     groupId: string
@@ -561,6 +568,8 @@ export default function ScheduledLessons({
   }
 
   async function save() {
+    setFormError(null)
+
     if (lessonMode === 'group') {
       const validStudents = groupStudents.map(s => s.trim()).filter(Boolean)
       if (validStudents.length < 2) return
@@ -587,6 +596,9 @@ export default function ScheduledLessons({
         setShowModal(false)
         resetForm()
         router.refresh()
+      } else {
+        const data = await res.json().catch(() => ({}))
+        setFormError(data.error ?? 'Não foi possível agendar o grupo.')
       }
       return
     }
@@ -617,10 +629,14 @@ export default function ScheduledLessons({
     )
 
     setSaving(false)
-    if (results.every(r => r.ok)) {
+    const failedRes = results.find(r => !r.ok)
+    if (!failedRes) {
       setShowModal(false)
       resetForm()
       router.refresh()
+    } else {
+      const data = await failedRes.json().catch(() => ({}))
+      setFormError(data.error ?? 'Não foi possível agendar uma ou mais datas.')
     }
   }
 
@@ -641,6 +657,7 @@ export default function ScheduledLessons({
     setCustomMinutes(45)
     setLessonMode('individual')
     setGroupStudents(['', ''])
+    setFormError(null)
   }
 
   // "+ Agendar Próxima" — retention nudge once a lesson is done (confirmed)
@@ -674,6 +691,7 @@ export default function ScheduledLessons({
 
   function openEditModal(lesson: Lesson) {
     setEditLesson(lesson)
+    setEditFormError(null)
     const { date, time } = toFortalezaParts(lesson.scheduled_at)
     setEditForm({
       student_name:  lesson.student_name ?? '',
@@ -699,8 +717,9 @@ export default function ScheduledLessons({
   async function saveEdit() {
     if (!editLesson) return
     setEditSaving(true)
+    setEditFormError(null)
     const finalEditDuration = editCustomDuration ? editCustomMinutes : editForm.duration_min
-    await fetch('/api/owner/schedule', {
+    const res = await fetch('/api/owner/schedule', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -714,7 +733,12 @@ export default function ScheduledLessons({
         level:         editForm.level || null,
       }),
     })
+    const data = await res.json().catch(() => ({}))
     setEditSaving(false)
+    if (!res.ok || data.error) {
+      setEditFormError(data.error ?? 'Não foi possível salvar as alterações.')
+      return
+    }
     setEditLesson(null)
     router.refresh()
   }
@@ -1309,6 +1333,16 @@ export default function ScheduledLessons({
               </div>
 
             </div>
+
+            {editFormError && (
+              <div style={{
+                marginTop: '16px', padding: '10px 14px',
+                background: 'var(--signal-light)', color: 'var(--signal-dark)',
+                borderRadius: 'var(--radius-md)', fontSize: '13px',
+              }}>
+                {editFormError}
+              </div>
+            )}
 
             <div style={{ display: 'flex', gap: '10px', marginTop: '24px' }}>
               <button
@@ -1942,6 +1976,16 @@ export default function ScheduledLessons({
               </div>
 
             </div>
+
+            {formError && (
+              <div style={{
+                marginTop: '16px', padding: '10px 14px',
+                background: 'var(--signal-light)', color: 'var(--signal-dark)',
+                borderRadius: 'var(--radius-md)', fontSize: '13px',
+              }}>
+                {formError}
+              </div>
+            )}
 
             {/* Actions */}
             <div style={{ display: 'flex', gap: '10px', marginTop: '24px' }}>

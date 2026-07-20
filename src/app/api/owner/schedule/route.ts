@@ -1,7 +1,11 @@
 import { createServiceClient } from '@/lib/supabase-server'
+import { checkSchedulingConflicts } from '@/repositories/scheduledLessonRepository'
 import { NextResponse } from 'next/server'
 
 const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
+
+const STUDENT_CLASH_ERROR = 'Não é possível agendar: este aluno já possui uma aula marcada para este mesmo horário.'
+const INSTRUCTOR_CLASH_ERROR = 'O instrutor selecionado já possui uma aula agendada para este horário.'
 
 // TODO(notify_student_before_class): the reminder needs to fire 2h before
 // scheduled_at, which is almost never when this route runs (lessons are
@@ -24,6 +28,29 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: 'Grupo precisa de pelo menos 2 alunos' },
         { status: 400 }
+      )
+    }
+
+    // Instructor is assigned per student later, at confirm time (see
+    // confirmGroup in ScheduledLessons.tsx) — nothing to clash-check on that
+    // side here. Students, though, can still be double-booked into this new
+    // group slot while already sitting in an unrelated lesson elsewhere.
+    const studentConflicts = await Promise.all(
+      validStudents.map(async (name: string) => {
+        const { studentConflict } = await checkSchedulingConflicts(SCHOOL_ID, {
+          instructorId: null,
+          studentName:  name,
+          scheduledAt:  body.scheduled_at,
+          durationMin:  body.duration_min ?? 60,
+        })
+        return studentConflict ? name : null
+      })
+    )
+    const clashingStudent = studentConflicts.find(Boolean)
+    if (clashingStudent) {
+      return NextResponse.json(
+        { error: `Não é possível agendar: ${clashingStudent} já possui uma aula marcada para este mesmo horário.` },
+        { status: 409 }
       )
     }
 
@@ -71,6 +98,19 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({ ok: true, group_id: group.id })
+  }
+
+  const { instructorConflict, studentConflict } = await checkSchedulingConflicts(SCHOOL_ID, {
+    instructorId: body.instructor_id || null,
+    studentName:  body.student_name,
+    scheduledAt:  body.scheduled_at,
+    durationMin:  body.duration_min || 60,
+  })
+  if (studentConflict) {
+    return NextResponse.json({ error: STUDENT_CLASH_ERROR }, { status: 409 })
+  }
+  if (instructorConflict) {
+    return NextResponse.json({ error: INSTRUCTOR_CLASH_ERROR }, { status: 409 })
   }
 
   const { error, data } = await supabase
@@ -124,6 +164,33 @@ export async function PATCH(request: Request) {
   const body = await request.json()
   const { id, ...updates } = body
   const supabase = createServiceClient()
+
+  // Only re-validate when the edit actually touches what a clash is defined
+  // by — a PATCH that's just correcting notes/level shouldn't pay for a
+  // lookup, and (more importantly) shouldn't ever get blocked by it.
+  if (updates.scheduled_at && updates.duration_min) {
+    const { data: current } = await supabase
+      .from('scheduled_lessons')
+      .select('group_id')
+      .eq('id', id)
+      .eq('school_id', SCHOOL_ID)
+      .single()
+
+    const { instructorConflict, studentConflict } = await checkSchedulingConflicts(SCHOOL_ID, {
+      instructorId:    updates.instructor_id ?? null,
+      studentName:     updates.student_name ?? '',
+      scheduledAt:     updates.scheduled_at,
+      durationMin:     updates.duration_min,
+      excludeLessonId: id,
+      groupId:         current?.group_id ?? null,
+    })
+    if (studentConflict) {
+      return NextResponse.json({ error: STUDENT_CLASH_ERROR }, { status: 409 })
+    }
+    if (instructorConflict) {
+      return NextResponse.json({ error: INSTRUCTOR_CLASH_ERROR }, { status: 409 })
+    }
+  }
 
   const { error } = await supabase
     .from('scheduled_lessons')

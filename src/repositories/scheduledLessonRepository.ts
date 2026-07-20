@@ -239,6 +239,67 @@ export async function getRescheduleSuggestion(
   return null
 }
 
+/** Instructor-clash + student-double-booking check, run before creating or
+ *  editing a scheduled_lessons row. Same overlap math as
+ *  getRescheduleSuggestion above (interval intersection, not exact-time
+ *  match, so back-to-back-but-overlapping slots are still caught).
+ *
+ *  `groupId` is the lesson's own group_id, if it's part of a group booking
+ *  (mode: 'group' in the schedule POST route below) — the one real
+ *  mechanism this codebase has for "one instructor, one slot, multiple
+ *  students on purpose". A clash against a *different* row sharing that
+ *  exact group is not a real conflict (they're companions in the same
+ *  class); a clash against an individual row, or a row in a *different*
+ *  group, still blocks — an instructor can't run two separate classes at
+ *  once either. The student check has no such exception: nobody can
+ *  physically be in two lessons at once, group or not. */
+export async function checkSchedulingConflicts(
+  schoolId: string,
+  params: {
+    instructorId: string | null
+    studentName: string
+    scheduledAt: string
+    durationMin: number
+    excludeLessonId?: string
+    groupId?: string | null
+  }
+): Promise<{ instructorConflict: boolean; studentConflict: boolean }> {
+  const supabase = createServiceClient()
+  const slotStart = new Date(params.scheduledAt).getTime()
+  const slotEnd   = slotStart + params.durationMin * 60000
+
+  let query = supabase
+    .from('scheduled_lessons')
+    .select('id, instructor_id, student_name, scheduled_at, duration_min, group_id')
+    .eq('school_id', schoolId)
+    .neq('status', 'cancelled')
+
+  if (params.excludeLessonId) query = query.neq('id', params.excludeLessonId)
+
+  const { data } = await query
+  const targetName = normalizeStudentName(params.studentName)
+
+  let instructorConflict = false
+  let studentConflict = false
+
+  for (const row of data ?? []) {
+    const rowStart = new Date(row.scheduled_at).getTime()
+    const rowEnd   = rowStart + (row.duration_min ?? 60) * 60000
+    if (!(slotStart < rowEnd && slotEnd > rowStart)) continue
+
+    const sameGroup = !!params.groupId && !!row.group_id && params.groupId === row.group_id
+
+    if (!sameGroup && params.instructorId && row.instructor_id === params.instructorId) {
+      instructorConflict = true
+    }
+    if (targetName && normalizeStudentName(row.student_name) === targetName) {
+      studentConflict = true
+    }
+  }
+
+  return { instructorConflict, studentConflict }
+}
+
 export async function createScheduledLesson(payload: {
   school_id: string
   student_name: string
