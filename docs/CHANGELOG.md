@@ -765,3 +765,19 @@ their commit message and diff.
   flag to the delete call; also had to add `reschedule_from_id` to the
   POST so the not-yet-deleted original doesn't get double-counted
   against its own replacement by the Rule 3 capacity check.
+- `bae565b` **feat**: replaced Sala de Espera's one global "Exibir QR Code
+  de Check-in" button with a per-student one on each checkin card (a
+  compact 📱 icon next to "Ver Ficha"), opening a QR unique to that
+  student. `CheckinQRButton.tsx` gained optional `studentName`/
+  `activityName`/`compact` props rather than becoming a new component —
+  the modal and `/api/owner/qr` endpoint were already exactly what the
+  per-student version needed, just missing a way to parameterize the
+  target URL. Deviation from the instruction's literal URL format
+  (`?id=[student_id]&name=&sport=`): used `?student=&activity=` instead,
+  since `checkin/[school]/page.tsx` already reads exactly those two
+  params (`prefillStudentName`/`prefillActivityName`, passed into
+  `CheckinForm`) to pre-fill the public form — reusing that existing
+  mechanism instead of inventing a second one with different names.
+  `id=student_id` also wasn't reliable to begin with: `checkins` has no
+  FK to `students` (the same name-as-key limitation documented elsewhere
+  in this codebase), so there's no guaranteed `student_id` to put there.
