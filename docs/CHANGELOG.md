@@ -789,3 +789,19 @@ their commit message and diff.
   counter. (`termo_responsabilidade`, named in the instruction, doesn't
   exist as a column — `waiver_signed_at` is the real field that records
   waiver acceptance.)
+- `fc45651` **fix**: restored the primary green "Confirmar Aula" button on
+  individual (non-group) rows in Aulas Agendadas' Hoje/Amanhã lists — a
+  prior change had removed it in favor of "+ Agendar Próxima Aula" on the
+  premise that check-in already covers confirmation from Sala de Espera,
+  but that leaves no path at all to confirm a lesson once its checkin is
+  `deferred_to_schedule` (or it was scheduled with no checkin to begin
+  with) — only group lessons still had a working "Confirmar" action.
+  Reuses the existing group-confirm modal/flow for a single lesson
+  (`openGroupConfirmModal([lesson])`, a "group of one") instead of
+  building a second confirm UI — `groupConfirmModal.groupId` is now
+  `string | null` to represent that case, with the modal's title/button
+  text adapting ("Confirmar aula"/"Confirmar" vs. "Confirmar grupo · N
+  alunos"/"Confirmar todos"). "Confirmar Aula" is now the primary solid
+  button; "+ Agendar Próxima Aula" (retention nudge) moved to a secondary
+  outline style on the same row, since it only makes sense once the
+  current lesson is actually confirmed.
