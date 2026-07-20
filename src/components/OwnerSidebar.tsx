@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import Logo from '@/components/Logo'
 
 const NAV = [
-  { href: '/owner',          label: 'Base Camp'     },
+  { href: '/owner',          label: 'Spot'          },
   { href: '/owner/sessions', label: 'Aulas'         },
   { href: '/owner/students', label: 'Alunos'        },
   { href: '/owner/crew',     label: 'Equipe'        },

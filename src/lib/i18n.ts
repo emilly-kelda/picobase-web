@@ -1,7 +1,7 @@
 export const translations = {
   en: {
     // Nav
-    nav_basecamp:  'Base Camp',
+    nav_basecamp:  'Spot',
     nav_sessions:  'Sessions',
     nav_students:  'Students',
     nav_bookings:  'Bookings',
@@ -19,8 +19,8 @@ export const translations = {
     nav_season:    'Season',
     nav_activities:'Activities',
 
-    // Base Camp
-    basecamp_title:       'Base Camp',
+    // Spot
+    basecamp_title:       'Spot',
     basecamp_season:      'Current season',
     today_label:          'Today',
     today_students:       'Students',
@@ -42,7 +42,7 @@ export const translations = {
     view_all:             'View all →',
     no_sessions:          'No sessions yet.',
 
-    // Base Camp — Aulas Agendadas (ScheduledLessons.tsx)
+    // Spot — Aulas Agendadas (ScheduledLessons.tsx)
     tomorrow_label:       'Tomorrow',
     status_confirmed:     'Confirmed',
     status_checked_in:    'Checked In',
@@ -50,8 +50,8 @@ export const translations = {
     no_scheduled_tomorrow:'No lessons scheduled for tomorrow.',
     no_scheduled_sport:   'No lessons scheduled for this sport',
 
-    // Base Camp — Sala de Espera (PendingLessons.tsx)
-    waiting_room_title:   'Waiting Room',
+    // Spot — Aguardando Vento (PendingLessons.tsx)
+    waiting_room_title:   'Awaiting Wind',
     no_checkins_waiting:  'No students waiting for check-in.',
     lesson_confirmed_for: 'Lesson confirmed —',
     confirm_arrow_btn:    'Confirm →',
@@ -251,7 +251,7 @@ export const translations = {
 
   pt: {
     // Nav
-    nav_basecamp:  'Base Camp',
+    nav_basecamp:  'Spot',
     nav_sessions:  'Aulas',
     nav_students:  'Alunos',
     nav_bookings:  'Reservas',
@@ -269,8 +269,8 @@ export const translations = {
     nav_season:    'Temporada',
     nav_activities:'Atividades',
 
-    // Base Camp
-    basecamp_title:       'Base Camp',
+    // Spot
+    basecamp_title:       'Spot',
     basecamp_season:      'Temporada atual',
     today_label:          'Hoje',
     today_students:       'Alunos',
@@ -292,7 +292,7 @@ export const translations = {
     view_all:             'Ver todas →',
     no_sessions:          'Nenhuma aula ainda.',
 
-    // Base Camp — Aulas Agendadas (ScheduledLessons.tsx)
+    // Spot — Aulas Agendadas (ScheduledLessons.tsx)
     tomorrow_label:       'Amanhã',
     status_confirmed:     'Confirmada',
     status_checked_in:    'Check-in',
@@ -300,8 +300,8 @@ export const translations = {
     no_scheduled_tomorrow:'Nenhuma aula agendada para amanhã.',
     no_scheduled_sport:   'Nenhuma aula agendada para este esporte',
 
-    // Base Camp — Sala de Espera (PendingLessons.tsx)
-    waiting_room_title:   'Sala de Espera',
+    // Spot — Aguardando Vento (PendingLessons.tsx)
+    waiting_room_title:   'Aguardando Vento',
     no_checkins_waiting:  'Nenhum aluno aguardando check-in.',
     lesson_confirmed_for: 'Aula confirmada —',
     confirm_arrow_btn:    'Confirmar →',

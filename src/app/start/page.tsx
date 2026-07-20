@@ -370,7 +370,7 @@ export default function StartPage() {
           gap: '12px',
         }}>
           <span style={{ display: 'inline-block', width: '20px', height: '1px', background: '#C8C6C0' }} />
-          Base Camp · Seasonal sports schools
+          Spot · Seasonal sports schools
           <span style={{ display: 'inline-block', width: '20px', height: '1px', background: '#C8C6C0' }} />
         </div>
 

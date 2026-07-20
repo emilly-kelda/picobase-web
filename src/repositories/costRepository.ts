@@ -112,7 +112,7 @@ export async function deleteCost(id: string, schoolId: string) {
  *  a one-off expense isn't part of an ongoing monthly burn rate, and
  *  including it would permanently inflate this figure by whatever the
  *  one-time cost was. Returns 0 if the school has no recurring cost records
- *  yet, so callers (Base Camp, Runway Calculator) can fall back to their
+ *  yet, so callers (Spot, Runway Calculator) can fall back to their
  *  existing burn_rate source rather than showing R$0. */
 export async function getMonthlyCostTotal(schoolId: string): Promise<number> {
   const supabase = createServiceClient()

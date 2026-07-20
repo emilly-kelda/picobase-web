@@ -70,7 +70,7 @@ export default async function OwnerPage() {
     getMonthComparison(SCHOOL_ID),
     getWeather(selectedWeatherSpot),
     getPackages(SCHOOL_ID),
-    // IKO/VDWS 10h autonomy-certificate eligibility — Sala de Espera's
+    // IKO/VDWS 10h autonomy-certificate eligibility — Aguardando Vento's
     // medal icon next to a student's name.
     getCompletedHoursByStudent(SCHOOL_ID),
   ])
@@ -110,7 +110,7 @@ export default async function OwnerPage() {
   // picobase_chameleon_button_dossie.md Fase 4 asked to make this count's
   // source of truth checkins.stage = 'na_agua' instead. Done as a union
   // with the existing schedule-window heuristic, not a straight
-  // replacement: ChameleonButton's "Enviar para a água" is a brand-new,
+  // replacement: ChameleonButton's "Iniciar Velejo" is a brand-new,
   // manual action nobody has a habit of clicking yet, so switching this
   // badge to depend on it alone would make it under-count (likely show 0)
   // until staff actually adopt the button — a visible regression on the
@@ -159,7 +159,7 @@ export default async function OwnerPage() {
       <ReceptionModeProvider>
 
       {/* Page title — the Reception Mode toggle sits inline right next to
-          "Base Camp", not pushed to the row's far-right edge. That corner
+          "Spot", not pushed to the row's far-right edge. That corner
           also holds AlertsDrawer's bell trigger (position: fixed, top:
           20px, right: 24px, independent of this row's layout), and a
           right-aligned toggle here lands squarely inside the bell's
@@ -171,7 +171,7 @@ export default async function OwnerPage() {
               fontSize: '22px', fontWeight: '600',
               color: 'var(--slate)', letterSpacing: '-0.02em',
             }}>
-              Base Camp
+              Spot
             </h1>
             <ReceptionModeToggle />
           </div>
@@ -188,7 +188,7 @@ export default async function OwnerPage() {
 
         {/* ════════════════════════════════════════════════════════════
             COLUMN 1 (left, wider) — operational: what reception acts on.
-            Venda Rápida + Sala de Espera stacked at the top, right above
+            Venda Rápida + Aguardando Vento stacked at the top, right above
             Aulas Agendadas — this is the column someone working the
             counter actually looks at all day, so it gets the extra width.
         ════════════════════════════════════════════════════════════ */}
@@ -201,8 +201,6 @@ export default async function OwnerPage() {
             instructors={instructorList}
             activities={activities}
             packageBalances={packageBalances}
-            payoutModel={(school as any)?.payout_model ?? 'percentage'}
-            fixedPayoutValue={(school as any)?.fixed_payout_value ?? null}
             packageTypes={packageTypes as any}
             schoolSlug={(school as any)?.slug ?? runway.slug ?? ''}
             schoolName={runway.school_name ?? 'Pico Base'}

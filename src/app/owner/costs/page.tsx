@@ -68,7 +68,7 @@ export default async function CostsPage({
   const rawNetProfit = ((runway as any).season_profit ?? 0) - totalPartnerCommissions
   const adjustedNetProfit = Math.max(0, rawNetProfit)
 
-  // Same fallback rule as Base Camp used to apply before this card moved
+  // Same fallback rule as Spot used to apply before this card moved
   // here: real itemized costs (this page's own list) take priority over the
   // season's manually-set burn_rate once any recurring entry exists, so the
   // two never disagree.
@@ -122,7 +122,7 @@ export default async function CostsPage({
             {fmt(monthlyCostTotal)}
           </span>
           <span style={{ fontSize: '11px', color: 'var(--mist)', marginTop: '4px' }}>
-            mensais + anuais/12 · alimenta o indicador de Custo operacional mensal no Base Camp
+            mensais + anuais/12 · alimenta o indicador de Custo operacional mensal no Spot
           </span>
         </div>
       )}
@@ -160,7 +160,7 @@ export default async function CostsPage({
 
       {/* ── Reserva de Baixa Temporada + Simulador de Cenários ────────────
           Side by side instead of stacked full-width rows — the blue card
-          (real numbers, moved from Base Camp so Sala de Espera/Aulas
+          (real numbers, moved from Spot so Aguardando Vento/Aulas
           Agendadas get the full column height there) and the interactive
           "what if" sliders are the same topic at two different zoom
           levels, so there's no reason for the simulator to eat a whole

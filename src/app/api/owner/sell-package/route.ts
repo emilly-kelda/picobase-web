@@ -57,9 +57,9 @@ export async function POST(request: Request) {
   // Credit balance is derived live from package_sales (getPackageBalancesForCheckins
   // sums minutes_purchased - minutes_used), so it's already "updated" the instant
   // the row above lands — nothing else to write for that part. What doesn't
-  // happen automatically: a student who was sold a package from Base Camp's
+  // happen automatically: a student who was sold a package from Spot's
   // "Venda Rápida" (no checkin required to open that flow) has no checkins row
-  // for today at all, so they never appear in Sala de Espera afterward — that's
+  // for today at all, so they never appear in Aguardando Vento afterward — that's
   // the actual bug. Best-effort: never let this block the sale response, since
   // package_sales is the real source of truth for the transaction.
   try {

@@ -16,7 +16,7 @@ export function useReceptionMode() {
   return useContext(ReceptionModeContext)
 }
 
-/** "Modo Recepção" — blurs financial figures on Base Camp for front-desk
+/** "Modo Recepção" — blurs financial figures on Spot for front-desk
  *  use, when the screen is visible to walk-in students/parents rather than
  *  just the owner. Pure client-side display state, deliberately not
  *  persisted (cookie/localStorage) — it always starts revealed on load, so

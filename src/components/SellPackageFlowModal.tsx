@@ -56,9 +56,9 @@ const inputStyle: React.CSSProperties = {
   outline: 'none', boxSizing: 'border-box',
 }
 
-/** Unified sell-package entry point — opened either from the Base Camp
+/** Unified sell-package entry point — opened either from the Spot
  *  "Venda Rápida" card (no student known yet, full name search same as
- *  AddBookingModal) or from a Sala de Espera card whose student has no
+ *  AddBookingModal) or from an Aguardando Vento card whose student has no
  *  active credits (initialStudentName pre-fills and locks the name, since
  *  the checkin already identifies who it is). Both paths post to the same
  *  api/owner/sell-package, which find-or-creates the students row by name —

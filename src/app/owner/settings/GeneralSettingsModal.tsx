@@ -58,7 +58,7 @@ export default function GeneralSettingsModal({
 
   // Spot location — searched via Nominatim/OpenStreetMap (api/owner/geocode
   // proxies it server-side; Nominatim requires a descriptive User-Agent a
-  // browser fetch can't reliably set). Feeds Base Camp's WeatherWidget as
+  // browser fetch can't reliably set). Feeds Spot's WeatherWidget as
   // the school's default monitored location.
   const [spotName, setSpotName]     = useState(school.spot_name ?? '')
   const [latitude, setLatitude]     = useState<number | null>(school.latitude ?? null)
@@ -250,7 +250,7 @@ export default function GeneralSettingsModal({
               </div>
             )}
             <div style={{ fontSize: '11px', color: 'var(--mist)', marginTop: '4px' }}>
-              Busca via OpenStreetMap (Nominatim). Alimenta o card de clima do Base Camp.
+              Busca via OpenStreetMap (Nominatim). Alimenta o card de clima do Spot.
             </div>
           </div>
 

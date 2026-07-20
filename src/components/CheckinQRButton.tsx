@@ -3,12 +3,21 @@
 import { useState, useEffect } from 'react'
 import Button from '@/components/ui/Button'
 
+/** Strips the protocol and ellipsizes long paths — a visual "shortened
+ *  link" with no shortening service involved (none exists in this
+ *  project); the href underneath is always the real, full URL. */
+function shortenForDisplay(url: string, maxLen = 42): string {
+  const stripped = url.replace(/^https?:\/\//, '')
+  return stripped.length <= maxLen ? stripped : `${stripped.slice(0, maxLen - 1)}…`
+}
+
 /** Trigger for the receptionist's counter: opens a QR (same /api/owner/qr
  *  endpoint) right where the walk-in student is being handled — Sala de
- *  Espera. Two shapes: the default pill (school-wide QR, no student
- *  attached) and `compact` (a small icon-only trigger meant to sit inside a
- *  single checkin card's action row) — passing studentName/activityName
- *  makes the generated QR point at that specific student's checkin URL
+ *  Espera. Three shapes: the default pill (school-wide QR, no student
+ *  attached), `compact` (a small labeled trigger for a checkin card's
+ *  action row), and `iconOnly` (bare glyph, no label — ChameleonButton's
+ *  not-checked-in state). Passing studentName/activityName makes the
+ *  generated QR point at that specific student's checkin URL
  *  (?student=&activity=, the same query params CheckinForm.tsx already
  *  reads to pre-fill/lock its form — see checkin/[school]/page.tsx), so
  *  scanning it drops them straight into a form that already knows who they
@@ -19,6 +28,8 @@ export default function CheckinQRButton({
   studentName,
   activityName,
   compact = false,
+  iconOnly = false,
+  onOpen,
   className,
 }: {
   slug: string
@@ -26,6 +37,16 @@ export default function CheckinQRButton({
   studentName?: string
   activityName?: string | null
   compact?: boolean
+  // Tiny square glyph-only trigger — no text label at all — for contexts
+  // too tight for even the compact pill (ChameleonButton's not-checked-in
+  // state, restoring the QR/modal flow that used to be the primary action
+  // there before it got replaced by a plain button).
+  iconOnly?: boolean
+  // Fires whenever the modal is opened, any trigger shape — lets a caller
+  // (ChameleonButton) piggyback its own side effect (marking checked_in
+  // true) on the same click without this component knowing anything about
+  // that business logic.
+  onOpen?: () => void
   className?: string
 }) {
   const [open, setOpen]       = useState(false)
@@ -55,7 +76,21 @@ export default function CheckinQRButton({
 
   return (
     <>
-      {compact ? (
+      {iconOnly ? (
+        // Restored per the approved redesign: check-in's primary action in
+        // Aguardando Vento goes back to a compact QR trigger instead of the
+        // plain "Check-in" button ChameleonButton had — 36px square (avatar
+        // height) so it sits naturally next to the card's other elements.
+        <button
+          type="button"
+          onClick={() => { onOpen?.(); setOpen(true) }}
+          title={studentName ? `QR Code de check-in — ${studentName}` : 'QR Code de check-in'}
+          className={`inline-flex items-center justify-center rounded-lg bg-pb-glacial text-pb-white hover:opacity-90 ${className ?? ''}`}
+          style={{ width: '36px', height: '36px', fontSize: '18px', flexShrink: 0, border: 'none', cursor: 'pointer' }}
+        >
+          🔲
+        </button>
+      ) : compact ? (
         // Fase 3 of picobase_design_system_dossie.md: the old icon-only
         // 📱 trigger read as "phone" — ambiguous with the student's own
         // device, not obviously "open the check-in QR". No icon library is
@@ -129,8 +164,15 @@ export default function CheckinQRButton({
               )}
             </div>
 
-            <div style={{ fontSize: '12px', color: 'var(--mist)', marginBottom: '20px', wordBreak: 'break-all' }}>
-              {checkinUrl}
+            <div style={{ marginBottom: '20px' }}>
+              <a
+                href={checkinUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ fontSize: '12px', color: 'var(--glacial-dark)', textDecoration: 'underline', wordBreak: 'break-all' }}
+              >
+                {shortenForDisplay(checkinUrl)}
+              </a>
             </div>
 
             <button

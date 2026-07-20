@@ -54,19 +54,21 @@ export type LessonToConfirm = {
   instructor: { id: string; name: string } | null
 }
 
-/** "Confirmar / Iniciar Aula" for a scheduled lesson — same pricing/payment
- *  decision Sala de Espera's confirm modal makes (activity, level,
- *  instructor, duration, currency, price, payment method), just triggered
- *  from Aulas Agendadas instead, via scheduled_lesson_id rather than a
- *  checkin_id (confirm-lesson already supports confirming either way — see
- *  its studentName/scheduledLesson derivation). Used for a lesson that was
- *  either pre-booked in advance or deferred here from Sala de Espera via
- *  "Agendar Aula"; either way, the student is now actually starting it.
+/** "Confirmar / Iniciar Aula" for a scheduled lesson — the pricing/payment
+ *  decision (activity, level, instructor, duration, currency, price,
+ *  payment method), triggered from Aulas Agendadas via scheduled_lesson_id
+ *  rather than a checkin_id (confirm-lesson already supports confirming
+ *  either way — see its studentName/scheduledLesson derivation). Used for a
+ *  lesson that was either pre-booked in advance or deferred here from
+ *  Aguardando Vento via "Agendar Aula"; either way, the student is now
+ *  actually starting it.
  *
- *  Deliberately smaller than PendingLessons' inline modal: no health-alert
- *  banner (that's checkin-specific data, not on scheduled_lessons) and no
- *  progression tracker (student skill updates stay on the student profile
- *  page — not duplicating that editor here). */
+ *  This is now the only closing/charging modal in the app — Aguardando
+ *  Vento's own inline confirm modal (PendingLessons.tsx) was removed
+ *  entirely; that queue no longer has any close/charge action of its own.
+ *  No health-alert banner here (that's checkin-specific data, not on
+ *  scheduled_lessons) and no progression tracker (student skill updates
+ *  stay on the student profile page — not duplicating that editor here). */
 export default function ConfirmLessonModal({
   lesson,
   activities,

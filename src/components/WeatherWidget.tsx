@@ -10,7 +10,7 @@ import { compassLabel, weatherIcon, type WeatherData, type WeatherSpot } from '@
 // server-side validation.
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 365
 
-// Sized for Base Camp's right-hand sidebar column (its only call site) —
+// Sized for Spot's right-hand sidebar column (its only call site) —
 // stacked temp/wind rows instead of side-by-side, since the full compass
 // names (e.g. "Leste-Sudeste") need more horizontal room than the old
 // 8-point abbreviations did.

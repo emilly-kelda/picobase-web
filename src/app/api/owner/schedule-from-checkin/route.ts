@@ -4,12 +4,12 @@ import { NextResponse } from 'next/server'
 
 const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
 
-/** Backs Sala de Espera's "Agendar Aula" — a checkin with no scheduled
+/** Backs Aguardando Vento's "Agendar Aula" — a checkin with no scheduled
  *  lesson yet (a walk-in with nothing pre-arranged) gets slotted into a
  *  specific instructor/time instead of being confirmed (charged) on the
  *  spot. Creates the real scheduled_lessons row Aulas Agendadas reads from,
  *  then links it back onto the checkin and marks it deferred so it stops
- *  showing in Sala de Espera (see migration 20260802000000 for why a
+ *  showing in Aguardando Vento (see migration 20260802000000 for why a
  *  simple scheduled_lesson_id check isn't enough to distinguish this from
  *  a checkin that arrived for an already-existing booking). */
 export async function POST(request: Request) {

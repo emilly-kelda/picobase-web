@@ -13,7 +13,7 @@ const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
 const VALID_STAGES: Stage[] = ['sala_de_espera', 'na_agua', 'concluido']
 
 /** picobase_chameleon_button_dossie.md Fase 3 — the only stage transition
- *  that needs a dedicated endpoint: ChameleonButton's "Enviar para a água"
+ *  that needs a dedicated endpoint: ChameleonButton's "Iniciar Velejo"
  *  (sala_de_espera -> na_agua). The other two transitions ride existing
  *  routes instead of duplicating them: onSellPackage opens the pre-existing
  *  SellPackageFlowModal (no new backend needed — hasCredit is derived from

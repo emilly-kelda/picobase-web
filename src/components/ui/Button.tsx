@@ -24,7 +24,7 @@ const VARIANT_CLASSES: Record<ButtonVariant, string> = {
 
 // md is the pre-existing app-wide default (untouched by the mockup, used
 // anywhere this spec doesn't reach). sm/xs are exact pixel values from the
-// approved mockup: Sala de Espera row buttons are 8px/12px padding at
+// approved mockup: Aguardando Vento row buttons are 8px/12px padding at
 // 13px; Linha de agenda row buttons are 6px/12px padding at the same 13px.
 const SIZE_CLASSES: Record<ButtonSize, string> = {
   md: 'px-4 py-2 text-sm',

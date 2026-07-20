@@ -379,7 +379,7 @@ export async function createScheduledLesson(payload: {
   return data
 }
 
-/** Makes sure `studentName` shows up in today's Sala de Espera
+/** Makes sure `studentName` shows up in today's Aguardando Vento
  *  (getPendingLessons: status='checked_in', deferred_to_schedule=false,
  *  checkin_at >= today). Originally lived only in sell-package/route.ts
  *  (Venda Rápida) — pulled out here so bookings/route.ts (Reservas) and

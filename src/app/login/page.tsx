@@ -112,7 +112,7 @@ function LoginForm() {
               letterSpacing: '-0.01em',
               marginBottom: '4px',
             }}>
-              Entrar na Base Camp
+              Entrar no Spot
             </h1>
             <p style={{ fontSize: '13px', color: 'var(--mist)' }}>
               Acesso exclusivo para gestores de escola

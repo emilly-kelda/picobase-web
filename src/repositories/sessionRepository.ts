@@ -215,7 +215,7 @@ export async function getTodayStats(schoolId: string) {
 }
 
 /** Month-to-date revenue/lesson count vs. the same day-range last month, for
- *  the Base Camp "vs. last month" indicator. Clamps the last-month cutoff
+ *  the Spot "vs. last month" indicator. Clamps the last-month cutoff
  *  day to that month's actual length (e.g. May 31 → Apr 30, not an
  *  overflowed May 1) instead of using Date#setMonth, which mis-rolls on
  *  short months. */

@@ -3,8 +3,8 @@
  * generates the bg-pb-, text-pb- and border-pb- utility classes — the v4-native equivalent
  * of the dossiê's theme.extend.colors.pb block. Deliberately a separate namespace from
  * the pre-existing --slate/--storm/--glacial/... tokens in globals.css (used inline via
- * var() across the whole app): this dossiê only re-skins Base Camp, Aulas Agendadas, and
- * Sala de Espera (Fase 4), so the rest of the app keeps its current palette until a later
+ * var() across the whole app): this dossiê only re-skins Spot, Aulas Agendadas, and
+ * Aguardando Vento (Fase 4), so the rest of the app keeps its current palette until a later
  * pass extends pb-* everywhere. */
 @theme {
   --color-pb-slate:         #1A1C22;

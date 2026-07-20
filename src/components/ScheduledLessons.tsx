@@ -870,24 +870,25 @@ export default function ScheduledLessons({
           </div>
         ) : (
           <div style={{
-            display: 'flex', flexDirection: 'column', gap: '8px',
+            background: '#fff',
+            // #E4E2DB (pb-border) — exact hex from the approved mockup,
+            // not --border (#E6E5E2, a subtly different gray).
+            border: '0.5px solid var(--color-pb-border)',
+            borderRadius: '10px',
             // Past 8 rows this scrolls internally instead of the page
             // itself growing without bound — an unbounded list here was
             // the main driver of the left column running far past the
             // right one (the "rolagem infinita" complaint).
             ...(totalRows > 8
               ? { maxHeight: '640px', overflowY: 'auto' as const, overflowX: 'hidden' as const }
-              : {}),
+              : { overflow: 'hidden' as const }),
           }}>
-            {individualLessons.map(lesson => (
+            {individualLessons.map((lesson, i) => (
               <div key={lesson.id} style={{
-                background: '#fff',
-                // #E4E2DB (pb-border) — exact hex from the approved
-                // mockup, not --border (#E6E5E2, a subtly different gray).
-                border: '0.5px solid var(--color-pb-border)',
-                borderRadius: '10px',
                 display: 'flex', alignItems: 'center', gap: '14px',
                 padding: '12px 16px',
+                borderBottom: i < totalRows - 1
+                  ? '0.5px solid var(--color-pb-border)' : 'none',
               }}>
                 <div style={{
                   fontSize: '14px', fontWeight: '500',
@@ -961,20 +962,23 @@ export default function ScheduledLessons({
                       folds into neutral alongside "scheduled" rather than
                       overloading success with a different meaning. size="md"
                       per the approved mockup's "Agendada" spec (10px/12px,
-                      distinct from Sala de Espera's 8px/11px default). */}
+                      distinct from Aguardando Vento's 8px/11px default). */}
                   <Badge variant={lesson.status === 'confirmed' ? 'success' : 'neutral'} size="md">
                     {lesson.status === 'confirmed' ? t.status_confirmed
                       : lesson.status === 'checked_in' ? t.status_checked_in
                       : t.status_scheduled}
                   </Badge>
-                  {/* Reagendar + Confirmar are both frequent actions — the
+                  {/* "+ Agendar Próxima Aula" (re-engagement shortcut, NOT
+                      "Reagendar" — that label/action is exclusive to
+                      MissedLessons.tsx's sidebar, for actually-missed
+                      sessions) + Confirmar are both frequent actions — the
                       approved mockup requires neither to hide behind "⋮".
                       Same hide rule as before: only status 'confirmed'
                       (shown as the "Confirmada" badge instead) drops them. */}
                   {lesson.status !== 'confirmed' && (
                     <>
                       <Button variant="secondary" size="xs" onClick={() => openRebookModal(lesson)}>
-                        Reagendar
+                        + Agendar Próxima Aula
                       </Button>
                       <Button variant="primary" size="xs" onClick={() => setConfirmLessonModal(lesson)}>
                         Confirmar
@@ -1015,15 +1019,14 @@ export default function ScheduledLessons({
               </div>
             ))}
 
-            {groupLessons.map(group => {
+            {groupLessons.map((group, gi) => {
               const first = group[0]
               return (
                 <div key={first.group_id} style={{
-                  background: '#fff',
-                  border: '0.5px solid var(--color-pb-border)',
-                  borderRadius: '10px',
                   display: 'flex', alignItems: 'flex-start', gap: '12px',
                   padding: '14px 20px',
+                  borderBottom: individualLessons.length + gi < totalRows - 1
+                    ? '0.5px solid var(--color-pb-border)' : 'none',
                 }}>
                   <div style={{
                     fontSize: '15px', fontWeight: '600',

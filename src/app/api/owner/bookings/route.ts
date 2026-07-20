@@ -61,7 +61,7 @@ export async function POST(request: Request) {
   }
 
   // A reservation for today is, functionally, a walk-in about to happen —
-  // gets them into Sala de Espera right away instead of only appearing once
+  // gets them into Aguardando Vento right away instead of only appearing once
   // someone later confirms/schedules them. A booking with no date, or a
   // future one, isn't touched: this only fires when preferred_date is
   // literally today, not "no preference yet" or "next week".

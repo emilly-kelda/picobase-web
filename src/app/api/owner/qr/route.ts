@@ -7,7 +7,7 @@ const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const format = searchParams.get('format') ?? 'png'
-  // Optional per-student targeting (Sala de Espera's individual QR button):
+  // Optional per-student targeting (Aguardando Vento's individual QR button):
   // appended as query params CheckinForm.tsx already reads to pre-fill/lock
   // its form (see checkin/[school]/page.tsx's ?student=&activity=) — same
   // mechanism as the manual "send a pre-filled check-in link" flow, just

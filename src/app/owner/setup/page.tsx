@@ -87,7 +87,7 @@ export default function OwnerSetupPage() {
               Defina sua senha
             </h1>
             <p style={{ fontSize: '13px', color: 'var(--mist)' }}>
-              Última etapa para acessar a Base Camp
+              Última etapa para acessar o Spot
             </p>
           </div>
 

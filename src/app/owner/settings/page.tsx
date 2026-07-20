@@ -62,7 +62,7 @@ export default async function SettingsPage() {
       done:  (sessionCount ?? 0) > 0,
       sub:   (sessionCount ?? 0) > 0
         ? `${sessionCount} aula${(sessionCount ?? 0) !== 1 ? 's' : ''} confirmada${(sessionCount ?? 0) !== 1 ? 's' : ''}`
-        : 'Confirme a primeira aula pelo Base Camp',
+        : 'Confirme a primeira aula pelo Spot',
       href:  '/owner',
     },
   ]
@@ -88,7 +88,7 @@ export default async function SettingsPage() {
         schoolName={school?.name ?? 'Escola'}
       />
 
-      {/* Moved from Base Camp's dashboard — that slot now hosts Venda
+      {/* Moved from Spot's dashboard — that slot now hosts Venda
           Rápida. The instructor-facing page (/instructor/[school]) still
           reads school.daily_notice, so editing stays available here. */}
       <div style={{ marginBottom: '24px' }}>

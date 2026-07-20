@@ -10,7 +10,7 @@ const VARIANT_CLASSES: Record<BadgeVariant, string> = {
 }
 
 // Exact values from the approved mockup (picobase_chameleon_button_
-// dossie.md urgent visual-spec correction): Sala de Espera badges
+// dossie.md urgent visual-spec correction): Aguardando Vento badges
 // ("Termo assinado", "Xh restantes", "Sem créditos") are 3px/8px padding
 // at 11px; the Linha de agenda "Agendada" badge is 3px/10px at 12px.
 const SIZE_CLASSES: Record<BadgeSize, string> = {

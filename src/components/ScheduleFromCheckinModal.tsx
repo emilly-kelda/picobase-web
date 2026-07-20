@@ -32,7 +32,7 @@ function nowPlus(minutes: number) {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 }
 
-/** "Agendar Aula" from a Sala de Espera card that has no scheduled lesson
+/** "Agendar Aula" from an Aguardando Vento card that has no scheduled lesson
  *  yet — a walk-in with nothing pre-arranged gets slotted into a specific
  *  instructor/time instead of being confirmed (charged) immediately.
  *  Deliberately lightweight: no pricing/payment fields here — that

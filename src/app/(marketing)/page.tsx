@@ -1030,7 +1030,7 @@ export default function HomePage() {
                     <span key={color} style={{ width: '10px', height: '10px', borderRadius: '50%', background: color }} />
                   ))}
                 </div>
-                <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.2)' }}>Base Camp</span>
+                <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.2)' }}>Spot</span>
                 <span style={{ width: '60px' }} />
               </div>
 

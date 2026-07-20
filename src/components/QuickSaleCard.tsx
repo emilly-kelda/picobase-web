@@ -4,10 +4,10 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import SellPackageFlowModal, { type PackageOption } from './SellPackageFlowModal'
 
-/** Replaces the old "Mural de Avisos" slot at the top of Base Camp — that
+/** Replaces the old "Mural de Avisos" slot at the top of Spot — that
  *  widget had no operational use for a receptionist mid-shift; a one-click
  *  path into a package sale does. Opens the same unified sell modal used by
- *  Sala de Espera's per-card "Vender Pacote" button, just without a student
+ *  Aguardando Vento's per-card "Vender Pacote" button, just without a student
  *  pre-selected. */
 export default function QuickSaleCard({ packageTypes }: { packageTypes: PackageOption[] }) {
   const router = useRouter()
