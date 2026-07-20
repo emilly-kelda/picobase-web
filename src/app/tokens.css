@@ -1,0 +1,21 @@
+/* Pico Base design system — pb-* color tokens (picobase_design_system_dossie.md, Fase 0).
+ * Tailwind v4 is CSS-first (no tailwind.config.ts in this project), so @theme is what
+ * generates the bg-pb-*/text-pb-*/border-pb-* utility classes — the v4-native equivalent
+ * of the dossiê's theme.extend.colors.pb block. Deliberately a separate namespace from
+ * the pre-existing --slate/--storm/--glacial/... tokens in globals.css (used inline via
+ * var() across the whole app): this dossiê only re-skins Base Camp, Aulas Agendadas, and
+ * Sala de Espera (Fase 4), so the rest of the app keeps its current palette until a later
+ * pass extends pb-* everywhere. */
+@theme {
+  --color-pb-slate:         #1A1C22;
+  --color-pb-storm:         #2B3340;
+  --color-pb-glacial:       #00A896;
+  --color-pb-signal:        #E8471A;
+  --color-pb-powder:        #F0EEE9;
+  --color-pb-white:         #FFFFFF;
+  --color-pb-glacial-light: #E0F8F5;
+  --color-pb-glacial-dark:  #007868;
+  --color-pb-signal-light:  #FDF0EC;
+  --color-pb-mist:          #8A8C98;
+  --color-pb-border:        #E4E2DB;
+}
