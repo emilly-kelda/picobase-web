@@ -829,3 +829,30 @@ their commit message and diff.
   the other 5 filters, these only show lessons once a matching
   `activities` row exists (via `/owner/activities`) — none created here,
   that's the owner's catalog to manage.
+- `540ed1c` **fix**: repositioned "Confirmar Aula" to sit immediately
+  before the WhatsApp button, per a follow-up report. Verified line by
+  line that the button restored in `fc45651` is still present and
+  correctly conditioned (hidden only when `status === 'confirmed'`) —
+  `ScheduledLessons.tsx` is the only component in the codebase that
+  renders an "Aulas Agendadas" list, so there's no second, unpatched copy
+  hiding elsewhere. If it's still not visible after this deploys, that
+  points to browser cache or a Vercel deployment lag, not a remaining
+  code gap.
+- `7b468b1` **feat**: same-day bookings and lessons now enter Sala de
+  Espera automatically, not just Venda Rápida sales. Extracted
+  `ensureActiveCheckinForToday()` out of `sell-package/route.ts` into
+  `scheduledLessonRepository.ts` (now takes `schoolId` as a parameter
+  instead of a closed-over constant) so it's one shared implementation
+  instead of three near-copies. Wired into `POST /api/owner/bookings`
+  (Reservas — only when `preferred_date` is today; future/undated
+  bookings are left alone) and `POST /api/owner/schedule` (any same-day
+  individual lesson, covering both the explicitly-named "aula
+  experimental, sem pacote" case and same-day bookings generally, since
+  the logic doesn't actually depend on package status). Deliberately
+  fires on booking *creation*, not confirmation — the instruction said
+  "no momento em que for registrado", and gating on manual confirmation
+  would add a step it didn't ask for. Also fixed a real
+  `router.refresh()` gap found while checking this: `BookingsClient.tsx`'s
+  confirm/decline action updated its own local list but never revalidated
+  server data, leaving the pending-bookings sidebar badge
+  (`getPendingBookingsCount`) stale until an unrelated navigation.
