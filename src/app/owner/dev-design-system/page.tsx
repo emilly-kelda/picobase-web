@@ -1,5 +1,6 @@
 import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
+import ChameleonButtonPreview from './ChameleonButtonPreview'
 
 /** Isolated preview of the shared design-system components
  *  (picobase_design_system_dossie.md) — not linked from the sidebar,
@@ -30,6 +31,11 @@ export default function DesignSystemPreviewPage() {
           <Badge variant="danger">Sem créditos</Badge>
           <Badge variant="neutral">Agendada</Badge>
         </div>
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-xs font-medium uppercase tracking-wider text-pb-mist">ChameleonButton</h2>
+        <ChameleonButtonPreview />
       </section>
     </div>
   )
