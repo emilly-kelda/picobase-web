@@ -6,7 +6,12 @@ export type BadgeSize = 'sm' | 'md'
 const VARIANT_CLASSES: Record<BadgeVariant, string> = {
   success: 'bg-pb-glacial-light text-pb-glacial-dark',
   danger:  'bg-pb-signal-light text-pb-signal',
-  neutral: 'bg-pb-powder text-pb-mist',
+  // Stock Tailwind slate, not pb-powder/pb-mist: pb-powder IS the page/
+  // card background, so a badge using it as its own bg would blend
+  // straight into the card instead of reading as a distinct badge shape.
+  // slate-100/slate-600 gives it enough contrast against the white card
+  // while staying in the muted-palette family.
+  neutral: 'bg-slate-100 text-slate-600',
 }
 
 // Exact values from the approved mockup (picobase_chameleon_button_

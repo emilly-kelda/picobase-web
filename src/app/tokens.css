@@ -15,7 +15,7 @@
 @theme {
   --color-pb-slate:         #0F172A; /* was #1A1C22 — slate-900 */
   --color-pb-storm:         #334155; /* was #2B3340 — slate-700 */
-  --color-pb-glacial:       #1E293B; /* was #00A896 (teal) — muted slate-navy, slate-800 */
+  --color-pb-glacial:       #0F172A; /* was #00A896 (teal), then #1E293B (slate-800) — slate-900, "alta fidelidade" grafite ask */
   --color-pb-signal:        #E11D48; /* was #E8471A (coral) — rose-600 */
   --color-pb-powder:        #F8FAFC; /* was #F0EEE9 — slate-50 */
   --color-pb-white:         #FFFFFF;
