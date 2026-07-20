@@ -225,11 +225,12 @@ export default function PendingLessons({
             const lastLesson = balance?.hasPackage && balance.minutesRemaining > 0 && balance.minutesRemaining <= 60
 
             // Card layout follows picobase_design_system_dossie.md Fase 4's
-            // Aguardando Vento spec, corrected per the approved redesign:
-            // secondary actions (Agendar aula, Ver ficha) moved to the
-            // card's top-right corner (avatar row) to free the bottom row
-            // for just the primary ChameleonButton action — no more
-            // 3-element button row competing for space.
+            // Aguardando Vento spec. Per
+            // fix_checkin_removido_e_estagio_errado.md, the button row
+            // (ChameleonButton + Agendar aula + Ver ficha) sits below the
+            // badge row, full card width — NOT in the avatar row's
+            // top-right corner (that placement hid Check-in and read as
+            // "Iniciar Velejo" in the wrong spot).
             const hasCredit = !!balance?.hasPackage && !exhausted
             const creditBadgeText = lastLesson
               ? `${t.package_last_lesson_badge} · ${fmtMinutes(balance?.minutesRemaining ?? 0)} ${t.package_remaining_singular}`
@@ -247,8 +248,7 @@ export default function PendingLessons({
                   padding: '16px',
                 }}
               >
-                {/* Avatar row — also carries the secondary actions
-                    (Agendar aula, Ver ficha) in the top-right corner now. */}
+                {/* Avatar row */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
                   <div style={{
                     width: '36px', height: '36px',
@@ -313,14 +313,6 @@ export default function PendingLessons({
                       <span title={fmtTime(checkin.checkin_at)}>{fmtRelative(checkin.checkin_at)}</span>
                     </div>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-                    <Button variant="secondary" size="sm" onClick={() => setScheduleModal(checkin)}>
-                      {t.schedule_lesson_btn}
-                    </Button>
-                    <Button variant="tertiary" size="sm" onClick={() => setFichaModal(checkin)}>
-                      {t.view_ficha_full_btn}
-                    </Button>
-                  </div>
                 </div>
 
                 {/* Badge row */}
@@ -349,11 +341,13 @@ export default function PendingLessons({
                   )}
                 </div>
 
-                {/* Primary action row — Agendar aula/Ver ficha moved up to
-                    the avatar row (top-right corner); Finalizar e cobrar
-                    was removed entirely — closing/charging a session now
+                {/* Button row — Check-in/Enviar para a água/Vender pacote
+                    (ChameleonButton, flex-1, most prominent) + Agendar aula
+                    (secondary, border-only) + Ver ficha (tertiary, plain
+                    text link) in that order. Finalizar e cobrar stays
+                    removed from this row — closing/charging a session
                     happens only via Aulas Agendadas' "Confirmar Aula". */}
-                <div style={{ display: 'flex', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <ChameleonButton
                     stage={checkin.stage ?? 'sala_de_espera'}
                     checkedIn={checkin.checked_in}
@@ -367,6 +361,12 @@ export default function PendingLessons({
                     onSellPackage={() => setSellModal(checkin)}
                     lang={lang}
                   />
+                  <Button variant="secondary" size="sm" onClick={() => setScheduleModal(checkin)}>
+                    {t.schedule_lesson_btn}
+                  </Button>
+                  <Button variant="tertiary" size="sm" onClick={() => setFichaModal(checkin)}>
+                    {t.view_ficha_full_btn}
+                  </Button>
                 </div>
               </div>
             )

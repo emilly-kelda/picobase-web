@@ -16,7 +16,7 @@ type ChameleonButtonProps = {
   onSendToWater?: () => void
   onSellPackage?: () => void
   className?: string
-  // Only gates the "Iniciar Velejo"/"Start Session" label below — the
+  // Only gates the "Enviar para a água"/"Send to water" label below — the
   // rest of this component's text is still PT-only, unchanged by this
   // rename (a broader i18n pass wasn't asked for here).
   lang?: 'en' | 'pt'
@@ -35,10 +35,11 @@ type ChameleonButtonProps = {
  *  - checked in, sala_de_espera + no credit -> danger "Vender pacote"
  *    (doesn't advance stage on its own — that happens once the sale
  *    actually completes)
- *  - checked in, sala_de_espera + credit    -> primary "Iniciar Velejo →"
- *    ("Start Session →" in en) — renamed from "Enviar para a água".
- *    Not gated on having an activity defined — reverted deliberately;
- *    Agendar aula/Ver ficha live in the card's top-right corner instead.
+ *  - checked in, sala_de_espera + credit    -> primary "Enviar para a água"
+ *    ("Send to water" in en), wave icon — per
+ *    fix_checkin_removido_e_estagio_errado.md this replaces the earlier
+ *    "Iniciar Velejo →" label, same color/format as Check-in (same
+ *    component, just a different label/icon once checked in).
  *  - na_agua                    -> no button, muted "Na água" text.
  *    "Finalizar e cobrar" was removed from this queue entirely per the
  *    approved redesign — closing/charging a session happens only via
@@ -90,7 +91,7 @@ export default function ChameleonButton({
     }
     return (
       <Button variant="primary" size="sm" onClick={onSendToWater} className={className}>
-        {lang === 'pt' ? 'Iniciar Velejo →' : 'Start Session →'}
+        <span className="text-[15px]">🌊</span> {lang === 'pt' ? 'Enviar para a água' : 'Send to water'}
       </Button>
     )
   }
