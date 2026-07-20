@@ -21,10 +21,12 @@ export default function MissedLessons({
   lessons,
   instructors = [],
   schoolName = 'Pico Base',
+  t,
 }: {
   lessons: MissedLesson[]
   instructors?: Array<{ id: string; name: string }>
   schoolName?: string
+  t: Record<string, string>
 }) {
   const router = useRouter()
   const { toast, showToast } = useToast()
@@ -76,7 +78,7 @@ export default function MissedLessons({
           letterSpacing: '0.1em', textTransform: 'uppercase',
           color: 'var(--signal)',
         }}>
-          Aulas não realizadas
+          {t.missed_lessons_title}
         </div>
         <span style={{
           background: 'var(--signal)',
@@ -169,10 +171,15 @@ export default function MissedLessons({
                     fontFamily: 'var(--font-sans)',
                     transition: 'background-color 0.15s',
                   }}
-                  onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'var(--glacial)' }}
-                  onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'var(--glacial-light)' }}
+                  // Hover inverts to solid --glacial with white text, not just a
+                  // background swap — with the muted-palette repaint, --glacial
+                  // is now a dark slate (not a mid-tone teal), so leaving the
+                  // dark --glacial-dark text unchanged on hover would put
+                  // near-black text on a near-black background.
+                  onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'var(--glacial)'; e.currentTarget.style.color = '#fff' }}
+                  onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'var(--glacial-light)'; e.currentTarget.style.color = 'var(--glacial-dark)' }}
                 >
-                  Reagendar
+                  {t.reschedule_btn}
                 </button>
 
                 <button
@@ -190,7 +197,7 @@ export default function MissedLessons({
                     fontFamily: 'var(--font-sans)',
                   }}
                 >
-                  {loading === lesson.id ? '...' : 'Descartar'}
+                  {loading === lesson.id ? '...' : t.dismiss_btn}
                 </button>
               </div>
             </div>

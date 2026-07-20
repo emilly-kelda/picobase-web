@@ -375,6 +375,7 @@ export default async function OwnerPage() {
             lessons={missedLessons as any}
             instructors={instructorList}
             schoolName={runway.school_name ?? 'Pico Base'}
+            t={t}
           />
 
         </div>

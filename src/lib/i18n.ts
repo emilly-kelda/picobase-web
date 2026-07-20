@@ -50,6 +50,11 @@ export const translations = {
     no_scheduled_tomorrow:'No lessons scheduled for tomorrow.',
     no_scheduled_sport:   'No lessons scheduled for this sport',
 
+    // Spot — Aulas Não Realizadas (MissedLessons.tsx)
+    missed_lessons_title: 'Overdue Sessions',
+    reschedule_btn:       'Reschedule',
+    dismiss_btn:          'Dismiss',
+
     // Spot — Aguardando Vento (PendingLessons.tsx)
     waiting_room_title:   'Awaiting Wind',
     no_checkins_waiting:  'No students waiting for check-in.',
@@ -299,6 +304,11 @@ export const translations = {
     no_scheduled_today:   'Nenhuma aula agendada para hoje.',
     no_scheduled_tomorrow:'Nenhuma aula agendada para amanhã.',
     no_scheduled_sport:   'Nenhuma aula agendada para este esporte',
+
+    // Spot — Aulas Não Realizadas (MissedLessons.tsx)
+    missed_lessons_title: 'Aulas não realizadas',
+    reschedule_btn:       'Reagendar',
+    dismiss_btn:          'Descartar',
 
     // Spot — Aguardando Vento (PendingLessons.tsx)
     waiting_room_title:   'Aguardando Vento',
