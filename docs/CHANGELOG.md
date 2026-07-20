@@ -568,3 +568,20 @@ their commit message and diff.
   options, not replaced). `getWeather()` now takes an already-resolved
   spot object instead of resolving by id internally, since resolution
   needs the school row the caller already has.
+- `5c49dd6` **feat**: Aulas Agendadas settled on pure retention — check-in
+  already happens in Sala de Espera, so this list doesn't need its own
+  confirm action anymore. Removed the status-dependent "Confirmar Aula"/
+  "+ Agendar Próxima" swap in favor of a single, unconditional "+
+  Agendar Próxima Aula" button, opening the existing scheduling modal
+  pre-filled with the student/activity/instructor. `ConfirmLessonModal.tsx`
+  deleted (no longer used anywhere — group rows keep their own separate
+  "Confirmar grupo →" flow, since there's no checkin-based equivalent
+  for a group). The "Lembrete" link (always to the student) became a
+  WhatsApp icon button with a popover offering "Enviar para o Aluno" or
+  "Enviar para o Instrutor" — real `api.whatsapp.com/send?phone=...&text=...`
+  links (not `window.open`, so cmd/middle-click and popup blockers both
+  behave normally), student message mentions the instructor, instructor
+  message mentions the student, both include name + time.
+  `getScheduledLessons()` now selects `users.whatsapp` in the instructor
+  join (previously only `id, name`). "Editar" and cancel stayed exactly
+  where they were.
