@@ -599,3 +599,15 @@ their commit message and diff.
   1:2/1-column result with a plain `<style>` + media query instead,
   matching the `.dash-grid-2col` pattern Base Camp already uses, rather
   than introducing a second styling paradigm in one file.
+- `56976c2` **fix**: `WeatherWidget`'s spot picker (📍 icon + popover)
+  now only shows for a school that hasn't configured its own location
+  yet. `buildWeatherSpots()` used to prepend the school's saved spot
+  ahead of the curated Ceará presets (`[school, ...curated]`) so both
+  stayed reachable; now a configured school gets a single-item list
+  (`[school]` only) and the curated list is a pure fallback for a new
+  school with nothing set in Settings → Geral. `WeatherWidget` hides
+  the picker whenever `spots.length <= 1` — nothing to switch to. A
+  stale `weather_spot` cookie from before the school configured its
+  location self-corrects for free: it won't match the new single-item
+  list, so `resolveWeatherSpot()` falls back to the school's own spot
+  without needing the cookie cleared.
