@@ -8,6 +8,7 @@ import LevelPicker from '@/components/LevelPicker'
 import { whatsappDigitsWithCountryCode } from '@/lib/whatsapp'
 import { Toast, useToast } from '@/components/Toast'
 import ConfirmLessonModal from '@/components/ConfirmLessonModal'
+import { translateModalityName } from '@/lib/modality'
 
 type Lesson = {
   id: string
@@ -209,14 +210,17 @@ function formatHours(minutes: number): string {
  *  in production (see AUDITORIA_DASHBOARD.md item 4). */
 function getPackageBadge(
   studentName: string | null,
-  activePackages: PackageSale[]
+  activePackages: PackageSale[],
+  t: Record<string, string>
 ): { label: string; tone: 'ok' | 'warn' } | null {
   if (!studentName) return null
   const sales = activePackages.filter(p => p.student_name.toLowerCase() === studentName.toLowerCase())
-  if (sales.length === 0) return { label: 'Aula Avulsa', tone: 'warn' }
+  if (sales.length === 0) return { label: t.walk_in_lesson_badge, tone: 'warn' }
   const remaining = sales.reduce((sum, p) => sum + Math.max(0, p.minutes_purchased - p.minutes_used), 0)
-  if (remaining <= 0) return { label: 'Sem créditos', tone: 'warn' }
-  const label = remaining === 60 ? `${formatHours(remaining)} restante` : `${formatHours(remaining)} restantes`
+  if (remaining <= 0) return { label: t.no_credits_badge, tone: 'warn' }
+  const label = remaining === 60
+    ? `${formatHours(remaining)} ${t.package_remaining_singular}`
+    : `${formatHours(remaining)} ${t.package_remaining_badge}`
   return { label, tone: 'ok' }
 }
 
@@ -345,6 +349,8 @@ export default function ScheduledLessons({
   schoolName = 'Pico Base',
   payoutModel = 'percentage',
   fixedPayoutValue = null,
+  t,
+  lang = 'pt',
 }: {
   todayLessons: Lesson[]
   tomorrowLessons: Lesson[]
@@ -354,6 +360,8 @@ export default function ScheduledLessons({
   schoolName?: string
   payoutModel?: string
   fixedPayoutValue?: number | null
+  t: Record<string, string>
+  lang?: 'en' | 'pt'
 }) {
   const router = useRouter()
   const { toast, showToast }        = useToast()
@@ -878,8 +886,8 @@ export default function ScheduledLessons({
               padding: '2px',
             }}>
               {([
-                { key: 'today',    label: `Hoje (${todayCount})`      },
-                { key: 'tomorrow', label: `Amanhã (${tomorrowCount})` },
+                { key: 'today',    label: `${t.today_label} (${todayCount})`      },
+                { key: 'tomorrow', label: `${t.tomorrow_label} (${tomorrowCount})` },
               ] as const).map(tab => (
                 <button
                   key={tab.key}
@@ -934,7 +942,7 @@ export default function ScheduledLessons({
                   color: active ? '#fff' : 'var(--mist)',
                 }}
               >
-                {SPORT_FILTER_LABELS[sport]}
+                {sport === 'all' ? t.origin_all : translateModalityName(SPORT_FILTER_LABELS[sport], lang)}
               </button>
             )
           })}
@@ -956,8 +964,8 @@ export default function ScheduledLessons({
             </svg>
             <div style={{ fontSize: '13px', color: 'var(--mist)' }}>
               {activeSportFilter === 'all'
-                ? `Nenhuma aula agendada para ${activeTab === 'today' ? 'hoje' : 'amanhã'}.`
-                : `Nenhuma aula agendada para este esporte (${SPORT_FILTER_LABELS[activeSportFilter]}).`}
+                ? (activeTab === 'today' ? t.no_scheduled_today : t.no_scheduled_tomorrow)
+                : `${t.no_scheduled_sport} (${translateModalityName(SPORT_FILTER_LABELS[activeSportFilter], lang)}).`}
             </div>
           </div>
         ) : (
@@ -1019,7 +1027,7 @@ export default function ScheduledLessons({
                       // exist by then), so re-showing "Sem créditos" on it
                       // reads as an open billing problem that isn't real.
                       if (lesson.status === 'confirmed') return null
-                      const badge = getPackageBadge(lesson.student_name, activePackages)
+                      const badge = getPackageBadge(lesson.student_name, activePackages, t)
                       if (!badge) return null
                       return (
                         <span style={{
@@ -1058,9 +1066,9 @@ export default function ScheduledLessons({
                         ? 'var(--amber)'
                         : 'var(--mist)',
                   }}>
-                    {lesson.status === 'confirmed' ? 'Confirmada'
-                      : lesson.status === 'checked_in' ? 'Check-in'
-                      : 'Agendada'}
+                    {lesson.status === 'confirmed' ? t.status_confirmed
+                      : lesson.status === 'checked_in' ? t.status_checked_in
+                      : t.status_scheduled}
                   </span>
                   {/* Restored as the primary action: reception needs a
                       direct way to confirm/start an individual lesson from
@@ -2237,6 +2245,7 @@ export default function ScheduledLessons({
           instructors={instructors}
           payoutModel={payoutModel}
           fixedPayoutValue={fixedPayoutValue}
+          t={t}
           onClose={() => setConfirmLessonModal(null)}
           onConfirmed={() => { setConfirmLessonModal(null); router.refresh() }}
         />

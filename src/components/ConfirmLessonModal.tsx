@@ -27,6 +27,9 @@ const CURRENCY_OPTIONS: Array<{ value: Currency; symbol: string; flag: string }>
 ]
 const CURRENCY_SYMBOL: Record<Currency, string> = { BRL: 'R$', EUR: '€', USD: '$' }
 
+// Same duration values everywhere else in the app uses (ScheduledLessons.tsx's
+// own "+ Agendar" form, ScheduleFromCheckinModal.tsx) — labels aren't
+// translated since "1h"/"1h30" reads the same in both languages.
 const DURATIONS = [
   { label: '1h',   value: 60  },
   { label: '1h30', value: 90  },
@@ -70,6 +73,7 @@ export default function ConfirmLessonModal({
   instructors,
   payoutModel = 'percentage',
   fixedPayoutValue = null,
+  t,
   onClose,
   onConfirmed,
 }: {
@@ -78,6 +82,7 @@ export default function ConfirmLessonModal({
   instructors: Instructor[]
   payoutModel?: string
   fixedPayoutValue?: number | null
+  t: Record<string, string>
   onClose: () => void
   onConfirmed: () => void
 }) {
@@ -212,16 +217,16 @@ export default function ConfirmLessonModal({
       }}>
         <div style={{ marginBottom: '20px' }}>
           <div style={{ fontSize: '18px', fontWeight: '500', color: 'var(--slate)', marginBottom: '4px' }}>
-            {lesson.student_name ?? 'Aluno'}
+            {lesson.student_name ?? t.th_student}
           </div>
           <div style={{ fontSize: '13px', color: 'var(--mist)' }}>
-            Agendada para {new Date(lesson.scheduled_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Fortaleza' })}
+            {t.scheduled_for_label} {new Date(lesson.scheduled_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Fortaleza' })}
           </div>
         </div>
 
         <div style={{ marginBottom: '20px' }}>
           <div style={{ fontSize: '11px', fontWeight: '500', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--mist)', marginBottom: '8px' }}>
-            Atividade
+            {t.confirm_activity}
           </div>
           <select
             value={activityId}
@@ -233,7 +238,7 @@ export default function ConfirmLessonModal({
               fontFamily: 'var(--font-sans)', outline: 'none', cursor: 'pointer',
             }}
           >
-            <option value="">Selecionar atividade</option>
+            <option value="">{t.select_activity}</option>
             {activities.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
           </select>
         </div>
@@ -246,7 +251,7 @@ export default function ConfirmLessonModal({
 
         <div style={{ marginBottom: '20px' }}>
           <div style={{ fontSize: '11px', fontWeight: '500', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--mist)', marginBottom: '8px' }}>
-            Instrutor
+            {t.confirm_instructor}
           </div>
           <select
             value={instructorId}
@@ -258,7 +263,7 @@ export default function ConfirmLessonModal({
               fontFamily: 'var(--font-sans)', outline: 'none', cursor: 'pointer',
             }}
           >
-            <option value="">Selecionar instrutor</option>
+            <option value="">{t.select_instructor}</option>
             {instructors.map(i => (
               <option key={i.id} value={i.id}>{i.name} · {Math.round((i.commission_pct ?? 0) * 100)}%</option>
             ))}
@@ -267,7 +272,7 @@ export default function ConfirmLessonModal({
 
         <div style={{ marginBottom: '20px' }}>
           <div style={{ fontSize: '11px', fontWeight: '500', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--mist)', marginBottom: '8px' }}>
-            Data da aula
+            {t.lesson_date_label}
           </div>
           <input
             type="date" value={sessionDate} onChange={e => setSessionDate(e.target.value)}
@@ -281,7 +286,7 @@ export default function ConfirmLessonModal({
 
         <div style={{ marginBottom: '20px' }}>
           <div style={{ fontSize: '11px', fontWeight: '500', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--mist)', marginBottom: '8px' }}>
-            Duração
+            {t.duration_label}
           </div>
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
             {DURATIONS.map(d => (
@@ -309,7 +314,7 @@ export default function ConfirmLessonModal({
                 fontSize: '14px', fontWeight: '500', cursor: 'pointer', fontFamily: 'var(--font-sans)',
               }}
             >
-              Outro
+              {t.duration_other}
             </button>
           </div>
           {useCustom && (
@@ -326,7 +331,7 @@ export default function ConfirmLessonModal({
 
         <div style={{ marginBottom: '16px' }}>
           <div style={{ fontSize: '11px', fontWeight: '500', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--mist)', marginBottom: '8px' }}>
-            Moeda cobrada
+            {t.currency_charged}
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
             {CURRENCY_OPTIONS.map(c => (
@@ -355,9 +360,9 @@ export default function ConfirmLessonModal({
             fontSize: '11px', fontWeight: '500', letterSpacing: '0.1em', textTransform: 'uppercase',
             color: 'var(--mist)', marginBottom: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
           }}>
-            <span>Valor cobrado ({CURRENCY_SYMBOL[currency]})</span>
+            <span>{t.amount_charged} ({CURRENCY_SYMBOL[currency]})</span>
             <div style={{ display: 'flex', gap: '2px', background: 'var(--powder)', borderRadius: 'var(--radius-md)', padding: '2px' }}>
-              {[{ key: 'total', label: 'Total' }, { key: 'per_hour', label: '/hora' }].map(m => (
+              {[{ key: 'total', label: t.price_mode_total }, { key: 'per_hour', label: t.price_mode_hour }].map(m => (
                 <button
                   key={m.key}
                   onClick={() => setPriceMode(m.key as 'total' | 'per_hour')}
@@ -389,21 +394,21 @@ export default function ConfirmLessonModal({
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
                 <input
                   type="number" value={pricePerHour} onChange={e => setPricePerHour(Number(e.target.value))}
-                  placeholder="R$/hora"
+                  placeholder={`R$${t.price_mode_hour}`}
                   style={{
                     width: '140px', padding: '10px 14px', border: '0.5px solid var(--border-strong)',
                     borderRadius: 'var(--radius-md)', fontSize: '20px', fontWeight: '600',
                     color: 'var(--slate)', fontFamily: 'var(--font-sans)', outline: 'none',
                   }}
                 />
-                <div style={{ fontSize: '13px', color: 'var(--mist)' }}>/ hora</div>
+                <div style={{ fontSize: '13px', color: 'var(--mist)' }}>{t.price_mode_hour}</div>
               </div>
               {pricePerHour > 0 && finalDuration > 0 && (
                 <div style={{
                   padding: '10px 14px', background: 'var(--glacial-light)', borderRadius: 'var(--radius-md)',
                   fontSize: '13px', color: 'var(--glacial-dark)', display: 'flex', justifyContent: 'space-between',
                 }}>
-                  <span>{pricePerHour}/h × {(finalDuration / 60).toFixed(1)}h</span>
+                  <span>{pricePerHour}{t.price_mode_hour} × {(finalDuration / 60).toFixed(1)}h</span>
                   <span style={{ fontWeight: '600' }}>= {fmt(totalPrice, currency)}</span>
                 </div>
               )}
@@ -413,12 +418,12 @@ export default function ConfirmLessonModal({
           {currency !== 'BRL' && totalPrice > 0 && (
             <div style={{ fontSize: '12px', marginTop: '8px', color: fxSource === 'fallback' ? '#92400E' : 'var(--mist)' }}>
               {totalPriceBRL != null && fxSource === 'fallback' ? (
-                `Convertido: ${fmt(totalPriceBRL, 'BRL')} — usando taxa padrão da escola devido à instabilidade de rede`
+                `${t.converted_label} ${fmt(totalPriceBRL, 'BRL')} — ${t.fx_fallback_note}`
               ) : totalPriceBRL != null ? (
-                `Convertido: ${fmt(totalPriceBRL, 'BRL')} (Cotação: 1 ${currency} = ${fmt(fxRate ?? 0, 'BRL')})`
+                `${t.converted_label} ${fmt(totalPriceBRL, 'BRL')} (${t.fx_rate_label} ${currency} = ${fmt(fxRate ?? 0, 'BRL')})`
               ) : fxError ? (
                 <>
-                  Taxa de câmbio indisponível.{' '}
+                  {t.fx_unavailable}{' '}
                   <button
                     type="button" onClick={loadFxRates} disabled={fxLoading}
                     style={{
@@ -427,10 +432,10 @@ export default function ConfirmLessonModal({
                       fontSize: '12px', fontFamily: 'var(--font-sans)',
                     }}
                   >
-                    {fxLoading ? 'Tentando...' : 'Tentar novamente'}
+                    {fxLoading ? t.fx_trying : t.fx_retry}
                   </button>
                 </>
-              ) : 'Buscando taxa de câmbio…'}
+              ) : t.fx_loading}
             </div>
           )}
 
@@ -440,15 +445,15 @@ export default function ConfirmLessonModal({
               display: 'flex', flexDirection: 'column', gap: '8px',
             }}>
               <div style={{ fontSize: '10px', fontWeight: '600', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--mist)' }}>
-                Custo variável {variableCost?.variableCostMode === 'per_trip' ? '· por trip' : '· por aluno'}
+                {t.variable_cost_label} {variableCost?.variableCostMode === 'per_trip' ? `· ${t.per_trip}` : `· ${t.per_student}`}
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-                <span style={{ color: 'var(--mist)' }}>{variableCost?.variableCostName ?? 'Custo'}</span>
+                <span style={{ color: 'var(--mist)' }}>{variableCost?.variableCostName ?? t.variable_cost_label}</span>
                 <span style={{ color: '#DC2626', fontWeight: '500' }}>− {fmt(costDeduction, currency)}</span>
               </div>
               <div style={{ height: '0.5px', background: 'var(--border)' }} />
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-                <span style={{ color: 'var(--mist)' }}>Base para comissão</span>
+                <span style={{ color: 'var(--mist)' }}>{t.commission_base}</span>
                 <span style={{ fontWeight: '600', color: 'var(--slate)', fontVariantNumeric: 'tabular-nums' }}>
                   {fmt(netRevenue, currency)}
                 </span>
@@ -458,8 +463,8 @@ export default function ConfirmLessonModal({
 
           <div style={{ fontSize: '13px', color: 'var(--mist)', marginTop: '4px' }}>
             {usesFixedPayout
-              ? `→ repasse do instrutor ${fmt(commissionBRL ?? 0, 'BRL')} (fixo)`
-              : `→ comissão ${commissionBRL != null ? fmt(commissionBRL, 'BRL') : '—'}`}
+              ? `→ ${t.instructor_payout_fixed} ${fmt(commissionBRL ?? 0, 'BRL')}`
+              : `→ ${t.commission_arrow_label} ${commissionBRL != null ? fmt(commissionBRL, 'BRL') : '—'}`}
           </div>
         </div>
 
@@ -472,12 +477,12 @@ export default function ConfirmLessonModal({
               textDecoration: 'underline', textDecorationColor: 'var(--border)',
             }}
           >
-            + Adicionar observação
+            {t.add_note_btn}
           </button>
         ) : (
           <div style={{ marginBottom: '24px' }}>
             <textarea
-              value={notes} onChange={e => setNotes(e.target.value)} placeholder="Observações sobre a aula..."
+              value={notes} onChange={e => setNotes(e.target.value)} placeholder={t.note_placeholder}
               style={{
                 width: '100%', padding: '10px 14px', border: '0.5px solid var(--border-strong)',
                 borderRadius: 'var(--radius-md)', fontSize: '14px', color: 'var(--slate)',
@@ -490,14 +495,14 @@ export default function ConfirmLessonModal({
 
         <div style={{ marginBottom: '20px' }}>
           <div style={{ fontSize: '11px', fontWeight: '500', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--mist)', marginBottom: '10px' }}>
-            Forma de pagamento *
+            {t.payment_method_label} *
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
             {([
-              { value: 'pix',       label: 'PIX',       icon: '⚡' },
-              { value: 'dinheiro',  label: 'Dinheiro',  icon: '💵' },
-              { value: 'cartao',    label: 'Cartão',    icon: '💳' },
-              { value: 'a_receber', label: 'A receber', icon: '⏳' },
+              { value: 'pix',       label: t.payment_pix,        icon: '⚡' },
+              { value: 'dinheiro',  label: t.payment_cash,       icon: '💵' },
+              { value: 'cartao',    label: t.payment_card,       icon: '💳' },
+              { value: 'a_receber', label: t.payment_receivable, icon: '⏳' },
             ] as const).map(opt => {
               const active = paymentMethod === opt.value
               return (
@@ -522,7 +527,7 @@ export default function ConfirmLessonModal({
           </div>
           {!paymentMethod && (
             <div style={{ fontSize: '11px', color: 'var(--mist)', marginTop: '6px' }}>
-              Selecione a forma de pagamento para confirmar
+              {t.select_payment_hint}
             </div>
           )}
         </div>
@@ -545,7 +550,7 @@ export default function ConfirmLessonModal({
               fontSize: '14px', cursor: 'pointer', fontFamily: 'var(--font-sans)',
             }}
           >
-            Cancelar
+            {t.cancel_btn}
           </button>
           <button
             onClick={confirm}
@@ -559,7 +564,7 @@ export default function ConfirmLessonModal({
               cursor: cantConfirm ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-sans)',
             }}
           >
-            {confirming ? 'Confirmando...' : `Confirmar aula · ${fmt(totalPrice, currency)}`}
+            {confirming ? t.confirming_btn : `${t.confirm_lesson_btn} ${fmt(totalPrice, currency)}`}
           </button>
         </div>
       </div>

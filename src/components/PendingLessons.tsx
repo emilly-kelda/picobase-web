@@ -10,6 +10,7 @@ import CheckinQRButton from '@/components/CheckinQRButton'
 import SellPackageFlowModal, { type PackageOption } from '@/components/SellPackageFlowModal'
 import ScheduleFromCheckinModal from '@/components/ScheduleFromCheckinModal'
 import type { VariableCostInfo } from '@/lib/commission'
+import { translateModalityName } from '@/lib/modality'
 
 type ActivityRef = {
   id: string
@@ -136,6 +137,8 @@ export default function PendingLessons({
   schoolSlug,
   schoolName,
   hoursMap,
+  t,
+  lang = 'pt',
 }: {
   checkins: Checkin[]
   instructors: Instructor[]
@@ -147,6 +150,8 @@ export default function PendingLessons({
   schoolSlug: string
   schoolName: string
   hoursMap?: Map<string, number>
+  t: Record<string, string>
+  lang?: 'en' | 'pt'
 }) {
   const router = useRouter()
   const [checkins, setCheckins]         = useState(initialCheckins)
@@ -374,7 +379,7 @@ export default function PendingLessons({
             color: 'var(--mist)',
             display: 'flex', alignItems: 'center', gap: '8px',
           }}>
-            Sala de Espera
+            {t.waiting_room_title}
             <span style={{
               background: 'var(--signal)',
               color: '#fff',
@@ -401,7 +406,7 @@ export default function PendingLessons({
             marginBottom: '12px',
           }}>
             <span>✓</span>
-            <span>Aula confirmada — {confirmed}</span>
+            <span>{t.lesson_confirmed_for} {confirmed}</span>
           </div>
         )}
 
@@ -414,7 +419,7 @@ export default function PendingLessons({
             textAlign: 'center',
             fontSize: '13px', color: 'var(--mist)',
           }}>
-            Nenhum aluno aguardando check-in.
+            {t.no_checkins_waiting}
           </div>
         ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -442,7 +447,7 @@ export default function PendingLessons({
                   background: '#DC2626',
                   letterSpacing: '0.01em',
                 }}>
-                  ⚠ Sem Créditos
+                  ⚠ {t.no_credits_badge}
                 </span>
               )
             } else if (exhausted) {
@@ -454,7 +459,7 @@ export default function PendingLessons({
                   background: '#DC2626',
                   letterSpacing: '0.01em',
                 }}>
-                  ⚠ Pacote esgotado — cobrar avulsa
+                  ⚠ {t.package_exhausted_badge}
                 </span>
               )
             } else if (lastLesson) {
@@ -465,7 +470,7 @@ export default function PendingLessons({
                   padding: '3px 10px', borderRadius: '99px',
                   background: '#FEF3C7',
                 }}>
-                  ⚠ Última aula do pacote · {fmtMinutes(balance.minutesRemaining)} restante
+                  ⚠ {t.package_last_lesson_badge} · {fmtMinutes(balance.minutesRemaining)} {t.package_remaining_singular}
                 </span>
               )
             } else {
@@ -476,7 +481,7 @@ export default function PendingLessons({
                   padding: '3px 10px', borderRadius: '99px',
                   background: '#E0F8F5',
                 }}>
-                  ✓ {fmtMinutes(balance.minutesRemaining)} restantes
+                  ✓ {fmtMinutes(balance.minutesRemaining)} {t.package_remaining_badge}
                 </span>
               )
             }
@@ -535,7 +540,7 @@ export default function PendingLessons({
                       {checkin.student_name}
                     </span>
                     {(hoursMap?.get(checkin.student_name) ?? 0) >= 10 * 60 && (
-                      <span title="10h+ de aula concluídas — pode ser a sessão de avaliação final (Certificado de Autonomia IKO/VDWS)" style={{ fontSize: '12px' }}>🏅</span>
+                      <span title={t.medal_tooltip} style={{ fontSize: '12px' }}>🏅</span>
                     )}
                     {checkin.source && (
                       <span title={checkin.source} style={{ fontSize: '12px' }}>{SOURCE_ICON[checkin.source] ?? ''}</span>
@@ -547,7 +552,7 @@ export default function PendingLessons({
                         background: '#FEF3C7', color: '#92400E',
                         fontSize: '10px', fontWeight: '600', flexShrink: 0,
                       }}>
-                        ⚠ Menor
+                        ⚠ {t.minor_badge}
                       </span>
                     )}
                     {checkin.health_condition && (
@@ -556,7 +561,7 @@ export default function PendingLessons({
                         color: 'var(--signal-dark)', background: 'var(--signal-light)',
                         padding: '1px 6px', borderRadius: 'var(--radius-full)', flexShrink: 0,
                       }}>
-                        ⚠ Saúde
+                        ⚠ {t.health_label}
                       </span>
                     )}
                   </div>
@@ -566,7 +571,7 @@ export default function PendingLessons({
                       color: '#007868', background: '#E0F8F5',
                       padding: '1px 7px', borderRadius: 'var(--radius-full)', whiteSpace: 'nowrap',
                     }}>
-                      ✓ Termo Assinado
+                      ✓ {t.waiver_signed_badge}
                     </span>
                     {balance?.hasPackage && balance.packageSaleId ? (
                       <button
@@ -581,18 +586,18 @@ export default function PendingLessons({
                         }}
                         onMouseEnter={e => { e.currentTarget.style.opacity = '0.8' }}
                         onMouseLeave={e => { e.currentTarget.style.opacity = '1' }}
-                        title="Ver histórico do pacote"
+                        title={t.view_package_history_title}
                       >
                         {packageBadge}
                       </button>
                     ) : packageBadge}
                     <span style={{ fontSize: '11px', color: 'var(--mist)', whiteSpace: 'nowrap' }}>
-                      {checkin.activities?.name ?? 'Sem atividade'}
+                      {checkin.activities?.name ? translateModalityName(checkin.activities.name, lang) : t.no_activity_label}
                       {' · '}
-                      {instructor?.name ?? 'Sem instrutor'}
+                      {instructor?.name ?? t.no_instructor_label}
                       {' · '}
                       <span title={fmtTime(checkin.checkin_at)}>{fmtRelative(checkin.checkin_at)}</span>
-                      {checkin.scheduled_lesson && ' · 📅 Agendado'}
+                      {checkin.scheduled_lesson && ` · 📅 ${t.scheduled_badge}`}
                     </span>
                   </div>
                 </div>
@@ -616,7 +621,7 @@ export default function PendingLessons({
                         whiteSpace: 'nowrap',
                       }}
                     >
-                      Confirmar →
+                      {t.confirm_arrow_btn}
                     </button>
                   ) : (
                     // Walk-in with nothing pre-arranged — gets slotted into
@@ -637,12 +642,12 @@ export default function PendingLessons({
                         whiteSpace: 'nowrap',
                       }}
                     >
-                      Agendar
+                      {t.schedule_btn}
                     </button>
                   )}
                   <button
                     onClick={() => setFichaModal(checkin)}
-                    title="Ver Ficha"
+                    title={t.view_file_btn}
                     style={{
                       padding: '6px 10px',
                       background: 'transparent',
@@ -655,7 +660,7 @@ export default function PendingLessons({
                       whiteSpace: 'nowrap',
                     }}
                   >
-                    Ficha
+                    {t.view_file_btn}
                   </button>
                   {/* Individual QR — unique link per student (?student=&
                       activity=), not the school-wide one that used to sit
@@ -670,7 +675,7 @@ export default function PendingLessons({
                   {!balance?.hasPackage || exhausted ? (
                     <button
                       onClick={() => setSellModal(checkin)}
-                      title="Vender Pacote"
+                      title={t.sell_package_btn}
                       style={{
                         padding: '6px 10px',
                         background: 'transparent',
@@ -683,7 +688,7 @@ export default function PendingLessons({
                         whiteSpace: 'nowrap',
                       }}
                     >
-                      💳 Vender
+                      💳 {t.sell_package_btn}
                     </button>
                   ) : null}
                 </div>

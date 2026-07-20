@@ -185,6 +185,8 @@ export default async function OwnerPage() {
             schoolSlug={(school as any)?.slug ?? runway.slug ?? ''}
             schoolName={runway.school_name ?? 'Pico Base'}
             hoursMap={hoursMap}
+            t={t}
+            lang={lang}
           />
 
           <ScheduledLessons
@@ -196,6 +198,8 @@ export default async function OwnerPage() {
             schoolName={runway.school_name ?? 'Pico Base'}
             payoutModel={(school as any)?.payout_model ?? 'percentage'}
             fixedPayoutValue={(school as any)?.fixed_payout_value ?? null}
+            t={t}
+            lang={lang}
           />
 
         </div>
