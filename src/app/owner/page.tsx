@@ -187,12 +187,6 @@ export default async function OwnerPage() {
             hoursMap={hoursMap}
           />
 
-          <MissedLessons
-            lessons={missedLessons as any}
-            instructors={instructorList}
-            schoolName={runway.school_name ?? 'Pico Base'}
-          />
-
           <ScheduledLessons
             todayLessons={todayLessons as any}
             tomorrowLessons={tomorrowLessons as any}
@@ -343,6 +337,18 @@ export default async function OwnerPage() {
               }} />
             </div>
           </div>
+
+          {/* Moved here from the left column — a red alert list that grows
+              unboundedly (every missed lesson stacks) was the single
+              biggest contributor to the left column running far past the
+              right one, leaving that whitespace this rebalance is fixing.
+              Right under "Hoje" so it stays the first thing seen after
+              today's numbers, matching its urgency. */}
+          <MissedLessons
+            lessons={missedLessons as any}
+            instructors={instructorList}
+            schoolName={runway.school_name ?? 'Pico Base'}
+          />
 
         </div>
 

@@ -481,6 +481,14 @@ export default function PendingLessons({
               )
             }
 
+            // Compact row: name+badges on the left (Nome, Termo Assinado,
+            // Créditos Restantes — the three the layout task called out by
+            // name), actions in a single horizontal row on the right,
+            // instead of the old 3-line info block + stacked action
+            // column. Nationality and the "📅 Agendado" tag dropped from
+            // this compact view (still visible in "Ver Ficha") — neither
+            // was on the must-keep list, and the primary button already
+            // signals scheduled-vs-walk-in via its own label.
             return (
               <div
                 key={checkin.id}
@@ -491,15 +499,15 @@ export default function PendingLessons({
                     : exhausted
                     ? '1.5px solid #DC2626'
                     : '0.5px solid var(--border)',
-                  borderRadius: 'var(--radius-lg)',
-                  padding: '16px 20px',
+                  borderRadius: 'var(--radius-md)',
+                  padding: '10px 14px',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '14px',
+                  gap: '12px',
                 }}
               >
                 <div style={{
-                  width: '36px', height: '36px',
+                  width: '28px', height: '28px',
                   borderRadius: 'var(--radius-full)',
                   background: checkin.health_condition
                     ? 'var(--signal-light)'
@@ -509,80 +517,54 @@ export default function PendingLessons({
                     : 'var(--glacial-dark)',
                   display: 'flex', alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: '11px', fontWeight: '600',
+                  fontSize: '10px', fontWeight: '600',
                   flexShrink: 0,
-                }}>
+                }}
+                  title={checkin.student_nationality ?? undefined}
+                >
                   {getInitials(checkin.student_name)}
                 </div>
 
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{
-                    fontSize: '14px', fontWeight: '500',
-                    color: 'var(--slate)', marginBottom: '2px',
-                    display: 'flex', alignItems: 'center', gap: '8px',
+                    fontSize: '13px', fontWeight: '500',
+                    color: 'var(--slate)', marginBottom: '3px',
+                    display: 'flex', alignItems: 'center', gap: '6px',
                   }}>
-                    {checkin.student_name}
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {checkin.student_name}
+                    </span>
                     {(hoursMap?.get(checkin.student_name) ?? 0) >= 10 * 60 && (
-                      <span
-                        title="10h+ de aula concluídas — pode ser a sessão de avaliação final (Certificado de Autonomia IKO/VDWS)"
-                        style={{ fontSize: '14px' }}
-                      >
-                        🏅
-                      </span>
+                      <span title="10h+ de aula concluídas — pode ser a sessão de avaliação final (Certificado de Autonomia IKO/VDWS)" style={{ fontSize: '12px' }}>🏅</span>
                     )}
                     {checkin.source && (
-                      <span
-                        title={checkin.source}
-                        style={{ fontSize: '14px' }}
-                      >
-                        {SOURCE_ICON[checkin.source] ?? ''}
-                      </span>
+                      <span title={checkin.source} style={{ fontSize: '12px' }}>{SOURCE_ICON[checkin.source] ?? ''}</span>
                     )}
                     {checkin.is_minor && (
                       <span style={{
-                        display: 'inline-flex', alignItems: 'center', gap: '4px',
-                        padding: '2px 8px',
-                        borderRadius: 'var(--radius-full)',
-                        background: '#FEF3C7',
-                        color: '#92400E',
-                        fontSize: '11px', fontWeight: '600',
+                        display: 'inline-flex', alignItems: 'center',
+                        padding: '1px 6px', borderRadius: 'var(--radius-full)',
+                        background: '#FEF3C7', color: '#92400E',
+                        fontSize: '10px', fontWeight: '600', flexShrink: 0,
                       }}>
                         ⚠ Menor
                       </span>
                     )}
                     {checkin.health_condition && (
                       <span style={{
-                        fontSize: '10px', fontWeight: '500',
-                        color: 'var(--signal-dark)',
-                        background: 'var(--signal-light)',
-                        padding: '2px 8px',
-                        borderRadius: 'var(--radius-full)',
+                        fontSize: '9px', fontWeight: '500',
+                        color: 'var(--signal-dark)', background: 'var(--signal-light)',
+                        padding: '1px 6px', borderRadius: 'var(--radius-full)', flexShrink: 0,
                       }}>
                         ⚠ Saúde
                       </span>
                     )}
                   </div>
-                  <div style={{ fontSize: '12px', color: 'var(--mist)' }}>
-                    {checkin.activities?.name ?? 'Atividade não selecionada'}
-                    {' · '}
-                    {instructor?.name ?? 'Sem instrutor'}
-                    {' · '}
-                    <span title={fmtTime(checkin.checkin_at)}>{fmtRelative(checkin.checkin_at)}</span>
-                  </div>
-                  <div style={{ marginTop: '6px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                    {checkin.student_nationality && (
-                      <span style={{
-                        fontSize: '10px', fontWeight: '500',
-                        color: 'var(--mist)', background: 'var(--powder)',
-                        padding: '2px 8px', borderRadius: 'var(--radius-full)',
-                      }}>
-                        {checkin.student_nationality}
-                      </span>
-                    )}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                     <span style={{
                       fontSize: '10px', fontWeight: '500',
                       color: '#007868', background: '#E0F8F5',
-                      padding: '2px 8px', borderRadius: 'var(--radius-full)',
+                      padding: '1px 7px', borderRadius: 'var(--radius-full)', whiteSpace: 'nowrap',
                     }}>
                       ✓ Termo Assinado
                     </span>
@@ -595,7 +577,7 @@ export default function PendingLessons({
                         })}
                         style={{
                           background: 'none', border: 'none', padding: 0,
-                          cursor: 'pointer', transition: 'opacity 0.15s',
+                          cursor: 'pointer', transition: 'opacity 0.15s', lineHeight: 0,
                         }}
                         onMouseEnter={e => { e.currentTarget.style.opacity = '0.8' }}
                         onMouseLeave={e => { e.currentTarget.style.opacity = '1' }}
@@ -604,31 +586,18 @@ export default function PendingLessons({
                         {packageBadge}
                       </button>
                     ) : packageBadge}
-                    {checkin.scheduled_lesson && (() => {
-                      const sched = checkin.scheduled_lesson
-                      const schedInstructor = unwrapInstructor(sched.instructor)
-                      const parts = [
-                        sched.activities?.name,
-                        isLevel(sched.level) ? LEVEL_LABELS[sched.level].pt : null,
-                        schedInstructor?.name,
-                        sched.duration_min ? fmtMinutes(sched.duration_min) : null,
-                        fmtTime(sched.scheduled_at),
-                      ].filter(Boolean)
-                      return (
-                        <span style={{
-                          fontSize: '11px', fontWeight: '500',
-                          color: 'var(--glacial-dark)',
-                          padding: '3px 10px', borderRadius: '99px',
-                          background: 'var(--glacial-light)',
-                        }}>
-                          📅 Agendado · {parts.join(' · ')}
-                        </span>
-                      )
-                    })()}
+                    <span style={{ fontSize: '11px', color: 'var(--mist)', whiteSpace: 'nowrap' }}>
+                      {checkin.activities?.name ?? 'Sem atividade'}
+                      {' · '}
+                      {instructor?.name ?? 'Sem instrutor'}
+                      {' · '}
+                      <span title={fmtTime(checkin.checkin_at)}>{fmtRelative(checkin.checkin_at)}</span>
+                      {checkin.scheduled_lesson && ' · 📅 Agendado'}
+                    </span>
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flexShrink: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
                   {checkin.scheduled_lesson ? (
                     // Arrived for a lesson already booked in advance — ready
                     // to go right now, so this stays the one-step
@@ -636,12 +605,12 @@ export default function PendingLessons({
                     <button
                       onClick={() => open(checkin)}
                       style={{
-                        padding: '8px 18px',
+                        padding: '6px 14px',
                         background: 'var(--slate)',
                         color: '#fff',
                         border: 'none',
                         borderRadius: 'var(--radius-md)',
-                        fontSize: '13px', fontWeight: '500',
+                        fontSize: '12px', fontWeight: '500',
                         cursor: 'pointer',
                         fontFamily: 'var(--font-sans)',
                         whiteSpace: 'nowrap',
@@ -657,29 +626,10 @@ export default function PendingLessons({
                     <button
                       onClick={() => setScheduleModal(checkin)}
                       style={{
-                        padding: '8px 18px',
+                        padding: '6px 14px',
                         background: 'var(--slate)',
                         color: '#fff',
                         border: 'none',
-                        borderRadius: 'var(--radius-md)',
-                        fontSize: '13px', fontWeight: '500',
-                        cursor: 'pointer',
-                        fontFamily: 'var(--font-sans)',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      Agendar Aula
-                    </button>
-                  )}
-                  <div style={{ display: 'flex', gap: '6px' }}>
-                    <button
-                      onClick={() => setFichaModal(checkin)}
-                      style={{
-                        flex: 1,
-                        padding: '6px 18px',
-                        background: 'transparent',
-                        color: 'var(--mist)',
-                        border: '0.5px solid var(--border-strong)',
                         borderRadius: 'var(--radius-md)',
                         fontSize: '12px', fontWeight: '500',
                         cursor: 'pointer',
@@ -687,24 +637,42 @@ export default function PendingLessons({
                         whiteSpace: 'nowrap',
                       }}
                     >
-                      Ver Ficha
+                      Agendar
                     </button>
-                    {/* Individual QR — unique link per student (?student=&
-                        activity=), not the school-wide one that used to sit
-                        in this card's header. */}
-                    <CheckinQRButton
-                      slug={schoolSlug}
-                      schoolName={schoolName}
-                      studentName={checkin.student_name}
-                      activityName={checkin.activities?.name}
-                      compact
-                    />
-                  </div>
+                  )}
+                  <button
+                    onClick={() => setFichaModal(checkin)}
+                    title="Ver Ficha"
+                    style={{
+                      padding: '6px 10px',
+                      background: 'transparent',
+                      color: 'var(--mist)',
+                      border: '0.5px solid var(--border-strong)',
+                      borderRadius: 'var(--radius-md)',
+                      fontSize: '12px', fontWeight: '500',
+                      cursor: 'pointer',
+                      fontFamily: 'var(--font-sans)',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    Ficha
+                  </button>
+                  {/* Individual QR — unique link per student (?student=&
+                      activity=), not the school-wide one that used to sit
+                      in this card's header. */}
+                  <CheckinQRButton
+                    slug={schoolSlug}
+                    schoolName={schoolName}
+                    studentName={checkin.student_name}
+                    activityName={checkin.activities?.name}
+                    compact
+                  />
                   {!balance?.hasPackage || exhausted ? (
                     <button
                       onClick={() => setSellModal(checkin)}
+                      title="Vender Pacote"
                       style={{
-                        padding: '6px 18px',
+                        padding: '6px 10px',
                         background: 'transparent',
                         color: '#007868',
                         border: '0.5px solid #007868',
@@ -715,7 +683,7 @@ export default function PendingLessons({
                         whiteSpace: 'nowrap',
                       }}
                     >
-                      Vender Pacote
+                      💳 Vender
                     </button>
                   ) : null}
                 </div>

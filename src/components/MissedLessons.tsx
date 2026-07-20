@@ -62,7 +62,11 @@ export default function MissedLessons({
   if (visible.length === 0) return <Toast toast={toast} />
 
   return (
-    <div style={{ marginBottom: '28px' }}>
+    <div style={{
+      background: 'var(--surface)', border: '0.5px solid var(--border)',
+      borderRadius: 'var(--radius-xl)', boxShadow: 'var(--shadow-sm)',
+      padding: '14px',
+    }}>
       <div style={{
         display: 'flex', alignItems: 'center', gap: '8px',
         marginBottom: '10px',
@@ -115,58 +119,52 @@ export default function MissedLessons({
                 border: '0.5px solid var(--signal-light)',
                 borderLeft: '3px solid var(--signal)',
                 borderRadius: 'var(--radius-md)',
-                padding: '12px 16px',
+                padding: '8px 10px',
                 display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                gap: '12px',
+                flexDirection: 'column',
+                gap: '4px',
               }}
             >
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ marginBottom: '2px' }}>
-                  <Link
-                    href={`/owner/students/name/${encodeURIComponent(lesson.student_name)}`}
-                    style={{
-                      fontSize: '13px', fontWeight: '500',
-                      color: 'var(--slate)', textDecoration: 'none',
-                      borderBottom: '1px solid transparent',
-                      transition: 'border-color 0.15s',
-                    }}
-                    onMouseEnter={e => { e.currentTarget.style.borderBottomColor = 'var(--glacial)' }}
-                    onMouseLeave={e => { e.currentTarget.style.borderBottomColor = 'transparent' }}
-                  >
-                    {lesson.student_name}
-                  </Link>
-                </div>
-                <div style={{ fontSize: '11px', color: 'var(--mist)' }}>
-                  {lesson.activities?.name ?? '—'}
-                  {' · '}
-                  {lesson.instructor?.name ?? '—'}
-                  {' · '}
-                  {formattedDate} {formattedTime}
-                </div>
-              </div>
-
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: '12px',
-                flexShrink: 0,
-              }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '8px' }}>
+                <Link
+                  href={`/owner/students/name/${encodeURIComponent(lesson.student_name)}`}
+                  style={{
+                    fontSize: '12px', fontWeight: '500',
+                    color: 'var(--slate)', textDecoration: 'none',
+                    borderBottom: '1px solid transparent',
+                    transition: 'border-color 0.15s',
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.borderBottomColor = 'var(--glacial)' }}
+                  onMouseLeave={e => { e.currentTarget.style.borderBottomColor = 'transparent' }}
+                >
+                  {lesson.student_name}
+                </Link>
                 <span style={{
-                  fontSize: '11px', color: 'var(--signal)',
-                  fontWeight: '500',
+                  fontSize: '10px', color: 'var(--signal)',
+                  fontWeight: '500', flexShrink: 0,
                 }}>
                   {timeAgo}
                 </span>
+              </div>
+              <div style={{ fontSize: '10px', color: 'var(--mist)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {lesson.activities?.name ?? '—'}
+                {' · '}
+                {lesson.instructor?.name ?? '—'}
+                {' · '}
+                {formattedDate} {formattedTime}
+              </div>
 
+              <div style={{ display: 'flex', gap: '6px', marginTop: '2px' }}>
                 <button
                   onClick={() => setRescheduling(lesson)}
                   style={{
-                    padding: '5px 12px',
+                    flex: 1, padding: '4px 8px',
                     background: 'var(--glacial-light)',
                     color: 'var(--glacial-dark)',
                     border: 'none',
                     borderRadius: 'var(--radius-md)',
-                    fontSize: '11px', fontWeight: '500',
+                    fontSize: '10px', fontWeight: '500',
                     cursor: 'pointer',
                     fontFamily: 'var(--font-sans)',
                     transition: 'background-color 0.15s',
@@ -181,12 +179,12 @@ export default function MissedLessons({
                   onClick={() => dismiss(lesson.id)}
                   disabled={loading === lesson.id}
                   style={{
-                    padding: '5px 12px',
+                    flex: 1, padding: '4px 8px',
                     background: 'var(--signal-light)',
                     color: 'var(--signal-dark)',
                     border: '0.5px solid var(--signal)',
                     borderRadius: 'var(--radius-md)',
-                    fontSize: '11px', fontWeight: '500',
+                    fontSize: '10px', fontWeight: '500',
                     cursor: loading === lesson.id ? 'not-allowed' : 'pointer',
                     opacity: loading === lesson.id ? 0.6 : 1,
                     fontFamily: 'var(--font-sans)',

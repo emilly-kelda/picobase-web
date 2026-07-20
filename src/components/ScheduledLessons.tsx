@@ -963,7 +963,14 @@ export default function ScheduledLessons({
         ) : (
           <div style={{
             background: '#fff', border: '0.5px solid var(--border)',
-            borderRadius: 'var(--radius-lg)', overflow: 'hidden',
+            borderRadius: 'var(--radius-lg)',
+            // Past 8 rows this scrolls internally instead of the page
+            // itself growing without bound — an unbounded list here was
+            // the main driver of the left column running far past the
+            // right one (the "rolagem infinita" complaint).
+            ...(totalRows > 8
+              ? { maxHeight: '640px', overflowY: 'auto' as const, overflowX: 'hidden' as const }
+              : { overflow: 'hidden' as const }),
           }}>
             {individualLessons.map((lesson, i) => (
               <div key={lesson.id} style={{
