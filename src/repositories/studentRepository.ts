@@ -60,24 +60,26 @@ export async function getStudentById(schoolId: string, id: string) {
   }
 }
 
+/** studentId is accepted for API compatibility with existing callers but
+ *  unused — checkins has no student_id column (verified live), only
+ *  student_name, same name-as-key limitation as everywhere else in this
+ *  codebase. Previously this (and getSessionsByStudentName below) queried
+ *  a checkins.session_id column that doesn't exist either — that error was
+ *  silently swallowed (only .data was read, never .error), so both
+ *  functions always returned [] rather than throwing. The real link is the
+ *  other direction: sessions.checkin_id -> checkins.id. */
 export async function getSessionsByStudent(schoolId: string, studentName: string, studentId?: string) {
   const supabase = createServiceClient()
+  void studentId
 
-  const [nameResult, idResult] = await Promise.all([
-    supabase.from('checkins').select('session_id').eq('school_id', schoolId).eq('student_name', studentName),
-    studentId
-      ? supabase.from('checkins').select('session_id').eq('school_id', schoolId).eq('student_id', studentId)
-      : Promise.resolve({ data: [] as { session_id: string | null }[] }),
-  ])
+  const { data: checkinRows } = await supabase
+    .from('checkins')
+    .select('id')
+    .eq('school_id', schoolId)
+    .ilike('student_name', studentName)
 
-  const sessionIds = [
-    ...new Set([
-      ...(nameResult.data ?? []).map((c: any) => c.session_id).filter(Boolean),
-      ...(idResult.data ?? []).map((c: any) => c.session_id).filter(Boolean),
-    ]),
-  ]
-
-  if (sessionIds.length === 0) return []
+  const checkinIds = [...new Set((checkinRows ?? []).map(c => c.id))]
+  if (checkinIds.length === 0) return []
 
   const { data, error } = await supabase
     .from('sessions')
@@ -86,7 +88,7 @@ export async function getSessionsByStudent(schoolId: string, studentName: string
       users!sessions_instructor_id_fkey ( name ),
       activities ( name )
     `)
-    .in('id', sessionIds)
+    .in('checkin_id', checkinIds)
     .order('session_date', { ascending: false })
   if (error) throw error
   return data ?? []
@@ -131,7 +133,13 @@ export async function getActivePackagesByStudent(schoolId: string) {
  *  IKO/VDWS 10h autonomy-certificate eligibility badge. `sessions` are
  *  already-confirmed/realized lessons by construction (no separate status
  *  column — a scheduled-but-not-yet-happened lesson lives in
- *  scheduled_lessons instead), so every row here counts.
+ *  scheduled_lessons instead), so every row here counts. The link is
+ *  sessions.checkin_id -> checkins.id (checkins has no reverse
+ *  session_id column, despite what this function originally assumed —
+ *  that mistake briefly took production down: an uncaught 42703 on a
+ *  nonexistent column crashed every render of /owner, since this
+ *  function, unlike getSessionsByStudent/getSessionsByStudentName below,
+ *  actually checks its query errors instead of silently swallowing them).
  *
  *  Keyed by raw (not normalized) student_name, same convention as
  *  getActivePackagesByStudent right above — this map is meant to be read
@@ -145,29 +153,30 @@ export async function getActivePackagesByStudent(schoolId: string) {
  *  introduced by this function specifically. */
 export async function getCompletedHoursByStudent(schoolId: string): Promise<Map<string, number>> {
   const supabase = createServiceClient()
-  const { data: checkinRows, error } = await supabase
-    .from('checkins')
-    .select('student_name, session_id')
+  const { data: sessions, error } = await supabase
+    .from('sessions')
+    .select('checkin_id, duration_min')
     .eq('school_id', schoolId)
-    .not('session_id', 'is', null)
+    .not('checkin_id', 'is', null)
   if (error) throw error
 
-  const sessionIds = [...new Set((checkinRows ?? []).map(c => c.session_id).filter(Boolean))]
-  if (sessionIds.length === 0) return new Map()
+  const checkinIds = [...new Set((sessions ?? []).map(s => s.checkin_id).filter(Boolean))]
+  if (checkinIds.length === 0) return new Map()
 
-  const { data: sessions, error: sessionsError } = await supabase
-    .from('sessions')
-    .select('id, duration_min')
-    .in('id', sessionIds as string[])
-  if (sessionsError) throw sessionsError
+  const { data: checkins, error: checkinsError } = await supabase
+    .from('checkins')
+    .select('id, student_name')
+    .in('id', checkinIds as string[])
+  if (checkinsError) throw checkinsError
 
-  const durationById = new Map((sessions ?? []).map(s => [s.id, s.duration_min ?? 0]))
+  const nameByCheckinId = new Map((checkins ?? []).map(c => [c.id, c.student_name]))
 
   const totals = new Map<string, number>()
-  for (const c of checkinRows ?? []) {
-    if (!c.session_id) continue
-    const duration = durationById.get(c.session_id) ?? 0
-    totals.set(c.student_name, (totals.get(c.student_name) ?? 0) + duration)
+  for (const s of sessions ?? []) {
+    if (!s.checkin_id) continue
+    const name = nameByCheckinId.get(s.checkin_id)
+    if (!name) continue
+    totals.set(name, (totals.get(name) ?? 0) + (s.duration_min ?? 0))
   }
   return totals
 }
@@ -177,14 +186,12 @@ export async function getSessionsByStudentName(schoolId: string, studentName: st
   const supabase = createServiceClient()
   const { data: checkinRows } = await supabase
     .from('checkins')
-    .select('session_id')
+    .select('id')
     .eq('school_id', schoolId)
     .ilike('student_name', studentName.trim())
 
-  const sessionIds = [...new Set(
-    (checkinRows ?? []).map((c: any) => c.session_id).filter(Boolean),
-  )]
-  if (sessionIds.length === 0) return []
+  const checkinIds = [...new Set((checkinRows ?? []).map(c => c.id))]
+  if (checkinIds.length === 0) return []
 
   const { data } = await supabase
     .from('sessions')
@@ -193,7 +200,7 @@ export async function getSessionsByStudentName(schoolId: string, studentName: st
       users!sessions_instructor_id_fkey ( name ),
       activities ( name )
     `)
-    .in('id', sessionIds)
+    .in('checkin_id', checkinIds)
     .order('session_date', { ascending: false })
   return data ?? []
 }
