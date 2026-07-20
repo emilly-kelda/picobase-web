@@ -73,20 +73,24 @@ export async function POST(request: Request) {
  *  checkin_at >= today) right after a package sale.
  *
  *  checkins has a DB check constraint ("lgpd_required", verified live) that
- *  rejects any row with lgpd_consent != true — so a brand new row can't be
- *  fabricated out of thin air for a walk-up sale with no waiver on file.
- *  Two cases:
+ *  rejects any row with lgpd_consent != true — so a brand new row needs an
+ *  explicit consent value, one way or another. Three cases:
  *   - A checkins row for today already exists (e.g. sold from the Sala de
  *     Espera card itself) → just reactivate it if something had moved it
  *     out of the pending view. Untouched if it's already showing, or if the
  *     student's lesson today was already confirmed (status 'session_confirmed'
  *     stays as-is — they don't belong back in the waiting queue).
- *   - No row for today → copy the identity/consent fields from that
- *     student's most recent already-consented checkin (any date) into a
+ *   - No row for today, but a prior already-consented checkin exists →
+ *     copy the identity/consent fields from that most recent one into a
  *     fresh row for today, same as a returning customer not having to
- *     re-sign a waiver they already have on file. If they have no prior
- *     consented checkin at all, there's nothing legitimate to copy — skip
- *     silently and leave them to check in for real (QR/waiver flow).
+ *     re-sign a waiver they already have on file.
+ *   - No row for today and no prior consented checkin at all (brand new
+ *     student, first-ever interaction is this counter sale) → explicit
+ *     product decision: Venda Rápida is a presencial, at-the-counter sale,
+ *     so create the check-in anyway with lgpd_consent/gdpr_consent forced
+ *     true and waiver_signed_at set to now, representing consent given in
+ *     person at time of sale — this used to skip check-in creation
+ *     entirely in this case, which is exactly the bug being fixed here.
  */
 async function ensureActiveCheckinForToday(
   supabase: ReturnType<typeof createServiceClient>,
@@ -130,7 +134,20 @@ async function ensureActiveCheckinForToday(
     .limit(1)
     .maybeSingle()
 
-  if (!priorCheckin) return
+  if (!priorCheckin) {
+    await supabase.from('checkins').insert({
+      school_id:    SCHOOL_ID,
+      student_name: studentName,
+      status:       'checked_in',
+      checkin_at:   new Date().toISOString(),
+      deferred_to_schedule: false,
+      lgpd_consent: true,
+      gdpr_consent: true,
+      waiver_signed_at: new Date().toISOString(),
+      source: 'walk_in',
+    })
+    return
+  }
 
   await supabase.from('checkins').insert({
     school_id:    SCHOOL_ID,
