@@ -1,11 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { LEVEL_LABELS, isLevel } from '@/lib/levels'
 import LevelPicker from '@/components/LevelPicker'
-import ConfirmLessonModal from '@/components/ConfirmLessonModal'
 import { whatsappDigitsWithCountryCode } from '@/lib/whatsapp'
 
 type Lesson = {
@@ -19,7 +18,7 @@ type Lesson = {
   group_id: string | null
   student_whatsapp?: string | null
   activities: { id: string; name: string; default_price: number; default_duration_min: number } | null
-  instructor: { id: string; name: string } | null
+  instructor: { id: string; name: string; whatsapp?: string | null } | null
 }
 
 type Activity = {
@@ -59,6 +58,116 @@ function fmtTime(iso: string) {
   return new Date(iso).toLocaleTimeString('pt-BR', {
     hour: '2-digit', minute: '2-digit', timeZone: 'America/Fortaleza',
   })
+}
+
+// Explicitly api.whatsapp.com/send (not the wa.me short-link this file used
+// before) — the ask for this feature specifically. Same digits-with-
+// country-code normalization as the rest of the app either way.
+function buildApiWhatsAppUrl(phone: string | null | undefined, message: string): string {
+  return `https://api.whatsapp.com/send?phone=${whatsappDigitsWithCountryCode(phone)}&text=${encodeURIComponent(message)}`
+}
+
+function studentConfirmationMessage(lesson: Lesson, dayLabel: string, schoolName: string): string {
+  const activityName = lesson.activities?.name ?? 'sua aula'
+  const instructorName = lesson.instructor?.name ?? 'nosso instrutor'
+  return `Olá, ${lesson.student_name ?? ''}! Confirmando sua aula de ${activityName} com ${instructorName}, agendada para ${dayLabel} às ${fmtTime(lesson.scheduled_at)} na ${schoolName}. Até lá!`
+}
+
+function instructorConfirmationMessage(lesson: Lesson, dayLabel: string): string {
+  const activityName = lesson.activities?.name ?? 'uma aula'
+  return `Olá, ${lesson.instructor?.name ?? ''}! Você tem ${activityName} com ${lesson.student_name ?? 'o aluno'} agendada para ${dayLabel} às ${fmtTime(lesson.scheduled_at)}.`
+}
+
+/** Icon-only trigger + popover offering a choice of who to message — the
+ *  student (confirmation, mentions the instructor) or the instructor
+ *  (heads-up, mentions the student) — instead of a single link that always
+ *  went to the student. Each option is a plain <a target="_blank">, not an
+ *  onClick + window.open, so it behaves like a normal link (middle-click/
+ *  cmd-click to open in background, etc.) and can't be blocked by a
+ *  popup blocker the way a script-initiated window.open sometimes is. */
+function WhatsAppActionButton({ lesson, dayLabel, schoolName }: { lesson: Lesson; dayLabel: string; schoolName: string }) {
+  const [open, setOpen] = useState(false)
+  const wrapRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    function onOutside(e: MouseEvent) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', onOutside)
+    return () => document.removeEventListener('mousedown', onOutside)
+  }, [open])
+
+  const studentPhone    = lesson.student_whatsapp
+  const instructorPhone = lesson.instructor?.whatsapp
+  const hasAny = !!studentPhone || !!instructorPhone
+
+  return (
+    <div ref={wrapRef} style={{ position: 'relative', flexShrink: 0 }}>
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        disabled={!hasAny}
+        title={hasAny ? 'Enviar mensagem no WhatsApp' : 'Sem WhatsApp cadastrado'}
+        style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          width: '28px', height: '28px', flexShrink: 0, padding: 0,
+          borderRadius: 'var(--radius-md)', border: 'none',
+          background: 'rgba(37,211,102,0.1)', color: '#128C4A',
+          cursor: hasAny ? 'pointer' : 'not-allowed',
+          opacity: hasAny ? 1 : 0.35,
+        }}
+      >
+        <WhatsAppIcon />
+      </button>
+
+      {open && (
+        <div style={{
+          position: 'absolute', top: 'calc(100% + 4px)', right: 0, zIndex: 60,
+          background: '#fff', border: '0.5px solid var(--border)',
+          borderRadius: 'var(--radius-md)', boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+          minWidth: '220px', overflow: 'hidden',
+        }}>
+          <a
+            href={studentPhone ? buildApiWhatsAppUrl(studentPhone, studentConfirmationMessage(lesson, dayLabel, schoolName)) : undefined}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => setOpen(false)}
+            aria-disabled={!studentPhone}
+            style={{
+              display: 'block', padding: '10px 14px',
+              fontSize: '13px', color: studentPhone ? 'var(--slate)' : 'var(--mist)',
+              textDecoration: 'none', borderBottom: '0.5px solid var(--border)',
+              opacity: studentPhone ? 1 : 0.5,
+              pointerEvents: studentPhone ? 'auto' : 'none',
+              cursor: studentPhone ? 'pointer' : 'not-allowed',
+              fontFamily: 'var(--font-sans)',
+            }}
+          >
+            Enviar para o Aluno{lesson.student_name ? ` (${lesson.student_name})` : ''}
+          </a>
+          <a
+            href={instructorPhone ? buildApiWhatsAppUrl(instructorPhone, instructorConfirmationMessage(lesson, dayLabel)) : undefined}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => setOpen(false)}
+            aria-disabled={!instructorPhone}
+            style={{
+              display: 'block', padding: '10px 14px',
+              fontSize: '13px', color: instructorPhone ? 'var(--slate)' : 'var(--mist)',
+              textDecoration: 'none',
+              opacity: instructorPhone ? 1 : 0.5,
+              pointerEvents: instructorPhone ? 'auto' : 'none',
+              cursor: instructorPhone ? 'pointer' : 'not-allowed',
+              fontFamily: 'var(--font-sans)',
+            }}
+          >
+            Enviar para o Instrutor{lesson.instructor?.name ? ` (${lesson.instructor.name})` : ''}
+          </a>
+        </div>
+      )}
+    </div>
+  )
 }
 
 /** Fortaleza-local date/time parts for pre-filling the edit form's <input type="date">
@@ -222,9 +331,6 @@ export default function ScheduledLessons({
   instructors,
   activePackages = [],
   schoolName = 'Pico Base',
-  schoolSlug = '',
-  payoutModel = 'percentage',
-  fixedPayoutValue = null,
 }: {
   todayLessons: Lesson[]
   tomorrowLessons: Lesson[]
@@ -232,13 +338,9 @@ export default function ScheduledLessons({
   instructors: Instructor[]
   activePackages?: PackageSale[]
   schoolName?: string
-  schoolSlug?: string
-  payoutModel?: string
-  fixedPayoutValue?: number | null
 }) {
   const router = useRouter()
   const [showModal, setShowModal]   = useState(false)
-  const [confirmLessonModal, setConfirmLessonModal] = useState<Lesson | null>(null)
   const [deleting, setDeleting]     = useState<string | null>(null)
   const [saving, setSaving]         = useState(false)
   const [activeTab, setActiveTab]   = useState<'today' | 'tomorrow'>('today')
@@ -635,17 +737,8 @@ export default function ScheduledLessons({
     .sort((a, b) => a[0].scheduled_at.localeCompare(b[0].scheduled_at))
   const totalRows = individualLessons.length + groupLessons.length
 
-  function buildWhatsAppUrl(lesson: Lesson): string {
-    const dayLabel = activeTab === 'today' ? 'hoje' : 'amanhã'
-    const activityName = lesson.activities?.name ?? 'sua aula'
-    const message =
-      `Olá, ${lesson.student_name ?? ''}! Tudo bem? Passando para lembrar da sua aula de ` +
-      `${activityName} agendada para ${dayLabel} às ${fmtTime(lesson.scheduled_at)} na ${schoolName}. ` +
-      `Para agilizar a sua entrada, por favor preencha o nosso check-in e termo de responsabilidade ` +
-      `clicando aqui: https://picobase.com.br/checkin/${schoolSlug}. Aguardamos você!`
-    const phone = whatsappDigitsWithCountryCode(lesson.student_whatsapp)
-    return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
-  }
+  // Used by WhatsAppActionButton's message templates below.
+  const dayLabel = activeTab === 'today' ? 'hoje' : 'amanhã'
 
   function openGroupConfirmModal(group: Lesson[]) {
     const first = group[0]
@@ -907,77 +1000,25 @@ export default function ScheduledLessons({
                       : lesson.status === 'checked_in' ? 'Check-in'
                       : 'Agendada'}
                   </span>
-                  {/* One primary action, not two competing ones — this used
-                      to sit next to a separate "Check-in" link that opened
-                      the public waiver form, which was really just another
-                      way of saying "start this lesson". The public form is
-                      still reachable (Sala de Espera's QR button, or the
-                      link itself), just not duplicated here. Shown on both
-                      Hoje and Amanhã — a school may want to pre-confirm a
-                      lesson booked in advance (the confirm modal's own
-                      session-date field is editable for exactly that).
-                      Once the lesson is done (confirmed) or its slot has
-                      already passed, the action flips from a repeatable
-                      "confirm this" click — which would double-charge/
-                      double-debit a package if clicked again — to a
-                      retention nudge: book the student's NEXT one before
-                      they leave the counter. That swap is what actually
-                      satisfies "no repeated-click button once confirmed",
-                      not removing the action outright. */}
-                  {
-                    lesson.status === 'confirmed' || new Date(lesson.scheduled_at).getTime() < Date.now() ? (
-                      <button
-                        onClick={() => openRebookModal(lesson)}
-                        style={{
-                          padding: '5px 12px', background: '#007868', color: '#fff',
-                          border: 'none', borderRadius: '99px',
-                          fontSize: '11px', fontWeight: '600',
-                          cursor: 'pointer', fontFamily: 'var(--font-sans)', flexShrink: 0,
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        + Agendar Próxima
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => setConfirmLessonModal(lesson)}
-                        style={{
-                          padding: '5px 12px', background: 'var(--signal)', color: '#fff',
-                          border: 'none', borderRadius: '99px',
-                          fontSize: '11px', fontWeight: '600',
-                          cursor: 'pointer', fontFamily: 'var(--font-sans)', flexShrink: 0,
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        Confirmar Aula
-                      </button>
-                    )
-                  }
-                  <a
-                    href={lesson.student_whatsapp ? buildWhatsAppUrl(lesson) : undefined}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    title={lesson.student_whatsapp ? 'Enviar lembrete no WhatsApp' : 'Aluno sem WhatsApp cadastrado'}
-                    aria-disabled={!lesson.student_whatsapp}
+                  {/* Check-in already happens in Sala de Espera (either the
+                      walk-in flow there, or a checkin arriving pre-matched
+                      to this scheduled_lesson) — so this list's own job is
+                      retention, not re-confirming a lesson a second place
+                      already confirms. One unconditional action instead of
+                      the previous status-dependent Confirmar/Agendar swap. */}
+                  <button
+                    onClick={() => openRebookModal(lesson)}
                     style={{
-                      display: 'flex', alignItems: 'center', gap: '5px', flexShrink: 0,
-                      padding: '5px 10px',
-                      borderRadius: 'var(--radius-md)',
-                      background: 'rgba(37,211,102,0.1)',
-                      color: '#128C4A',
-                      fontSize: '11px', fontWeight: '500', fontFamily: 'var(--font-sans)',
-                      opacity: lesson.student_whatsapp ? 1 : 0.35,
-                      pointerEvents: lesson.student_whatsapp ? 'auto' : 'none',
-                      cursor: lesson.student_whatsapp ? 'pointer' : 'not-allowed',
-                      textDecoration: 'none', whiteSpace: 'nowrap',
-                      transition: 'background-color 0.15s',
+                      padding: '5px 12px', background: '#007868', color: '#fff',
+                      border: 'none', borderRadius: '99px',
+                      fontSize: '11px', fontWeight: '600',
+                      cursor: 'pointer', fontFamily: 'var(--font-sans)', flexShrink: 0,
+                      whiteSpace: 'nowrap',
                     }}
-                    onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'rgba(37,211,102,0.18)' }}
-                    onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'rgba(37,211,102,0.1)' }}
                   >
-                    <WhatsAppIcon />
-                    Lembrete
-                  </a>
+                    + Agendar Próxima Aula
+                  </button>
+                  <WhatsAppActionButton lesson={lesson} dayLabel={dayLabel} schoolName={schoolName} />
                 </div>
                 <button
                   onClick={() => openEditModal(lesson)}
@@ -1946,18 +1987,6 @@ export default function ScheduledLessons({
             </div>
           </div>
         </div>
-      )}
-
-      {confirmLessonModal && (
-        <ConfirmLessonModal
-          lesson={confirmLessonModal}
-          activities={activities}
-          instructors={instructors}
-          payoutModel={payoutModel}
-          fixedPayoutValue={fixedPayoutValue}
-          onClose={() => setConfirmLessonModal(null)}
-          onConfirmed={() => { setConfirmLessonModal(null); router.refresh() }}
-        />
       )}
 
       {/* Group confirm modal */}

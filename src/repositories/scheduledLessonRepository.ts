@@ -36,7 +36,7 @@ export async function getScheduledLessons(
         group_id,
         package_sale_id,
         activities ( id, name, default_price, default_duration_min ),
-        instructor:users!scheduled_lessons_instructor_id_fkey ( id, name )
+        instructor:users!scheduled_lessons_instructor_id_fkey ( id, name, whatsapp )
       `)
       .eq('school_id', schoolId)
       .gte('scheduled_at', start)
