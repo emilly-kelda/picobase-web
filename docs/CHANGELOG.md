@@ -625,3 +625,15 @@ their commit message and diff.
   the season cookie the rest of that page already uses for Reserva/
   Simulador. Inserted right after the costs list, before the Reserva +
   Simulador grid.
+- `cc631f0` **feat**: Aulas (`/owner/sessions`) gained a "Duração Média"
+  card and a distribution panel below the totals bar. Verified first
+  that Ticket Médio + the Todos/Direto/Parceiros quick filters were
+  already fully built (`getSessionTotals().avgTicket`, `originHref`) —
+  no changes needed there. `getSessionTotals()` now also returns
+  `avgDuration`; new panel (Realizadas tab only) shows Mix de Origem
+  (two-color bar, Parceiro vs. everything else, same binary the quick
+  filters use) and Faturamento por Esporte (modality detected from the
+  activity name via the same prefix-match convention as
+  `scheduledLessonRepository.ts`). Both derived from the same already-
+  filtered `sessions` array the table uses — no new queries, reacts to
+  month/instructor/origin automatically.
