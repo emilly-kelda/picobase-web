@@ -121,10 +121,10 @@ export default function OwnerNav({
           padding: 9px ${collapsed ? '0' : '12px'};
           justify-content: ${collapsed ? 'center' : 'flex-start'};
           border-radius: var(--radius-md);
-          color: ${dark ? '#94A3B8' : 'var(--mist)'};
+          color: ${dark ? '#A1A1AA' : 'var(--mist)'};
           text-decoration: none;
           white-space: nowrap;
-          transition: background 0.15s, color 0.15s;
+          transition: background-color 0.2s, color 0.2s;
         }
         .nav-row:hover {
           color: ${dark ? '#fff' : 'var(--slate)'};
@@ -133,10 +133,10 @@ export default function OwnerNav({
         .nav-row.active {
           color: ${dark ? '#fff' : 'var(--slate)'};
           font-weight: 500;
-          /* Translucent white overlay, not a solid fill — against a
-             near-black slate-950 sidebar a solid dark fill barely reads
-             as "highlighted"; a soft overlay does. */
-          background: ${dark ? 'rgba(255,255,255,0.08)' : 'var(--powder)'};
+          /* zinc-800/60, not a generic white overlay — matches the zinc
+             family explicitly asked for, still translucent since a solid
+             fill barely reads as "highlighted" against zinc-950. */
+          background: ${dark ? 'rgba(39,39,42,0.6)' : 'var(--powder)'};
         }
         .nav-row svg { flex-shrink: 0; }
         .nav-active-dot {
@@ -186,11 +186,9 @@ export default function OwnerNav({
       <aside style={{
         width: `${sidebarWidth}px`,
         flexShrink: 0,
-        // slate-950, not --color-pb-storm (slate-700, a mid-tone meant for
-        // borders/secondary elements elsewhere) — the "grafite profundo"
-        // ask specifically wants this darker than any other dark surface
-        // in the app.
-        background: dark ? '#020617' : '#fff',
+        // zinc-950 — explicitly chosen over the slate family (cooler,
+        // blue-tinted) for a fully neutral, warm-neutral graphite instead.
+        background: dark ? '#09090b' : '#fff',
         borderRight: dark ? 'none' : '1px solid var(--border)',
         position: 'sticky',
         top: 0,
