@@ -474,8 +474,8 @@ export default function PendingLessons({
             // resurface it later if still wanted.
             const hasCredit = !!balance?.hasPackage && !exhausted
             const creditBadgeText = lastLesson
-              ? `${t.package_last_lesson_badge} · ${fmtMinutes(balance!.minutesRemaining)} ${t.package_remaining_singular}`
-              : `${fmtMinutes(balance!.minutesRemaining)} ${t.package_remaining_badge}`
+              ? `${t.package_last_lesson_badge} · ${fmtMinutes(balance?.minutesRemaining ?? 0)} ${t.package_remaining_singular}`
+              : `${fmtMinutes(balance?.minutesRemaining ?? 0)} ${t.package_remaining_badge}`
 
             return (
               <div
