@@ -1,0 +1,40 @@
+import { createServiceClient } from '@/lib/supabase-server'
+import { NextResponse } from 'next/server'
+import type { Stage } from '@/lib/stage'
+
+const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
+
+// 'checkout' is deliberately not settable here — it's local UI state (the
+// checkout modal being open for a given row, see ChameleonButton's caller
+// in ScheduledLessons.tsx / PendingLessons.tsx), not a persisted fact.
+// Nothing writes a checkin to 'checkout' in the database; it goes straight
+// from 'na_agua' to 'concluido' via confirm-lesson/route.ts once the modal
+// is actually confirmed.
+const VALID_STAGES: Stage[] = ['sala_de_espera', 'na_agua', 'concluido']
+
+/** picobase_chameleon_button_dossie.md Fase 3 — the only stage transition
+ *  that needs a dedicated endpoint: ChameleonButton's "Enviar para a água"
+ *  (sala_de_espera -> na_agua). The other two transitions ride existing
+ *  routes instead of duplicating them: onSellPackage opens the pre-existing
+ *  SellPackageFlowModal (no new backend needed — hasCredit is derived from
+ *  package balances the caller already refetches), and onFinishAndCharge's
+ *  na_agua -> concluido happens inside confirm-lesson/route.ts, alongside
+ *  the checkins.status update it was already making. */
+export async function PATCH(request: Request) {
+  const body = await request.json()
+  const { id, stage } = body
+
+  if (!id || typeof stage !== 'string' || !VALID_STAGES.includes(stage as Stage)) {
+    return NextResponse.json({ error: 'id e um stage valido sao obrigatorios' }, { status: 400 })
+  }
+
+  const supabase = createServiceClient()
+  const { error } = await supabase
+    .from('checkins')
+    .update({ stage })
+    .eq('id', id)
+    .eq('school_id', SCHOOL_ID)
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ ok: true })
+}

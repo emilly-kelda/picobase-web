@@ -198,9 +198,14 @@ export async function POST(request: Request) {
   // skill-progress summary via WhatsApp. No such job exists yet.
 
   if (checkin_id) {
+    // stage kept in sync with status here rather than as a separate call —
+    // picobase_chameleon_button_dossie.md's Fase 3 "onFinishAndCharge: ...
+    // ao confirmar o checkout, stage vira concluido", this is that
+    // transition (na_agua/whatever it was -> concluido, regardless of
+    // which stage it started this confirm from).
     const { error: checkinError } = await supabase
       .from('checkins')
-      .update({ status: 'session_confirmed' })
+      .update({ status: 'session_confirmed', stage: 'concluido' })
       .eq('id', checkin_id)
 
     if (checkinError) {
