@@ -173,6 +173,11 @@ export default function PendingLessons({
   const [showNotes, setShowNotes]       = useState(false)
   const [confirming, setConfirming]         = useState(false)
   const [confirmed, setConfirmed]           = useState<string | null>(null)
+  // confirm-lesson can now reject the request (instructor/student clash,
+  // insufficient package balance) — this used to only ever check data.ok
+  // and otherwise do nothing, leaving the operator with no idea why
+  // nothing happened when a submit failed.
+  const [confirmError, setConfirmError]     = useState<string | null>(null)
   const [showProgression, setShowProgression] = useState(false)
   const [progLevel,        setProgLevel]      = useState('')
   const [progNotes,        setProgNotes]      = useState('')
@@ -226,6 +231,7 @@ export default function PendingLessons({
     const schedInstructor = unwrapInstructor(sched?.instructor ?? null)
 
     setSelected(checkin)
+    setConfirmError(null)
     setActivityId(sched?.activities?.id ?? checkin.activity_id ?? '')
     setDuration(sched?.duration_min ?? fallbackActivity?.default_duration_min ?? 60)
     setPrice(fallbackActivity?.default_price ?? 0)
@@ -310,6 +316,7 @@ export default function PendingLessons({
   async function confirm() {
     if (!selected || !instructorId) return
     setConfirming(true)
+    setConfirmError(null)
 
     const res = await fetch('/api/owner/confirm-lesson', {
       method: 'POST',
@@ -341,6 +348,8 @@ export default function PendingLessons({
         setConfirmed(null)
         router.refresh()
       }, 2000)
+    } else {
+      setConfirmError(data.error ?? 'Erro ao confirmar aula')
     }
   }
 
@@ -1300,6 +1309,16 @@ export default function PendingLessons({
                 </div>
               )}
             </div>
+
+            {confirmError && (
+              <div style={{
+                marginTop: '12px', padding: '10px 14px',
+                background: 'var(--signal-light)', color: 'var(--signal-dark)',
+                borderRadius: 'var(--radius-md)', fontSize: '13px',
+              }}>
+                {confirmError}
+              </div>
+            )}
 
             <div style={{ display: 'flex', gap: '10px' }}>
               <button

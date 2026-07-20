@@ -1,6 +1,7 @@
 import { createServiceClient } from '@/lib/supabase-server'
 import { computeCommissionAmount, getVariableCostForStudent } from '@/lib/commission'
 import { convertToBRL } from '@/lib/fx'
+import { checkSchedulingConflicts, checkPackageCapacity } from '@/repositories/scheduledLessonRepository'
 import { NextResponse } from 'next/server'
 
 const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
@@ -40,24 +41,64 @@ export async function POST(request: Request) {
   // checkin and pass the scheduled_lessons row id directly instead.
   const linkedScheduledLessonId = checkin?.scheduled_lesson_id ?? scheduled_lesson_id ?? null
 
-  // Without a checkin, the student's name (for variable-cost lookup and the
-  // package auto-debit below) has to come from the scheduled_lessons row
-  // instead — this used to only ever come from checkin?.student_name, so
-  // confirming directly from a scheduled lesson (no checkin in scope)
-  // silently skipped both. scheduledLesson.package_sale_id, if set, is
-  // whichever specific sale was linked at schedule time (either picked
+  // Needed as a student-name/package_sale_id fallback when there's no
+  // checkin (unchanged from before), and now also to re-validate
+  // instructor/student clash + package capacity against the lesson's own
+  // original scheduled_at — instructor_id and duration_min can both be
+  // edited right here in the confirm modal (ScheduledLessons.tsx's
+  // "Confirmar Aula", and PendingLessons.tsx's own confirm form), so a
+  // swap could introduce a conflict that was never checked when the
+  // lesson was first scheduled. scheduledLesson.package_sale_id, if set,
+  // is whichever specific sale was linked at schedule time (either picked
   // explicitly in the "+ Agendar" autocomplete, or carried over from the
   // originating checkin by schedule-from-checkin) — preferred over the
   // general FIFO-by-name lookup when it still has balance.
-  const { data: scheduledLesson } = (!checkin && linkedScheduledLessonId)
+  const { data: scheduledLesson } = linkedScheduledLessonId
     ? await supabase
         .from('scheduled_lessons')
-        .select('student_name, package_sale_id')
+        .select('student_name, package_sale_id, scheduled_at, duration_min')
         .eq('id', linkedScheduledLessonId)
         .single()
     : { data: null }
 
   const studentName = checkin?.student_name ?? scheduledLesson?.student_name ?? null
+
+  if (scheduledLesson) {
+    const effectiveDuration = duration_min || scheduledLesson.duration_min || 60
+    const { instructorConflict, studentConflict } = await checkSchedulingConflicts(SCHOOL_ID, {
+      instructorId:    instructor_id || null,
+      studentName:     studentName ?? '',
+      scheduledAt:     scheduledLesson.scheduled_at,
+      durationMin:     effectiveDuration,
+      excludeLessonId: linkedScheduledLessonId,
+    })
+    if (studentConflict) {
+      return NextResponse.json(
+        { error: 'Não é possível confirmar: este aluno já possui uma aula marcada para este mesmo horário.' },
+        { status: 409 }
+      )
+    }
+    if (instructorConflict) {
+      return NextResponse.json(
+        { error: 'O instrutor selecionado já possui uma aula agendada para este horário.' },
+        { status: 409 }
+      )
+    }
+
+    if (scheduledLesson.package_sale_id) {
+      const capacity = await checkPackageCapacity(SCHOOL_ID, {
+        packageSaleId:   scheduledLesson.package_sale_id,
+        durationMin:     effectiveDuration,
+        excludeLessonId: linkedScheduledLessonId,
+      })
+      if (!capacity.ok) {
+        return NextResponse.json(
+          { error: 'Saldo de créditos insuficiente. O aluno precisa de adquirir um novo pacote para agendar.' },
+          { status: 409 }
+        )
+      }
+    }
+  }
 
   // Re-derive from the instructor's saved rate rather than trusting whatever
   // commission_pct the client last loaded — that value never reflects fixed
