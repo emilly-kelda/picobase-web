@@ -740,3 +740,28 @@ their commit message and diff.
   `maxCount` cap already keeps this unreachable in normal use; a full fix
   would mean serializing those requests, trading a rare race for slower
   UX in the common case.
+- `a9a3a5f` **feat**: minimum-window cancellation penalty. Cancelling a
+  scheduled lesson inside the school's configured window (new
+  `schools.cancellation_window_hours`, default 24, exposed as a numeric
+  field next to Notificações' existing "Cancelamento Tardio" toggle)
+  still frees the instructor's slot, but if the lesson was tied to a
+  package the credit is forfeited (`minutes_used += duration_min`,
+  annotated in `notes` as a no-show) instead of returned; the API
+  response carries `penalized`/`message`, shown to the owner via a toast.
+  Discovered and fixed a real pre-existing bug this depended on:
+  `ScheduledLessons.tsx`'s `cancel()` sent `id` in the DELETE body, but
+  the route only ever reads it from `?id=` — the pattern
+  `MissedLessons.tsx`/`RescheduleModal.tsx` already used correctly
+  against the same endpoint — so the "Cancelar" button on Aulas Agendadas
+  has never actually cancelled anything; every call 400'd silently and
+  the client just refreshed regardless. Also had to fix a side effect of
+  the penalty itself: `RescheduleModal` creates the replacement lesson
+  *before* deleting the missed original, and a missed lesson's
+  `scheduled_at` is always in the past by definition, so the penalty
+  would have fired on every reschedule even though the student keeps the
+  lesson. Fixed by carrying `package_sale_id` forward onto the
+  replacement (previously dropped — rescheduling silently stopped
+  drawing on the student's package at all) and adding a `skip_penalty`
+  flag to the delete call; also had to add `reschedule_from_id` to the
+  POST so the not-yet-deleted original doesn't get double-counted
+  against its own replacement by the Rule 3 capacity check.
