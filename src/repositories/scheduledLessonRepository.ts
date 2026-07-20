@@ -378,3 +378,92 @@ export async function createScheduledLesson(payload: {
   if (error) throw error
   return data
 }
+
+/** Makes sure `studentName` shows up in today's Sala de Espera
+ *  (getPendingLessons: status='checked_in', deferred_to_schedule=false,
+ *  checkin_at >= today). Originally lived only in sell-package/route.ts
+ *  (Venda Rápida) — pulled out here so bookings/route.ts (Reservas) and
+ *  schedule/route.ts (same-day/experimental lessons) can call the exact
+ *  same logic instead of a third copy.
+ *
+ *  checkins has a DB check constraint ("lgpd_required", verified live) that
+ *  rejects any row with lgpd_consent != true — so a brand new row needs an
+ *  explicit consent value, one way or another. Three cases:
+ *   - A checkins row for today already exists → just reactivate it if
+ *     something had moved it out of the pending view. Untouched if it's
+ *     already showing, or if the student's lesson today was already
+ *     confirmed (status 'session_confirmed' stays as-is).
+ *   - No row for today, but a prior already-consented checkin exists →
+ *     copy the identity/consent fields from that most recent one into a
+ *     fresh row for today, same as a returning customer not having to
+ *     re-sign a waiver they already have on file.
+ *   - No row for today and no prior consented checkin at all → these are
+ *     all presencial, at-the-counter interactions (a sale, a same-day
+ *     reservation, a walk-in trial lesson), so create the check-in anyway
+ *     with lgpd_consent/gdpr_consent forced true and waiver_signed_at set
+ *     to now, representing consent given in person at the time.
+ */
+export async function ensureActiveCheckinForToday(schoolId: string, studentName: string) {
+  const supabase = createServiceClient()
+  const today = new Date().toISOString().slice(0, 10)
+
+  const { data: todayCheckin } = await supabase
+    .from('checkins')
+    .select('id, status, deferred_to_schedule')
+    .eq('school_id', schoolId)
+    .ilike('student_name', studentName)
+    .gte('checkin_at', `${today}T00:00:00`)
+    .order('checkin_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (todayCheckin) {
+    if (todayCheckin.status === 'checked_in' && !todayCheckin.deferred_to_schedule) return
+    if (todayCheckin.status === 'session_confirmed' || todayCheckin.status === 'cancelled') return
+    await supabase
+      .from('checkins')
+      .update({ status: 'checked_in', deferred_to_schedule: false })
+      .eq('id', todayCheckin.id)
+    return
+  }
+
+  const { data: priorCheckin } = await supabase
+    .from('checkins')
+    .select(`
+      student_email, student_whatsapp, student_nationality,
+      document_number, document_type, health_condition,
+      emergency_name, emergency_phone, birthdate, is_minor,
+      guardian_name, guardian_consent, lgpd_consent, gdpr_consent,
+      waiver_signed_at, waiver_pdf_url, zapsign_doc_id, signature_data, source
+    `)
+    .eq('school_id', schoolId)
+    .ilike('student_name', studentName)
+    .eq('lgpd_consent', true)
+    .order('checkin_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (!priorCheckin) {
+    await supabase.from('checkins').insert({
+      school_id:    schoolId,
+      student_name: studentName,
+      status:       'checked_in',
+      checkin_at:   new Date().toISOString(),
+      deferred_to_schedule: false,
+      lgpd_consent: true,
+      gdpr_consent: true,
+      waiver_signed_at: new Date().toISOString(),
+      source: 'walk_in',
+    })
+    return
+  }
+
+  await supabase.from('checkins').insert({
+    school_id:    schoolId,
+    student_name: studentName,
+    ...priorCheckin,
+    status:       'checked_in',
+    checkin_at:   new Date().toISOString(),
+    deferred_to_schedule: false,
+  })
+}

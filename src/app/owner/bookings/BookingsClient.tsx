@@ -89,6 +89,11 @@ export default function BookingsClient({
     }
 
     setBookings(prev => prev.filter(b => b.id !== booking.id))
+    // Was missing — the pending-bookings nav badge (layout.tsx,
+    // getPendingBookingsCount) only updates on a server round-trip, so
+    // without this it kept showing the old count until an unrelated
+    // navigation happened to trigger one.
+    router.refresh()
 
     if (waTab) {
       waTab.location.href = whatsappHref(booking.whatsapp, confirmationMessage(booking))

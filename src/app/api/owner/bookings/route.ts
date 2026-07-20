@@ -1,5 +1,6 @@
 import { createServiceClient } from '@/lib/supabase-server'
 import { createBooking, updateBookingStatus } from '@/repositories/bookingRepository'
+import { ensureActiveCheckinForToday } from '@/repositories/scheduledLessonRepository'
 import { NextResponse } from 'next/server'
 
 const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
@@ -57,6 +58,18 @@ export async function POST(request: Request) {
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     return NextResponse.json({ error: message }, { status: 500 })
+  }
+
+  // A reservation for today is, functionally, a walk-in about to happen —
+  // gets them into Sala de Espera right away instead of only appearing once
+  // someone later confirms/schedules them. A booking with no date, or a
+  // future one, isn't touched: this only fires when preferred_date is
+  // literally today, not "no preference yet" or "next week".
+  const today = new Date().toISOString().slice(0, 10)
+  if (preferred_date === today) {
+    try {
+      await ensureActiveCheckinForToday(SCHOOL_ID, studentName)
+    } catch {}
   }
 
   return NextResponse.json({ ok: true })

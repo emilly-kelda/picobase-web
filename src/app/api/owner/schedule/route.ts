@@ -1,5 +1,5 @@
 import { createServiceClient } from '@/lib/supabase-server'
-import { checkSchedulingConflicts, checkPackageCapacity } from '@/repositories/scheduledLessonRepository'
+import { checkSchedulingConflicts, checkPackageCapacity, ensureActiveCheckinForToday } from '@/repositories/scheduledLessonRepository'
 import { NextResponse } from 'next/server'
 
 const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
@@ -152,6 +152,18 @@ export async function POST(request: Request) {
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // A lesson scheduled for today — most commonly a same-day/experimental
+  // booking with no package yet — should put the student in Sala de
+  // Espera right away instead of only Aulas Agendadas. Untouched for
+  // lessons scheduled on any other day.
+  const today = new Date().toISOString().slice(0, 10)
+  if (typeof body.scheduled_at === 'string' && body.scheduled_at.slice(0, 10) === today) {
+    try {
+      await ensureActiveCheckinForToday(SCHOOL_ID, body.student_name)
+    } catch {}
+  }
+
   return NextResponse.json({ ok: true, id: data.id })
 }
 
