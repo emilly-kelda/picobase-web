@@ -637,3 +637,22 @@ their commit message and diff.
   `scheduledLessonRepository.ts`). Both derived from the same already-
   filtered `sessions` array the table uses — no new queries, reacts to
   month/instructor/origin automatically.
+- `6eff5da` **fix**: root-caused the Aulas-vs-Pagamentos revenue
+  divergence — it wasn't a currency/Taxa Fixa exclusion bug in
+  `close_month()` (both were already summed correctly; verified live
+  that all 28 sessions had `confirmed_at` set). The real cause: `payments`
+  is a snapshot only refreshed on a manual "Recalcular período" click, so
+  it silently drifts from `sessions` whenever a lesson is
+  confirmed/edited/removed afterward (confirmed against live June/April
+  2026 data). `payments/page.tsx` now calls the idempotent `close_month`
+  RPC (new `closeMonth()` in `crewRepository.ts`) before every read,
+  swallowing errors so a transient RPC failure can't crash the page —
+  the manual button stays as a fallback. Also added: an instructor filter
+  on Pagamentos identical to the one on Aulas (`getPayments()` gained an
+  optional `instructorId` filter, isolating that row and updating the
+  KPI cards — "Faturamento líquido" skips netting out partner commissions
+  while filtered, since partners aren't scoped to one instructor and
+  mixing the two produced a misleading negative number); and a click
+  handler on the red "− adiant." total opening a read-only history modal
+  (date/value/motivo) sourced from `instructor_advances` data
+  `getPayments()` already loaded — no new query needed.
