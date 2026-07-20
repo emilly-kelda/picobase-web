@@ -611,3 +611,17 @@ their commit message and diff.
   location self-corrects for free: it won't match the new single-item
   list, so `resolveWeatherSpot()` falls back to the school's own spot
   without needing the cookie cleared.
+- `37ba018` **refactor**: "Participação na Receita" (per-instructor
+  revenue bars) and "Resumo do Mês" (revenue/commissions/margin/paid/
+  pending) moved from `/owner/payments` to `/owner/costs`. Both only
+  ever lived in `PaymentsClient.tsx` (`payments/page.tsx` is a pure
+  data-fetching passthrough) — extracted into a new hookless shared
+  component, `PaymentsSummaryCards.tsx`, since everything they render
+  derives from `payments`/`summary` alone, with no dependency on the
+  Payments page's own tab/payment-method/pagination state. `getPayments`
+  is calendar-month-scoped, with no season-range concept — kept its own
+  independent month picker (new `MonthPeriodSelect.tsx`, same
+  auto-submit `<select>` pattern) on Custos rather than forcing it onto
+  the season cookie the rest of that page already uses for Reserva/
+  Simulador. Inserted right after the costs list, before the Reserva +
+  Simulador grid.
