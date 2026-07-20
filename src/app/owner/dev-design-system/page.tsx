@@ -1,4 +1,5 @@
 import Button from '@/components/ui/Button'
+import Badge from '@/components/ui/Badge'
 
 /** Isolated preview of the shared design-system components
  *  (picobase_design_system_dossie.md) — not linked from the sidebar,
@@ -19,6 +20,15 @@ export default function DesignSystemPreviewPage() {
           <Button variant="tertiary">Tertiary</Button>
           <Button variant="danger">Danger</Button>
           <Button variant="primary" disabled>Primary (disabled)</Button>
+        </div>
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-xs font-medium uppercase tracking-wider text-pb-mist">Badge</h2>
+        <div className="flex flex-wrap items-center gap-3">
+          <Badge variant="success">Termo assinado</Badge>
+          <Badge variant="danger">Sem créditos</Badge>
+          <Badge variant="neutral">Agendada</Badge>
         </div>
       </section>
     </div>
