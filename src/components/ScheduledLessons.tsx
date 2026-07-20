@@ -394,7 +394,9 @@ export default function ScheduledLessons({
   const [editFormError, setEditFormError] = useState<string | null>(null)
 
   const [groupConfirmModal, setGroupConfirmModal] = useState<{
-    groupId: string
+    // null for a single (non-group) lesson confirmed via this same modal —
+    // see openConfirmModal below, reusing this UI for a "group of one".
+    groupId: string | null
     activityId: string | null
     durationMin: number
     lessons: Array<{
@@ -771,10 +773,14 @@ export default function ScheduledLessons({
   // Used by WhatsAppActionButton's message templates below.
   const dayLabel = activeTab === 'today' ? 'hoje' : 'amanhã'
 
+  // Also the entry point for a single individual lesson's "Confirmar Aula"
+  // button below — passing a one-element array reuses the exact same
+  // modal/instructor-price-payment collection/confirm-lesson POST flow
+  // instead of building a second, near-identical UI just for group size 1.
   function openGroupConfirmModal(group: Lesson[]) {
     const first = group[0]
     setGroupConfirmModal({
-      groupId:     first.group_id!,
+      groupId:     first.group_id ?? null,
       activityId:  first.activities?.id ?? null,
       durationMin: first.duration_min,
       lessons: group.map(l => ({
@@ -1031,17 +1037,33 @@ export default function ScheduledLessons({
                       : lesson.status === 'checked_in' ? 'Check-in'
                       : 'Agendada'}
                   </span>
-                  {/* Check-in already happens in Sala de Espera (either the
-                      walk-in flow there, or a checkin arriving pre-matched
-                      to this scheduled_lesson) — so this list's own job is
-                      retention, not re-confirming a lesson a second place
-                      already confirms. One unconditional action instead of
-                      the previous status-dependent Confirmar/Agendar swap. */}
+                  {/* Restored as the primary action: reception needs a
+                      direct way to confirm/start an individual lesson from
+                      this list, not just from Sala de Espera's checkin flow
+                      — a lesson scheduled straight from here (or one whose
+                      checkin got deferred_to_schedule) has no checkin card
+                      left to confirm it from. Reuses the group-confirm
+                      modal/flow for a single lesson (see
+                      openGroupConfirmModal's comment). */}
+                  {lesson.status !== 'confirmed' && (
+                    <button
+                      onClick={() => openGroupConfirmModal([lesson])}
+                      style={{
+                        padding: '5px 12px', background: '#007868', color: '#fff',
+                        border: 'none', borderRadius: '99px',
+                        fontSize: '11px', fontWeight: '600',
+                        cursor: 'pointer', fontFamily: 'var(--font-sans)', flexShrink: 0,
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      ✓ Confirmar Aula
+                    </button>
+                  )}
                   <button
                     onClick={() => openRebookModal(lesson)}
                     style={{
-                      padding: '5px 12px', background: '#007868', color: '#fff',
-                      border: 'none', borderRadius: '99px',
+                      padding: '5px 12px', background: 'transparent', color: '#007868',
+                      border: '0.5px solid #007868', borderRadius: '99px',
                       fontSize: '11px', fontWeight: '600',
                       cursor: 'pointer', fontFamily: 'var(--font-sans)', flexShrink: 0,
                       whiteSpace: 'nowrap',
@@ -2062,7 +2084,9 @@ export default function ScheduledLessons({
               fontSize: '18px', fontWeight: '500',
               color: 'var(--slate)', marginBottom: '20px',
             }}>
-              Confirmar grupo · {groupConfirmModal.lessons.length} alunos
+              {groupConfirmModal.groupId
+                ? `Confirmar grupo · ${groupConfirmModal.lessons.length} alunos`
+                : 'Confirmar aula'}
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -2171,7 +2195,9 @@ export default function ScheduledLessons({
                   fontFamily: 'var(--font-sans)',
                 }}
               >
-                {confirming ? `Confirmando ${confirmProgress}...` : 'Confirmar todos'}
+                {confirming
+                  ? `Confirmando ${confirmProgress}...`
+                  : groupConfirmModal.groupId ? 'Confirmar todos' : 'Confirmar'}
               </button>
             </div>
           </div>
