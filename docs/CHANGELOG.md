@@ -674,3 +674,22 @@ their commit message and diff.
   it errors. Corrected an instruction premise mismatch along the way:
   Base Camp's real dashboard is `src/app/owner/page.tsx`, there's no
   `/owner/dashboard/page.tsx` in this codebase.
+- `359bbbe` **fix**: selling a package to a "Sem Créditos" student now
+  reactivates them in Sala de Espera instead of leaving them stuck.
+  Credit balance already updated live on its own (`packageBalances` is
+  derived from `package_sales`) and both `SellPackageFlowModal` call
+  sites already `router.refresh()` with `PendingLessons` already syncing
+  `initialCheckins` into local state — the real gap was that
+  `getPendingLessons()` only lists students with a `checkins` row for
+  today (`status='checked_in'`, `deferred_to_schedule=false`), and Base
+  Camp's "Venda Rápida" can sell to any registered student regardless of
+  whether they have one. `sell-package/route.ts` now reactivates today's
+  row if one exists but got filtered out, or creates one by copying
+  identity/consent fields from the student's most recent already-
+  consented prior checkin. Verified live via a throwaway insert that
+  `checkins` has a DB check constraint (`lgpd_required`) rejecting any
+  row with `lgpd_consent != true` — so a blind create-if-missing would
+  either hard-fail or require fabricating consent that was never given;
+  copying from a real prior waiver was the only compliant option. If a
+  student has no prior checkin at all, the sale still succeeds but they
+  aren't auto-checked-in — no consented record exists to copy from.
