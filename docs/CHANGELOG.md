@@ -715,3 +715,28 @@ their commit message and diff.
   `saveEdit()` never checked the API response for errors — `saveEdit()`
   even closed the modal and refreshed unconditionally — so a blocked save
   would have silently looked like it worked.
+- `01696b6` **feat**: blocks scheduling/editing a lesson tied to a package
+  (`package_sale_id`) once already-pending lessons on that same package
+  plus this one's own duration would exceed its remaining balance.
+  `checkPackageCapacity()` in `scheduledLessonRepository.ts`, wired into
+  `/api/owner/schedule` POST/PATCH and `/api/owner/schedule-from-checkin`.
+  Two deviations, both required for correctness: (1) the instruction said
+  to key off `student_id`, but `scheduled_lessons.student_id` is almost
+  never populated (same known gap as `getScheduledLessons`) — the real
+  link to a package is `package_sale_id`, which both routes already write
+  whenever a package is selected/linked; (2) the instruction said to
+  compare a lesson *count* against the credit balance, but packages here
+  are sold and drawn down in minutes, not session count — comparing
+  counts would let two 3h lessons through where a 3h + a 1h wouldn't,
+  same total minutes either way. The "already committed" query excludes
+  `status='confirmed'` as well as `'cancelled'`, since a confirmed
+  lesson's minutes are already folded into `minutes_used` by
+  confirm-lesson's own deduction — counting it again here would
+  double-charge the same minutes. No `package_sale_id` (pay-per-lesson or
+  group booking, neither tracks a package) skips the check entirely,
+  same as before. Known limitation: the recurring/"dias fixos" scheduling
+  mode fires its N requests in parallel, so concurrent requests could in
+  theory each read the same pre-commit balance — the existing client-side
+  `maxCount` cap already keeps this unreachable in normal use; a full fix
+  would mean serializing those requests, trading a rare race for slower
+  UX in the common case.
