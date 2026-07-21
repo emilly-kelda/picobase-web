@@ -978,27 +978,39 @@ export default function ScheduledLessons({
                   </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-                  {/* Merged status + Confirmar into one element: showing a
-                      neutral "Agendada"/"Check-in" badge right next to a
-                      separate "Confirmar" button (below) was the same
-                      information rendered twice. A confirmed lesson has
-                      nothing left to do here, so it stays a plain
-                      non-interactive success Badge — but scheduled/
-                      checked_in still needs a real click target (opens
-                      ConfirmLessonModal), so that state renders as a
-                      button styled like the Badge's warning variant
-                      instead, with its own status label preserved (not
-                      collapsed to a generic "Pendente" — losing the
-                      Agendada/Check-in distinction here would hide whether
-                      the student's actually arrived yet). */}
-                  {lesson.status === 'confirmed' ? (
-                    <Badge variant="success" size="md">{t.status_confirmed}</Badge>
-                  ) : (
+                  {/* Reverted the earlier merge of this Badge with
+                      Confirmar — folding the button into the status text
+                      made it read as plain text with no click target, so
+                      "Confirmar" effectively disappeared. Back to two
+                      separate elements: a plain status Badge, plus its own
+                      clearly-a-button Confirmar (pastel purple, #F5F3FF/
+                      #6D28D9 — the same violet pair already used for the
+                      "Grupo · N alunos" tag further down this file, not a
+                      new one-off color). */}
+                  <Badge variant={lesson.status === 'confirmed' ? 'success' : 'neutral'} size="md">
+                    {lesson.status === 'confirmed' ? t.status_confirmed
+                      : lesson.status === 'checked_in' ? t.status_checked_in
+                      : t.status_scheduled}
+                  </Badge>
+                  {lesson.status !== 'confirmed' && (
                     <button
                       onClick={() => setConfirmLessonModal(lesson)}
-                      className="inline-flex items-center rounded-[6px] font-medium whitespace-nowrap px-2.5 py-[3px] text-xs bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors border-0 cursor-pointer"
+                      style={{
+                        padding: '4px 8px',
+                        background: '#F5F3FF',
+                        color: '#6D28D9',
+                        border: 'none',
+                        borderRadius: 'var(--radius-md)',
+                        fontSize: '10px', fontWeight: '500',
+                        cursor: 'pointer',
+                        fontFamily: 'var(--font-sans)',
+                        transition: 'background-color 0.15s',
+                        whiteSpace: 'nowrap',
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.backgroundColor = '#6D28D9'; e.currentTarget.style.color = '#fff' }}
+                      onMouseLeave={e => { e.currentTarget.style.backgroundColor = '#F5F3FF'; e.currentTarget.style.color = '#6D28D9' }}
                     >
-                      {lesson.status === 'checked_in' ? t.status_checked_in : t.status_scheduled}
+                      Confirmar
                     </button>
                   )}
                   {/* "Iniciar Velejo"/"Start Session" — moves a scheduled
