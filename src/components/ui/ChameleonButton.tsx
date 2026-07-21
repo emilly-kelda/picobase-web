@@ -1,5 +1,4 @@
 import Button from '@/components/ui/Button'
-import CheckinQRButton from '@/components/CheckinQRButton'
 import type { Stage } from '@/lib/stage'
 
 type ChameleonButtonProps = {
@@ -26,12 +25,14 @@ type ChameleonButtonProps = {
  *  (picobase_chameleon_button_dossie.md, Fase 1) — the one thing a
  *  student's row actually needs right now:
  *
- *  - not checked in              -> full-width primary "Check-in"
- *    (CheckinQRButton, `compact` — icon + label, not the icon-only
- *    square) — clicking opens the QR/link modal and marks checked_in via
- *    onCheckIn. This is the starting state for EVERY student in
- *    Aguardando Vento, regardless of credit; checked_in and hasCredit are
- *    independent facts, so selling a package must never skip this.
+ *  - not checked in -> renders nothing. Used to be a full-width primary
+ *    "Check-in" trigger (CheckinQRButton, `compact`) here, but
+ *    PendingLessons.tsx's button row now has its own always-visible
+ *    Check-in chip (promoted out of Ver ficha) that does the exact same
+ *    job — opens the QR modal AND marks checked_in via its own onOpen.
+ *    Keeping both was showing two "Check-in" triggers on the same card at
+ *    once, which is the bug this removal fixes. checkedIn and hasCredit
+ *    are independent facts, so selling a package must never skip this.
  *  - checked in, sala_de_espera + no credit -> danger "Vender pacote"
  *    (doesn't advance stage on its own — that happens once the sale
  *    actually completes)
@@ -48,8 +49,11 @@ type ChameleonButtonProps = {
  *    action here for the moment.
  *  - concluido                  -> no button, just muted "Concluído" text
  *
- *  Always meant to be the row's single most prominent element — pass
- *  `flex-1` (the default) so it takes the remaining width. */
+ *  `flex-1` is the default className (still used when this is the row's
+ *  single most prominent element, e.g. the dev preview page), but
+ *  PendingLessons.tsx's own button row passes `className=""` — it now
+ *  sits alongside 3 other same-size buttons in one compact row rather
+ *  than being the one wide element in a mostly-empty row. */
 export default function ChameleonButton({
   stage,
   checkedIn,
@@ -69,17 +73,7 @@ export default function ChameleonButton({
   }
 
   if (!checkedIn) {
-    return (
-      <CheckinQRButton
-        slug={slug}
-        schoolName={schoolName}
-        studentName={studentName}
-        activityName={activityName}
-        compact
-        onOpen={onCheckIn}
-        className={className}
-      />
-    )
+    return null
   }
 
   if (stage === 'sala_de_espera') {

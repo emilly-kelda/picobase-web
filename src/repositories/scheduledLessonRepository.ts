@@ -501,15 +501,22 @@ export async function ensureActiveCheckinForToday(
     .maybeSingle()
 
   if (!priorCheckin) {
+    // lgpd_consent/gdpr_consent/waiver_signed_at deliberately false/null,
+    // not true/now — a student with no prior checkin at all (e.g. a brand
+    // new package sold via Spot's "Venda Rápida", which has no waiver step
+    // of its own) has NOT actually gone through the legal waiver flow yet.
+    // Faking these as already-signed here used to make Aguardando Vento's
+    // "Termo Assinado" badge lie for that student — the badge should read
+    // the real value and prompt for an actual signature instead.
     await supabase.from('checkins').insert({
       school_id:    schoolId,
       student_name: studentName,
       status:       'checked_in',
       checkin_at:   new Date().toISOString(),
       deferred_to_schedule: false,
-      lgpd_consent: true,
-      gdpr_consent: true,
-      waiver_signed_at: new Date().toISOString(),
+      lgpd_consent: false,
+      gdpr_consent: false,
+      waiver_signed_at: null,
       source: 'walk_in',
       activity_id:  resolvedActivityId,
     })

@@ -40,6 +40,7 @@ type Checkin = {
   partner_id: string | null
   stage: Stage | null
   checked_in: boolean
+  waiver_signed_at: string | null
   activities: ActivityRef | null
   instructor: { id: string; name: string } | { id: string; name: string }[] | null
   partner: { id: string; name: string; type: string } | { id: string; name: string; type: string }[] | null
@@ -315,11 +316,92 @@ export default function PendingLessons({
                       <span title={fmtTime(checkin.checkin_at)}>{fmtRelative(checkin.checkin_at, t)}</span>
                     </div>
                   </div>
+                  {/* All card actions live here now, top-right, next to
+                      the avatar/name — not a separate full-width bar
+                      below the badges. ChameleonButton's own compact
+                      Check-in state was retired (see ChameleonButton.tsx)
+                      since it duplicated this row's own Check-in chip once
+                      that chip was promoted out of Ver ficha; the chip now
+                      does both jobs (open the QR AND mark checked_in). */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                    <ChameleonButton
+                      stage={checkin.stage ?? 'sala_de_espera'}
+                      checkedIn={checkin.checked_in}
+                      hasCredit={hasCredit}
+                      slug={schoolSlug}
+                      schoolName={schoolName}
+                      studentName={checkin.student_name}
+                      activityName={displayActivityName}
+                      onCheckIn={() => checkIn(checkin)}
+                      onSendToWater={() => sendToWater(checkin)}
+                      onSellPackage={() => setSellModal(checkin)}
+                      lang={lang}
+                      className=""
+                    />
+                    {/* Byte-for-byte the same recipe as Reagendar
+                        (MissedLessons.tsx) — var(--glacial-light)/
+                        var(--glacial-dark), not an approximated zinc-*
+                        Tailwind class. */}
+                    <button
+                      onClick={() => setScheduleModal({ ...checkin, activity_id: checkin.activity_id ?? fallbackActivityId })}
+                      style={{
+                        padding: '4px 8px',
+                        background: 'var(--glacial-light)',
+                        color: 'var(--glacial-dark)',
+                        border: 'none',
+                        borderRadius: 'var(--radius-md)',
+                        fontSize: '10px', fontWeight: '500',
+                        cursor: 'pointer',
+                        fontFamily: 'var(--font-sans)',
+                        transition: 'background-color 0.15s',
+                        whiteSpace: 'nowrap',
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'var(--glacial)'; e.currentTarget.style.color = '#fff' }}
+                      onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'var(--glacial-light)'; e.currentTarget.style.color = 'var(--glacial-dark)' }}
+                    >
+                      {t.schedule_lesson_btn}
+                    </button>
+                    {/* Always-available "show QR again" trigger — also
+                        the only Check-in trigger now (see comment above);
+                        onOpen still marks checked_in the same way
+                        ChameleonButton's retired compact state used to. */}
+                    <CheckinQRButton
+                      slug={schoolSlug}
+                      schoolName={schoolName}
+                      studentName={checkin.student_name}
+                      activityName={displayActivityName}
+                      onOpen={() => checkIn(checkin)}
+                      chip
+                    />
+                    <button
+                      onClick={() => setFichaModal(checkin)}
+                      style={{
+                        padding: '4px 8px',
+                        background: 'var(--glacial-light)',
+                        color: 'var(--glacial-dark)',
+                        border: 'none',
+                        borderRadius: 'var(--radius-md)',
+                        fontSize: '10px', fontWeight: '500',
+                        cursor: 'pointer',
+                        fontFamily: 'var(--font-sans)',
+                        transition: 'background-color 0.15s',
+                        whiteSpace: 'nowrap',
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'var(--glacial)'; e.currentTarget.style.color = '#fff' }}
+                      onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'var(--glacial-light)'; e.currentTarget.style.color = 'var(--glacial-dark)' }}
+                    >
+                      {t.view_ficha_full_btn}
+                    </button>
+                  </div>
                 </div>
 
                 {/* Badge row */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginBottom: '12px' }}>
-                  <Badge variant="success">✓ {t.waiver_signed_badge}</Badge>
+                  {checkin.waiver_signed_at ? (
+                    <Badge variant="success">✓ {t.waiver_signed_badge}</Badge>
+                  ) : (
+                    <Badge variant="danger">{t.waiver_pending_badge}</Badge>
+                  )}
                   {hasCredit ? (
                     balance?.packageSaleId ? (
                       <button
@@ -341,85 +423,6 @@ export default function PendingLessons({
                   ) : (
                     <Badge variant="danger">{t.no_credits_badge}</Badge>
                   )}
-                </div>
-
-                {/* Button row — Check-in/Enviar para a água/Vender pacote
-                    (ChameleonButton, flex-1, most prominent) + Agendar aula
-                    (secondary, border-only) + Ver ficha (tertiary, plain
-                    text link) in that order. Finalizar e cobrar stays
-                    removed from this row — closing/charging a session
-                    happens only via Aulas Agendadas' "Confirmar Aula". */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <ChameleonButton
-                    stage={checkin.stage ?? 'sala_de_espera'}
-                    checkedIn={checkin.checked_in}
-                    hasCredit={hasCredit}
-                    slug={schoolSlug}
-                    schoolName={schoolName}
-                    studentName={checkin.student_name}
-                    activityName={displayActivityName}
-                    onCheckIn={() => checkIn(checkin)}
-                    onSendToWater={() => sendToWater(checkin)}
-                    onSellPackage={() => setSellModal(checkin)}
-                    lang={lang}
-                  />
-                  {/* Byte-for-byte the same recipe as Reagendar
-                      (MissedLessons.tsx) — var(--glacial-light)/
-                      var(--glacial-dark), not an approximated zinc-*
-                      Tailwind class. An earlier pass switched this to
-                      literal zinc utility classes, which was a mistake:
-                      "the same idea as Aulas Não Realizadas" means the
-                      literal same style object, not a close-but-different
-                      one. */}
-                  <button
-                    onClick={() => setScheduleModal({ ...checkin, activity_id: checkin.activity_id ?? fallbackActivityId })}
-                    style={{
-                      padding: '4px 8px',
-                      background: 'var(--glacial-light)',
-                      color: 'var(--glacial-dark)',
-                      border: 'none',
-                      borderRadius: 'var(--radius-md)',
-                      fontSize: '10px', fontWeight: '500',
-                      cursor: 'pointer',
-                      fontFamily: 'var(--font-sans)',
-                      transition: 'background-color 0.15s',
-                      whiteSpace: 'nowrap',
-                    }}
-                    onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'var(--glacial)'; e.currentTarget.style.color = '#fff' }}
-                    onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'var(--glacial-light)'; e.currentTarget.style.color = 'var(--glacial-dark)' }}
-                  >
-                    {t.schedule_lesson_btn}
-                  </button>
-                  {/* Always-available "show QR again" trigger — not gated
-                      on checked_in like ChameleonButton's own Check-in
-                      state above. Previously only reachable one click deep,
-                      inside Ver ficha; promoted here per explicit ask. */}
-                  <CheckinQRButton
-                    slug={schoolSlug}
-                    schoolName={schoolName}
-                    studentName={checkin.student_name}
-                    activityName={displayActivityName}
-                    chip
-                  />
-                  <button
-                    onClick={() => setFichaModal(checkin)}
-                    style={{
-                      padding: '4px 8px',
-                      background: 'var(--glacial-light)',
-                      color: 'var(--glacial-dark)',
-                      border: 'none',
-                      borderRadius: 'var(--radius-md)',
-                      fontSize: '10px', fontWeight: '500',
-                      cursor: 'pointer',
-                      fontFamily: 'var(--font-sans)',
-                      transition: 'background-color 0.15s',
-                      whiteSpace: 'nowrap',
-                    }}
-                    onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'var(--glacial)'; e.currentTarget.style.color = '#fff' }}
-                    onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'var(--glacial-light)'; e.currentTarget.style.color = 'var(--glacial-dark)' }}
-                  >
-                    {t.view_ficha_full_btn}
-                  </button>
                 </div>
               </div>
             )
@@ -498,10 +501,12 @@ export default function PendingLessons({
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '18px' }}>
               <div style={{
                 display: 'inline-flex', alignItems: 'center', gap: '6px',
-                fontSize: '11px', fontWeight: '500', color: 'var(--color-pb-glacial-dark)',
-                background: 'var(--color-pb-glacial-light)', padding: '4px 10px', borderRadius: 'var(--radius-full)',
+                fontSize: '11px', fontWeight: '500',
+                color: fichaModal.waiver_signed_at ? 'var(--color-pb-glacial-dark)' : 'var(--signal-dark)',
+                background: fichaModal.waiver_signed_at ? 'var(--color-pb-glacial-light)' : 'var(--signal-light)',
+                padding: '4px 10px', borderRadius: 'var(--radius-full)',
               }}>
-                ✓ Termo de Responsabilidade Assinado
+                {fichaModal.waiver_signed_at ? '✓ Termo de Responsabilidade Assinado' : 'Termo de Responsabilidade Pendente'}
               </div>
               {/* Moved here from the compact card's button row when that
                   row became [ChameleonButton][⋮] only
