@@ -487,6 +487,9 @@ export default function PaymentsClient({
           dinheiro:  { label: 'Dinheiro',   icon: '💵' },
           cartao:    { label: 'Cartão',     icon: '💳' },
           a_receber: { label: 'A receber',  icon: '⏳' },
+          // Package-covered lessons (ConfirmLessonModal's simple flow) —
+          // already paid for at package-sale time, not a new charge.
+          pacote:    { label: 'Pacote (pré-pago)', icon: '—' },
           unknown:   { label: 'Sem registro', icon: '—' },
         }
 

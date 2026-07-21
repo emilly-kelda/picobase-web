@@ -150,6 +150,98 @@ export async function getPackageBalancesForCheckins(
   return result
 }
 
+/** Single-student version of getPackageBalancesForCheckins, used by
+ *  ConfirmLessonModal to decide whether to show the plain operational
+ *  confirm flow or the full financial form. Mirrors confirm-lesson's own
+ *  auto-debit resolution exactly (oldest sale with balance > 0, FIFO) so
+ *  "this is the sale that will actually get debited" and "this is the
+ *  sale whose balance we're showing" are always the same row. Returns the
+ *  ONE active sale's own figures (not summed across every package the
+ *  student holds) — pricePaid/minutesPurchased are needed to pro-rate this
+ *  lesson's value for instructor commission without asking the owner to
+ *  type a price for a lesson that's already paid for. */
+export async function getPackageBalanceForStudent(
+  schoolId: string,
+  studentName: string
+): Promise<{
+  hasPackage: boolean
+  packageSaleId: string | null
+  minutesRemaining: number
+  minutesPurchased: number
+  pricePaid: number
+}> {
+  const NONE = { hasPackage: false, packageSaleId: null, minutesRemaining: 0, minutesPurchased: 0, pricePaid: 0 }
+  if (!studentName?.trim()) return NONE
+
+  const supabase = createServiceClient()
+  const { data } = await supabase
+    .from('package_sales')
+    .select('id, minutes_purchased, minutes_used, price_paid')
+    .eq('school_id', schoolId)
+    .ilike('student_name', studentName.trim())
+    .order('sold_at', { ascending: true })
+
+  const active = (data ?? []).find(s => (s.minutes_purchased ?? 0) - (s.minutes_used ?? 0) > 0)
+  if (!active) return NONE
+
+  return {
+    hasPackage:        true,
+    packageSaleId:      active.id,
+    minutesRemaining:   (active.minutes_purchased ?? 0) - (active.minutes_used ?? 0),
+    minutesPurchased:   active.minutes_purchased ?? 0,
+    pricePaid:          active.price_paid ?? 0,
+  }
+}
+
+/** Everything the "Extrato do Pacote" closing receipt needs: the sale's own
+ *  purchase figures plus its session history (dates/instructor/duration,
+ *  already carrying commission_amount per session via
+ *  getSessionHistoryForPackageSale -> getSessionsByStudentName, so the
+ *  receipt can roll up per-instructor payouts without a second query). */
+export async function getPackageReceiptData(schoolId: string, packageSaleId: string) {
+  const supabase = createServiceClient()
+
+  const { data: sale, error } = await supabase
+    .from('package_sales')
+    .select('id, student_name, minutes_purchased, minutes_used, price_paid, sold_at, packages ( name )')
+    .eq('id', packageSaleId)
+    .eq('school_id', schoolId)
+    .single()
+
+  if (error || !sale) return null
+
+  const history = await getSessionHistoryForPackageSale(schoolId, packageSaleId)
+  const pkg = Array.isArray(sale.packages) ? sale.packages[0] : sale.packages
+
+  return {
+    studentName:      sale.student_name,
+    packageName:      pkg?.name ?? null,
+    minutesPurchased: sale.minutes_purchased ?? 0,
+    minutesUsed:      sale.minutes_used ?? 0,
+    pricePaid:        sale.price_paid ?? 0,
+    soldAt:           sale.sold_at,
+    sessions:         history?.sessions ?? [],
+  }
+}
+
+/** Marks a package_sale as completed once its closing receipt is
+ *  finalized — additive, no other query in the app filters this row out by
+ *  reading status (getPackageSaleTotals and getVariableCostForStudent both
+ *  check status = 'active', which is correct: a completed package should
+ *  no longer contribute to "active" balance totals or accept new variable-
+ *  cost deductions). Does not touch minutes_used/price_paid — those were
+ *  already correct going in; this is purely a lifecycle flag. */
+export async function closePackageSale(schoolId: string, packageSaleId: string) {
+  const supabase = createServiceClient()
+  const { error } = await supabase
+    .from('package_sales')
+    .update({ status: 'completed' })
+    .eq('id', packageSaleId)
+    .eq('school_id', schoolId)
+  if (error) throw error
+  return { ok: true }
+}
+
 export async function getPackages(schoolId: string) {
   const supabase = createServiceClient()
   const { data, error } = await supabase

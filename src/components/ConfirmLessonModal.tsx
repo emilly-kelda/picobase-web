@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { isLevel, LEVEL_LABELS, type Level } from '@/lib/levels'
 import LevelPicker from '@/components/LevelPicker'
 import type { VariableCostInfo } from '@/lib/commission'
+import PackageReceiptModal from '@/components/PackageReceiptModal'
 
 type ActivityRef = {
   id: string
@@ -44,6 +45,13 @@ function fmt(n: number, currency: Currency = 'BRL') {
   }).format(n)
 }
 
+function fmtHoursMin(min: number) {
+  const h = Math.floor(min / 60)
+  const m = min % 60
+  if (h === 0) return `${m}min`
+  return m > 0 ? `${h}h${m}min` : `${h}h`
+}
+
 export type LessonToConfirm = {
   id: string
   student_name: string | null
@@ -54,14 +62,28 @@ export type LessonToConfirm = {
   instructor: { id: string; name: string } | null
 }
 
-/** "Confirmar / Iniciar Aula" for a scheduled lesson — the pricing/payment
- *  decision (activity, level, instructor, duration, currency, price,
- *  payment method), triggered from Aulas Agendadas via scheduled_lesson_id
- *  rather than a checkin_id (confirm-lesson already supports confirming
- *  either way — see its studentName/scheduledLesson derivation). Used for a
- *  lesson that was either pre-booked in advance or deferred here from
- *  Aguardando Vento via "Agendar Aula"; either way, the student is now
- *  actually starting it.
+/** "Confirmar / Iniciar Aula" for a scheduled lesson. Two very different
+ *  jobs share this one modal depending on whether the student has an
+ *  active pre-paid package covering this lesson's duration:
+ *
+ *  - Package covers it, not the last lesson: pure operational confirm
+ *    (instructor/date/duration/level) — no pricing UI at all. Price is
+ *    auto pro-rated from the package's own price_paid/minutes_purchased
+ *    (purely so instructor commission still computes correctly), payment
+ *    method is fixed to 'pacote', never shown or asked.
+ *  - Package covers it AND this is the last lesson (balance would hit
+ *    zero): same operational confirm, plus a highlighted prompt to open
+ *    the closing "Extrato do Pacote" (PackageReceiptModal) afterward.
+ *  - No package, or the "Realizar cobrança agora" toggle is on
+ *    (drop-in/trial add-on sold on top of an existing package): the full
+ *    financial form (currency, price, payment method) — this is the
+ *    entire modal's behavior before this split existed.
+ *
+ *  Triggered from Aulas Agendadas via scheduled_lesson_id rather than a
+ *  checkin_id (confirm-lesson already supports confirming either way — see
+ *  its studentName/scheduledLesson derivation). Used for a lesson that was
+ *  either pre-booked in advance or deferred here from Aguardando Vento via
+ *  "Agendar Aula"; either way, the student is now actually starting it.
  *
  *  This is now the only closing/charging modal in the app — Aguardando
  *  Vento's own inline confirm modal (PendingLessons.tsx) was removed
@@ -110,6 +132,13 @@ export default function ConfirmLessonModal({
   const [fxLoading, setFxLoading]       = useState(false)
   const [fxSource, setFxSource]         = useState<'live' | 'stale-cache' | 'fallback' | null>(null)
   const [error, setError]               = useState<string | null>(null)
+  const [packageBalance, setPackageBalance] = useState<{
+    hasPackage: boolean; packageSaleId: string | null
+    minutesRemaining: number; minutesPurchased: number; pricePaid: number
+  } | null>(null)
+  const [balanceLoading, setBalanceLoading] = useState(true)
+  const [chargeNow, setChargeNow]       = useState(false)
+  const [receiptFor, setReceiptFor]     = useState<string | null>(null)
 
   function loadFxRates() {
     setFxError(false)
@@ -131,6 +160,13 @@ export default function ConfirmLessonModal({
         .then(r => r.json())
         .then(data => setVariableCost(data))
         .catch(() => {})
+      fetch(`/api/owner/package-balance?student_name=${encodeURIComponent(lesson.student_name)}`)
+        .then(r => r.json())
+        .then(data => setPackageBalance(data))
+        .catch(() => setPackageBalance(null))
+        .finally(() => setBalanceLoading(false))
+    } else {
+      setBalanceLoading(false)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -154,21 +190,41 @@ export default function ConfirmLessonModal({
   const selectedInstructor = instructors.find(i => i.id === instructorId)
   const commissionPct      = selectedInstructor?.commission_pct ?? 0.38
   const finalDuration      = useCustom ? parseInt(custom) || 0 : duration
-  const totalPrice         = priceMode === 'per_hour'
-    ? Math.round(pricePerHour * (finalDuration / 60))
-    : price
+
+  // hasPackage/willExhaust drive the three-state render below (simple /
+  // last-lesson / financial). packagePrice pro-rates this lesson's share of
+  // the package's own price_paid — needed only so percentage-mode
+  // instructor commission still computes correctly without asking the
+  // owner to type a price for a lesson that's already paid for.
+  const hasPackage        = !!packageBalance?.hasPackage
+  const willExhaust        = hasPackage && packageBalance!.minutesRemaining <= finalDuration
+  const showFinancialForm  = chargeNow || !hasPackage
+  const packagePrice       = hasPackage && packageBalance!.minutesPurchased > 0
+    ? Math.round((packageBalance!.pricePaid / packageBalance!.minutesPurchased) * finalDuration)
+    : 0
+
+  const totalPrice = showFinancialForm
+    ? (priceMode === 'per_hour' ? Math.round(pricePerHour * (finalDuration / 60)) : price)
+    : packagePrice
+  const effectiveCurrency = showFinancialForm ? currency : 'BRL'
   const costDeduction = variableCost?.hasVariableCost ? variableCost.variableCostAmount : 0
   const netRevenue    = Math.max(0, totalPrice - costDeduction)
-  const cantConfirm = confirming || !instructorId || totalPrice <= 0 || finalDuration <= 0 || !paymentMethod
+  const cantConfirm = confirming || balanceLoading || !instructorId || finalDuration <= 0
+    || (showFinancialForm && (totalPrice <= 0 || !paymentMethod))
 
-  const fxRate           = currency === 'BRL' ? 1 : fxRates?.[currency] ?? null
+  const fxRate           = effectiveCurrency === 'BRL' ? 1 : fxRates?.[effectiveCurrency] ?? null
   const totalPriceBRL    = fxRate != null ? totalPrice * fxRate : null
   const netRevenueBRL    = totalPriceBRL != null ? Math.max(0, totalPriceBRL - costDeduction) : null
   const commissionBRL    = usesFixedPayout
     ? (fixedPayoutValue ?? 0)
     : (netRevenueBRL != null ? netRevenueBRL * commissionPct : null)
 
-  async function confirm() {
+  // openReceipt: only true for "Encerrar Pacote e Cobrar" — the lesson
+  // still confirms (and still auto-debits the package down to zero) the
+  // same way the plain simple-flow confirm does; the only difference is
+  // what happens on success (open the closing receipt instead of just
+  // closing this modal).
+  async function confirm(openReceipt = false) {
     if (!instructorId) return
     setConfirming(true)
     setError(null)
@@ -183,11 +239,11 @@ export default function ConfirmLessonModal({
         duration_min:   finalDuration,
         price:          totalPrice,
         price_original: totalPrice,
-        currency,
+        currency:       effectiveCurrency,
         notes,
         commission_pct: commissionPct,
         session_date:   sessionDate,
-        payment_method: paymentMethod,
+        payment_method: showFinancialForm ? paymentMethod : 'pacote',
         level,
       }),
     })
@@ -196,10 +252,25 @@ export default function ConfirmLessonModal({
     setConfirming(false)
 
     if (data.ok) {
-      onConfirmed()
+      if (openReceipt && packageBalance?.packageSaleId) {
+        setReceiptFor(packageBalance.packageSaleId)
+      } else {
+        onConfirmed()
+      }
     } else {
       setError(data.error ?? 'Erro ao confirmar aula')
     }
+  }
+
+  if (receiptFor) {
+    return (
+      <PackageReceiptModal
+        packageSaleId={receiptFor}
+        t={t}
+        onClose={onConfirmed}
+        onFinalized={onConfirmed}
+      />
+    )
   }
 
   return (
@@ -331,6 +402,49 @@ export default function ConfirmLessonModal({
           )}
         </div>
 
+        {hasPackage && (
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', color: 'var(--slate)' }}>
+              <input
+                type="checkbox" checked={chargeNow}
+                onChange={e => setChargeNow(e.target.checked)}
+                style={{ width: '15px', height: '15px', cursor: 'pointer' }}
+              />
+              {t.charge_now_toggle}
+            </label>
+          </div>
+        )}
+
+        {/* Package-covered, non-financial states — no pricing UI at all.
+            willExhaust swaps the plain balance line for a highlighted
+            prompt into the closing receipt (see the button row below,
+            which calls confirm(true) instead of confirm(false) here). */}
+        {!showFinancialForm && !balanceLoading && (
+          willExhaust ? (
+            <div style={{
+              marginBottom: '20px', padding: '14px 16px', borderRadius: 'var(--radius-md)',
+              background: 'var(--powder)', border: '0.5px solid var(--border-strong)',
+            }}>
+              <div style={{ fontSize: '13px', fontWeight: '500', color: 'var(--slate)', marginBottom: '4px' }}>
+                {t.last_lesson_banner_title}
+              </div>
+              <div style={{ fontSize: '12px', color: 'var(--mist)' }}>
+                {t.will_consume_label} {fmtHoursMin(finalDuration)}
+              </div>
+            </div>
+          ) : (
+            <div style={{
+              marginBottom: '20px', padding: '12px 14px', borderRadius: 'var(--radius-md)',
+              background: 'var(--glacial-light)', color: 'var(--glacial-dark)', fontSize: '13px',
+            }}>
+              {t.will_consume_label} {fmtHoursMin(finalDuration)} — {t.remaining_after_label}{' '}
+              {fmtHoursMin(Math.max(0, (packageBalance?.minutesRemaining ?? 0) - finalDuration))} {t.in_package_label}
+            </div>
+          )
+        )}
+
+        {showFinancialForm && (
+        <>
         <div style={{ marginBottom: '16px' }}>
           <div style={{ fontSize: '11px', fontWeight: '500', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--mist)', marginBottom: '8px' }}>
             {t.currency_charged}
@@ -469,6 +583,8 @@ export default function ConfirmLessonModal({
               : `→ ${t.commission_arrow_label} ${commissionBRL != null ? fmt(commissionBRL, 'BRL') : '—'}`}
           </div>
         </div>
+        </>
+        )}
 
         {!showNotes ? (
           <button
@@ -495,6 +611,7 @@ export default function ConfirmLessonModal({
           </div>
         )}
 
+        {showFinancialForm && (
         <div style={{ marginBottom: '20px' }}>
           <div style={{ fontSize: '11px', fontWeight: '500', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--mist)', marginBottom: '10px' }}>
             {t.payment_method_label} *
@@ -533,6 +650,7 @@ export default function ConfirmLessonModal({
             </div>
           )}
         </div>
+        )}
 
         {error && (
           <div style={{
@@ -546,28 +664,35 @@ export default function ConfirmLessonModal({
         <div style={{ display: 'flex', gap: '10px' }}>
           <button
             onClick={onClose}
-            style={{
-              flex: 1, padding: '12px', background: '#fff', color: 'var(--mist)',
-              border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)',
-              fontSize: '14px', cursor: 'pointer', fontFamily: 'var(--font-sans)',
-            }}
+            className="flex-1 bg-white text-zinc-500 border border-zinc-200 rounded-md px-3 py-3 text-sm cursor-pointer"
           >
             {t.cancel_btn}
           </button>
-          <button
-            onClick={confirm}
-            disabled={cantConfirm}
-            style={{
-              flex: 2, padding: '12px',
-              background: cantConfirm ? 'var(--border)' : 'var(--glacial)',
-              color: cantConfirm ? 'var(--mist)' : '#fff',
-              border: 'none', borderRadius: 'var(--radius-md)',
-              fontSize: '14px', fontWeight: '500',
-              cursor: cantConfirm ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-sans)',
-            }}
-          >
-            {confirming ? t.confirming_btn : `${t.confirm_lesson_btn} ${fmt(totalPrice, currency)}`}
-          </button>
+          {!showFinancialForm && willExhaust ? (
+            <button
+              onClick={() => confirm(true)}
+              disabled={cantConfirm}
+              className="flex-[2] bg-zinc-900 hover:bg-zinc-800 text-white rounded-md px-3 py-3 text-sm font-medium border-0 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-zinc-900"
+            >
+              {confirming ? t.confirming_btn : t.close_package_btn}
+            </button>
+          ) : !showFinancialForm ? (
+            <button
+              onClick={() => confirm(false)}
+              disabled={cantConfirm}
+              className="flex-[2] bg-zinc-900 hover:bg-zinc-800 text-white rounded-md px-3 py-3 text-sm font-medium border-0 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-zinc-900"
+            >
+              {confirming ? t.confirming_btn : t.confirm_lesson_simple_btn}
+            </button>
+          ) : (
+            <button
+              onClick={() => confirm(false)}
+              disabled={cantConfirm}
+              className="flex-[2] bg-zinc-900 hover:bg-zinc-800 text-white rounded-md px-3 py-3 text-sm font-medium border-0 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-zinc-900"
+            >
+              {confirming ? t.confirming_btn : `${t.confirm_lesson_btn} ${fmt(totalPrice, currency)}`}
+            </button>
+          )}
         </div>
       </div>
     </div>
