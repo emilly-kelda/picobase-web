@@ -12,9 +12,8 @@ import { translateModalityName } from '@/lib/modality'
 import Button from '@/components/ui/Button'
 import Select from '@/components/ui/Select'
 import Badge from '@/components/ui/Badge'
-import OverflowMenu from '@/components/ui/OverflowMenu'
 import PackageProgressBar from '@/components/PackageProgressBar'
-import { LightbulbIcon } from '@/components/nav-icons'
+import { LightbulbIcon, PencilIcon, XIcon } from '@/components/nav-icons'
 
 type Lesson = {
   id: string
@@ -1217,12 +1216,53 @@ export default function ScheduledLessons({
                   >
                     WhatsApp
                   </button>
-                  <OverflowMenu items={[
-                    { label: 'Editar', onClick: () => openEditModal(lesson) },
-                    ...(lesson.status === 'scheduled'
-                      ? [{ label: 'Cancelar', onClick: () => cancel(lesson.id), danger: true, disabled: deleting === lesson.id }]
-                      : []),
-                  ]} />
+                  {/* Kebab menu removed — Editar was its only entry for
+                      most rows (Cancelar only ever showed for 'scheduled'
+                      status), so a dropdown was overkill. Cancelar stays
+                      as its own icon, just no longer hidden behind a menu
+                      click, for the rows where it's actually available. */}
+                  {lesson.status === 'scheduled' && (
+                    <button
+                      onClick={() => cancel(lesson.id)}
+                      disabled={deleting === lesson.id}
+                      title="Cancelar aula"
+                      style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        padding: '6px',
+                        background: 'transparent',
+                        color: 'var(--mist)',
+                        border: 'none',
+                        borderRadius: 'var(--radius-md)',
+                        cursor: deleting === lesson.id ? 'not-allowed' : 'pointer',
+                        opacity: deleting === lesson.id ? 0.5 : 1,
+                        transition: 'background-color 0.15s, color 0.15s',
+                        flexShrink: 0,
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'var(--signal-light)'; e.currentTarget.style.color = 'var(--signal-dark)' }}
+                      onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = 'var(--mist)' }}
+                    >
+                      <XIcon size={15} />
+                    </button>
+                  )}
+                  <button
+                    onClick={() => openEditModal(lesson)}
+                    title="Editar Aula"
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      padding: '6px',
+                      background: 'transparent',
+                      color: 'var(--mist)',
+                      border: 'none',
+                      borderRadius: 'var(--radius-md)',
+                      cursor: 'pointer',
+                      transition: 'background-color 0.15s, color 0.15s',
+                      flexShrink: 0,
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'var(--powder)'; e.currentTarget.style.color = 'var(--slate)' }}
+                    onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = 'var(--mist)' }}
+                  >
+                    <PencilIcon size={15} />
+                  </button>
                 </div>
               </div>
             ))}

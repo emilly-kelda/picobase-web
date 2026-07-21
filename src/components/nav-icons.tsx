@@ -172,6 +172,14 @@ export function RefreshIcon({ size = 18 }: IconProps) {
   )
 }
 
+export function XIcon({ size = 18 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...base}>
+      <path d="M6 6l12 12M18 6 6 18" />
+    </svg>
+  )
+}
+
 export function LightbulbIcon({ size = 18 }: IconProps) {
   return (
     <svg width={size} height={size} {...base}>
