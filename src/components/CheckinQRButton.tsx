@@ -88,18 +88,23 @@ export default function CheckinQRButton({
           // rounded-[8px], not rounded-lg — globals.css/Tailwind
           // --radius-lg collision, see Button.tsx's comment.
           className={`inline-flex items-center justify-center rounded-[8px] bg-pb-glacial text-pb-white hover:opacity-90 ${className ?? ''}`}
-          style={{ width: '36px', height: '36px', fontSize: '18px', flexShrink: 0, border: 'none', cursor: 'pointer' }}
+          style={{ width: '36px', height: '36px', flexShrink: 0, border: 'none', cursor: 'pointer' }}
         >
-          🔲
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="3" width="7" height="7" rx="1" />
+            <rect x="14" y="3" width="7" height="7" rx="1" />
+            <rect x="3" y="14" width="7" height="7" rx="1" />
+            <path d="M14 14h3v3M14 21h3M21 17.5V21" />
+          </svg>
         </button>
       ) : compact ? (
         // Fase 3 of picobase_design_system_dossie.md: the old icon-only
         // 📱 trigger read as "phone" — ambiguous with the student's own
         // device, not obviously "open the check-in QR". No icon library is
         // installed in this project (every icon in the app is an emoji
-        // glyph), so 🔲 stands in for "QR code" — visually distinct from
-        // the phone glyph it replaces — paired with an always-visible
-        // "Check-in" label per the dossiê's explicit requirement.
+        // glyph), so a plain "Check-in" text label — no icon — stands in
+        // per the no-emoji pass; the dossiê's requirement was an
+        // always-visible text label, which this still satisfies.
         <Button
           type="button"
           variant="primary"
@@ -108,8 +113,7 @@ export default function CheckinQRButton({
           title={studentName ? `QR Code de check-in — ${studentName}` : 'QR Code de check-in'}
           className={className}
         >
-          {/* Icon at 15px against 13px body text — exact mockup spec. */}
-          <span className="text-[15px]">🔲</span> Check-in
+          Check-in
         </Button>
       ) : (
         <button
@@ -120,14 +124,14 @@ export default function CheckinQRButton({
             padding: '5px 12px',
             background: '#fff',
             border: '0.5px solid var(--border-strong)',
-            borderRadius: 'var(--radius-full)',
+            borderRadius: 'var(--radius-md)',
             fontSize: '11px', fontWeight: '500',
             color: 'var(--glacial-dark)',
             cursor: 'pointer', fontFamily: 'var(--font-sans)',
             whiteSpace: 'nowrap',
           }}
         >
-          🔲 Exibir QR Code de Check-in
+          Exibir QR Code de Check-in
         </button>
       )}
 

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { compassLabel, weatherIcon, type WeatherData, type WeatherSpot } from '@/lib/weather'
+import { WeatherIcon } from '@/components/weather-icons'
 
 // Same "set the cookie directly, then router.refresh()" pattern OwnerNav.tsx
 // already uses for the season switcher — no dedicated API route needed,
@@ -67,18 +68,21 @@ export default function WeatherWidget({ weather, spots }: { weather: WeatherData
               width: '24px', height: '24px', flexShrink: 0,
               border: '0.5px solid var(--border)', borderRadius: '999px',
               background: open ? 'var(--powder)' : '#fff',
-              color: 'var(--mist)', fontSize: '12px', cursor: 'pointer',
+              color: 'var(--mist)', cursor: 'pointer',
               padding: 0,
             }}
           >
-            📍
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 21.5s7-6.5 7-12A7 7 0 0 0 5 9.5c0 5.5 7 12 7 12Z" />
+              <circle cx="12" cy="9.5" r="2.5" />
+            </svg>
           </button>
           )}
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{ fontSize: '24px', lineHeight: 1, flexShrink: 0 }}>
-            {weatherIcon(weather.weatherCode)}
+          <div style={{ color: 'var(--slate)', lineHeight: 1, flexShrink: 0 }}>
+            <WeatherIcon kind={weatherIcon(weather.weatherCode)} size={26} />
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>

@@ -36,10 +36,11 @@ type ChameleonButtonProps = {
  *    (doesn't advance stage on its own — that happens once the sale
  *    actually completes)
  *  - checked in, sala_de_espera + credit    -> primary "Enviar para a água"
- *    ("Send to water" in en), wave icon — per
+ *    ("Send to water" in en) — per
  *    fix_checkin_removido_e_estagio_errado.md this replaces the earlier
  *    "Iniciar Velejo →" label, same color/format as Check-in (same
- *    component, just a different label/icon once checked in).
+ *    component, just a different label once checked in). No icon — the
+ *    later no-emoji pass dropped the wave glyph this state briefly had.
  *  - na_agua                    -> no button, muted "Na água" text.
  *    "Finalizar e cobrar" was removed from this queue entirely per the
  *    approved redesign — closing/charging a session happens only via
@@ -91,11 +92,11 @@ export default function ChameleonButton({
     }
     return (
       <Button variant="primary" size="sm" onClick={onSendToWater} className={className}>
-        <span className="text-[15px]">🌊</span> {lang === 'pt' ? 'Enviar para a água' : 'Send to water'}
+        {lang === 'pt' ? 'Enviar para a água' : 'Send to water'}
       </Button>
     )
   }
 
   // na_agua
-  return <span className={`text-xs text-pb-mist inline-flex items-center ${className}`}>🌊 Na água</span>
+  return <span className={`text-xs text-pb-mist inline-flex items-center ${className}`}>Na água</span>
 }

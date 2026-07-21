@@ -9,7 +9,6 @@ import SellPackageFlowModal, { type PackageOption } from '@/components/SellPacka
 import ScheduleFromCheckinModal from '@/components/ScheduleFromCheckinModal'
 import { translateModalityName } from '@/lib/modality'
 import Badge from '@/components/ui/Badge'
-import Button from '@/components/ui/Button'
 import ChameleonButton from '@/components/ui/ChameleonButton'
 import type { Stage } from '@/lib/stage'
 
@@ -58,15 +57,6 @@ type Instructor = {
   id: string
   name: string
   commission_pct: number | null
-}
-
-const SOURCE_ICON: Record<string, string> = {
-  walk_in:   '🚶',
-  whatsapp:  '💬',
-  instagram: '📸',
-  hotel:     '🏨',
-  agencia:   '✈',
-  outro:     '💡',
 }
 
 function fmtTime(iso: string) {
@@ -279,20 +269,14 @@ export default function PendingLessons({
                       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {checkin.student_name}
                       </span>
-                      {(hoursMap?.get(checkin.student_name) ?? 0) >= 10 * 60 && (
-                        <span title={t.medal_tooltip} style={{ fontSize: '12px' }}>🏅</span>
-                      )}
-                      {checkin.source && (
-                        <span title={checkin.source} style={{ fontSize: '12px' }}>{SOURCE_ICON[checkin.source] ?? ''}</span>
-                      )}
                       {checkin.is_minor && (
                         <span style={{
                           display: 'inline-flex', alignItems: 'center',
-                          padding: '1px 6px', borderRadius: 'var(--radius-full)',
-                          background: '#FEF3C7', color: '#92400E',
+                          padding: '1px 6px', borderRadius: 'var(--radius-md)',
+                          background: '#FFFBEB', color: '#B45309',
                           fontSize: '10px', fontWeight: '600', flexShrink: 0,
                         }}>
-                          ⚠ {t.minor_badge}
+                          {t.minor_badge}
                         </span>
                       )}
                       {checkin.health_condition && (
@@ -301,7 +285,7 @@ export default function PendingLessons({
                           color: 'var(--signal-dark)', background: 'var(--signal-light)',
                           padding: '1px 6px', borderRadius: 'var(--radius-full)', flexShrink: 0,
                         }}>
-                          ⚠ {t.health_label}
+                          {t.health_label}
                         </span>
                       )}
                     </div>
@@ -337,7 +321,7 @@ export default function PendingLessons({
                       <Badge variant="neutral">{creditBadgeText}</Badge>
                     )
                   ) : (
-                    <Badge variant="danger">⚠ {t.no_credits_badge}</Badge>
+                    <Badge variant="danger">{t.no_credits_badge}</Badge>
                   )}
                 </div>
 
@@ -361,12 +345,52 @@ export default function PendingLessons({
                     onSellPackage={() => setSellModal(checkin)}
                     lang={lang}
                   />
-                  <Button variant="secondary" size="sm" onClick={() => setScheduleModal(checkin)}>
+                  {/* Copies Reagendar's (MissedLessons.tsx) exact inline
+                      style instead of the shared Button's bordered
+                      "secondary" variant — same treatment applied to
+                      ScheduledLessons.tsx's "+ Agendar Próxima Aula". */}
+                  <button
+                    onClick={() => setScheduleModal(checkin)}
+                    style={{
+                      padding: '4px 8px',
+                      background: 'var(--glacial-light)',
+                      color: 'var(--glacial-dark)',
+                      border: 'none',
+                      borderRadius: 'var(--radius-md)',
+                      fontSize: '10px', fontWeight: '500',
+                      cursor: 'pointer',
+                      fontFamily: 'var(--font-sans)',
+                      transition: 'background-color 0.15s',
+                      whiteSpace: 'nowrap',
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'var(--glacial)'; e.currentTarget.style.color = '#fff' }}
+                    onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'var(--glacial-light)'; e.currentTarget.style.color = 'var(--glacial-dark)' }}
+                  >
                     {t.schedule_lesson_btn}
-                  </Button>
-                  <Button variant="tertiary" size="sm" onClick={() => setFichaModal(checkin)}>
+                  </button>
+                  {/* Ver ficha unified with the same Reagendar treatment as
+                      the two buttons above it — repeated explicit ask to
+                      make every secondary action in this row read as the
+                      same component, not a plain text link. */}
+                  <button
+                    onClick={() => setFichaModal(checkin)}
+                    style={{
+                      padding: '4px 8px',
+                      background: 'var(--glacial-light)',
+                      color: 'var(--glacial-dark)',
+                      border: 'none',
+                      borderRadius: 'var(--radius-md)',
+                      fontSize: '10px', fontWeight: '500',
+                      cursor: 'pointer',
+                      fontFamily: 'var(--font-sans)',
+                      transition: 'background-color 0.15s',
+                      whiteSpace: 'nowrap',
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'var(--glacial)'; e.currentTarget.style.color = '#fff' }}
+                    onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'var(--glacial-light)'; e.currentTarget.style.color = 'var(--glacial-dark)' }}
+                  >
                     {t.view_ficha_full_btn}
-                  </Button>
+                  </button>
                 </div>
               </div>
             )
@@ -477,7 +501,7 @@ export default function PendingLessons({
                 { label: 'Telefone de emergência', value: fichaModal.emergency_phone },
                 { label: 'Condições de saúde', value: fichaModal.health_condition },
                 { label: 'Responsável (menor de idade)', value: fichaModal.is_minor ? (fichaModal.guardian_name ?? '—') : null },
-                { label: 'Origem', value: fichaModal.source ? (SOURCE_ICON[fichaModal.source] ? `${SOURCE_ICON[fichaModal.source]} ${fichaModal.source}` : fichaModal.source) : null },
+                { label: 'Origem', value: fichaModal.source },
               ].filter(row => row.value).map(row => (
                 <div key={row.label}>
                   <div style={{

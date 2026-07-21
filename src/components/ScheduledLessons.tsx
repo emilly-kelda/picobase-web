@@ -977,9 +977,31 @@ export default function ScheduledLessons({
                       (shown as the "Confirmada" badge instead) drops them. */}
                   {lesson.status !== 'confirmed' && (
                     <>
-                      <Button variant="secondary" size="xs" onClick={() => openRebookModal(lesson)}>
+                      {/* Copies Reagendar's (MissedLessons.tsx) exact inline
+                          style — same var(--glacial-light)/var(--glacial-dark)
+                          fill, no border, var(--radius-md) — instead of the
+                          shared Button's bordered "secondary" variant, per
+                          explicit ask to make every scheduling action look
+                          like the same component. */}
+                      <button
+                        onClick={() => openRebookModal(lesson)}
+                        style={{
+                          padding: '4px 8px',
+                          background: 'var(--glacial-light)',
+                          color: 'var(--glacial-dark)',
+                          border: 'none',
+                          borderRadius: 'var(--radius-md)',
+                          fontSize: '10px', fontWeight: '500',
+                          cursor: 'pointer',
+                          fontFamily: 'var(--font-sans)',
+                          transition: 'background-color 0.15s',
+                          whiteSpace: 'nowrap',
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'var(--glacial)'; e.currentTarget.style.color = '#fff' }}
+                        onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'var(--glacial-light)'; e.currentTarget.style.color = 'var(--glacial-dark)' }}
+                      >
                         + Agendar Próxima Aula
-                      </Button>
+                      </button>
                       <Button variant="primary" size="xs" onClick={() => setConfirmLessonModal(lesson)}>
                         Confirmar
                       </Button>
@@ -988,20 +1010,25 @@ export default function ScheduledLessons({
                   {/* WhatsApp Aluno promoted to a visible glyph-only icon
                       per the mockup (18px, pb-mist, no background/border) —
                       WhatsApp Instrutor stays in the overflow alongside the
-                      genuinely rare actions (Editar, Cancelar). */}
+                      genuinely rare actions (Editar, Cancelar). Monochrome
+                      SVG, not an emoji, per the no-emoji pass. */}
                   {lesson.student_whatsapp ? (
                     <a
                       href={buildApiWhatsAppUrl(lesson.student_whatsapp, studentConfirmationMessage(lesson, dayLabel, schoolName))}
                       target="_blank"
                       rel="noopener noreferrer"
                       title={`WhatsApp Aluno${lesson.student_name ? ` (${lesson.student_name})` : ''}`}
-                      style={{ fontSize: '18px', color: 'var(--color-pb-mist)', lineHeight: 1 }}
+                      style={{ color: 'var(--color-pb-mist)', lineHeight: 1 }}
                     >
-                      💬
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 4C7 4 3 7.4 3 11.5c0 2.4 1.3 4.5 3.4 5.9L6 21l3.8-2.1c.7.1 1.4.2 2.2.2 5 0 9-3.4 9-7.6S17 4 12 4Z" />
+                      </svg>
                     </a>
                   ) : (
-                    <span style={{ fontSize: '18px', color: 'var(--color-pb-mist)', lineHeight: 1, opacity: 0.4 }}>
-                      💬
+                    <span style={{ color: 'var(--color-pb-mist)', lineHeight: 1, opacity: 0.4 }}>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 4C7 4 3 7.4 3 11.5c0 2.4 1.3 4.5 3.4 5.9L6 21l3.8-2.1c.7.1 1.4.2 2.2.2 5 0 9-3.4 9-7.6S17 4 12 4Z" />
+                      </svg>
                     </span>
                   )}
                   <OverflowMenu items={[
@@ -1037,7 +1064,7 @@ export default function ScheduledLessons({
                   </div>
                   <div style={{
                     width: '2px', height: '32px',
-                    background: '#5B21B6',
+                    background: '#6D28D9',
                     borderRadius: '1px', flexShrink: 0,
                   }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -1045,11 +1072,11 @@ export default function ScheduledLessons({
                       display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px',
                     }}>
                       <span style={{
-                        padding: '2px 8px', borderRadius: '99px',
-                        background: '#EDE9FE', color: '#5B21B6',
+                        padding: '2px 8px', borderRadius: 'var(--radius-md)',
+                        background: '#F5F3FF', color: '#6D28D9',
                         fontSize: '10px', fontWeight: '600',
                       }}>
-                        👥 Grupo · {group.length} alunos
+                        Grupo · {group.length} alunos
                       </span>
                       <span style={{ fontSize: '12px', color: 'var(--mist)' }}>
                         {first.activities?.name ?? 'Atividade não definida'}
@@ -1342,8 +1369,8 @@ export default function ScheduledLessons({
               borderRadius: '12px', padding: '4px', marginBottom: '20px', gap: '4px',
             }}>
               {([
-                { value: 'individual', label: '👤 Individual' },
-                { value: 'group',      label: '👥 Grupo'      },
+                { value: 'individual', label: 'Individual' },
+                { value: 'group',      label: 'Grupo'      },
               ] as const).map(opt => (
                 <button
                   key={opt.value}
@@ -1421,9 +1448,9 @@ export default function ScheduledLessons({
                               <div style={{
                                 flexShrink: 0,
                                 fontSize: '11px', fontWeight: '600',
-                                color: s.minutes_remaining <= 0 ? '#DC2626' : s.minutes_remaining < 60 ? '#92400E' : 'var(--glacial-dark)',
-                                background: s.minutes_remaining <= 0 ? '#FEE2E2' : s.minutes_remaining < 60 ? '#FEF3C7' : 'var(--glacial-light)',
-                                padding: '2px 8px', borderRadius: '99px',
+                                color: s.minutes_remaining <= 0 ? 'var(--signal)' : s.minutes_remaining < 60 ? '#B45309' : 'var(--glacial-dark)',
+                                background: s.minutes_remaining <= 0 ? 'var(--signal-light)' : s.minutes_remaining < 60 ? '#FFFBEB' : 'var(--glacial-light)',
+                                padding: '2px 8px', borderRadius: 'var(--radius-md)',
                               }}>
                                 {s.minutes_remaining <= 0 ? 'Esgotado' : `${formatHours(s.minutes_remaining)} restantes`}
                               </div>
@@ -1432,7 +1459,7 @@ export default function ScheduledLessons({
                                 flexShrink: 0,
                                 fontSize: '11px', fontWeight: '500',
                                 color: 'var(--mist)', background: 'var(--powder)',
-                                padding: '2px 8px', borderRadius: '99px',
+                                padding: '2px 8px', borderRadius: 'var(--radius-md)',
                               }}>
                                 Sem pacote
                               </div>
@@ -1445,22 +1472,22 @@ export default function ScheduledLessons({
                 {selectedPackage && selectedPackage.minutes_remaining <= 0 && (
                   <div style={{
                     marginTop: '6px', padding: '8px 12px',
-                    background: '#FEE2E2', borderRadius: 'var(--radius-md)',
-                    fontSize: '12px', color: '#DC2626',
+                    background: 'var(--signal-light)', borderRadius: 'var(--radius-md)',
+                    fontSize: '12px', color: 'var(--signal)',
                   }}>
-                    ⚠ {selectedPackage.package_name} esgotado — aluno não possui créditos suficientes.
+                    {selectedPackage.package_name} esgotado — aluno não possui créditos suficientes.
                     Considere cobrar uma aula avulsa ou renovar o plano.
                   </div>
                 )}
                 {selectedPackage && selectedPackage.minutes_remaining > 0 && (
                   <div style={{
                     marginTop: '6px', padding: '8px 12px',
-                    background: selectedPackage.minutes_remaining < 60 ? '#FEF3C7' : 'var(--glacial-light)',
+                    background: selectedPackage.minutes_remaining < 60 ? '#FFFBEB' : 'var(--glacial-light)',
                     borderRadius: 'var(--radius-md)',
-                    fontSize: '12px', color: selectedPackage.minutes_remaining < 60 ? '#92400E' : 'var(--glacial-dark)',
+                    fontSize: '12px', color: selectedPackage.minutes_remaining < 60 ? '#B45309' : 'var(--glacial-dark)',
                     display: 'flex', justifyContent: 'space-between',
                   }}>
-                    <span>📦 {selectedPackage.activity_name} — {selectedPackage.package_name}</span>
+                    <span>{selectedPackage.activity_name} — {selectedPackage.package_name}</span>
                     <span>
                       {formatHours(selectedPackage.minutes_remaining)} restantes
                       {mode !== 'single' && ` → ${form.count} aulas sugeridas`}
@@ -1542,7 +1569,7 @@ export default function ScheduledLessons({
                     background: 'var(--glacial-light)', borderRadius: '8px',
                     fontSize: '12px', color: 'var(--glacial-dark)', fontWeight: '500',
                   }}>
-                    👥 {groupStudents.filter(s => s.trim()).length} alunos
+                    {groupStudents.filter(s => s.trim()).length} alunos
                     {' · '}{activities.find(a => a.id === form.activity_id)?.name ?? 'atividade selecionada'}
                     {' · '}{form.time || '--:--'}
                   </div>
@@ -1814,7 +1841,7 @@ export default function ScheduledLessons({
                       background: 'var(--signal-light)',
                       padding: '6px 10px', borderRadius: 'var(--radius-md)',
                     }}>
-                      ⚠ Excede os minutos do pacote
+                      Excede os minutos do pacote
                     </div>
                   )}
                 </div>

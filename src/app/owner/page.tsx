@@ -159,7 +159,7 @@ export default async function OwnerPage() {
       <ReceptionModeProvider>
 
       {/* Page title — the Reception Mode toggle sits inline right next to
-          "Spot", not pushed to the row's far-right edge. That corner
+          "The Spot", not pushed to the row's far-right edge. That corner
           also holds AlertsDrawer's bell trigger (position: fixed, top:
           20px, right: 24px, independent of this row's layout), and a
           right-aligned toggle here lands squarely inside the bell's
@@ -171,7 +171,7 @@ export default async function OwnerPage() {
               fontSize: '22px', fontWeight: '600',
               color: 'var(--slate)', letterSpacing: '-0.02em',
             }}>
-              Spot
+              The Spot
             </h1>
             <ReceptionModeToggle />
           </div>
@@ -252,13 +252,13 @@ export default async function OwnerPage() {
                 style={{
                   position: 'absolute', top: '-8px', right: '12px',
                   display: 'flex', alignItems: 'center', gap: '5px',
-                  padding: '4px 10px', borderRadius: '99px',
-                  background: '#E8F5E9', border: '0.5px solid #A5D6A7',
-                  color: '#2E7D32', fontSize: '11px', fontWeight: '600',
+                  padding: '4px 10px', borderRadius: 'var(--radius-md)',
+                  background: 'var(--glacial-light)',
+                  color: 'var(--glacial-dark)', fontSize: '11px', fontWeight: '600',
                   boxShadow: 'var(--shadow-sm)', whiteSpace: 'nowrap',
                 }}
               >
-                🌊 {studentsInWaterNow} na água agora
+                {studentsInWaterNow} na água agora
               </div>
             )}
             <div style={{
@@ -455,8 +455,8 @@ export default async function OwnerPage() {
                     <span style={{
                       padding: '1px 6px',
                       borderRadius: '4px',
-                      background: '#EDE9FE',
-                      color: '#5B21B6',
+                      background: '#F5F3FF',
+                      color: '#6D28D9',
                       fontSize: '10px',
                       fontWeight: '600',
                       marginLeft: '4px',

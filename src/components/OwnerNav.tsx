@@ -10,6 +10,7 @@ import { createClient } from '@/utils/supabase/client'
 import {
   HomeIcon, CalendarIcon, UserIcon, InboxIcon, UsersIcon,
   PackageIcon, WalletIcon, ChartIcon, GearIcon, ChevronLeftIcon, TagIcon, LinkIcon,
+  SunIcon, MoonIcon,
 } from '@/components/nav-icons'
 
 type Season = { id: string; label: string }
@@ -127,16 +128,15 @@ export default function OwnerNav({
           transition: background-color 0.2s, color 0.2s;
         }
         .nav-row:hover {
-          color: ${dark ? '#fff' : 'var(--slate)'};
+          color: ${dark ? '#F4F4F5' : 'var(--slate)'};
           background: ${dark ? 'rgba(255,255,255,0.06)' : 'var(--powder)'};
         }
         .nav-row.active {
           color: ${dark ? '#fff' : 'var(--slate)'};
           font-weight: 500;
-          /* zinc-800/60, not a generic white overlay — matches the zinc
-             family explicitly asked for, still translucent since a solid
-             fill barely reads as "highlighted" against zinc-950. */
-          background: ${dark ? 'rgba(39,39,42,0.6)' : 'var(--powder)'};
+          /* Solid zinc-800, not a translucent overlay — reads clearly
+             against the lighter zinc-900 container background. */
+          background: ${dark ? '#27272a' : 'var(--powder)'};
         }
         .nav-row svg { flex-shrink: 0; }
         .nav-active-dot {
@@ -186,9 +186,9 @@ export default function OwnerNav({
       <aside style={{
         width: `${sidebarWidth}px`,
         flexShrink: 0,
-        // zinc-950 — explicitly chosen over the slate family (cooler,
-        // blue-tinted) for a fully neutral, warm-neutral graphite instead.
-        background: dark ? '#09090b' : '#fff',
+        // zinc-900 — one step lighter than the earlier zinc-950, still the
+        // neutral (non-blue-tinted) graphite family, not pure black.
+        background: dark ? '#18181b' : '#fff',
         borderRight: dark ? 'none' : '1px solid var(--border)',
         position: 'sticky',
         top: 0,
@@ -283,7 +283,7 @@ export default function OwnerNav({
               transition: 'color 0.15s, background 0.15s',
             }}
           >
-            <span>{dark ? '🌙' : '☀️'}</span>
+            <span style={{ display: 'inline-flex' }}>{dark ? <MoonIcon size={14} /> : <SunIcon size={14} />}</span>
             {!collapsed && <span>{dark ? 'Escura' : 'Clara'}</span>}
           </button>
 
@@ -304,8 +304,8 @@ export default function OwnerNav({
                 }}>
                   {activeSeasonLabel ?? '—'}
                 </span>
-                <span style={{ fontSize: '9px', opacity: 0.45, flexShrink: 0 }}>
-                  {collapsed ? '🗓' : '▾'}
+                <span style={{ display: 'inline-flex', opacity: 0.45, flexShrink: 0 }}>
+                  {collapsed ? <CalendarIcon size={12} /> : <span style={{ fontSize: '9px' }}>▾</span>}
                 </span>
               </div>
               <div className="season-dropdown">

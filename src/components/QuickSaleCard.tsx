@@ -29,7 +29,7 @@ export default function QuickSaleCard({ packageTypes }: { packageTypes: PackageO
           letterSpacing: '0.1em', textTransform: 'uppercase',
           color: 'var(--mist)', marginBottom: '10px',
         }}>
-          💳 Venda Rápida
+          Venda Rápida
         </span>
         <button
           onClick={() => setOpen(true)}

@@ -89,14 +89,18 @@ export function compassLabel(deg: number): string {
   return COMPASS_16[Math.round(deg / 22.5) % 16]
 }
 
-/** WMO weather codes (used by Open-Meteo) collapsed to a simple emoji. */
-export function weatherIcon(code: number): string {
-  if (code === 0) return '☀️'
-  if (code <= 2) return '🌤️'
-  if (code === 3) return '☁️'
-  if (code >= 45 && code <= 48) return '🌫️'
-  if (code >= 51 && code <= 67) return '🌧️'
-  if (code >= 71 && code <= 86) return '🌨️'
-  if (code >= 95) return '⛈️'
-  return '🌥️'
+export type WeatherIconKind = 'sun' | 'partly-cloudy' | 'cloudy' | 'fog' | 'rain' | 'snow' | 'storm'
+
+/** WMO weather codes (used by Open-Meteo) collapsed to an icon kind — the
+ *  actual glyph (WeatherIcon, weather-icons.tsx) is a monochrome SVG, not
+ *  an emoji. */
+export function weatherIcon(code: number): WeatherIconKind {
+  if (code === 0) return 'sun'
+  if (code <= 2) return 'partly-cloudy'
+  if (code === 3) return 'cloudy'
+  if (code >= 45 && code <= 48) return 'fog'
+  if (code >= 51 && code <= 67) return 'rain'
+  if (code >= 71 && code <= 86) return 'snow'
+  if (code >= 95) return 'storm'
+  return 'cloudy'
 }
