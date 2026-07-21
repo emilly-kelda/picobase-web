@@ -45,7 +45,6 @@ export default function ChameleonButtonPreview() {
           schoolName="Pico Base"
           studentName="Aluno de teste"
           onCheckIn={() => setCheckedIn(true)}
-          onSendToWater={() => setStage('na_agua')}
           onSellPackage={() => setHasCredit(true)}
         />
       </div>

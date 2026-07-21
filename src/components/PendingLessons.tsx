@@ -136,7 +136,7 @@ export default function PendingLessons({
 
   // ChameleonButton's onCheckIn — desk confirms this student is physically
   // present, independent of stage/hasCredit (see checkedIn gate added to
-  // ChameleonButton). Optimistic same as sendToWater below.
+  // ChameleonButton).
   async function checkIn(checkin: Checkin) {
     setCheckins(prev => prev.map(c => c.id === checkin.id ? { ...c, checked_in: true } : c))
     try {
@@ -144,20 +144,6 @@ export default function PendingLessons({
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: checkin.id, checked_in: true }),
-      })
-    } catch {}
-  }
-
-  // ChameleonButton's onSendToWater (picobase_chameleon_button_dossie.md
-  // Fase 3/4): sala_de_espera -> na_agua. Optimistic — the row's button
-  // flips to muted "Na água" text immediately; the PATCH just persists it.
-  async function sendToWater(checkin: Checkin) {
-    setCheckins(prev => prev.map(c => c.id === checkin.id ? { ...c, stage: 'na_agua' } : c))
-    try {
-      await fetch('/api/owner/checkin-stage', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: checkin.id, stage: 'na_agua' }),
       })
     } catch {}
   }
@@ -334,9 +320,7 @@ export default function PendingLessons({
                       studentName={checkin.student_name}
                       activityName={displayActivityName}
                       onCheckIn={() => checkIn(checkin)}
-                      onSendToWater={() => sendToWater(checkin)}
                       onSellPackage={() => setSellModal(checkin)}
-                      lang={lang}
                       className=""
                     />
                     {/* Byte-for-byte the same recipe as Reagendar

@@ -12,12 +12,8 @@ type ChameleonButtonProps = {
   studentName?: string
   activityName?: string | null
   onCheckIn?: () => void
-  onSendToWater?: () => void
   onSellPackage?: () => void
   className?: string
-  // Only gates the "Enviar para a água"/"Send to water" label below — the
-  // rest of this component's text is still PT-only, unchanged by this
-  // rename (a broader i18n pass wasn't asked for here).
   lang?: 'en' | 'pt'
 }
 
@@ -25,23 +21,20 @@ type ChameleonButtonProps = {
  *  (picobase_chameleon_button_dossie.md, Fase 1) — the one thing a
  *  student's row actually needs right now:
  *
- *  - not checked in -> renders nothing. Used to be a full-width primary
- *    "Check-in" trigger (CheckinQRButton, `compact`) here, but
- *    PendingLessons.tsx's button row now has its own always-visible
- *    Check-in chip (promoted out of Ver ficha) that does the exact same
- *    job — opens the QR modal AND marks checked_in via its own onOpen.
- *    Keeping both was showing two "Check-in" triggers on the same card at
- *    once, which is the bug this removal fixes. checkedIn and hasCredit
- *    are independent facts, so selling a package must never skip this.
+ *  - not checked in -> renders nothing. PendingLessons.tsx's button row has
+ *    its own always-visible Check-in chip (promoted out of Ver ficha) that
+ *    covers this job — opens the QR modal AND marks checked_in via its own
+ *    onOpen. checkedIn and hasCredit are independent facts, so selling a
+ *    package must never skip this.
  *  - checked in, sala_de_espera + no credit -> danger "Vender pacote"
  *    (doesn't advance stage on its own — that happens once the sale
  *    actually completes)
- *  - checked in, sala_de_espera + credit    -> primary "Enviar para a água"
- *    ("Send to water" in en) — per
- *    fix_checkin_removido_e_estagio_errado.md this replaces the earlier
- *    "Iniciar Velejo →" label, same color/format as Check-in (same
- *    component, just a different label once checked in). No icon — the
- *    later no-emoji pass dropped the wave glyph this state briefly had.
+ *  - checked in, sala_de_espera + credit    -> renders nothing. Used to be
+ *    a primary "Enviar para a água"/"Send to water" button that advanced
+ *    checkins.stage to na_agua — removed entirely per explicit ask, now
+ *    that ScheduledLessons.tsx's own "Iniciar Velejo"/"Start Session"
+ *    button (on the scheduled_lessons row) is the one place a session
+ *    actually starts, instead of two parallel stage-transition mechanisms.
  *  - na_agua                    -> no button, muted "Na água" text.
  *    "Finalizar e cobrar" was removed from this queue entirely per the
  *    approved redesign — closing/charging a session happens only via
@@ -63,7 +56,6 @@ export default function ChameleonButton({
   studentName,
   activityName,
   onCheckIn,
-  onSendToWater,
   onSellPackage,
   className = 'flex-1',
   lang = 'pt',
@@ -84,11 +76,7 @@ export default function ChameleonButton({
         </Button>
       )
     }
-    return (
-      <Button variant="primary" size="sm" onClick={onSendToWater} className={className}>
-        {lang === 'pt' ? 'Enviar para a água' : 'Send to water'}
-      </Button>
-    )
+    return null
   }
 
   // na_agua
