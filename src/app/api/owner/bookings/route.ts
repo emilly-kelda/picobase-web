@@ -69,7 +69,9 @@ export async function POST(request: Request) {
   if (preferred_date === today) {
     try {
       await ensureActiveCheckinForToday(SCHOOL_ID, studentName, { activityId: activity_id })
-    } catch {}
+    } catch (err) {
+      console.error('ensureActiveCheckinForToday failed for', studentName, err)
+    }
   }
 
   return NextResponse.json({ ok: true })

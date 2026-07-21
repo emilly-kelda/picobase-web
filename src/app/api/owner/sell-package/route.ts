@@ -64,7 +64,14 @@ export async function POST(request: Request) {
   // package_sales is the real source of truth for the transaction.
   try {
     await ensureActiveCheckinForToday(SCHOOL_ID, student_name.trim(), { sport: pkg.sport })
-  } catch {}
+  } catch (err) {
+    // Still never blocks the sale response (package_sales already
+    // committed above is the real source of truth for the transaction) —
+    // but a swallowed error here previously meant a student could vanish
+    // from Aguardando Vento with zero trace anywhere. Logging so that
+    // failure is at least visible in server logs instead of silent.
+    console.error('ensureActiveCheckinForToday failed for', student_name, err)
+  }
 
   return NextResponse.json({ ok: true })
 }

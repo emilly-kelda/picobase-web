@@ -161,7 +161,9 @@ export async function POST(request: Request) {
   if (typeof body.scheduled_at === 'string' && body.scheduled_at.slice(0, 10) === today) {
     try {
       await ensureActiveCheckinForToday(SCHOOL_ID, body.student_name, { activityId: body.activity_id })
-    } catch {}
+    } catch (err) {
+      console.error('ensureActiveCheckinForToday failed for', body.student_name, err)
+    }
   }
 
   return NextResponse.json({ ok: true, id: data.id })
