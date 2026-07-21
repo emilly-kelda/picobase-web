@@ -119,6 +119,7 @@ export default function ConfirmLessonModal({
   payoutModel = 'percentage',
   fixedPayoutValue = null,
   t,
+  lang = 'pt',
   onClose,
   onConfirmed,
 }: {
@@ -128,6 +129,7 @@ export default function ConfirmLessonModal({
   payoutModel?: string
   fixedPayoutValue?: number | null
   t: Record<string, string>
+  lang?: 'en' | 'pt'
   onClose: () => void
   onConfirmed: () => void
 }) {
@@ -339,7 +341,7 @@ export default function ConfirmLessonModal({
 
         {activityId && (
           <div style={{ marginBottom: '20px' }}>
-            <LevelPicker value={level} experimentalDisabled={experimentalDisabled} onChange={setLevel} />
+            <LevelPicker value={level} experimentalDisabled={experimentalDisabled} onChange={setLevel} lang={lang} />
           </div>
         )}
 

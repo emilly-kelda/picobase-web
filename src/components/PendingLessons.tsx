@@ -82,12 +82,12 @@ function fmtMinutes(min: number) {
   return `${h}h${m}min`
 }
 
-function fmtRelative(iso: string) {
+function fmtRelative(iso: string, t: Record<string, string>) {
   const minutesAgo = Math.round((Date.now() - new Date(iso).getTime()) / 60000)
-  if (minutesAgo < 1) return 'agora mesmo'
-  if (minutesAgo < 60) return `há ${minutesAgo}min`
+  if (minutesAgo < 1) return t.just_now_label
+  if (minutesAgo < 60) return `${minutesAgo}${t.minutes_ago_suffix}`
   const hoursAgo = Math.floor(minutesAgo / 60)
-  return `há ${hoursAgo}h`
+  return `${hoursAgo}${t.hours_ago_suffix}`
 }
 
 function fmtBirthdate(iso: string | null) {
@@ -312,7 +312,7 @@ export default function PendingLessons({
                       {' · '}
                       {instructor?.name ?? t.no_instructor_label}
                       {' · '}
-                      <span title={fmtTime(checkin.checkin_at)}>{fmtRelative(checkin.checkin_at)}</span>
+                      <span title={fmtTime(checkin.checkin_at)}>{fmtRelative(checkin.checkin_at, t)}</span>
                     </div>
                   </div>
                 </div>
@@ -479,7 +479,7 @@ export default function PendingLessons({
                   {fichaModal.student_name}
                 </div>
                 <div style={{ fontSize: '12px', color: 'var(--mist)' }}>
-                  Check-in {fmtTime(fichaModal.checkin_at)} · {fmtRelative(fichaModal.checkin_at)}
+                  Check-in {fmtTime(fichaModal.checkin_at)} · {fmtRelative(fichaModal.checkin_at, t)}
                 </div>
               </div>
               <button

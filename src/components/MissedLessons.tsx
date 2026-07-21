@@ -100,8 +100,8 @@ export default function MissedLessons({
           const daysAgo = Math.floor(hoursAgo / 24)
 
           const timeAgo = daysAgo > 0
-            ? `${daysAgo} dia${daysAgo > 1 ? 's' : ''} atrás`
-            : `${hoursAgo}h atrás`
+            ? `${daysAgo} ${daysAgo > 1 ? t.days_ago_plural : t.day_ago_singular}`
+            : `${hoursAgo}${t.hours_ago_suffix}`
 
           const formattedTime = scheduledDate.toLocaleTimeString(
             'pt-BR',

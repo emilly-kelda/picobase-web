@@ -22,6 +22,7 @@ export const translations = {
     // Spot
     basecamp_title:       'Spot',
     basecamp_season:      'Current season',
+    scheduled_lessons_title: 'Scheduled Lessons',
     today_label:          'Today',
     today_students:       'Students',
     today_sessions:       'Sessions',
@@ -54,6 +55,11 @@ export const translations = {
     missed_lessons_title: 'Overdue Sessions',
     reschedule_btn:       'Reschedule',
     dismiss_btn:          'Dismiss',
+    day_ago_singular:     'day ago',
+    days_ago_plural:      'days ago',
+    hours_ago_suffix:     'h ago',
+    minutes_ago_suffix:   'min ago',
+    just_now_label:       'just now',
 
     // Spot — Aguardando Vento (PendingLessons.tsx)
     waiting_room_title:   'Awaiting Wind',
@@ -292,6 +298,7 @@ export const translations = {
     // Spot
     basecamp_title:       'Spot',
     basecamp_season:      'Temporada atual',
+    scheduled_lessons_title: 'Aulas agendadas',
     today_label:          'Hoje',
     today_students:       'Alunos',
     today_sessions:       'Aulas',
@@ -324,6 +331,11 @@ export const translations = {
     missed_lessons_title: 'Aulas não realizadas',
     reschedule_btn:       'Reagendar',
     dismiss_btn:          'Descartar',
+    day_ago_singular:     'dia atrás',
+    days_ago_plural:      'dias atrás',
+    hours_ago_suffix:     'h atrás',
+    minutes_ago_suffix:   'min atrás',
+    just_now_label:       'agora mesmo',
 
     // Spot — Aguardando Vento (PendingLessons.tsx)
     waiting_room_title:   'Aguardando Vento',

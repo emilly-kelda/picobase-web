@@ -15,12 +15,13 @@ const labelStyle: React.CSSProperties = {
 /** Per-activity level picker. Experimental is disabled once the student has any
  *  confirmed session in this activity (one-shot trial) — see lib/levels.ts. */
 export default function LevelPicker({
-  value, onChange, experimentalDisabled, label = 'Nível',
+  value, onChange, experimentalDisabled, label = 'Nível', lang = 'pt',
 }: {
   value: string
   onChange: (level: Level) => void
   experimentalDisabled: boolean
   label?: string
+  lang?: 'en' | 'pt'
 }) {
   return (
     <div>
@@ -48,7 +49,7 @@ export default function LevelPicker({
                 opacity: disabled ? 0.6 : 1,
               }}
             >
-              {LEVEL_LABELS[l].pt}
+              {LEVEL_LABELS[l][lang]}
             </button>
           )
         })}

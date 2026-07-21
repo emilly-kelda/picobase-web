@@ -776,7 +776,7 @@ export default function ScheduledLessons({
               letterSpacing: '0.1em', textTransform: 'uppercase',
               color: 'var(--mist)',
             }}>
-              Aulas agendadas
+              {t.scheduled_lessons_title}
             </div>
 
             <div style={{
@@ -948,7 +948,7 @@ export default function ScheduledLessons({
                   </div>
                   <div style={{ fontSize: '12px', color: 'var(--color-pb-mist)' }}>
                     {lesson.activities?.name ?? 'Atividade não definida'}
-                    {isLevel(lesson.level) && <> · {LEVEL_LABELS[lesson.level].pt}</>}
+                    {isLevel(lesson.level) && <> · {LEVEL_LABELS[lesson.level][lang]}</>}
                     {lesson.instructor && (
                       <> · {(lesson.instructor as any).name}</>
                     )}
@@ -1193,6 +1193,7 @@ export default function ScheduledLessons({
                   value={editForm.level}
                   experimentalDisabled={editExperimentalDisabled}
                   onChange={level => setEditForm(f => ({ ...f, level }))}
+                  lang={lang}
                 />
               )}
 
@@ -1618,6 +1619,7 @@ export default function ScheduledLessons({
                   value={form.level}
                   experimentalDisabled={experimentalDisabled}
                   onChange={level => setForm(f => ({ ...f, level }))}
+                  lang={lang}
                 />
               )}
 
@@ -2145,6 +2147,7 @@ export default function ScheduledLessons({
           payoutModel={payoutModel}
           fixedPayoutValue={fixedPayoutValue}
           t={t}
+          lang={lang}
           onClose={() => setConfirmLessonModal(null)}
           onConfirmed={() => { setConfirmLessonModal(null); router.refresh() }}
         />
