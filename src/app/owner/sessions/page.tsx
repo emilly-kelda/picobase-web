@@ -16,6 +16,23 @@ function fmt(n: number | null | undefined) {
   }).format(n)
 }
 
+// Same €/$ formatting convention ReceivablesView.tsx already uses for
+// showing an original foreign-currency amount (pt-BR separators, 2
+// decimals) — not a new one-off format.
+function fmtOriginal(n: number, currency: string) {
+  const num = n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  if (currency === 'EUR') return `€ ${num}`
+  if (currency === 'USD') return `$ ${num}`
+  return num
+}
+
+function fmtBRL2(n: number) {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency', currency: 'BRL',
+    minimumFractionDigits: 2, maximumFractionDigits: 2,
+  }).format(n)
+}
+
 function fmtDate(d: string) {
   return new Date(d + 'T12:00:00').toLocaleDateString('pt-BR', {
     day: '2-digit', month: 'short',
@@ -376,23 +393,31 @@ export default async function SessionsPage({
             }}>
               {t.origin_mix_title}
             </div>
+            {/* Pastel pair instead of the old --glacial/--slate segments —
+                those two are both near-black slates since the muted-palette
+                repaint, which made the split unreadable. Azul pastel for
+                Parceiros, roxo pastel for Direto (the same purple family
+                the Confirmar/Grupo badges already use); legend dots take
+                the stronger tone of the same hue so each dot still reads
+                against the white card while mapping unambiguously to its
+                pastel bar segment. */}
             <div style={{
               display: 'flex', height: '10px', borderRadius: '99px',
               overflow: 'hidden', marginBottom: '10px',
             }}>
-              <div style={{ width: `${partnerPct}%`, background: 'var(--glacial)' }} />
-              <div style={{ width: `${directPct}%`, background: 'var(--slate)' }} />
+              <div style={{ width: `${partnerPct}%`, background: '#BFDBFE' }} />
+              <div style={{ width: `${directPct}%`, background: '#E9D5FF' }} />
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ width: '8px', height: '8px', borderRadius: '99px', background: 'var(--glacial)', display: 'inline-block' }} />
+                <span style={{ width: '8px', height: '8px', borderRadius: '99px', background: '#3B82F6', display: 'inline-block' }} />
                 <span style={{ color: 'var(--slate)' }}>{t.origin_partners}</span>
                 <span style={{ color: 'var(--mist)', fontVariantNumeric: 'tabular-nums' }}>
                   {partnerCount} · {Math.round(partnerPct)}%
                 </span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ width: '8px', height: '8px', borderRadius: '99px', background: 'var(--slate)', display: 'inline-block' }} />
+                <span style={{ width: '8px', height: '8px', borderRadius: '99px', background: '#A855F7', display: 'inline-block' }} />
                 <span style={{ color: 'var(--slate)' }}>{t.origin_direct}</span>
                 <span style={{ color: 'var(--mist)', fontVariantNumeric: 'tabular-nums' }}>
                   {directCount} · {Math.round(directPct)}%
@@ -552,20 +577,45 @@ export default async function SessionsPage({
                       )}
                     </td>
                     <td style={{ padding: '13px 20px', fontSize: '13px', color: 'var(--slate)', fontVariantNumeric: 'tabular-nums' }}>
-                      {fmt(s.price)}
-                      {s.currency && s.currency !== 'BRL' && (
-                        <span style={{
-                          padding: '1px 6px',
-                          borderRadius: '4px',
-                          background: s.currency === 'EUR' ? '#EEF3FC' : '#EDE9FE',
-                          color: s.currency === 'EUR' ? '#1A4B8A' : '#4B1AA8',
-                          fontSize: '10px',
-                          fontWeight: '600',
-                          marginLeft: '4px',
-                        }}>
-                          {s.currency}
-                        </span>
-                      )}
+                      {(() => {
+                        const isForeign = !!s.currency && s.currency !== 'BRL'
+                        const badge = isForeign && (
+                          <span style={{
+                            padding: '1px 6px',
+                            borderRadius: '4px',
+                            background: s.currency === 'EUR' ? '#EEF3FC' : '#EDE9FE',
+                            color: s.currency === 'EUR' ? '#1A4B8A' : '#4B1AA8',
+                            fontSize: '10px',
+                            fontWeight: '600',
+                            marginLeft: '4px',
+                          }}>
+                            {s.currency}
+                          </span>
+                        )
+                        // Foreign charge: what the student actually paid (€/$)
+                        // is the primary figure, with the BRL conversion as a
+                        // secondary line — the converted number alone next to
+                        // an "EUR" tag read as if €366 had been charged. The
+                        // applied rate lives in a native title tooltip (this
+                        // is a server component — no client JS for hover
+                        // needed). Falls back to the plain BRL rendering when
+                        // price_original is missing/zero (older rows predating
+                        // that column, and a 0 divisor would make the rate
+                        // meaningless).
+                        if (isForeign && s.price_original != null && s.price_original > 0 && s.price != null) {
+                          const rate = s.price / s.price_original
+                          return (
+                            <span title={`Cotação: 1 ${s.currency} = ${fmtBRL2(rate)} · Total: ${fmtBRL2(s.price)}`} style={{ cursor: 'help' }}>
+                              <span style={{ fontWeight: '500' }}>{fmtOriginal(s.price_original, s.currency!)}</span>
+                              {badge}
+                              <span style={{ display: 'block', fontSize: '11px', color: 'var(--mist)' }}>
+                                ({fmt(s.price)})
+                              </span>
+                            </span>
+                          )
+                        }
+                        return <>{fmt(s.price)}{badge}</>
+                      })()}
                     </td>
                     <td style={{ padding: '13px 20px', fontSize: '13px', color: 'var(--mist)' }}>
                       {fmtPct(s.commission_pct)}
