@@ -992,30 +992,16 @@ export default function ScheduledLessons({
                       : t.status_scheduled}
                   </Badge>
                   {/* "Iniciar Velejo"/"Start Session" — moves a scheduled
-                      lesson to 'checked_in' (already a real status this
-                      list's own Badge recognized, just nothing could set
-                      it). Only for 'scheduled' rows; once started,
-                      "Confirmar" is the only next step. Same Reagendar
-                      recipe as the buttons below. */}
+                      lesson to 'checked_in'. Now the bold zinc-900 primary
+                      (swapped from the light Reagendar-style fill it had
+                      before) — this is the main action for a 'scheduled'
+                      row, Confirmar below is now the softer one since it's
+                      only relevant once the lesson's already underway. */}
                   {lesson.status === 'scheduled' && (
                     <button
                       onClick={() => startSession(lesson)}
                       disabled={startingSession === lesson.id}
-                      style={{
-                        padding: '4px 8px',
-                        background: 'var(--glacial-light)',
-                        color: 'var(--glacial-dark)',
-                        border: 'none',
-                        borderRadius: 'var(--radius-md)',
-                        fontSize: '10px', fontWeight: '500',
-                        cursor: startingSession === lesson.id ? 'not-allowed' : 'pointer',
-                        opacity: startingSession === lesson.id ? 0.6 : 1,
-                        fontFamily: 'var(--font-sans)',
-                        transition: 'background-color 0.15s',
-                        whiteSpace: 'nowrap',
-                      }}
-                      onMouseEnter={e => { if (startingSession !== lesson.id) { e.currentTarget.style.backgroundColor = 'var(--glacial)'; e.currentTarget.style.color = '#fff' } }}
-                      onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'var(--glacial-light)'; e.currentTarget.style.color = 'var(--glacial-dark)' }}
+                      className="bg-zinc-900 hover:bg-zinc-800 text-white font-medium rounded-lg px-2.5 py-1.5 text-xs transition-colors border-0 disabled:opacity-60 disabled:cursor-not-allowed"
                     >
                       {startingSession === lesson.id ? '...' : (lang === 'pt' ? 'Iniciar Velejo' : 'Start Session')}
                     </button>
@@ -1032,10 +1018,7 @@ export default function ScheduledLessons({
                       {/* Byte-for-byte the same recipe as Reagendar
                           (MissedLessons.tsx) — var(--glacial-light)/
                           var(--glacial-dark), not an approximated zinc-*
-                          Tailwind class. Confirmar right below stays the
-                          bold zinc-900 primary — a deliberately different,
-                          more prominent style for the actual charge/close
-                          action, not what this button matches. */}
+                          Tailwind class. */}
                       <button
                         onClick={() => openRebookModal(lesson)}
                         style={{
@@ -1055,9 +1038,14 @@ export default function ScheduledLessons({
                       >
                         + Agendar Próxima Aula
                       </button>
+                      {/* Softer emerald "status tag" look, but still a real
+                          button — clicking it still opens
+                          ConfirmLessonModal to actually close/charge the
+                          lesson. Purely cosmetic swap from the bold
+                          zinc-900 it had before. */}
                       <button
                         onClick={() => setConfirmLessonModal(lesson)}
-                        className="bg-zinc-900 hover:bg-zinc-800 text-white font-medium rounded-md px-3 py-1.5 text-xs transition-colors border-0"
+                        className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-[11px] px-2 py-1 rounded-md font-medium border-0 transition-colors cursor-pointer"
                       >
                         Confirmar
                       </button>
