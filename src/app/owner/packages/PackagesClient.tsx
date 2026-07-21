@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import MultiCurrencyPriceEditor from '@/components/MultiCurrencyPriceEditor'
 import SellPackageButton from '@/components/SellPackageButton'
+import { SportIcon, sportIconKey } from '@/components/SportIcon'
 import PackageFormModal, { type PackageType } from './PackageFormModal'
 
 type PackageCard = PackageType & {
@@ -127,8 +128,9 @@ export default function PackagesClient({
                     padding: '3px 10px', borderRadius: '99px',
                     background: style.bg, color: style.color,
                     fontSize: '11px', fontWeight: '600',
+                    display: 'inline-flex', alignItems: 'center', gap: '5px',
                   }}>
-                    {style.icon} {sport}
+                    {sportIconKey(sport) ? <SportIcon name={sport} size={12} /> : style.icon} {sport}
                   </span>
                   <span style={{ fontSize: '12px', color: 'var(--mist)' }}>
                     {pkgs.length} pacote{pkgs.length !== 1 ? 's' : ''}
@@ -154,9 +156,9 @@ export default function PackagesClient({
                           width: '38px', height: '38px', borderRadius: 'var(--radius-md)',
                           background: style.bg, flexShrink: 0,
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontSize: '18px',
+                          fontSize: '18px', color: style.color,
                         }}>
-                          {style.icon}
+                          {sportIconKey(pkg.sport) ? <SportIcon name={pkg.sport} size={20} /> : style.icon}
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontSize: '14px', fontWeight: '600', color: 'var(--slate)', marginBottom: '2px' }}>

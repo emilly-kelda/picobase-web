@@ -1,6 +1,7 @@
 'use client'
 
 import { useRef, useState, useEffect, useMemo } from 'react'
+import { SportIcon, sportIconKey } from '@/components/SportIcon'
 
 const LANGS = {
   en: {
@@ -1068,7 +1069,9 @@ export default function CheckinForm({
                         display: 'flex', alignItems: 'center', gap: '12px', width: '100%', textAlign: 'left',
                       }}
                     >
-                      <span style={{ fontSize: '22px' }}>{activityIcon(a.name)}</span>
+                      <span style={{ fontSize: '22px', display: 'inline-flex' }}>
+                        {sportIconKey(a.name) ? <SportIcon name={a.name} size={24} /> : activityIcon(a.name)}
+                      </span>
                       <span style={{ flex: 1 }}>{a.name}</span>
                       {active && <span style={{ color: '#00A896', fontSize: '16px' }}>✓</span>}
                     </button>
