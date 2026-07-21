@@ -2388,7 +2388,9 @@ export default function ScheduledLessons({
               </button>
               <button
                 onClick={confirmGroup}
-                disabled={confirming || groupConfirmModal.lessons.some(l => !l.instructor_id || !(Number(l.price) > 0))}
+                disabled={confirming || groupConfirmModal.lessons.some(
+                  l => !l.instructor_id || !(Number(l.price) > 0) || !l.payment_method
+                )}
                 style={{
                   flex: 2, padding: '11px',
                   background: confirming ? 'var(--border)' : 'var(--slate)',
