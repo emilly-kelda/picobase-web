@@ -13,6 +13,7 @@ import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
 import OverflowMenu from '@/components/ui/OverflowMenu'
 import PackageProgressBar from '@/components/PackageProgressBar'
+import { LightbulbIcon } from '@/components/nav-icons'
 
 type Lesson = {
   id: string
@@ -269,6 +270,10 @@ export default function ScheduledLessons({
   const router = useRouter()
   const { toast, showToast }        = useToast()
   const [showModal, setShowModal]   = useState(false)
+  const [bookingSuggestion, setBookingSuggestion] = useState<{
+    date: string; time: string; instructor_id: string; instructor_name: string; windKn: number | null
+  } | null>(null)
+  const [loadingBookingSuggestion, setLoadingBookingSuggestion] = useState(false)
   const [deleting, setDeleting]     = useState<string | null>(null)
   const [saving, setSaving]         = useState(false)
   const [activeTab, setActiveTab]   = useState<'today' | 'tomorrow'>('today')
@@ -366,6 +371,51 @@ export default function ScheduledLessons({
       .then(data => setStudentSuggestions(data.students ?? []))
       .catch(() => setStudentSuggestions([]))
   }, [])
+
+  // "Sugestão do sistema" card in the Agendar aula modal — same idea as
+  // RescheduleModal's own suggestion fetch, but clickable-to-apply instead
+  // of auto-filled on load (this form has more fields already mid-fill by
+  // the time an activity's picked, so overwriting date/time/instructor
+  // without an explicit click would be more surprising here than useful).
+  // Needs an activity to detect modality from, so there's nothing to fetch
+  // until one's chosen.
+  useEffect(() => {
+    if (!showModal || lessonMode !== 'individual' || !form.activity_id) {
+      setBookingSuggestion(null)
+      return
+    }
+    let cancelled = false
+    async function loadBookingSuggestion() {
+      setLoadingBookingSuggestion(true)
+      try {
+        const activityName = activities.find(a => a.id === form.activity_id)?.name ?? ''
+        const params = new URLSearchParams({
+          activityName,
+          durationMin: String(form.duration_min || 60),
+        })
+        const res = await fetch(`/api/owner/booking-suggestion?${params}`)
+        const data = await res.json()
+        if (!cancelled) setBookingSuggestion(data.suggestion ?? null)
+      } catch {
+        if (!cancelled) setBookingSuggestion(null)
+      } finally {
+        if (!cancelled) setLoadingBookingSuggestion(false)
+      }
+    }
+    loadBookingSuggestion()
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showModal, lessonMode, form.activity_id])
+
+  function applyBookingSuggestion() {
+    if (!bookingSuggestion) return
+    setForm(f => ({
+      ...f,
+      date: bookingSuggestion.date,
+      time: bookingSuggestion.time,
+      instructor_id: bookingSuggestion.instructor_id,
+    }))
+  }
 
   // Sync editable dates whenever scheduling params change
   useEffect(() => {
@@ -1557,6 +1607,41 @@ export default function ScheduledLessons({
                   </div>
                 )}
               </div>
+              )}
+
+              {/* "Sugestão do sistema" — same card as RescheduleModal's,
+                  but a real click target here (applyBookingSuggestion)
+                  instead of auto-filled on load. Needs form.activity_id to
+                  detect modality, so it only shows once one's picked. */}
+              {lessonMode === 'individual' && form.activity_id && (
+                loadingBookingSuggestion ? (
+                  <div style={{ fontSize: '12px', color: 'var(--mist)' }}>
+                    Buscando melhor horário disponível...
+                  </div>
+                ) : bookingSuggestion ? (
+                  <button
+                    type="button"
+                    onClick={applyBookingSuggestion}
+                    style={{
+                      display: 'flex', alignItems: 'flex-start', gap: '8px',
+                      width: '100%', textAlign: 'left',
+                      padding: '10px 14px', border: 'none', cursor: 'pointer',
+                      background: 'var(--glacial-light)', color: 'var(--slate)',
+                      borderRadius: 'var(--radius-md)', fontSize: '12px',
+                      fontFamily: 'var(--font-sans)',
+                    }}
+                  >
+                    <span style={{ color: 'var(--glacial-dark)', flexShrink: 0, marginTop: '1px' }}>
+                      <LightbulbIcon size={14} />
+                    </span>
+                    <span>
+                      <strong>Sugestão do sistema:</strong>{' '}
+                      {new Date(`${bookingSuggestion.date}T12:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+                      {' às '}{bookingSuggestion.time} com {bookingSuggestion.instructor_name}
+                      {bookingSuggestion.windKn != null && ` · vento ${Math.round(bookingSuggestion.windKn)}kn`}
+                    </span>
+                  </button>
+                ) : null
               )}
 
               {/* Group students — group mode only */}

@@ -75,6 +75,36 @@ export async function getWeather(spot: WeatherSpot): Promise<WeatherData | null>
   }
 }
 
+export type HourlyWind = { dateStr: string; hour: number; windKn: number }
+
+/** Hourly wind forecast for the booking-suggestion feature (ScheduledLessons.tsx's
+ *  "Agendar aula" modal) — separate from getWeather() above, which only ever
+ *  fetches the current reading. Same Open-Meteo host, no key. Returns []
+ *  (not throwing) on any failure — booking suggestions are meant to degrade
+ *  to plain instructor-availability, not break the modal, if the forecast
+ *  call fails. */
+export async function getHourlyWindForecast(spot: WeatherSpot, days = 7): Promise<HourlyWind[]> {
+  try {
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${spot.lat}&longitude=${spot.lon}` +
+      `&hourly=wind_speed_10m&wind_speed_unit=kn&timezone=America%2FFortaleza&forecast_days=${days}`
+    const res = await fetch(url, { next: { revalidate: 1800 } })
+    if (!res.ok) return []
+    const data = await res.json()
+    const times: string[] = data?.hourly?.time ?? []
+    const speeds: number[] = data?.hourly?.wind_speed_10m ?? []
+    // Open-Meteo returns local ("YYYY-MM-DDTHH:mm") strings when a timezone
+    // is passed, not UTC — matches the plain date/hour math the booking
+    // suggestion's slot search already does.
+    return times.map((t, i) => ({
+      dateStr: t.slice(0, 10),
+      hour: Number(t.slice(11, 13)),
+      windKn: speeds[i],
+    }))
+  } catch {
+    return []
+  }
+}
+
 // 16-point compass with full Portuguese names rather than abbreviations
 // (e.g. "Leste-Sudeste" instead of "ESE") — wind direction meaningfully
 // affects lesson/spot choice for kite and wingfoil, so the extra precision

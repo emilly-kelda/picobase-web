@@ -1,5 +1,6 @@
 import { createServiceClient } from '@/lib/supabase-server'
 import { normalizeStudentName } from '@/lib/text'
+import { windViability } from '@/lib/weather'
 
 export async function getScheduledLessons(
   schoolId: string,
@@ -237,6 +238,104 @@ export async function getRescheduleSuggestion(
   }
 
   return null
+}
+
+const BOOKING_CANDIDATE_HOURS = RESCHEDULE_CANDIDATE_HOURS
+const BOOKING_SEARCH_DAYS = RESCHEDULE_SEARCH_DAYS
+
+/** Same instructor-availability scan as getRescheduleSuggestion, for the
+ *  "Agendar aula" creation modal's suggestion card instead of the missed-
+ *  lesson reschedule flow. Diverges in one way: rather than returning the
+ *  very first open slot, it keeps scanning (still chronological, so it
+ *  never suggests something later than necessary) until it finds one whose
+ *  hour falls in windViability's "ideal" sailing band, and only settles for
+ *  the first-available slot if no such window turns up in the search
+ *  range. `windKnAt` is optional and pure (no fetch in here, keeping this
+ *  file to DB access only) — the caller (the API route) is what actually
+ *  hits Open-Meteo via lib/weather.ts's getHourlyWindForecast and passes a
+ *  lookup in; pass nothing (or a lookup that always returns null, e.g. the
+ *  school hasn't configured a spot yet) and this degrades to plain
+ *  first-available, same as reschedule. */
+export async function getBookingSuggestion(
+  schoolId: string,
+  activityName: string | null | undefined,
+  durationMin: number,
+  windKnAt?: (dateStr: string, hour: number) => number | null
+): Promise<{ date: string; time: string; instructor_id: string; instructor_name: string; windKn: number | null } | null> {
+  const supabase = createServiceClient()
+  const modality = detectModality(activityName)
+
+  const { data: allInstructors } = await supabase
+    .from('users')
+    .select('id, name, sports')
+    .eq('school_id', schoolId)
+    .in('role', ['instructor', 'owner'])
+    .eq('active', true)
+    .order('name')
+
+  const compatible = modality
+    ? (allInstructors ?? []).filter(i => (i.sports ?? []).includes(modality))
+    : []
+  const pool = compatible.length > 0 ? compatible : (allInstructors ?? [])
+  if (pool.length === 0) return null
+
+  const windowStart = new Date()
+  windowStart.setDate(windowStart.getDate() + 1)
+  windowStart.setHours(0, 0, 0, 0)
+  const windowEnd = new Date(windowStart)
+  windowEnd.setDate(windowEnd.getDate() + BOOKING_SEARCH_DAYS)
+
+  const { data: busy } = await supabase
+    .from('scheduled_lessons')
+    .select('instructor_id, scheduled_at, duration_min')
+    .eq('school_id', schoolId)
+    .neq('status', 'cancelled')
+    .gte('scheduled_at', windowStart.toISOString())
+    .lt('scheduled_at', windowEnd.toISOString())
+
+  const busyByInstructor = new Map<string, Array<{ start: number; end: number }>>()
+  for (const b of busy ?? []) {
+    if (!b.instructor_id) continue
+    const start = new Date(b.scheduled_at).getTime()
+    const end = start + (b.duration_min ?? 60) * 60000
+    if (!busyByInstructor.has(b.instructor_id)) busyByInstructor.set(b.instructor_id, [])
+    busyByInstructor.get(b.instructor_id)!.push({ start, end })
+  }
+
+  type Candidate = { date: string; time: string; instructor_id: string; instructor_name: string; windKn: number | null }
+  let firstAvailable: Candidate | null = null
+
+  for (let day = 0; day < BOOKING_SEARCH_DAYS; day++) {
+    const date = new Date(windowStart)
+    date.setDate(date.getDate() + day)
+    const dateStr = date.toISOString().slice(0, 10)
+
+    for (const hour of BOOKING_CANDIDATE_HOURS) {
+      const slotStart = new Date(`${dateStr}T${String(hour).padStart(2, '0')}:00:00-03:00`).getTime()
+      const slotEnd = slotStart + durationMin * 60000
+
+      for (const instructor of pool) {
+        const busySlots = busyByInstructor.get(instructor.id) ?? []
+        const conflict = busySlots.some(b => slotStart < b.end && slotEnd > b.start)
+        if (conflict) continue
+
+        const windKn = windKnAt ? windKnAt(dateStr, hour) : null
+        const candidate: Candidate = {
+          date: dateStr,
+          time: `${String(hour).padStart(2, '0')}:00`,
+          instructor_id: instructor.id,
+          instructor_name: instructor.name,
+          windKn,
+        }
+        if (!firstAvailable) firstAvailable = candidate
+        if (windKn != null && windViability(windKn).variant === 'success') {
+          return candidate
+        }
+      }
+    }
+  }
+
+  return firstAvailable
 }
 
 /** Instructor-clash + student-double-booking check, run before creating or
