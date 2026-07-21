@@ -136,4 +136,33 @@ export async function findDuplicateDocument(
   return candidates.find(name => normalizeStudentName(name) !== target) ?? null
 }
 
+/** Same duplicate guard as findDuplicateDocument, for the email field —
+ *  flags an email already on file under a DIFFERENT student name, not a
+ *  returning student re-checking-in under their own name/email. ilike
+ *  (no wildcards) does a case-insensitive exact match, since emails are
+ *  stored as typed and shouldn't be treated as case-sensitive. */
+export async function findDuplicateEmail(
+  schoolId: string,
+  email: string,
+  studentName: string
+): Promise<string | null> {
+  const supabase = createServiceClient()
+  const target = normalizeStudentName(studentName)
+  const normalizedEmail = email.trim()
+
+  const [{ data: students }, { data: checkins }] = await Promise.all([
+    supabase.from('students').select('name')
+      .eq('school_id', schoolId).ilike('email', normalizedEmail).limit(5),
+    supabase.from('checkins').select('student_name')
+      .eq('school_id', schoolId).ilike('student_email', normalizedEmail).limit(5),
+  ])
+
+  const candidates = [
+    ...(students ?? []).map(s => s.name),
+    ...(checkins ?? []).map(c => c.student_name),
+  ]
+
+  return candidates.find(name => normalizeStudentName(name) !== target) ?? null
+}
+
 

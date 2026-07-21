@@ -623,6 +623,10 @@ export default function CheckinForm({
   const [duplicateDocName, setDuplicateDocName] = useState<string | null>(null)
   const [checkingDocument, setCheckingDocument] = useState(false)
 
+  // Same guard, for the email field — see findDuplicateEmail.
+  const [duplicateEmailName, setDuplicateEmailName] = useState<string | null>(null)
+  const [checkingEmail, setCheckingEmail] = useState(false)
+
   const [isMinor,         setIsMinor]         = useState(false)
   const [guardianName,    setGuardianName]    = useState('')
   const [guardianConsent, setGuardianConsent] = useState(false)
@@ -717,6 +721,26 @@ export default function CheckinForm({
       setDuplicateDocName(null)
     } finally {
       setCheckingDocument(false)
+    }
+  }
+
+  async function checkEmailDuplicate(email: string, studentName: string) {
+    if (!email.trim() || studentName.trim().length < 2) {
+      setDuplicateEmailName(null)
+      return
+    }
+    setCheckingEmail(true)
+    try {
+      const res = await fetch(
+        `/api/checkin/check-email?school=${encodeURIComponent(school.slug)}` +
+        `&email=${encodeURIComponent(email.trim())}&name=${encodeURIComponent(studentName.trim())}`
+      )
+      const data = await res.json()
+      setDuplicateEmailName(data.duplicate ? data.existingName : null)
+    } catch {
+      setDuplicateEmailName(null)
+    } finally {
+      setCheckingEmail(false)
     }
   }
 
@@ -900,6 +924,7 @@ export default function CheckinForm({
     && form.document_number.trim().length > 0
     && (form.student_nationality !== 'BR' || isValidCPF(form.document_number))
     && !duplicateDocName
+    && !duplicateEmailName
     && (dobDigits.length === 0 || isValidDateInput(form.date_of_birth))
   const canAdvanceActivity = form.activity_id !== ''
 
@@ -1136,8 +1161,32 @@ export default function CheckinForm({
             <div>
               <label style={labelStyle}>{t.email}</label>
               <input style={inputStyle} type="email" value={form.student_email}
-                onChange={e => setForm(f => ({ ...f, student_email: e.target.value }))}
+                onChange={e => {
+                  setForm(f => ({ ...f, student_email: e.target.value }))
+                  setDuplicateEmailName(null)
+                }}
+                onBlur={() => checkEmailDuplicate(form.student_email, form.student_name)}
                 placeholder="joao@email.com" autoComplete="email" />
+              {checkingEmail && (
+                <div style={{ fontSize: '11px', color: '#8A8C98', marginTop: '4px' }}>
+                  {lang === 'pt' ? 'Verificando...' : 'Checking...'}
+                </div>
+              )}
+              {duplicateEmailName && (
+                <div style={{
+                  fontSize: '12px', color: '#92400E', background: '#FEF3C7',
+                  border: '1px solid #F59E0B', borderRadius: '8px',
+                  padding: '8px 10px', marginTop: '6px', lineHeight: '1.4',
+                }}>
+                  {lang === 'pt'
+                    ? `⚠️ Este e-mail já possui cadastro (${duplicateEmailName}).`
+                    : lang === 'fr'
+                    ? `⚠️ Cet e-mail est déjà enregistré (${duplicateEmailName}).`
+                    : lang === 'es'
+                    ? `⚠️ Este correo ya está registrado (${duplicateEmailName}).`
+                    : `⚠️ This email is already registered (${duplicateEmailName}).`}
+                </div>
+              )}
             </div>
             <div>
               <label style={labelStyle}>{t.whatsapp}</label>
