@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { translateModalityName } from '@/lib/modality'
 import Select from '@/components/ui/Select'
 
@@ -32,6 +32,12 @@ const selectStyle: React.CSSProperties = {
 function nowPlus(minutes: number) {
   const d = new Date(Date.now() + minutes * 60000)
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
+
+function fmtSuggestionDate(dateStr: string) {
+  return new Date(`${dateStr}T12:00:00`).toLocaleDateString('pt-BR', {
+    day: '2-digit', month: 'short',
+  })
 }
 
 /** "Agendar Aula" from an Aguardando Vento card that has no scheduled lesson
@@ -78,8 +84,53 @@ export default function ScheduleFromCheckinModal({
   const [saving, setSaving]             = useState(false)
   const [error, setError]               = useState<string | null>(null)
 
+  // "Sugestão do sistema" — same feature/endpoint as ScheduledLessons.tsx's
+  // own Agendar Aula modal and RescheduleModal.tsx's Reagendar flow, just
+  // auto-applied instead of click-to-apply (RescheduleModal's behavior,
+  // since this modal has no separate "aplicar" affordance). Re-fetches
+  // whenever Atividade changes, since availability depends on modality —
+  // Instrutor isn't a search input the underlying endpoint accepts, so
+  // changing it wouldn't change what comes back.
+  const [loadingSuggestion, setLoadingSuggestion] = useState(true)
+  const [noSuggestion, setNoSuggestion]           = useState(false)
+  const [suggestedInstructorName, setSuggestedInstructorName] = useState<string | null>(null)
+
   const finalDuration = useCustom ? parseInt(custom) || 0 : duration
   const canSave = !saving && !!date && !!time && finalDuration > 0
+
+  useEffect(() => {
+    let cancelled = false
+    async function loadSuggestion() {
+      setLoadingSuggestion(true)
+      try {
+        const activityName = activities.find(a => a.id === activityId)?.name ?? ''
+        const params = new URLSearchParams({ durationMin: String(finalDuration || 60) })
+        if (activityName) params.set('activityName', activityName)
+        const res = await fetch(`/api/owner/booking-suggestion?${params}`)
+        const data = await res.json()
+        if (cancelled) return
+        if (data.suggestion) {
+          setDate(data.suggestion.date)
+          setTime(data.suggestion.time)
+          // Never overrides an instructor already chosen — either passed
+          // in as initialInstructorId (this student's usual instructor)
+          // or picked manually — only fills it in when it's still empty.
+          setInstructorId(prev => prev || data.suggestion.instructor_id)
+          setSuggestedInstructorName(data.suggestion.instructor_name)
+          setNoSuggestion(false)
+        } else {
+          setNoSuggestion(true)
+        }
+      } catch {
+        if (!cancelled) setNoSuggestion(true)
+      } finally {
+        if (!cancelled) setLoadingSuggestion(false)
+      }
+    }
+    loadSuggestion()
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activityId])
 
   async function submit() {
     if (!canSave) return
@@ -130,6 +181,30 @@ export default function ScheduleFromCheckinModal({
         <div style={{ fontSize: '13px', color: 'var(--mist)', marginBottom: '20px' }}>
           {studentName}
         </div>
+
+        {/* "Sugestão do sistema" — same banner/copy as RescheduleModal.tsx's
+            Reagendar aula modal, applied here for parity. */}
+        {loadingSuggestion ? (
+          <div style={{ fontSize: '13px', color: 'var(--mist)', padding: '12px 0' }}>
+            Buscando o próximo horário disponível...
+          </div>
+        ) : noSuggestion ? (
+          <div style={{
+            fontSize: '12px', color: 'var(--mist)',
+            background: 'var(--powder)', borderRadius: 'var(--radius-md)',
+            padding: '10px 14px', marginBottom: '16px',
+          }}>
+            Nenhum horário livre encontrado automaticamente nos próximos dias — selecione manualmente abaixo.
+          </div>
+        ) : (
+          <div style={{
+            fontSize: '12px', color: 'var(--slate)',
+            background: 'var(--glacial-light)', borderRadius: 'var(--radius-md)',
+            padding: '10px 14px', marginBottom: '16px',
+          }}>
+            💡 <strong>Sugestão do sistema:</strong> {fmtSuggestionDate(date)} às {time} com {suggestedInstructorName}.
+          </div>
+        )}
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div>
