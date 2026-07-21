@@ -25,10 +25,14 @@ const VALID_STAGES: Stage[] = ['sala_de_espera', 'na_agua', 'concluido']
  *  added alongside `stage` here rather than as a separate route, since it's
  *  the same "PATCH one field on a checkin row" shape. `stage` and
  *  `checked_in` are independent facts (see 20260806000000_checkin_checked_
- *  in.sql), so either can be sent alone. */
+ *  in.sql), so either can be sent alone.
+ *
+ *  equipment_notes rides the same shape for the same reason — free-text
+ *  edit from "Ver ficha", nothing else about the row changes when it's
+ *  saved. */
 export async function PATCH(request: Request) {
   const body = await request.json()
-  const { id, stage, checked_in } = body
+  const { id, stage, checked_in, equipment_notes } = body
 
   if (!id) {
     return NextResponse.json({ error: 'id e obrigatorio' }, { status: 400 })
@@ -39,13 +43,17 @@ export async function PATCH(request: Request) {
   if (checked_in !== undefined && typeof checked_in !== 'boolean') {
     return NextResponse.json({ error: 'checked_in deve ser boolean' }, { status: 400 })
   }
-  if (stage === undefined && checked_in === undefined) {
-    return NextResponse.json({ error: 'stage ou checked_in e obrigatorio' }, { status: 400 })
+  if (equipment_notes !== undefined && typeof equipment_notes !== 'string') {
+    return NextResponse.json({ error: 'equipment_notes deve ser string' }, { status: 400 })
+  }
+  if (stage === undefined && checked_in === undefined && equipment_notes === undefined) {
+    return NextResponse.json({ error: 'stage, checked_in ou equipment_notes e obrigatorio' }, { status: 400 })
   }
 
-  const update: { stage?: Stage; checked_in?: boolean } = {}
+  const update: { stage?: Stage; checked_in?: boolean; equipment_notes?: string } = {}
   if (stage !== undefined) update.stage = stage as Stage
   if (checked_in !== undefined) update.checked_in = checked_in
+  if (equipment_notes !== undefined) update.equipment_notes = equipment_notes
 
   const supabase = createServiceClient()
   const { error } = await supabase

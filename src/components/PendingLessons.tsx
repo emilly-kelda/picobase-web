@@ -42,6 +42,7 @@ type Checkin = {
   stage: Stage | null
   checked_in: boolean
   waiver_signed_at: string | null
+  equipment_notes: string | null
   activities: ActivityRef | null
   instructor: { id: string; name: string } | { id: string; name: string }[] | null
   partner: { id: string; name: string; type: string } | { id: string; name: string; type: string }[] | null
@@ -95,6 +96,68 @@ function fmtRelative(iso: string, t: Record<string, string>) {
 function fmtBirthdate(iso: string | null) {
   if (!iso) return null
   return new Date(iso + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+}
+
+/** Free-text equipment notes (kite size, board, harness, etc.) inside "Ver
+ *  ficha" — the only editable field in an otherwise read-only modal.
+ *  Deliberately its own component (not inline state in PendingLessons
+ *  itself) so `key={fichaModal.id}` on its usage resets the draft cleanly
+ *  when a different student's ficha opens. */
+function EquipmentNotesField({ checkin }: { checkin: Checkin }) {
+  const [draft, setDraft] = useState(checkin.equipment_notes ?? '')
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const dirty = draft !== (checkin.equipment_notes ?? '')
+
+  async function save() {
+    setSaving(true)
+    setSaved(false)
+    try {
+      await fetch('/api/owner/checkin-stage', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: checkin.id, equipment_notes: draft }),
+      })
+      setSaved(true)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div style={{ marginTop: '18px', paddingTop: '18px', borderTop: '0.5px solid var(--border)' }}>
+      <div style={{ fontSize: '10px', fontWeight: '500', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--mist)', marginBottom: '6px' }}>
+        Notas de equipamento
+      </div>
+      <textarea
+        value={draft}
+        onChange={e => { setDraft(e.target.value); setSaved(false) }}
+        placeholder="Ex: kite 9m, prancha 138cm, trapézio M"
+        style={{
+          width: '100%', padding: '10px 12px', border: '0.5px solid var(--border-strong)',
+          borderRadius: 'var(--radius-md)', fontSize: '13px', color: 'var(--slate)',
+          fontFamily: 'var(--font-sans)', outline: 'none', minHeight: '56px',
+          resize: 'vertical' as const, boxSizing: 'border-box' as const,
+        }}
+      />
+      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '8px', marginTop: '8px' }}>
+        {saved && !dirty && <span style={{ fontSize: '11px', color: 'var(--color-pb-glacial-dark)' }}>Salvo</span>}
+        <button
+          onClick={save}
+          disabled={saving || !dirty}
+          style={{
+            padding: '6px 14px', borderRadius: 'var(--radius-md)', border: 'none',
+            background: dirty && !saving ? 'var(--glacial)' : 'var(--border)',
+            color: dirty && !saving ? '#fff' : 'var(--mist)',
+            fontSize: '12px', fontWeight: '500', fontFamily: 'var(--font-sans)',
+            cursor: dirty && !saving ? 'pointer' : 'not-allowed',
+          }}
+        >
+          {saving ? 'Salvando...' : 'Salvar'}
+        </button>
+      </div>
+    </div>
+  )
 }
 
 export default function PendingLessons({
@@ -520,17 +583,17 @@ export default function PendingLessons({
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {[
+                { label: 'WhatsApp', value: fichaModal.student_whatsapp },
+                { label: 'Email', value: fichaModal.student_email },
+                { label: 'Contato de emergência', value: fichaModal.emergency_name },
+                { label: 'Telefone de emergência', value: fichaModal.emergency_phone },
+                { label: 'Condições de saúde', value: fichaModal.health_condition },
                 { label: 'Nacionalidade', value: fichaModal.student_nationality },
                 {
                   label: fichaModal.document_type === 'cpf' ? 'CPF' : fichaModal.document_type === 'passport' ? 'Passaporte' : 'Documento',
                   value: fichaModal.document_number,
                 },
                 { label: 'Data de nascimento', value: fmtBirthdate(fichaModal.birthdate) },
-                { label: 'Email', value: fichaModal.student_email },
-                { label: 'WhatsApp', value: fichaModal.student_whatsapp },
-                { label: 'Contato de emergência', value: fichaModal.emergency_name },
-                { label: 'Telefone de emergência', value: fichaModal.emergency_phone },
-                { label: 'Condições de saúde', value: fichaModal.health_condition },
                 { label: 'Responsável (menor de idade)', value: fichaModal.is_minor ? (fichaModal.guardian_name ?? '—') : null },
                 { label: 'Origem', value: fichaModal.source },
               ].filter(row => row.value).map(row => (
@@ -547,6 +610,11 @@ export default function PendingLessons({
                 </div>
               ))}
             </div>
+
+            {/* key={fichaModal.id} forces a fresh mount (and fresh draft
+                state) whenever a different student's ficha opens — this
+                component's own useState wouldn't otherwise reset. */}
+            <EquipmentNotesField key={fichaModal.id} checkin={fichaModal} />
 
             <button
               onClick={() => setFichaModal(null)}
