@@ -21,10 +21,10 @@ type Instructor = {
 
 type Currency = 'BRL' | 'EUR' | 'USD'
 
-const CURRENCY_OPTIONS: Array<{ value: Currency; symbol: string; flag: string }> = [
-  { value: 'BRL', symbol: 'R$', flag: '🇧🇷' },
-  { value: 'EUR', symbol: '€',  flag: '🇪🇺' },
-  { value: 'USD', symbol: '$',  flag: '🇺🇸' },
+const CURRENCY_OPTIONS: Array<{ value: Currency; symbol: string }> = [
+  { value: 'BRL', symbol: 'R$' },
+  { value: 'EUR', symbol: '€'  },
+  { value: 'USD', symbol: '$'  },
 ]
 const CURRENCY_SYMBOL: Record<Currency, string> = { BRL: 'R$', EUR: '€', USD: '$' }
 
@@ -43,6 +43,27 @@ function fmt(n: number, currency: Currency = 'BRL') {
     style: 'currency', currency,
     minimumFractionDigits: 2, maximumFractionDigits: 2,
   }).format(n)
+}
+
+// Small stroke icons for the payment-method picker — same 24x24/
+// stroke=currentColor convention as nav-icons.tsx/weather-icons.tsx, in
+// place of the ⚡💵💳⏳ emoji this used to show (no-emoji pass).
+function PaymentMethodIcon({ method }: { method: 'pix' | 'dinheiro' | 'cartao' | 'a_receber' }) {
+  const props = {
+    width: 15, height: 15, viewBox: '0 0 24 24', fill: 'none' as const,
+    stroke: 'currentColor', strokeWidth: 1.5,
+    strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const,
+  }
+  switch (method) {
+    case 'pix':
+      return <svg {...props}><path d="M13 3 4 14h6l-1 7 9-11h-6l1-7Z" /></svg>
+    case 'dinheiro':
+      return <svg {...props}><rect x="2.5" y="6" width="19" height="12" rx="2" /><circle cx="12" cy="12" r="2.5" /></svg>
+    case 'cartao':
+      return <svg {...props}><rect x="2.5" y="5.5" width="19" height="13" rx="2" /><path d="M2.5 10h19" /></svg>
+    case 'a_receber':
+      return <svg {...props}><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3.5 2" /></svg>
+  }
 }
 
 function fmtHoursMin(min: number) {
@@ -465,7 +486,7 @@ export default function ConfirmLessonModal({
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
                 }}
               >
-                <span>{c.flag}</span><span>{c.value}</span>
+                <span>{c.value}</span>
               </button>
             ))}
           </div>
@@ -618,10 +639,10 @@ export default function ConfirmLessonModal({
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
             {([
-              { value: 'pix',       label: t.payment_pix,        icon: '⚡' },
-              { value: 'dinheiro',  label: t.payment_cash,       icon: '💵' },
-              { value: 'cartao',    label: t.payment_card,       icon: '💳' },
-              { value: 'a_receber', label: t.payment_receivable, icon: '⏳' },
+              { value: 'pix',       label: t.payment_pix },
+              { value: 'dinheiro',  label: t.payment_cash },
+              { value: 'cartao',    label: t.payment_card },
+              { value: 'a_receber', label: t.payment_receivable },
             ] as const).map(opt => {
               const active = paymentMethod === opt.value
               return (
@@ -639,7 +660,7 @@ export default function ConfirmLessonModal({
                     display: 'flex', alignItems: 'center', gap: '8px',
                   }}
                 >
-                  <span>{opt.icon}</span><span>{opt.label}</span>
+                  <PaymentMethodIcon method={opt.value} /><span>{opt.label}</span>
                 </button>
               )
             })}
