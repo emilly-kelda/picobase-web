@@ -106,19 +106,16 @@ function fmtBirthdate(iso: string | null) {
  *  ficha" — the only editable field in an otherwise read-only modal.
  *  Deliberately its own component (not inline state in PendingLessons
  *  itself) so `key={fichaModal.id}` on its usage resets the draft cleanly
- *  when a different student's ficha opens. */
-function EquipmentNotesField({ checkin, windKn }: { checkin: Checkin; windKn: number | null }) {
+ *  when a different student's ficha opens. The weight-based kite-size
+ *  suggestion used to live in this box too — moved up next to the Peso
+ *  chip itself (WeightAndSuggestion, right below) so it reacts live as
+ *  the operator types a weight, instead of sitting in a separate section
+ *  further down the modal. */
+function EquipmentNotesField({ checkin }: { checkin: Checkin }) {
   const [draft, setDraft] = useState(checkin.equipment_notes ?? '')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const dirty = draft !== (checkin.equipment_notes ?? '')
-
-  // Rough starting point only — weight x current spot wind, generic
-  // school-agnostic matrix (see lib/equipment.ts). Never writes into
-  // equipment_notes itself; the operator still types the real gear below.
-  const suggestion = (checkin.weight_kg != null && windKn != null)
-    ? suggestKiteSizeM(checkin.weight_kg, windKn)
-    : null
 
   async function save() {
     setSaving(true)
@@ -140,19 +137,6 @@ function EquipmentNotesField({ checkin, windKn }: { checkin: Checkin; windKn: nu
       <div style={{ fontSize: '10px', fontWeight: '500', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--mist)', marginBottom: '6px' }}>
         Notas de equipamento
       </div>
-      {suggestion && (
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: '6px',
-          padding: '8px 10px', marginBottom: '8px',
-          background: 'var(--color-pb-glacial-light)', color: 'var(--color-pb-glacial-dark)',
-          borderRadius: 'var(--radius-md)', fontSize: '12px',
-        }}>
-          <LightbulbIcon size={14} />
-          <span>
-            Sugestão ({windKn!.toFixed(0)}kn · {checkin.weight_kg}kg): kite {suggestion.min}m – {suggestion.max}m
-          </span>
-        </div>
-      )}
       <textarea
         value={draft}
         onChange={e => { setDraft(e.target.value); setSaved(false) }}
@@ -194,21 +178,94 @@ const fichaInputStyle: CSSProperties = {
   fontFamily: 'var(--font-sans)', outline: 'none', boxSizing: 'border-box' as const,
 }
 
+/** Inline-editable Peso chip + live kite-size suggestion — the whole point
+ *  is skipping the Ficha -> Editar -> Salvar round trip for a field the
+ *  operator touches constantly. `draft` (not checkin.weight_kg) drives the
+ *  suggestion calc, so it updates as the number is typed, before the
+ *  onBlur/Enter auto-save even fires. Auto-save is deliberately silent
+ *  (fetch...catch{}, no "Salvo" indicator) — same convention as
+ *  PendingLessons' own checkIn() — since surfacing a save confirmation for
+ *  every keystroke-triggered blur would be noisier than the friction this
+ *  was meant to remove. */
+function WeightAndSuggestion({
+  checkin, windKn, onSaved,
+}: {
+  checkin: Checkin
+  windKn: number | null
+  onSaved: (patch: Partial<Checkin>) => void
+}) {
+  const [draft, setDraft] = useState(checkin.weight_kg != null ? String(checkin.weight_kg) : '')
+  const draftWeight = draft.trim() ? Number(draft) : null
+  const suggestion = (draftWeight != null && windKn != null) ? suggestKiteSizeM(draftWeight, windKn) : null
+
+  async function commit() {
+    if (draftWeight === checkin.weight_kg) return
+    onSaved({ weight_kg: draftWeight })
+    try {
+      await fetch('/api/owner/checkin-stage', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: checkin.id, weight_kg: draftWeight }),
+      })
+    } catch {}
+  }
+
+  return (
+    <div style={{ marginBottom: '18px' }}>
+      <div style={fichaLabelStyle}>Peso</div>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+        <input
+          type="number" inputMode="decimal" min={1} max={300}
+          value={draft}
+          onChange={e => setDraft(e.target.value)}
+          onBlur={commit}
+          onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
+          placeholder="—"
+          style={{
+            width: '64px', padding: '4px 8px', textAlign: 'center',
+            border: '0.5px solid var(--border-strong)', borderRadius: 'var(--radius-md)',
+            fontSize: '13px', color: 'var(--slate)', fontFamily: 'var(--font-sans)', outline: 'none',
+          }}
+        />
+        <span style={{ fontSize: '13px', color: 'var(--mist)' }}>kg</span>
+      </div>
+      {suggestion && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '6px',
+          padding: '8px 10px', marginTop: '8px',
+          background: 'var(--color-pb-glacial-light)', color: 'var(--color-pb-glacial-dark)',
+          borderRadius: 'var(--radius-md)', fontSize: '12px',
+        }}>
+          <LightbulbIcon size={14} />
+          <span>
+            Sugestão ({windKn!.toFixed(0)}kn · {draftWeight}kg): kite {suggestion.min}m – {suggestion.max}m
+          </span>
+        </div>
+      )}
+    </div>
+  )
+}
+
 /** The Ficha modal's header actions + info body — pulled out of the .map
  *  loop's parent so the pencil-edit toggle (top-right, next to the close
  *  ×) can sit above both the read-only rows list and its edit-mode
  *  replacement without threading state through PendingLessons itself.
  *  Editable fields are the same allowlist the API accepts
- *  (EDITABLE_TEXT_FIELDS in checkin-stage/route.ts) plus weight_kg —
- *  health_condition is encrypted server-side and stays read-only here,
- *  a fuller edit flow if that's ever needed shouldn't ride this quick form. */
+ *  (EDITABLE_TEXT_FIELDS in checkin-stage/route.ts) — health_condition is
+ *  encrypted server-side and stays read-only here, a fuller edit flow if
+ *  that's ever needed shouldn't ride this quick form. weight_kg used to
+ *  be one of these fields too, but that meant changing it required the
+ *  full Ficha -> Editar -> Salvar round trip; it now has its own always-
+ *  visible inline chip (WeightAndSuggestion) instead, editable with no
+ *  "Editar" click at all. */
 function FichaModalContent({
-  checkin, onClose, onSaved, t,
+  checkin, onClose, onSaved, t, windKn,
 }: {
   checkin: Checkin
   onClose: () => void
   onSaved: (patch: Partial<Checkin>) => void
   t: Record<string, string>
+  windKn: number | null
 }) {
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -220,7 +277,6 @@ function FichaModalContent({
     document_number:     checkin.document_number ?? '',
     emergency_name:      checkin.emergency_name ?? '',
     emergency_phone:     checkin.emergency_phone ?? '',
-    weight_kg:           checkin.weight_kg != null ? String(checkin.weight_kg) : '',
   })
 
   async function save() {
@@ -233,7 +289,6 @@ function FichaModalContent({
       document_number:     draft.document_number.trim() || null,
       emergency_name:      draft.emergency_name.trim() || null,
       emergency_phone:     draft.emergency_phone.trim() || null,
-      weight_kg:           draft.weight_kg.trim() ? Number(draft.weight_kg) : null,
     }
     try {
       await fetch('/api/owner/checkin-stage', {
@@ -297,6 +352,8 @@ function FichaModalContent({
         </div>
       </div>
 
+      <WeightAndSuggestion checkin={checkin} windKn={windKn} onSaved={onSaved} />
+
       {editing ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <div>
@@ -313,11 +370,6 @@ function FichaModalContent({
             <label style={fichaLabelStyle}>Email</label>
             <input style={fichaInputStyle} value={draft.student_email}
               onChange={e => setDraft(d => ({ ...d, student_email: e.target.value }))} />
-          </div>
-          <div>
-            <label style={fichaLabelStyle}>Peso (kg)</label>
-            <input style={fichaInputStyle} type="number" min={1} max={300} value={draft.weight_kg}
-              onChange={e => setDraft(d => ({ ...d, weight_kg: e.target.value }))} />
           </div>
           <div>
             <label style={fichaLabelStyle}>Nacionalidade</label>
@@ -373,7 +425,6 @@ function FichaModalContent({
             { label: 'Contato de emergência', value: checkin.emergency_name },
             { label: 'Telefone de emergência', value: checkin.emergency_phone },
             { label: 'Condições de saúde', value: checkin.health_condition },
-            { label: 'Peso', value: checkin.weight_kg != null ? `${checkin.weight_kg} kg` : null },
             { label: 'Nacionalidade', value: checkin.student_nationality },
             {
               label: checkin.document_type === 'cpf' ? 'CPF' : checkin.document_type === 'passport' ? 'Passaporte' : 'Documento',
@@ -821,12 +872,13 @@ export default function PendingLessons({
               onClose={() => setFichaModal(null)}
               onSaved={patch => updateFichaFields(fichaModal.id, patch)}
               t={t}
+              windKn={weather?.windSpeedKn ?? null}
             />
 
             {/* key={fichaModal.id} forces a fresh mount (and fresh draft
                 state) whenever a different student's ficha opens — this
                 component's own useState wouldn't otherwise reset. */}
-            <EquipmentNotesField key={fichaModal.id} checkin={fichaModal} windKn={weather?.windSpeedKn ?? null} />
+            <EquipmentNotesField key={fichaModal.id} checkin={fichaModal} />
 
             <button
               onClick={() => setFichaModal(null)}
