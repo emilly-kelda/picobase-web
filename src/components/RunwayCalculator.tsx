@@ -9,6 +9,12 @@ type Props = {
   daysLeft?: number
   projectedRunway?: number
   gap?: number
+  // Average price/duration across the school's own active package
+  // types — "standard package" has no single definition otherwise, every
+  // school's catalog differs. Either can be 0 (no active packages yet),
+  // in which case the package-equivalent line just doesn't render.
+  avgPackagePrice?: number
+  avgPackageMinutes?: number
 }
 
 function fmt(n: number) {
@@ -18,7 +24,7 @@ function fmt(n: number) {
   }).format(n)
 }
 
-export default function RunwayCalculator({ seasonProfit, burnRate, currency = 'BRL', daysLeft, projectedRunway, gap }: Props) {
+export default function RunwayCalculator({ seasonProfit, burnRate, currency = 'BRL', daysLeft, projectedRunway, gap, avgPackagePrice = 0, avgPackageMinutes = 0 }: Props) {
   const [burn, setBurn] = useState(burnRate > 0 ? burnRate : 5000)
   const [profit, setProfit] = useState(seasonProfit > 0 ? seasonProfit : 0)
 
@@ -53,6 +59,8 @@ export default function RunwayCalculator({ seasonProfit, burnRate, currency = 'B
 
   const avgLessonProfit = 250
   const lessonsNeeded   = profitGap > 0 ? Math.ceil(profitGap / avgLessonProfit) : 0
+  const packageHours    = avgPackageMinutes > 0 ? Math.round(avgPackageMinutes / 60) : 0
+  const packagesNeeded  = profitGap > 0 && avgPackagePrice > 0 ? Math.ceil(profitGap / avgPackagePrice) : 0
   const survivalDate    = (() => {
     if (runwayMonths <= 0) return null
     const d = new Date()
@@ -346,6 +354,11 @@ export default function RunwayCalculator({ seasonProfit, burnRate, currency = 'B
               <div style={{ fontSize: '11px', color: 'var(--amber)', opacity: 0.7 }}>
                 ≈ {lessonsNeeded} aulas a mais
               </div>
+              {packagesNeeded > 0 && (
+                <div style={{ fontSize: '11px', color: 'var(--amber)', opacity: 0.7, marginTop: '2px' }}>
+                  Faltam {packagesNeeded} pacote{packagesNeeded > 1 ? 's' : ''} de {packageHours}h para meta de {targetMonths} meses
+                </div>
+              )}
             </div>
           )}
         </div>

@@ -8,6 +8,12 @@ type Props = {
   seasonRevenue: number
   commissions: number
   netProfit: number
+  // Informational only (see costs/page.tsx's own comment on this) — revenue
+  // minus commissions minus one month of operational cost, NOT fed into
+  // runwayMonths/gapToTarget (those stay netProfit ÷ monthlyBurn, since
+  // netProfit already having costs subtracted would double-count monthlyBurn
+  // as both a subtraction and the divisor).
+  netAfterOperationalCosts?: number
   monthlyBurn: number
   gapToTarget: number
   projectedRunway?: number
@@ -29,23 +35,26 @@ function fmt(n: number) {
  *  breakdown) — same numbers, so keeping both was the redundant part, not
  *  the breakdown itself. */
 export default function RunwaySummary({
-  runwayMonths, seasonRevenue, commissions, netProfit, monthlyBurn,
+  runwayMonths, seasonRevenue, commissions, netProfit, netAfterOperationalCosts, monthlyBurn,
   gapToTarget, projectedRunway, daysLeft,
 }: Props) {
   const [isOpen, setIsOpen] = useState(true)
 
+  // Zinc/muted palette, not the old dark-teal (--ocean-deep) + mint/amber/
+  // coral trio — emerald-400 for goals met, matching the emerald-family
+  // "success" tone used everywhere else in the app now.
   const safetyScore = runwayMonths >= 9
-    ? { label: 'Protegido', color: '#6DD5C0' }
+    ? { label: 'Protegido', color: '#34D399' }
     : runwayMonths >= 6
-    ? { label: 'Saudável',  color: '#6DD5C0' }
+    ? { label: 'Saudável',  color: '#34D399' }
     : runwayMonths >= 3
-    ? { label: 'Vulnerável', color: '#F0C674' }
+    ? { label: 'Vulnerável', color: '#FBBF24' }
     : runwayMonths > 0
-    ? { label: 'Crítico',   color: '#E88C7D' }
+    ? { label: 'Crítico',   color: '#FB7185' }
     : { label: '—', color: 'rgba(255,255,255,0.4)' }
 
   return (
-    <div style={{ background: 'var(--ocean-deep)', borderRadius: '16px', overflow: 'hidden' }}>
+    <div style={{ background: '#18181B', border: '0.5px solid rgba(255,255,255,0.08)', borderRadius: '16px', overflow: 'hidden' }}>
       <button
         onClick={() => setIsOpen(o => !o)}
         style={{
@@ -126,12 +135,26 @@ export default function RunwaySummary({
               </span>
               <span style={{
                 fontSize: '14px', fontWeight: '700',
-                color: netProfit < 0 ? '#E88C7D' : '#fff',
+                color: netProfit < 0 ? '#FB7185' : '#fff',
                 fontVariantNumeric: 'tabular-nums',
               }}>
                 <MaskableValue>{fmt(netProfit)}</MaskableValue>
               </span>
             </div>
+            {netAfterOperationalCosts !== undefined && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', letterSpacing: '0.06em' }} title="Lucro líquido menos 1 mês de custo operacional — informativo, não afeta o cálculo de meses cobertos abaixo.">
+                  Lucro após custos operacionais
+                </span>
+                <span style={{
+                  fontSize: '13px', fontWeight: '500',
+                  color: netAfterOperationalCosts < 0 ? '#FB7185' : '#34D399',
+                  fontVariantNumeric: 'tabular-nums',
+                }}>
+                  <MaskableValue>{fmt(netAfterOperationalCosts)}</MaskableValue>
+                </span>
+              </div>
+            )}
             {monthlyBurn > 0 && (
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', letterSpacing: '0.06em' }}>

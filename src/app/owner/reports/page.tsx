@@ -138,6 +138,7 @@ export default function ReportsPage() {
     partners:    PartnerData[]
     payments:    PaymentData
     metrics:     Metrics
+    monthlyCostTotal: number
   } | null>(null)
   const [tab, setTab] = useState<'faturamento' | 'modalidade' | 'instructors' | 'partners' | 'payments'>('faturamento')
   const [groupBy, setGroupBy] = useState<GroupBy>('month')
@@ -164,6 +165,11 @@ export default function ReportsPage() {
   const totalCommissions = data.monthly.reduce((s, m) => s + m.commissions, 0)
   const totalNet          = data.monthly.reduce((s, m) => s + m.net, 0)
   const totalLessons     = data.monthly.reduce((s, m) => s + m.lessons, 0)
+  // Informational only, same as Custos' "Lucro após custos operacionais" —
+  // multiplies the monthly rate by how many months this report actually
+  // covers (data.monthly.length), not a flat one-month subtraction, since
+  // this table can span a whole season/year instead of a single month.
+  const netAfterOperationalCosts = totalNet - (data.monthlyCostTotal * data.monthly.length)
   const maxRevenue       = Math.max(...data.monthly.map(m => m.revenue), 1)
   const maxSportRevenue  = Math.max(...data.sports.map(s => s.revenue), 1)
 
@@ -173,6 +179,12 @@ export default function ReportsPage() {
     { label: 'Receita total',     value: fmt(totalRevenue),        color: 'var(--slate)' },
     { label: 'Comissões pagas',   value: fmt(totalCommissions),    color: '#DC2626'      },
     { label: 'Lucro líquido',     value: fmt(totalNet),            color: '#007868'      },
+    {
+      label: 'Lucro após custos operacionais',
+      value: fmt(netAfterOperationalCosts),
+      color: netAfterOperationalCosts < 0 ? '#DC2626' : '#047857',
+      sub: data.monthlyCostTotal > 0 ? `${fmt(data.monthlyCostTotal)}/mês × ${data.monthly.length} meses` : undefined,
+    },
     { label: 'Aulas confirmadas', value: totalLessons.toString(),  color: 'var(--slate)' },
     {
       label: 'Ticket médio',

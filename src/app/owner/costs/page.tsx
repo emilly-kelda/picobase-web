@@ -2,6 +2,7 @@ import { cookies } from 'next/headers'
 import { getCosts, getKnownCategories, getMonthlyCostTotal } from '@/repositories/costRepository'
 import { getRunwayData, getRunwayProjection } from '@/repositories/runwayRepository'
 import { getPayments } from '@/repositories/crewRepository'
+import { getPackages } from '@/repositories/packageRepository'
 import CostsClient from './CostsClient'
 import MonthPeriodSelect from './MonthPeriodSelect'
 import RunwayCalculator from '@/components/RunwayCalculator'
@@ -26,7 +27,7 @@ export default async function CostsPage({
 
   const [
     { costs, total, pageSize }, knownCategories, monthlyCostTotal, runway, projection,
-    { payments, period: resolvedPeriod, summary: paymentsSummary },
+    { payments, period: resolvedPeriod, summary: paymentsSummary }, activePackageTypes,
   ] = await Promise.all([
     getCosts(SCHOOL_ID, 0),
     getKnownCategories(SCHOOL_ID),
@@ -43,6 +44,10 @@ export default async function CostsPage({
     // no season-date-range concept, so this stays its own independent
     // period filter, same as it worked on /owner/payments.
     getPayments(SCHOOL_ID, period),
+    // Feeds RunwayCalculator's "packages needed to close the gap" language
+    // — an average across the school's own active package types (price and
+    // duration both vary per school), not a hardcoded assumption.
+    getPackages(SCHOOL_ID),
   ])
 
   const monthOptions = Array.from({ length: 12 }, (_, i) => {
@@ -77,6 +82,25 @@ export default async function CostsPage({
     ? adjustedNetProfit / monthlyBurn
     : ((runway as any).winter_runway_months ?? 0)
   const gapToTarget  = Math.max(0, 6 * monthlyBurn - adjustedNetProfit)
+
+  // Informational only — deliberately NOT fed into runwayMonths/gapToTarget
+  // above. Those divide rawNetProfit by monthlyBurn to get "months
+  // covered"; if netProfit already had monthlyBurn subtracted from it,
+  // dividing by monthlyBurn again would double-count the same cost once
+  // as a subtraction and again as the divisor. This is a separate,
+  // one-month-of-overhead reference point for "what's actually left after
+  // covering operational costs", not a runway input.
+  const netAfterOperationalCosts = rawNetProfit - monthlyBurn
+
+  // Average across the school's own active package types — "pacote
+  // padrão" has no single definition (every school's catalog differs), so
+  // this is the fairest stand-in rather than a hardcoded assumption.
+  const avgPackagePrice   = activePackageTypes.length > 0
+    ? activePackageTypes.reduce((s, p) => s + ((p as any).final_price ?? (p as any).base_price ?? 0), 0) / activePackageTypes.length
+    : 0
+  const avgPackageMinutes = activePackageTypes.length > 0
+    ? activePackageTypes.reduce((s, p) => s + ((p as any).total_minutes ?? 0), 0) / activePackageTypes.length
+    : 0
 
   return (
     <div>
@@ -173,6 +197,7 @@ export default async function CostsPage({
             seasonRevenue={(runway as any).season_revenue ?? 0}
             commissions={((runway as any).crew_commissions ?? 0) + totalPartnerCommissions}
             netProfit={rawNetProfit}
+            netAfterOperationalCosts={netAfterOperationalCosts}
             monthlyBurn={monthlyBurn}
             gapToTarget={gapToTarget}
             projectedRunway={projection?.projectedRunway}
@@ -195,6 +220,8 @@ export default async function CostsPage({
             daysLeft={projection?.daysLeft}
             projectedRunway={projection?.projectedRunway}
             gap={projection?.gap}
+            avgPackagePrice={avgPackagePrice}
+            avgPackageMinutes={avgPackageMinutes}
           />
         </div>
       </div>
