@@ -1169,7 +1169,7 @@ export default function ScheduledLessons({
                   >
                     <option value="">Selecionar</option>
                     {activities.map(a => (
-                      <option key={a.id} value={a.id}>{a.name}</option>
+                      <option key={a.id} value={a.id}>{translateModalityName(a.name, lang)}</option>
                     ))}
                   </select>
                 </div>
@@ -1592,7 +1592,7 @@ export default function ScheduledLessons({
                   >
                     <option value="">Selecionar</option>
                     {activities.map(a => (
-                      <option key={a.id} value={a.id}>{a.name}</option>
+                      <option key={a.id} value={a.id}>{translateModalityName(a.name, lang)}</option>
                     ))}
                   </select>
                 </div>

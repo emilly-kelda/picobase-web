@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { translateModalityName } from '@/lib/modality'
 
 type ActivityRef = { id: string; name: string }
 type Instructor = { id: string; name: string }
@@ -51,6 +52,7 @@ export default function ScheduleFromCheckinModal({
   instructors,
   initialActivityId,
   initialInstructorId,
+  lang = 'pt',
   onClose,
   onScheduled,
 }: {
@@ -60,6 +62,7 @@ export default function ScheduleFromCheckinModal({
   instructors: Instructor[]
   initialActivityId?: string | null
   initialInstructorId?: string | null
+  lang?: 'en' | 'pt'
   onClose: () => void
   onScheduled: () => void
 }) {
@@ -132,7 +135,7 @@ export default function ScheduleFromCheckinModal({
             <label style={labelStyle}>Atividade</label>
             <select style={selectStyle} value={activityId} onChange={e => setActivityId(e.target.value)}>
               <option value="">Selecionar atividade</option>
-              {activities.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+              {activities.map(a => <option key={a.id} value={a.id}>{translateModalityName(a.name, lang)}</option>)}
             </select>
           </div>
 

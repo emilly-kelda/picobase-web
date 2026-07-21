@@ -453,6 +453,7 @@ export default function PendingLessons({
           instructors={instructors}
           initialActivityId={scheduleModal.activity_id}
           initialInstructorId={scheduleModal.instructor_id}
+          lang={lang}
           onClose={() => setScheduleModal(null)}
           onScheduled={() => { setScheduleModal(null); router.refresh() }}
         />

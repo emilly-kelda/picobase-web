@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { isLevel, LEVEL_LABELS, type Level } from '@/lib/levels'
+import { translateModalityName } from '@/lib/modality'
 import LevelPicker from '@/components/LevelPicker'
 import type { VariableCostInfo } from '@/lib/commission'
 import PackageReceiptModal from '@/components/PackageReceiptModal'
@@ -335,7 +336,7 @@ export default function ConfirmLessonModal({
             }}
           >
             <option value="">{t.select_activity}</option>
-            {activities.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+            {activities.map(a => <option key={a.id} value={a.id}>{translateModalityName(a.name, lang)}</option>)}
           </select>
         </div>
 
