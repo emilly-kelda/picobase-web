@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { LEVEL_LABELS, isLevel } from '@/lib/levels'
@@ -40,6 +40,7 @@ type Instructor = {
   id: string
   name: string
   commission_pct: number | null
+  sports?: string[] | null
 }
 
 type PackageSale = {
@@ -158,6 +159,19 @@ function activityMatchesSport(activityName: string | null | undefined, sport: Sp
   return normalized.startsWith(sport)
 }
 
+// Same canonical modality list + prefix-match convention as
+// scheduledLessonRepository.ts's detectModality and CheckinForm.tsx's own
+// copy (duplicated locally rather than shared — see that file's comment
+// for why). Only the 5 core sports, not the operational categories in
+// SPORT_FILTERS above (Aluguel/Supervisão/Downwind) — instructors.sports
+// only ever tags the core sports someone's qualified to teach.
+const MODALITY_KEYWORDS = ['kitesurf', 'wingfoil', 'kitefoil', 'surf', 'windsurf'] as const
+
+function detectModality(activityName: string | null | undefined): string | null {
+  const normalized = (activityName ?? '').toLowerCase().replace(/[^a-z]/g, '')
+  return MODALITY_KEYWORDS.find(m => normalized.startsWith(m)) ?? null
+}
+
 /** package_sales has no FK to activities — match the package's free-text
  *  sport field against the activity catalog by name, same fuzzy approach
  *  already used elsewhere in this file for the free-typed student name path. */
@@ -212,6 +226,66 @@ const labelStyle: React.CSSProperties = {
   color: 'var(--mist)',
   display: 'block',
   marginBottom: '6px',
+}
+
+/** Replaces the browser's native <select> chrome (which varies wildly
+ *  across Chrome/Firefox/Safari and never matches the design system) with
+ *  a consistent rounded border, soft shadow, and a custom SVG chevron —
+ *  same visual language as inputStyle's text inputs, just with
+ *  appearance:none + right padding to make room for the arrow. */
+function StyledSelect({
+  value,
+  onChange,
+  disabled,
+  children,
+}: {
+  value: string
+  onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void
+  disabled?: boolean
+  children: React.ReactNode
+}) {
+  return (
+    <div style={{ position: 'relative' }}>
+      <select
+        value={value}
+        onChange={onChange}
+        disabled={disabled}
+        style={{
+          ...inputStyle,
+          appearance: 'none',
+          WebkitAppearance: 'none',
+          MozAppearance: 'none',
+          paddingRight: '34px',
+          cursor: disabled ? 'not-allowed' : 'pointer',
+          background: disabled ? 'var(--powder)' : '#fff',
+          color: disabled ? 'var(--mist)' : 'var(--slate)',
+          boxShadow: '0 1px 2px rgba(13,15,20,0.04)',
+          transition: 'border-color 0.15s, box-shadow 0.15s',
+        }}
+        onFocus={e => {
+          e.currentTarget.style.borderColor = 'var(--slate)'
+          e.currentTarget.style.boxShadow = '0 0 0 3px rgba(13,15,20,0.08)'
+        }}
+        onBlur={e => {
+          e.currentTarget.style.borderColor = 'var(--border-strong)'
+          e.currentTarget.style.boxShadow = '0 1px 2px rgba(13,15,20,0.04)'
+        }}
+      >
+        {children}
+      </select>
+      <svg
+        width="16" height="16" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+        style={{
+          position: 'absolute', top: '50%', right: '12px',
+          transform: 'translateY(-50%)', pointerEvents: 'none',
+          color: 'var(--mist)',
+        }}
+      >
+        <polyline points="6 9 12 15 18 9" />
+      </svg>
+    </div>
+  )
 }
 
 function generateDates(
@@ -453,6 +527,55 @@ export default function ScheduledLessons({
     }, 300)
     return () => clearTimeout(handle)
   }, [form.student_name, form.activity_id])
+
+  // Instrutor pre-fill — same trigger/shape as the level effect just above
+  // (student name + activity known, debounced network lookup), backed by
+  // getDefaultInstructorForStudent (most recent confirmed session, same
+  // modality preferred once one's picked). Only ever fires while the
+  // Agendar modal is open and in individual mode — group lessons pick an
+  // instructor per student later, in the confirm step.
+  useEffect(() => {
+    if (!showModal || lessonMode !== 'individual' || form.student_name.trim().length <= 2) return
+    const handle = setTimeout(() => {
+      const params = new URLSearchParams({ student_name: form.student_name })
+      if (form.activity_id) params.set('activity_id', form.activity_id)
+      fetch(`/api/owner/default-instructor?${params}`)
+        .then(r => r.json())
+        .then(data => {
+          if (!data?.instructorId) return
+          setForm(f => ({ ...f, instructor_id: data.instructorId }))
+        })
+        .catch(() => {})
+    }, 300)
+    return () => clearTimeout(handle)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showModal, lessonMode, form.student_name, form.activity_id])
+
+  // Narrows the Agendar modal's Instrutor dropdown to whoever teaches the
+  // selected modality — same fallback CheckinForm.tsx's own copy uses: a
+  // school that hasn't filled in instructor specialties yet (or where
+  // nobody's tagged for this specific sport) shouldn't lose instructor
+  // selection entirely, so an empty match falls back to the full list.
+  const selectedActivityNameForModal = activities.find(a => a.id === form.activity_id)?.name
+  const selectedModalityForModal = detectModality(selectedActivityNameForModal)
+  const filteredInstructorsForModal = useMemo(() => {
+    if (!selectedModalityForModal) return instructors
+    const compatible = instructors.filter(i => (i.sports ?? []).includes(selectedModalityForModal))
+    return compatible.length > 0 ? compatible : instructors
+  }, [instructors, selectedModalityForModal])
+
+  // If the modality changes and the previously picked/pre-filled
+  // instructor doesn't teach it, drop back to "Selecionar" instead of
+  // silently submitting a mismatched instructor_id.
+  useEffect(() => {
+    setForm(f => {
+      if (f.instructor_id && !filteredInstructorsForModal.some(i => i.id === f.instructor_id)) {
+        return { ...f, instructor_id: '' }
+      }
+      return f
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filteredInstructorsForModal])
 
   // maxCount is bounded by the package the owner explicitly selected from the
   // dropdown (selectedPackage) — not a name-substring guess. Uncapped (99) until
@@ -1275,8 +1398,7 @@ export default function ScheduledLessons({
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div>
                   <label style={labelStyle}>Atividade</label>
-                  <select
-                    style={{ ...inputStyle, cursor: 'pointer' }}
+                  <StyledSelect
                     value={editForm.activity_id}
                     onChange={e => setEditForm(f => ({ ...f, activity_id: e.target.value }))}
                   >
@@ -1284,12 +1406,11 @@ export default function ScheduledLessons({
                     {activities.map(a => (
                       <option key={a.id} value={a.id}>{translateModalityName(a.name, lang)}</option>
                     ))}
-                  </select>
+                  </StyledSelect>
                 </div>
                 <div>
                   <label style={labelStyle}>Instrutor</label>
-                  <select
-                    style={{ ...inputStyle, cursor: 'pointer' }}
+                  <StyledSelect
                     value={editForm.instructor_id}
                     onChange={e => setEditForm(f => ({ ...f, instructor_id: e.target.value }))}
                   >
@@ -1297,7 +1418,7 @@ export default function ScheduledLessons({
                     {instructors.map(i => (
                       <option key={i.id} value={i.id}>{i.name}</option>
                     ))}
-                  </select>
+                  </StyledSelect>
                 </div>
               </div>
 
@@ -1733,8 +1854,7 @@ export default function ScheduledLessons({
               <div style={{ display: 'grid', gridTemplateColumns: lessonMode === 'group' ? '1fr' : '1fr 1fr', gap: '12px' }}>
                 <div>
                   <label style={labelStyle}>Atividade</label>
-                  <select
-                    style={{ ...inputStyle, cursor: 'pointer' }}
+                  <StyledSelect
                     value={form.activity_id}
                     onChange={e => setForm(f => ({ ...f, activity_id: e.target.value }))}
                   >
@@ -1742,21 +1862,20 @@ export default function ScheduledLessons({
                     {activities.map(a => (
                       <option key={a.id} value={a.id}>{translateModalityName(a.name, lang)}</option>
                     ))}
-                  </select>
+                  </StyledSelect>
                 </div>
                 {lessonMode === 'individual' && (
                 <div>
                   <label style={labelStyle}>Instrutor</label>
-                  <select
-                    style={{ ...inputStyle, cursor: 'pointer' }}
+                  <StyledSelect
                     value={form.instructor_id}
                     onChange={e => setForm(f => ({ ...f, instructor_id: e.target.value }))}
                   >
                     <option value="">Selecionar</option>
-                    {instructors.map(i => (
+                    {filteredInstructorsForModal.map(i => (
                       <option key={i.id} value={i.id}>{i.name}</option>
                     ))}
-                  </select>
+                  </StyledSelect>
                 </div>
                 )}
               </div>

@@ -355,7 +355,7 @@ export async function getInstructors(schoolId: string) {
   const supabase = createServiceClient()
   const { data, error } = await supabase
     .from('users')
-    .select('id, name, commission_pct, weekly_capacity_hours')
+    .select('id, name, commission_pct, weekly_capacity_hours, sports')
     .eq('school_id', schoolId)
     .in('role', ['instructor', 'owner'])
     .eq('active', true)

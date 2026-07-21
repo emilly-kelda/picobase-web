@@ -81,6 +81,7 @@ export default async function OwnerPage() {
     id: i.id,
     name: i.name,
     commission_pct: (i as any).commission_pct ?? null,
+    sports: (i as any).sports ?? null,
   }))
 
   // Team occupancy for today — % of instructors with at least one lesson

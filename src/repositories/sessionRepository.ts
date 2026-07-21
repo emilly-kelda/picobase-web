@@ -92,6 +92,53 @@ export async function getDefaultLevelForStudent(
   return resolveDefaultLevel(match?.level ?? null, !!match)
 }
 
+/** Preferred instructor for (studentName[, activityId]) — the student's
+ *  most recent confirmed session, same "most recent confirmed session"
+ *  signal as getDefaultLevelForStudent just above, reused for the
+ *  Agendar Aula modal's Instrutor pre-fill instead of Nível. When an
+ *  activity is already known (picked manually, or auto-filled from an
+ *  active package match), a session in that SAME modality is preferred
+ *  over a more recent one in a different sport — a kitesurf instructor
+ *  from last month is a better guess than yesterday's wingfoil session
+ *  with someone else. Falls back to the single most recent session across
+ *  any activity when there's no same-modality match, or none was given. */
+export async function getDefaultInstructorForStudent(
+  schoolId: string,
+  studentName: string,
+  activityId?: string | null
+): Promise<{ instructorId: string | null; instructorName: string | null }> {
+  const supabase = createServiceClient()
+  const { data, error } = await supabase
+    .from('sessions')
+    .select(`
+      activity_id, session_date, confirmed_at,
+      checkins ( student_name ),
+      instructor:users!sessions_instructor_id_fkey ( id, name )
+    `)
+    .eq('school_id', schoolId)
+    .order('session_date', { ascending: false })
+    .order('confirmed_at', { ascending: false })
+    .limit(300)
+
+  if (error) throw error
+
+  const target = normalizeStudentName(studentName)
+  const matches = (data ?? []).filter(
+    s => normalizeStudentName((s.checkins as { student_name?: string } | null)?.student_name) === target
+      && s.instructor
+  )
+  if (matches.length === 0) return { instructorId: null, instructorName: null }
+
+  const sameActivity = activityId ? matches.find(m => m.activity_id === activityId) : null
+  const chosen = sameActivity ?? matches[0]
+  const instructor = Array.isArray(chosen.instructor) ? chosen.instructor[0] : chosen.instructor
+
+  return {
+    instructorId:   (instructor as { id?: string } | null)?.id ?? null,
+    instructorName: (instructor as { name?: string } | null)?.name ?? null,
+  }
+}
+
 export async function getRecentSessions(schoolId: string, limit = 8) {
   const supabase = createServiceClient()
   const { data, error } = await supabase
