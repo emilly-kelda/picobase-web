@@ -10,6 +10,7 @@ import ScheduleFromCheckinModal from '@/components/ScheduleFromCheckinModal'
 import { translateModalityName } from '@/lib/modality'
 import Badge from '@/components/ui/Badge'
 import ChameleonButton from '@/components/ui/ChameleonButton'
+import PackageProgressBar from '@/components/PackageProgressBar'
 import type { Stage } from '@/lib/stage'
 
 type ActivityRef = {
@@ -111,7 +112,7 @@ export default function PendingLessons({
   checkins: Checkin[]
   instructors: Instructor[]
   activities?: ActivityRef[]
-  packageBalances?: Record<string, { minutesRemaining: number; hasPackage: boolean; packageSaleId?: string; packageSport?: string | null }>
+  packageBalances?: Record<string, { minutesRemaining: number; minutesPurchased?: number; hasPackage: boolean; packageSaleId?: string; packageSport?: string | null }>
   packageTypes?: PackageOption[]
   schoolSlug: string
   schoolName: string
@@ -424,6 +425,17 @@ export default function PendingLessons({
                     <Badge variant="danger">{t.no_credits_badge}</Badge>
                   )}
                 </div>
+
+                {/* Graphical complement to the "Xh restantes" badge above —
+                    the text stays as the precise reading, this just adds an
+                    at-a-glance visual for hours consumed vs. total. */}
+                {hasCredit && balance?.minutesPurchased ? (
+                  <div style={{ marginBottom: '4px' }}>
+                    <PackageProgressBar
+                      pctUsed={((balance.minutesPurchased - balance.minutesRemaining) / balance.minutesPurchased) * 100}
+                    />
+                  </div>
+                ) : null}
               </div>
             )
           })}

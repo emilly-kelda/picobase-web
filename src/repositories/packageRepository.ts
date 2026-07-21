@@ -114,7 +114,7 @@ export async function getPackageDashboard(schoolId: string) {
  *  consumed next, not just whichever happens to be newest. */
 export async function getPackageBalancesForCheckins(
   schoolId: string
-): Promise<Record<string, { minutesRemaining: number; hasPackage: boolean; packageSaleId: string; packageSport: string | null }>> {
+): Promise<Record<string, { minutesRemaining: number; minutesPurchased: number; hasPackage: boolean; packageSaleId: string; packageSport: string | null }>> {
   const supabase = createServiceClient()
   const { data } = await supabase
     .from('package_sales')
@@ -123,7 +123,7 @@ export async function getPackageBalancesForCheckins(
     .order('sold_at', { ascending: true })
 
   const map: Record<string, {
-    minutesRemaining: number; packageSaleId: string; activeSaleId: string | null
+    minutesRemaining: number; minutesPurchased: number; packageSaleId: string; activeSaleId: string | null
     // packageSport tracks the SAME sale as packageSaleId (the pinned
     // oldest-with-balance one) — used as a display/pre-select fallback
     // when a checkin's own activity_id is null (see PendingLessons.tsx),
@@ -141,6 +141,7 @@ export async function getPackageBalancesForCheckins(
     if (!existing) {
       map[key] = {
         minutesRemaining: remaining,
+        minutesPurchased: sale.minutes_purchased ?? 0,
         packageSaleId: sale.id,
         activeSaleId: remaining > 0 ? sale.id : null,
         packageSport: saleSport,
@@ -149,6 +150,7 @@ export async function getPackageBalancesForCheckins(
     } else {
       map[key] = {
         minutesRemaining: existing.minutesRemaining + remaining,
+        minutesPurchased: existing.minutesPurchased + (sale.minutes_purchased ?? 0),
         packageSaleId: existing.activeSaleId ?? sale.id,
         activeSaleId: existing.activeSaleId ?? (remaining > 0 ? sale.id : null),
         packageSport: existing.activeSaleSport ?? saleSport,
@@ -157,9 +159,9 @@ export async function getPackageBalancesForCheckins(
     }
   }
 
-  const result: Record<string, { minutesRemaining: number; hasPackage: boolean; packageSaleId: string; packageSport: string | null }> = {}
+  const result: Record<string, { minutesRemaining: number; minutesPurchased: number; hasPackage: boolean; packageSaleId: string; packageSport: string | null }> = {}
   for (const [key, v] of Object.entries(map)) {
-    result[key] = { minutesRemaining: v.minutesRemaining, hasPackage: true, packageSaleId: v.packageSaleId, packageSport: v.packageSport }
+    result[key] = { minutesRemaining: v.minutesRemaining, minutesPurchased: v.minutesPurchased, hasPackage: true, packageSaleId: v.packageSaleId, packageSport: v.packageSport }
   }
   return result
 }

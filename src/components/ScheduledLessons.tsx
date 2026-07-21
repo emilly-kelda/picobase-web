@@ -12,6 +12,7 @@ import { translateModalityName } from '@/lib/modality'
 import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
 import OverflowMenu from '@/components/ui/OverflowMenu'
+import PackageProgressBar from '@/components/PackageProgressBar'
 
 type Lesson = {
   id: string
@@ -112,16 +113,18 @@ function getPackageBadge(
   studentName: string | null,
   activePackages: PackageSale[],
   t: Record<string, string>
-): { label: string; tone: 'ok' | 'warn' } | null {
+): { label: string; tone: 'ok' | 'warn'; pctUsed: number | null } | null {
   if (!studentName) return null
   const sales = activePackages.filter(p => p.student_name.toLowerCase() === studentName.toLowerCase())
-  if (sales.length === 0) return { label: t.walk_in_lesson_badge, tone: 'warn' }
+  if (sales.length === 0) return { label: t.walk_in_lesson_badge, tone: 'warn', pctUsed: null }
+  const purchased = sales.reduce((sum, p) => sum + p.minutes_purchased, 0)
   const remaining = sales.reduce((sum, p) => sum + Math.max(0, p.minutes_purchased - p.minutes_used), 0)
-  if (remaining <= 0) return { label: t.no_credits_badge, tone: 'warn' }
+  if (remaining <= 0) return { label: t.no_credits_badge, tone: 'warn', pctUsed: 100 }
   const label = remaining === 60
     ? `${formatHours(remaining)} ${t.package_remaining_singular}`
     : `${formatHours(remaining)} ${t.package_remaining_badge}`
-  return { label, tone: 'ok' }
+  const pctUsed = purchased > 0 ? ((purchased - remaining) / purchased) * 100 : null
+  return { label, tone: 'ok', pctUsed }
 }
 
 // 'supervis' (not 'supervisao') deliberately — normalization below strips
@@ -953,12 +956,15 @@ export default function ScheduledLessons({
                       // mockup only shows the 'ok' case, this is the
                       // closest in-palette equivalent for the other one.
                       return (
-                        <span style={{
-                          fontSize: '12px', fontWeight: '400',
-                          color: badge.tone === 'ok' ? 'var(--color-pb-mist)' : 'var(--signal)',
-                          whiteSpace: 'nowrap',
-                        }}>
-                          · {badge.label}
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{
+                            fontSize: '12px', fontWeight: '400',
+                            color: badge.tone === 'ok' ? 'var(--color-pb-mist)' : 'var(--signal)',
+                            whiteSpace: 'nowrap',
+                          }}>
+                            · {badge.label}
+                          </span>
+                          {badge.pctUsed !== null && <PackageProgressBar pctUsed={badge.pctUsed} width="40px" />}
                         </span>
                       )
                     })()}
