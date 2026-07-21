@@ -57,6 +57,7 @@ export async function POST(request: Request) {
 
   if (checkin.package_sale_id) {
     const capacity = await checkPackageCapacity(SCHOOL_ID, {
+      studentName:   checkin.student_name,
       packageSaleId: checkin.package_sale_id,
       durationMin:   duration_min || 60,
     })

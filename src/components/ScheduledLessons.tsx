@@ -25,6 +25,12 @@ type Lesson = {
   level: string | null
   group_id: string | null
   student_whatsapp?: string | null
+  // Already returned by getScheduledLessons — declared here so it's
+  // typed all the way through to ConfirmLessonModal's balance check
+  // (package-balance/route.ts reads the EXACT sale this lesson is tied
+  // to, instead of independently re-guessing one — see that modal's
+  // LessonToConfirm comment for why the mismatch mattered).
+  package_sale_id?: string | null
   activities: { id: string; name: string; default_price: number; default_duration_min: number } | null
   instructor: { id: string; name: string; whatsapp?: string | null } | null
 }

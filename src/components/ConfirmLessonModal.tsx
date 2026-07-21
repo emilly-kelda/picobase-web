@@ -82,6 +82,16 @@ export type LessonToConfirm = {
   level: string | null
   activities: ActivityRef | null
   instructor: { id: string; name: string } | null
+  // Whichever package_sales row was actually attached to this lesson at
+  // scheduling time — the exact one confirm-lesson/route.ts will enforce
+  // capacity against server-side. Passed through so the balance shown
+  // here (package-balance/route.ts) reads that SAME row instead of
+  // independently re-picking "the student's oldest active package by
+  // name," which can silently be a different sale — see the comment on
+  // the balance-loading effect below for why that mismatch used to let
+  // this modal show a healthy balance right before the server rejected
+  // the confirm for insufficient capacity.
+  package_sale_id?: string | null
 }
 
 /** "Confirmar / Iniciar Aula" for a scheduled lesson. Two very different
@@ -184,7 +194,20 @@ export default function ConfirmLessonModal({
         .then(r => r.json())
         .then(data => setVariableCost(data))
         .catch(() => {})
-      fetch(`/api/owner/package-balance?student_name=${encodeURIComponent(lesson.student_name)}`)
+      // package_sale_id + exclude_lesson_id: read the balance for the
+      // EXACT sale this lesson is tied to (not a fresh "oldest active
+      // package by name" guess, which can land on a different sale — see
+      // the LessonToConfirm.package_sale_id comment), net of capacity
+      // already reserved by this student's OTHER pending lessons against
+      // that same sale — the same accounting confirm-lesson/route.ts's
+      // checkPackageCapacity enforces. Without this, the balance shown
+      // here could read "10h left" while several other not-yet-confirmed
+      // lessons already have that package's real remaining capacity
+      // mostly spoken for, so confirming this one still got rejected.
+      const balanceParams = new URLSearchParams({ student_name: lesson.student_name })
+      if (lesson.package_sale_id) balanceParams.set('package_sale_id', lesson.package_sale_id)
+      balanceParams.set('exclude_lesson_id', lesson.id)
+      fetch(`/api/owner/package-balance?${balanceParams}`)
         .then(r => r.json())
         .then(data => setPackageBalance(data))
         .catch(() => setPackageBalance(null))

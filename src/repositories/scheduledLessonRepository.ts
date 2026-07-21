@@ -399,16 +399,14 @@ export async function checkSchedulingConflicts(
   return { instructorConflict, studentConflict }
 }
 
-/** Package credit check, run before creating/editing a scheduled_lessons
- *  row tied to a specific package_sale_id: (minutes already committed to
- *  other still-pending lessons drawing on this same package) + this
- *  lesson's own duration, against what the package actually has left
- *  (minutes_purchased - minutes_used — same balance math
- *  getPackageBalancesForCheckins uses). Packages in this app are
- *  minute-based, not session-count based, so capacity is measured in
- *  minutes here rather than a raw lesson count — a plain count comparison
- *  would let two 3h lessons through where a 3h + a 1h wouldn't, despite
- *  drawing the identical total.
+/** What a specific package_sales row actually has free right now: raw
+ *  balance (minutes_purchased - minutes_used) minus minutes already
+ *  committed to this student's OTHER still-pending lessons drawing on the
+ *  same sale. Packages in this app are minute-based, not session-count
+ *  based, so capacity is measured in minutes here rather than a raw
+ *  lesson count — a plain count comparison would let two 3h lessons
+ *  through where a 3h + a 1h wouldn't, despite drawing the identical
+ *  total.
  *
  *  Only counts scheduled_lessons rows still in an unconfirmed state
  *  (excludes 'cancelled' and 'confirmed') — a confirmed lesson's minutes
@@ -416,28 +414,30 @@ export async function checkSchedulingConflicts(
  *  deduction, so counting it here too would double-charge the same
  *  minutes against the balance.
  *
- *  No packageSaleId means no credit concept to violate (pay-per-lesson/
- *  avulsa booking, or group scheduling — neither tracks a package here) —
- *  callers simply don't invoke this in that case. */
-export async function checkPackageCapacity(
+ *  Single source of truth for "how much of this package is actually
+ *  free" — both checkPackageCapacity (the confirm-time gate) and
+ *  getPackageBalanceForStudent (what ConfirmLessonModal displays before
+ *  the operator ever hits confirm) call this, so the two can never drift
+ *  apart again the way they used to: the modal used to independently
+ *  re-guess "the student's oldest active package" by name and show its
+ *  raw, un-netted balance, which could look perfectly healthy right up
+ *  until the actual confirm got rejected for insufficient capacity once
+ *  every other pending lesson against that same sale was accounted for. */
+export async function getAvailablePackageMinutes(
   schoolId: string,
-  params: {
-    packageSaleId: string
-    durationMin: number
-    excludeLessonId?: string
-  }
-): Promise<{ ok: true } | { ok: false }> {
+  packageSaleId: string,
+  excludeLessonId?: string | null
+): Promise<{ minutesPurchased: number; pricePaid: number; available: number } | null> {
   const supabase = createServiceClient()
 
   const { data: sale } = await supabase
     .from('package_sales')
-    .select('minutes_purchased, minutes_used')
-    .eq('id', params.packageSaleId)
+    .select('minutes_purchased, minutes_used, price_paid')
+    .eq('id', packageSaleId)
     .eq('school_id', schoolId)
     .maybeSingle()
 
-  // Unknown/deleted sale — nothing to enforce a balance against.
-  if (!sale) return { ok: true }
+  if (!sale) return null
 
   const remaining = Math.max(0, (sale.minutes_purchased ?? 0) - (sale.minutes_used ?? 0))
 
@@ -445,19 +445,83 @@ export async function checkPackageCapacity(
     .from('scheduled_lessons')
     .select('id, duration_min')
     .eq('school_id', schoolId)
-    .eq('package_sale_id', params.packageSaleId)
+    .eq('package_sale_id', packageSaleId)
     .neq('status', 'cancelled')
     .neq('status', 'confirmed')
 
-  if (params.excludeLessonId) query = query.neq('id', params.excludeLessonId)
+  if (excludeLessonId) query = query.neq('id', excludeLessonId)
 
   const { data: pendingLessons } = await query
   const alreadyCommitted = (pendingLessons ?? []).reduce((s, l) => s + (l.duration_min ?? 0), 0)
 
-  if (alreadyCommitted + params.durationMin > remaining) {
-    return { ok: false }
+  return {
+    minutesPurchased: sale.minutes_purchased ?? 0,
+    pricePaid:        sale.price_paid ?? 0,
+    available:        Math.max(0, remaining - alreadyCommitted),
   }
-  return { ok: true }
+}
+
+/** Package credit check, run before creating/editing a scheduled_lessons
+ *  row tied to a specific package_sale_id — see getAvailablePackageMinutes
+ *  for the per-sale accounting. No packageSaleId means no credit concept
+ *  to violate (pay-per-lesson/avulsa booking, or group scheduling —
+ *  neither tracks a package here) — callers simply don't invoke this in
+ *  that case.
+ *
+ *  Prefers params.packageSaleId (whichever sale was linked at scheduling
+ *  time) but falls back to the student's other active sales, oldest
+ *  first, when that specific one no longer has enough room — the same
+ *  FIFO fallback confirm-lesson's own auto-debit step already applied,
+ *  which this check used to lack entirely. Without it, a lesson linked to
+ *  a sale that later got exhausted by other confirmed lessons would get
+ *  rejected here as "insufficient balance" even when the student's
+ *  current active package (a newer purchase, say) had plenty of room —
+ *  exactly the gap that let ConfirmLessonModal show a healthy balance
+ *  (an independent, always-FIFO lookup) moments before this rigid,
+ *  linked-sale-only check turned around and rejected the same confirm.
+ *
+ *  Returns which sale actually cleared the check (resolvedSaleId) so the
+ *  caller's subsequent debit reuses that exact resolution instead of
+ *  re-deriving it — the sale that got validated and the sale that gets
+ *  debited must always be the same row. */
+export async function checkPackageCapacity(
+  schoolId: string,
+  params: {
+    studentName: string
+    packageSaleId: string
+    durationMin: number
+    excludeLessonId?: string
+  }
+): Promise<{ ok: true; resolvedSaleId: string | null } | { ok: false }> {
+  const supabase = createServiceClient()
+
+  const { data: sales } = await supabase
+    .from('package_sales')
+    .select('id')
+    .eq('school_id', schoolId)
+    .ilike('student_name', params.studentName)
+    .order('sold_at', { ascending: true })
+
+  // The linked sale was deleted since scheduling — nothing left to
+  // enforce a balance against (matches the old behavior for an unknown
+  // sale id).
+  if (!(sales ?? []).some(s => s.id === params.packageSaleId)) {
+    return { ok: true, resolvedSaleId: null }
+  }
+
+  const candidateIds = [
+    params.packageSaleId,
+    ...(sales ?? []).map(s => s.id).filter(id => id !== params.packageSaleId),
+  ]
+
+  for (const saleId of candidateIds) {
+    const info = await getAvailablePackageMinutes(schoolId, saleId, params.excludeLessonId)
+    if (info && info.available >= params.durationMin) {
+      return { ok: true, resolvedSaleId: saleId }
+    }
+  }
+
+  return { ok: false }
 }
 
 export async function createScheduledLesson(payload: {

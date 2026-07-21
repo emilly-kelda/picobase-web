@@ -125,6 +125,7 @@ export async function POST(request: Request) {
 
   if (body.package_sale_id) {
     const capacity = await checkPackageCapacity(SCHOOL_ID, {
+      studentName:     body.student_name,
       packageSaleId:   body.package_sale_id,
       durationMin:     body.duration_min || 60,
       excludeLessonId: rescheduleFromId,
@@ -262,7 +263,7 @@ export async function PATCH(request: Request) {
   if (updates.scheduled_at && updates.duration_min) {
     const { data: current } = await supabase
       .from('scheduled_lessons')
-      .select('group_id, package_sale_id')
+      .select('group_id, package_sale_id, student_name')
       .eq('id', id)
       .eq('school_id', SCHOOL_ID)
       .single()
@@ -284,6 +285,7 @@ export async function PATCH(request: Request) {
 
     if (current?.package_sale_id) {
       const capacity = await checkPackageCapacity(SCHOOL_ID, {
+        studentName:     updates.student_name ?? current.student_name ?? '',
         packageSaleId:   current.package_sale_id,
         durationMin:     updates.duration_min,
         excludeLessonId: id,

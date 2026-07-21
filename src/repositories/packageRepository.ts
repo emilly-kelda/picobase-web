@@ -1,5 +1,6 @@
 ﻿import { createServiceClient } from '@/lib/supabase-server'
 import { getSessionsByStudentName } from './studentRepository'
+import { getAvailablePackageMinutes } from './scheduledLessonRepository'
 import { normalizeStudentName } from '@/lib/text'
 
 export async function getPackageDashboard(schoolId: string) {
@@ -168,17 +169,33 @@ export async function getPackageBalancesForCheckins(
 
 /** Single-student version of getPackageBalancesForCheckins, used by
  *  ConfirmLessonModal to decide whether to show the plain operational
- *  confirm flow or the full financial form. Mirrors confirm-lesson's own
- *  auto-debit resolution exactly (oldest sale with balance > 0, FIFO) so
- *  "this is the sale that will actually get debited" and "this is the
- *  sale whose balance we're showing" are always the same row. Returns the
- *  ONE active sale's own figures (not summed across every package the
- *  student holds) — pricePaid/minutesPurchased are needed to pro-rate this
- *  lesson's value for instructor commission without asking the owner to
- *  type a price for a lesson that's already paid for. */
+ *  confirm flow or the full financial form.
+ *
+ *  Resolution order matches checkPackageCapacity exactly (same shared
+ *  getAvailablePackageMinutes accounting, same FIFO fallback): prefer
+ *  opts.packageSaleId — the sale actually linked on the scheduled_lessons
+ *  row being confirmed, if the caller knows it — while it still has room,
+ *  then fall back to the oldest active sale with any balance left. Before
+ *  this shared resolution existed, this function did its own independent
+ *  FIFO-by-name lookup while checkPackageCapacity checked only the linked
+ *  sale with no fallback — the two could land on genuinely different
+ *  sales, so the balance shown here ("10h left") could read perfectly
+ *  healthy right up until confirm-lesson rejected the same confirm for
+ *  insufficient capacity on the *other* (linked, since-exhausted) sale.
+ *
+ *  opts.excludeLessonId nets out capacity this same lesson has already
+ *  reserved against its own linked sale, so re-fetching the balance for a
+ *  lesson that's already contributing to "already committed" doesn't
+ *  double-count itself as unavailable.
+ *
+ *  Returns the ONE resolved sale's own figures (not summed across every
+ *  package the student holds) — pricePaid/minutesPurchased are needed to
+ *  pro-rate this lesson's value for instructor commission without asking
+ *  the owner to type a price for a lesson that's already paid for. */
 export async function getPackageBalanceForStudent(
   schoolId: string,
-  studentName: string
+  studentName: string,
+  opts: { packageSaleId?: string | null; excludeLessonId?: string | null } = {}
 ): Promise<{
   hasPackage: boolean
   packageSaleId: string | null
@@ -190,23 +207,34 @@ export async function getPackageBalanceForStudent(
   if (!studentName?.trim()) return NONE
 
   const supabase = createServiceClient()
-  const { data } = await supabase
+  const { data: sales } = await supabase
     .from('package_sales')
     .select('id, minutes_purchased, minutes_used, price_paid')
     .eq('school_id', schoolId)
     .ilike('student_name', studentName.trim())
     .order('sold_at', { ascending: true })
 
-  const active = (data ?? []).find(s => (s.minutes_purchased ?? 0) - (s.minutes_used ?? 0) > 0)
-  if (!active) return NONE
+  if (!sales || sales.length === 0) return NONE
 
-  return {
-    hasPackage:        true,
-    packageSaleId:      active.id,
-    minutesRemaining:   (active.minutes_purchased ?? 0) - (active.minutes_used ?? 0),
-    minutesPurchased:   active.minutes_purchased ?? 0,
-    pricePaid:          active.price_paid ?? 0,
+  const candidateIds = opts.packageSaleId
+    ? [opts.packageSaleId, ...sales.map(s => s.id).filter(id => id !== opts.packageSaleId)]
+    : sales.map(s => s.id)
+
+  for (const saleId of candidateIds) {
+    if (!sales.some(s => s.id === saleId)) continue
+    const info = await getAvailablePackageMinutes(schoolId, saleId, opts.excludeLessonId)
+    if (info && info.available > 0) {
+      return {
+        hasPackage:       true,
+        packageSaleId:    saleId,
+        minutesRemaining: info.available,
+        minutesPurchased: info.minutesPurchased,
+        pricePaid:        info.pricePaid,
+      }
+    }
   }
+
+  return NONE
 }
 
 /** Everything the "Extrato do Pacote" closing receipt needs: the sale's own

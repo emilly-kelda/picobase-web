@@ -63,6 +63,13 @@ export async function POST(request: Request) {
 
   const studentName = checkin?.student_name ?? scheduledLesson?.student_name ?? null
 
+  // Set only when the capacity check below actually runs (i.e. this lesson
+  // had a package explicitly linked at scheduling time) — the auto-debit
+  // step further down reuses this exact resolution instead of re-deriving
+  // its own, so the sale that got validated and the sale that gets
+  // debited are guaranteed to be the same row.
+  let resolvedPackageSaleId: string | null = null
+
   if (scheduledLesson) {
     const effectiveDuration = duration_min || scheduledLesson.duration_min || 60
     const { instructorConflict, studentConflict } = await checkSchedulingConflicts(SCHOOL_ID, {
@@ -87,6 +94,7 @@ export async function POST(request: Request) {
 
     if (scheduledLesson.package_sale_id) {
       const capacity = await checkPackageCapacity(SCHOOL_ID, {
+        studentName:     studentName ?? '',
         packageSaleId:   scheduledLesson.package_sale_id,
         durationMin:     effectiveDuration,
         excludeLessonId: linkedScheduledLessonId,
@@ -97,6 +105,7 @@ export async function POST(request: Request) {
           { status: 409 }
         )
       }
+      resolvedPackageSaleId = capacity.resolvedSaleId
     }
   }
 
@@ -237,15 +246,17 @@ export async function POST(request: Request) {
       .ilike('student_name', studentName)
       .order('sold_at', { ascending: true })
 
-    // Prefer the sale explicitly linked on the scheduled_lessons row (picked
-    // in the "+ Agendar" autocomplete, or carried over by
-    // schedule-from-checkin) while it still has balance, before falling
-    // back to the general FIFO-oldest-active lookup.
-    const linkedSale = scheduledLesson?.package_sale_id
-      ? (packageSales ?? []).find(s => s.id === scheduledLesson.package_sale_id)
-      : null
-    const activeSale = (linkedSale && (linkedSale.minutes_purchased ?? 0) - (linkedSale.minutes_used ?? 0) > 0)
-      ? linkedSale
+    // When a package was explicitly linked at scheduling time, the
+    // capacity check above already resolved exactly which sale has room
+    // (the linked one, or its FIFO fallback) — reuse that resolution
+    // rather than re-deriving it here with a *different*, looser rule
+    // ("any balance > 0" instead of "enough balance for this lesson's
+    // duration"), which could debit a sale into a negative balance the
+    // capacity check would have rejected. No link at all (walk-in/avulsa,
+    // never went through a capacity check) keeps the original opportunistic
+    // FIFO-any-active-sale lookup.
+    const activeSale = scheduledLesson?.package_sale_id
+      ? (resolvedPackageSaleId ? (packageSales ?? []).find(s => s.id === resolvedPackageSaleId) : undefined)
       : (packageSales ?? []).find(s => (s.minutes_purchased ?? 0) - (s.minutes_used ?? 0) > 0)
 
     if (activeSale) {
