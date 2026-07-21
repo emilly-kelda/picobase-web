@@ -345,49 +345,18 @@ export default function PendingLessons({
                     onSellPackage={() => setSellModal(checkin)}
                     lang={lang}
                   />
-                  {/* Copies Reagendar's (MissedLessons.tsx) exact inline
-                      style instead of the shared Button's bordered
-                      "secondary" variant — same treatment applied to
-                      ScheduledLessons.tsx's "+ Agendar Próxima Aula". */}
+                  {/* Zinc-family flat style, not the slate-based
+                      var(--glacial-*) tokens — matches ScheduledLessons.tsx's
+                      "+ Agendar Próxima Aula"/"Confirmar" treatment. */}
                   <button
                     onClick={() => setScheduleModal(checkin)}
-                    style={{
-                      padding: '4px 8px',
-                      background: 'var(--glacial-light)',
-                      color: 'var(--glacial-dark)',
-                      border: 'none',
-                      borderRadius: 'var(--radius-md)',
-                      fontSize: '10px', fontWeight: '500',
-                      cursor: 'pointer',
-                      fontFamily: 'var(--font-sans)',
-                      transition: 'background-color 0.15s',
-                      whiteSpace: 'nowrap',
-                    }}
-                    onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'var(--glacial)'; e.currentTarget.style.color = '#fff' }}
-                    onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'var(--glacial-light)'; e.currentTarget.style.color = 'var(--glacial-dark)' }}
+                    className="bg-zinc-100 hover:bg-zinc-200 text-zinc-800 font-medium rounded-md px-3 py-1.5 text-xs transition-colors border-0 shadow-none whitespace-nowrap"
                   >
                     {t.schedule_lesson_btn}
                   </button>
-                  {/* Ver ficha unified with the same Reagendar treatment as
-                      the two buttons above it — repeated explicit ask to
-                      make every secondary action in this row read as the
-                      same component, not a plain text link. */}
                   <button
                     onClick={() => setFichaModal(checkin)}
-                    style={{
-                      padding: '4px 8px',
-                      background: 'var(--glacial-light)',
-                      color: 'var(--glacial-dark)',
-                      border: 'none',
-                      borderRadius: 'var(--radius-md)',
-                      fontSize: '10px', fontWeight: '500',
-                      cursor: 'pointer',
-                      fontFamily: 'var(--font-sans)',
-                      transition: 'background-color 0.15s',
-                      whiteSpace: 'nowrap',
-                    }}
-                    onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'var(--glacial)'; e.currentTarget.style.color = '#fff' }}
-                    onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'var(--glacial-light)'; e.currentTarget.style.color = 'var(--glacial-dark)' }}
+                    className="bg-zinc-100 hover:bg-zinc-200 text-zinc-800 font-medium rounded-md px-3 py-1.5 text-xs transition-colors border-0 shadow-none whitespace-nowrap"
                   >
                     {t.view_ficha_full_btn}
                   </button>

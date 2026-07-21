@@ -977,34 +977,23 @@ export default function ScheduledLessons({
                       (shown as the "Confirmada" badge instead) drops them. */}
                   {lesson.status !== 'confirmed' && (
                     <>
-                      {/* Copies Reagendar's (MissedLessons.tsx) exact inline
-                          style — same var(--glacial-light)/var(--glacial-dark)
-                          fill, no border, var(--radius-md) — instead of the
-                          shared Button's bordered "secondary" variant, per
-                          explicit ask to make every scheduling action look
-                          like the same component. */}
+                      {/* Zinc-family flat style (not the slate-based
+                          var(--glacial-*) tokens) — explicit ask to match
+                          the sidebar's zinc-900/zinc-800 neutral, not the
+                          slightly blue-tinted slate scale. Literal Tailwind
+                          classes here since zinc-* needs no custom token. */}
                       <button
                         onClick={() => openRebookModal(lesson)}
-                        style={{
-                          padding: '4px 8px',
-                          background: 'var(--glacial-light)',
-                          color: 'var(--glacial-dark)',
-                          border: 'none',
-                          borderRadius: 'var(--radius-md)',
-                          fontSize: '10px', fontWeight: '500',
-                          cursor: 'pointer',
-                          fontFamily: 'var(--font-sans)',
-                          transition: 'background-color 0.15s',
-                          whiteSpace: 'nowrap',
-                        }}
-                        onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'var(--glacial)'; e.currentTarget.style.color = '#fff' }}
-                        onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'var(--glacial-light)'; e.currentTarget.style.color = 'var(--glacial-dark)' }}
+                        className="bg-zinc-100 hover:bg-zinc-200 text-zinc-800 font-medium rounded-md px-3 py-1.5 text-xs transition-colors border-0 shadow-none whitespace-nowrap"
                       >
                         + Agendar Próxima Aula
                       </button>
-                      <Button variant="primary" size="xs" onClick={() => setConfirmLessonModal(lesson)}>
+                      <button
+                        onClick={() => setConfirmLessonModal(lesson)}
+                        className="bg-zinc-900 hover:bg-zinc-800 text-white font-medium rounded-md px-3 py-1.5 text-xs transition-colors border-0"
+                      >
                         Confirmar
-                      </Button>
+                      </button>
                     </>
                   )}
                   {/* WhatsApp Aluno promoted to a visible glyph-only icon
