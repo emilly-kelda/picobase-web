@@ -65,3 +65,28 @@ export async function PATCH(request: Request) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
 }
+
+/** Removes a checkin row outright — for cleaning up duplicates/no-shows in
+ *  Aguardando Vento, not a stage transition. id via query string, same
+ *  contract as /api/owner/schedule's own DELETE (that route used to read it
+ *  from the body and every caller's delete silently 400-ed until it was
+ *  fixed to match this). Confirmation happens client-side before this is
+ *  ever called — no server-side "are you sure", this is a direct delete. */
+export async function DELETE(request: Request) {
+  const { searchParams } = new URL(request.url)
+  const id = searchParams.get('id')
+
+  if (!id) {
+    return NextResponse.json({ error: 'id e obrigatorio' }, { status: 400 })
+  }
+
+  const supabase = createServiceClient()
+  const { error } = await supabase
+    .from('checkins')
+    .delete()
+    .eq('id', id)
+    .eq('school_id', SCHOOL_ID)
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ ok: true })
+}

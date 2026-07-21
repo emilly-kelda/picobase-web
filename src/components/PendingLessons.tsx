@@ -211,6 +211,18 @@ export default function PendingLessons({
     } catch {}
   }
 
+  // Removes the checkin row outright — for clearing duplicates/no-shows
+  // out of Aguardando Vento, not a stage transition. Confirms first since
+  // this is destructive and, unlike the other actions here, can't be
+  // undone from the UI.
+  async function removeCheckin(checkin: Checkin) {
+    if (!window.confirm(`Remover o check-in de ${checkin.student_name}? Essa ação não pode ser desfeita.`)) return
+    setCheckins(prev => prev.filter(c => c.id !== checkin.id))
+    try {
+      await fetch(`/api/owner/checkin-stage?id=${checkin.id}`, { method: 'DELETE' })
+    } catch {}
+  }
+
   return (
     <>
       <div style={{ marginBottom: '28px' }}>
@@ -439,6 +451,19 @@ export default function PendingLessons({
                       onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'var(--glacial-light)'; e.currentTarget.style.color = 'var(--glacial-dark)' }}
                     >
                       {t.view_ficha_full_btn}
+                    </button>
+                    {/* Removes the checkin outright — for clearing
+                        duplicates/no-shows, not a stage transition like
+                        everything else in this row. */}
+                    <button
+                      onClick={() => removeCheckin(checkin)}
+                      title="Remover check-in"
+                      aria-label="Remover check-in"
+                      className="text-zinc-400 hover:text-red-600 transition-colors p-1 rounded-md bg-transparent border-0 cursor-pointer"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M18 6 6 18M6 6l12 12" />
+                      </svg>
                     </button>
                   </div>
                 </div>
