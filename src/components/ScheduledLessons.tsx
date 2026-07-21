@@ -340,6 +340,8 @@ export default function ScheduledLessons({
   // The richer fields (currency/FX, per-hour pricing, session date, level
   // picker) live in ConfirmLessonModal.tsx itself, not here.
   const [confirmLessonModal, setConfirmLessonModal] = useState<Lesson | null>(null)
+  const [startingSession, setStartingSession] = useState<string | null>(null)
+  const [whatsAppModal, setWhatsAppModal] = useState<Lesson | null>(null)
 
   const [form, setForm] = useState({
     student_name:    '',
@@ -624,6 +626,21 @@ export default function ScheduledLessons({
     if (data.penalized && data.message) {
       showToast('err', data.message)
     }
+    router.refresh()
+  }
+
+  // Reuses the existing generic PATCH /api/owner/schedule (accepts any
+  // scheduled_lessons column) — 'checked_in' is already a real status
+  // this app recognizes (the row's own Badge already handles it via
+  // t.status_checked_in) but nothing in this list could ever set it.
+  async function startSession(lesson: Lesson) {
+    setStartingSession(lesson.id)
+    await fetch('/api/owner/schedule', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: lesson.id, status: 'checked_in' }),
+    })
+    setStartingSession(null)
     router.refresh()
   }
 
@@ -968,6 +985,35 @@ export default function ScheduledLessons({
                       : lesson.status === 'checked_in' ? t.status_checked_in
                       : t.status_scheduled}
                   </Badge>
+                  {/* "Iniciar Velejo"/"Start Session" — moves a scheduled
+                      lesson to 'checked_in' (already a real status this
+                      list's own Badge recognized, just nothing could set
+                      it). Only for 'scheduled' rows; once started,
+                      "Confirmar" is the only next step. Same Reagendar
+                      recipe as the buttons below. */}
+                  {lesson.status === 'scheduled' && (
+                    <button
+                      onClick={() => startSession(lesson)}
+                      disabled={startingSession === lesson.id}
+                      style={{
+                        padding: '4px 8px',
+                        background: 'var(--glacial-light)',
+                        color: 'var(--glacial-dark)',
+                        border: 'none',
+                        borderRadius: 'var(--radius-md)',
+                        fontSize: '10px', fontWeight: '500',
+                        cursor: startingSession === lesson.id ? 'not-allowed' : 'pointer',
+                        opacity: startingSession === lesson.id ? 0.6 : 1,
+                        fontFamily: 'var(--font-sans)',
+                        transition: 'background-color 0.15s',
+                        whiteSpace: 'nowrap',
+                      }}
+                      onMouseEnter={e => { if (startingSession !== lesson.id) { e.currentTarget.style.backgroundColor = 'var(--glacial)'; e.currentTarget.style.color = '#fff' } }}
+                      onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'var(--glacial-light)'; e.currentTarget.style.color = 'var(--glacial-dark)' }}
+                    >
+                      {startingSession === lesson.id ? '...' : (lang === 'pt' ? 'Iniciar Velejo' : 'Start Session')}
+                    </button>
+                  )}
                   {/* "+ Agendar Próxima Aula" (re-engagement shortcut, NOT
                       "Reagendar" — that label/action is exclusive to
                       MissedLessons.tsx's sidebar, for actually-missed
@@ -1011,36 +1057,28 @@ export default function ScheduledLessons({
                       </button>
                     </>
                   )}
-                  {/* WhatsApp Aluno promoted to a visible glyph-only icon
-                      per the mockup (18px, pb-mist, no background/border) —
-                      WhatsApp Instrutor stays in the overflow alongside the
-                      genuinely rare actions (Editar, Cancelar). Monochrome
-                      SVG, not an emoji, per the no-emoji pass. */}
-                  {lesson.student_whatsapp ? (
-                    <a
-                      href={buildApiWhatsAppUrl(lesson.student_whatsapp, studentConfirmationMessage(lesson, dayLabel, schoolName))}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      title={`WhatsApp Aluno${lesson.student_name ? ` (${lesson.student_name})` : ''}`}
-                      style={{ color: 'var(--color-pb-mist)', lineHeight: 1 }}
-                    >
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M12 4C7 4 3 7.4 3 11.5c0 2.4 1.3 4.5 3.4 5.9L6 21l3.8-2.1c.7.1 1.4.2 2.2.2 5 0 9-3.4 9-7.6S17 4 12 4Z" />
-                      </svg>
-                    </a>
-                  ) : (
-                    <span style={{ color: 'var(--color-pb-mist)', lineHeight: 1, opacity: 0.4 }}>
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M12 4C7 4 3 7.4 3 11.5c0 2.4 1.3 4.5 3.4 5.9L6 21l3.8-2.1c.7.1 1.4.2 2.2.2 5 0 9-3.4 9-7.6S17 4 12 4Z" />
-                      </svg>
-                    </span>
-                  )}
+                  {/* Text label on a pastel-green chip, not an icon-only
+                      glyph — opens a small picker (student vs instructor
+                      confirmation message) instead of jumping straight to
+                      the student's WhatsApp; instructor no longer needs
+                      the overflow menu entry below since this covers both. */}
+                  <button
+                    onClick={() => setWhatsAppModal(lesson)}
+                    style={{
+                      padding: '3px 8px',
+                      background: 'var(--color-pb-glacial-light)',
+                      color: 'var(--color-pb-glacial-dark)',
+                      border: 'none',
+                      borderRadius: 'var(--radius-md)',
+                      fontSize: '10px', fontWeight: '500',
+                      cursor: 'pointer',
+                      fontFamily: 'var(--font-sans)',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    WhatsApp
+                  </button>
                   <OverflowMenu items={[
-                    {
-                      label: `WhatsApp Instrutor${lesson.instructor?.name ? ` (${lesson.instructor.name})` : ''}`,
-                      href: lesson.instructor?.whatsapp ? buildApiWhatsAppUrl(lesson.instructor.whatsapp, instructorConfirmationMessage(lesson, dayLabel)) : '#',
-                      disabled: !lesson.instructor?.whatsapp,
-                    },
                     { label: 'Editar', onClick: () => openEditModal(lesson) },
                     ...(lesson.status === 'scheduled'
                       ? [{ label: 'Cancelar', onClick: () => cancel(lesson.id), danger: true, disabled: deleting === lesson.id }]
@@ -2151,6 +2189,80 @@ export default function ScheduledLessons({
           onClose={() => setConfirmLessonModal(null)}
           onConfirmed={() => { setConfirmLessonModal(null); router.refresh() }}
         />
+      )}
+
+      {/* Picker replacing the old icon-only WhatsApp link — lets the
+          operator send either the student's or the instructor's
+          confirmation message, instead of jumping straight to the
+          student's WhatsApp with no choice. */}
+      {whatsAppModal && (
+        <div
+          style={{
+            position: 'fixed', inset: 0,
+            background: 'rgba(0,0,0,0.45)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 260, padding: '24px',
+          }}
+          onClick={e => { if (e.target === e.currentTarget) setWhatsAppModal(null) }}
+        >
+          <div style={{ background: '#fff', borderRadius: 'var(--radius-xl)', width: '100%', maxWidth: '360px', padding: '24px' }}>
+            <div style={{ fontSize: '15px', fontWeight: '500', color: 'var(--slate)', marginBottom: '4px' }}>
+              WhatsApp
+            </div>
+            <div style={{ fontSize: '12px', color: 'var(--mist)', marginBottom: '18px' }}>
+              Escolha para quem enviar a confirmação
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <a
+                href={whatsAppModal.student_whatsapp ? buildApiWhatsAppUrl(whatsAppModal.student_whatsapp, studentConfirmationMessage(whatsAppModal, dayLabel, schoolName)) : undefined}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={e => { if (!whatsAppModal.student_whatsapp) e.preventDefault(); else setWhatsAppModal(null) }}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '12px 14px', borderRadius: 'var(--radius-md)',
+                  background: whatsAppModal.student_whatsapp ? 'var(--color-pb-glacial-light)' : 'var(--powder)',
+                  color: whatsAppModal.student_whatsapp ? 'var(--color-pb-glacial-dark)' : 'var(--mist)',
+                  fontSize: '13px', fontWeight: '500', textDecoration: 'none',
+                  cursor: whatsAppModal.student_whatsapp ? 'pointer' : 'not-allowed',
+                  opacity: whatsAppModal.student_whatsapp ? 1 : 0.6,
+                }}
+              >
+                <span>Aluno{whatsAppModal.student_name ? ` (${whatsAppModal.student_name})` : ''}</span>
+                {!whatsAppModal.student_whatsapp && <span style={{ fontSize: '11px' }}>Sem WhatsApp</span>}
+              </a>
+              <a
+                href={whatsAppModal.instructor?.whatsapp ? buildApiWhatsAppUrl(whatsAppModal.instructor.whatsapp, instructorConfirmationMessage(whatsAppModal, dayLabel)) : undefined}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={e => { if (!whatsAppModal.instructor?.whatsapp) e.preventDefault(); else setWhatsAppModal(null) }}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '12px 14px', borderRadius: 'var(--radius-md)',
+                  background: whatsAppModal.instructor?.whatsapp ? 'var(--color-pb-glacial-light)' : 'var(--powder)',
+                  color: whatsAppModal.instructor?.whatsapp ? 'var(--color-pb-glacial-dark)' : 'var(--mist)',
+                  fontSize: '13px', fontWeight: '500', textDecoration: 'none',
+                  cursor: whatsAppModal.instructor?.whatsapp ? 'pointer' : 'not-allowed',
+                  opacity: whatsAppModal.instructor?.whatsapp ? 1 : 0.6,
+                }}
+              >
+                <span>Instrutor{whatsAppModal.instructor?.name ? ` (${whatsAppModal.instructor.name})` : ''}</span>
+                {!whatsAppModal.instructor?.whatsapp && <span style={{ fontSize: '11px' }}>Sem WhatsApp</span>}
+              </a>
+            </div>
+            <button
+              onClick={() => setWhatsAppModal(null)}
+              style={{
+                width: '100%', marginTop: '16px', padding: '10px',
+                background: '#fff', color: 'var(--mist)',
+                border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)',
+                fontSize: '13px', cursor: 'pointer', fontFamily: 'var(--font-sans)',
+              }}
+            >
+              Fechar
+            </button>
+          </div>
+        </div>
       )}
 
       <Toast toast={toast} />
