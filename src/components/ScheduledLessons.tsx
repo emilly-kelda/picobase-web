@@ -10,6 +10,7 @@ import { Toast, useToast } from '@/components/Toast'
 import ConfirmLessonModal from '@/components/ConfirmLessonModal'
 import { translateModalityName } from '@/lib/modality'
 import Button from '@/components/ui/Button'
+import Select from '@/components/ui/Select'
 import Badge from '@/components/ui/Badge'
 import OverflowMenu from '@/components/ui/OverflowMenu'
 import PackageProgressBar from '@/components/PackageProgressBar'
@@ -226,66 +227,6 @@ const labelStyle: React.CSSProperties = {
   color: 'var(--mist)',
   display: 'block',
   marginBottom: '6px',
-}
-
-/** Replaces the browser's native <select> chrome (which varies wildly
- *  across Chrome/Firefox/Safari and never matches the design system) with
- *  a consistent rounded border, soft shadow, and a custom SVG chevron —
- *  same visual language as inputStyle's text inputs, just with
- *  appearance:none + right padding to make room for the arrow. */
-function StyledSelect({
-  value,
-  onChange,
-  disabled,
-  children,
-}: {
-  value: string
-  onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void
-  disabled?: boolean
-  children: React.ReactNode
-}) {
-  return (
-    <div style={{ position: 'relative' }}>
-      <select
-        value={value}
-        onChange={onChange}
-        disabled={disabled}
-        style={{
-          ...inputStyle,
-          appearance: 'none',
-          WebkitAppearance: 'none',
-          MozAppearance: 'none',
-          paddingRight: '34px',
-          cursor: disabled ? 'not-allowed' : 'pointer',
-          background: disabled ? 'var(--powder)' : '#fff',
-          color: disabled ? 'var(--mist)' : 'var(--slate)',
-          boxShadow: '0 1px 2px rgba(13,15,20,0.04)',
-          transition: 'border-color 0.15s, box-shadow 0.15s',
-        }}
-        onFocus={e => {
-          e.currentTarget.style.borderColor = 'var(--slate)'
-          e.currentTarget.style.boxShadow = '0 0 0 3px rgba(13,15,20,0.08)'
-        }}
-        onBlur={e => {
-          e.currentTarget.style.borderColor = 'var(--border-strong)'
-          e.currentTarget.style.boxShadow = '0 1px 2px rgba(13,15,20,0.04)'
-        }}
-      >
-        {children}
-      </select>
-      <svg
-        width="16" height="16" viewBox="0 0 24 24" fill="none"
-        stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-        style={{
-          position: 'absolute', top: '50%', right: '12px',
-          transform: 'translateY(-50%)', pointerEvents: 'none',
-          color: 'var(--mist)',
-        }}
-      >
-        <polyline points="6 9 12 15 18 9" />
-      </svg>
-    </div>
-  )
 }
 
 function generateDates(
@@ -1398,7 +1339,7 @@ export default function ScheduledLessons({
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div>
                   <label style={labelStyle}>Atividade</label>
-                  <StyledSelect
+                  <Select
                     value={editForm.activity_id}
                     onChange={e => setEditForm(f => ({ ...f, activity_id: e.target.value }))}
                   >
@@ -1406,11 +1347,11 @@ export default function ScheduledLessons({
                     {activities.map(a => (
                       <option key={a.id} value={a.id}>{translateModalityName(a.name, lang)}</option>
                     ))}
-                  </StyledSelect>
+                  </Select>
                 </div>
                 <div>
                   <label style={labelStyle}>Instrutor</label>
-                  <StyledSelect
+                  <Select
                     value={editForm.instructor_id}
                     onChange={e => setEditForm(f => ({ ...f, instructor_id: e.target.value }))}
                   >
@@ -1418,7 +1359,7 @@ export default function ScheduledLessons({
                     {instructors.map(i => (
                       <option key={i.id} value={i.id}>{i.name}</option>
                     ))}
-                  </StyledSelect>
+                  </Select>
                 </div>
               </div>
 
@@ -1854,7 +1795,7 @@ export default function ScheduledLessons({
               <div style={{ display: 'grid', gridTemplateColumns: lessonMode === 'group' ? '1fr' : '1fr 1fr', gap: '12px' }}>
                 <div>
                   <label style={labelStyle}>Atividade</label>
-                  <StyledSelect
+                  <Select
                     value={form.activity_id}
                     onChange={e => setForm(f => ({ ...f, activity_id: e.target.value }))}
                   >
@@ -1862,12 +1803,12 @@ export default function ScheduledLessons({
                     {activities.map(a => (
                       <option key={a.id} value={a.id}>{translateModalityName(a.name, lang)}</option>
                     ))}
-                  </StyledSelect>
+                  </Select>
                 </div>
                 {lessonMode === 'individual' && (
                 <div>
                   <label style={labelStyle}>Instrutor</label>
-                  <StyledSelect
+                  <Select
                     value={form.instructor_id}
                     onChange={e => setForm(f => ({ ...f, instructor_id: e.target.value }))}
                   >
@@ -1875,7 +1816,7 @@ export default function ScheduledLessons({
                     {filteredInstructorsForModal.map(i => (
                       <option key={i.id} value={i.id}>{i.name}</option>
                     ))}
-                  </StyledSelect>
+                  </Select>
                 </div>
                 )}
               </div>

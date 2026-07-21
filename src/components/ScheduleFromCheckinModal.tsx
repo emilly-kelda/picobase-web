@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { translateModalityName } from '@/lib/modality'
+import Select from '@/components/ui/Select'
 
 type ActivityRef = { id: string; name: string }
 type Instructor = { id: string; name: string }
@@ -133,18 +134,18 @@ export default function ScheduleFromCheckinModal({
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div>
             <label style={labelStyle}>Atividade</label>
-            <select style={selectStyle} value={activityId} onChange={e => setActivityId(e.target.value)}>
+            <Select value={activityId} onChange={e => setActivityId(e.target.value)}>
               <option value="">Selecionar atividade</option>
               {activities.map(a => <option key={a.id} value={a.id}>{translateModalityName(a.name, lang)}</option>)}
-            </select>
+            </Select>
           </div>
 
           <div>
             <label style={labelStyle}>Instrutor</label>
-            <select style={selectStyle} value={instructorId} onChange={e => setInstructorId(e.target.value)}>
+            <Select value={instructorId} onChange={e => setInstructorId(e.target.value)}>
               <option value="">Selecionar instrutor</option>
               {instructors.map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
-            </select>
+            </Select>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
