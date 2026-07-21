@@ -27,8 +27,6 @@ const LANGS = {
     emergency_phone: 'Contact phone',
     waiver_title: 'Terms and conditions',
     waiver_text: 'I understand that water sports involve inherent risks including injury or death. I voluntarily participate and release the school, instructors, and staff from liability for accidents or injuries during my participation. I confirm that I am physically fit to participate and that all information provided is accurate. I agree to follow the school\'s safety rules and the instructors\' guidance throughout the activity.',
-    sign_below: 'Sign below',
-    clear: 'Clear',
     i_agree: 'I have read, understood, and fully agree to the terms of the Assumption of Risk and Liability Waiver described above.',
     submit: 'Complete check-in ✓',
     submitting: 'Submitting...',
@@ -69,8 +67,6 @@ const LANGS = {
     emergency_phone: 'Telefone do contato',
     waiver_title: 'Termos e condições',
     waiver_text: 'Compreendo que os esportes aquáticos envolvem riscos inerentes, incluindo lesões ou morte. Participo voluntariamente e isento a escola, instrutores e equipe de responsabilidade por acidentes durante minha participação. Confirmo que estou fisicamente apto a participar e que todas as informações fornecidas são verdadeiras. Comprometo-me a seguir as regras de segurança e as orientações da escola e dos instrutores durante toda a atividade.',
-    sign_below: 'Assine abaixo',
-    clear: 'Limpar',
     i_agree: 'Li, compreendi e concordo integralmente com as cláusulas do Termo de Assunção de Risco e Responsabilidade acima descritas.',
     submit: 'Fazer check-in ✓',
     submitting: 'Enviando...',
@@ -111,8 +107,6 @@ const LANGS = {
     emergency_phone: 'Téléphone du contact',
     waiver_title: 'Conditions générales',
     waiver_text: "Je comprends que les sports nautiques comportent des risques inhérents incluant des blessures ou la mort. Je participe volontairement et décharge l'école, les instructeurs et le personnel de toute responsabilité. Je confirme être physiquement apte à participer et que toutes les informations fournies sont exactes. Je m'engage à suivre les règles de sécurité de l'école et les consignes des instructeurs pendant toute l'activité.",
-    sign_below: 'Signez ci-dessous',
-    clear: 'Effacer',
     i_agree: "J'ai lu, compris et j'accepte pleinement les clauses de la décharge de responsabilité et d'acceptation des risques décrites ci-dessus.",
     submit: 'Terminer le check-in ✓',
     submitting: 'Envoi en cours...',
@@ -153,8 +147,6 @@ const LANGS = {
     emergency_phone: 'Teléfono del contacto',
     waiver_title: 'Términos y condiciones',
     waiver_text: 'Entiendo que los deportes acuáticos implican riesgos inherentes incluyendo lesiones o muerte. Participo voluntariamente y eximo a la escuela, instructores y personal de responsabilidad por accidentes. Confirmo que estoy físicamente apto para participar y que toda la información proporcionada es veraz. Me comprometo a seguir las normas de seguridad de la escuela y las indicaciones de los instructores durante toda la actividad.',
-    sign_below: 'Firme abajo',
-    clear: 'Borrar',
     i_agree: 'He leído, comprendido y acepto íntegramente las cláusulas del Descargo de Responsabilidad y Asunción de Riesgos descritas anteriormente.',
     submit: 'Completar el check-in ✓',
     submitting: 'Enviando...',
@@ -591,7 +583,6 @@ export default function CheckinForm({
     health_condition:    '',
     emergency_name:      '',
     emergency_phone:     '',
-    signature_data:      '',
   })
 
   // Cookie-attributed referral pre-fills the source/partner step invisibly —
@@ -622,8 +613,6 @@ export default function CheckinForm({
   const [guardianName,    setGuardianName]    = useState('')
   const [guardianConsent, setGuardianConsent] = useState(false)
 
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const drawing   = useRef(false)
   const t = LANGS[lang]
 
   const waiverFileUrl = school.waiver_type === 'file'
@@ -775,61 +764,6 @@ export default function CheckinForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  function getPos(e: React.TouchEvent | React.MouseEvent, canvas: HTMLCanvasElement) {
-    const rect = canvas.getBoundingClientRect()
-    if ('touches' in e) {
-      return {
-        x: (e as React.TouchEvent).touches[0].clientX - rect.left,
-        y: (e as React.TouchEvent).touches[0].clientY - rect.top,
-      }
-    }
-    return {
-      x: (e as React.MouseEvent).clientX - rect.left,
-      y: (e as React.MouseEvent).clientY - rect.top,
-    }
-  }
-
-  function startDraw(e: React.TouchEvent | React.MouseEvent) {
-    e.preventDefault()
-    const canvas = canvasRef.current
-    if (!canvas) return
-    drawing.current = true
-    const ctx = canvas.getContext('2d')!
-    const pos = getPos(e, canvas)
-    ctx.beginPath()
-    ctx.moveTo(pos.x, pos.y)
-  }
-
-  function draw(e: React.TouchEvent | React.MouseEvent) {
-    e.preventDefault()
-    if (!drawing.current) return
-    const canvas = canvasRef.current
-    if (!canvas) return
-    const ctx = canvas.getContext('2d')!
-    ctx.lineWidth = 2.5
-    ctx.lineCap = 'round'
-    ctx.strokeStyle = '#1A1C22'
-    const pos = getPos(e, canvas)
-    ctx.lineTo(pos.x, pos.y)
-    ctx.stroke()
-  }
-
-  function stopDraw() {
-    drawing.current = false
-    const canvas = canvasRef.current
-    if (canvas) {
-      setForm(f => ({ ...f, signature_data: canvas.toDataURL() }))
-    }
-  }
-
-  function clearCanvas() {
-    const canvas = canvasRef.current
-    if (!canvas) return
-    const ctx = canvas.getContext('2d')!
-    ctx.clearRect(0, 0, canvas.width, canvas.height)
-    setForm(f => ({ ...f, signature_data: '' }))
-  }
-
   async function submit() {
     setSubmitting(true)
     setSubmitError(null)
@@ -947,7 +881,11 @@ export default function CheckinForm({
     )
   }
 
-  const canSubmitWaiver = agreed && gdpr && form.signature_data !== '' && !submitting
+  // agreed can only ever become true once waiverScrolledToEnd is true (see
+  // the ConsentCheckbox's disabled prop below) — reading the term in full
+  // is already a hard prerequisite for checking this box, not something
+  // that needs its own separate condition here.
+  const canSubmitWaiver = agreed && gdpr && !submitting
     && (!isMinor || (guardianName.trim().length > 2 && guardianConsent))
 
   const dobDigits = form.date_of_birth.replace(/\D/g, '')
@@ -1541,32 +1479,6 @@ export default function CheckinForm({
                 <input style={inputStyle} type="tel" placeholder={t.emergency_phone}
                   value={form.emergency_phone}
                   onChange={e => setForm(f => ({ ...f, emergency_phone: e.target.value }))} />
-              </div>
-            </div>
-
-            <div>
-              <div style={{ fontSize: '13px', fontWeight: '500', color: '#1A1C22', marginBottom: '10px' }}>{t.sign_below}</div>
-              <div style={{ background: '#fff', border: '1.5px solid #E4E0D8', borderRadius: '14px', overflow: 'hidden', position: 'relative' }}>
-                <canvas
-                  ref={canvasRef}
-                  width={432}
-                  height={160}
-                  style={{ width: '100%', height: '160px', display: 'block', cursor: 'crosshair', touchAction: 'none' }}
-                  onMouseDown={startDraw}
-                  onMouseMove={draw}
-                  onMouseUp={stopDraw}
-                  onMouseLeave={stopDraw}
-                  onTouchStart={startDraw}
-                  onTouchMove={draw}
-                  onTouchEnd={stopDraw}
-                />
-                <button onClick={clearCanvas} style={{
-                  position: 'absolute', bottom: '8px', right: '10px',
-                  fontSize: '11px', color: '#8A8C98', background: 'transparent',
-                  border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: '4px 8px',
-                }}>
-                  {t.clear}
-                </button>
               </div>
             </div>
 
