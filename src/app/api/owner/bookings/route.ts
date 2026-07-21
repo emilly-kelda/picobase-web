@@ -68,7 +68,7 @@ export async function POST(request: Request) {
   const today = new Date().toISOString().slice(0, 10)
   if (preferred_date === today) {
     try {
-      await ensureActiveCheckinForToday(SCHOOL_ID, studentName)
+      await ensureActiveCheckinForToday(SCHOOL_ID, studentName, { activityId: activity_id })
     } catch {}
   }
 

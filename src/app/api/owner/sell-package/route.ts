@@ -15,7 +15,7 @@ export async function POST(request: Request) {
 
   const { data: pkg, error: pkgError } = await supabase
     .from('packages')
-    .select('id, total_minutes, base_price, final_price')
+    .select('id, total_minutes, base_price, final_price, sport')
     .eq('id', package_id)
     .eq('school_id', SCHOOL_ID)
     .single()
@@ -63,7 +63,7 @@ export async function POST(request: Request) {
   // the actual bug. Best-effort: never let this block the sale response, since
   // package_sales is the real source of truth for the transaction.
   try {
-    await ensureActiveCheckinForToday(SCHOOL_ID, student_name.trim())
+    await ensureActiveCheckinForToday(SCHOOL_ID, student_name.trim(), { sport: pkg.sport })
   } catch {}
 
   return NextResponse.json({ ok: true })

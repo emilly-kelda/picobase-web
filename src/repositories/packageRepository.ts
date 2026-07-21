@@ -114,38 +114,52 @@ export async function getPackageDashboard(schoolId: string) {
  *  consumed next, not just whichever happens to be newest. */
 export async function getPackageBalancesForCheckins(
   schoolId: string
-): Promise<Record<string, { minutesRemaining: number; hasPackage: boolean; packageSaleId: string }>> {
+): Promise<Record<string, { minutesRemaining: number; hasPackage: boolean; packageSaleId: string; packageSport: string | null }>> {
   const supabase = createServiceClient()
   const { data } = await supabase
     .from('package_sales')
-    .select('id, student_name, minutes_purchased, minutes_used, sold_at')
+    .select('id, student_name, minutes_purchased, minutes_used, sold_at, packages ( sport )')
     .eq('school_id', schoolId)
     .order('sold_at', { ascending: true })
 
-  const map: Record<string, { minutesRemaining: number; packageSaleId: string; activeSaleId: string | null }> = {}
+  const map: Record<string, {
+    minutesRemaining: number; packageSaleId: string; activeSaleId: string | null
+    // packageSport tracks the SAME sale as packageSaleId (the pinned
+    // oldest-with-balance one) — used as a display/pre-select fallback
+    // when a checkin's own activity_id is null (see PendingLessons.tsx),
+    // so "Sem atividade" doesn't show for a student who clearly has an
+    // active package for a specific sport.
+    packageSport: string | null; activeSaleSport: string | null
+  }> = {}
   for (const sale of data ?? []) {
     const key = normalizeStudentName(sale.student_name)
     if (!key) continue
     const remaining = Math.max(0, (sale.minutes_purchased ?? 0) - (sale.minutes_used ?? 0))
+    const pkg = Array.isArray(sale.packages) ? sale.packages[0] : sale.packages
+    const saleSport = pkg?.sport ?? null
     const existing = map[key]
     if (!existing) {
       map[key] = {
         minutesRemaining: remaining,
         packageSaleId: sale.id,
         activeSaleId: remaining > 0 ? sale.id : null,
+        packageSport: saleSport,
+        activeSaleSport: remaining > 0 ? saleSport : null,
       }
     } else {
       map[key] = {
         minutesRemaining: existing.minutesRemaining + remaining,
         packageSaleId: existing.activeSaleId ?? sale.id,
         activeSaleId: existing.activeSaleId ?? (remaining > 0 ? sale.id : null),
+        packageSport: existing.activeSaleSport ?? saleSport,
+        activeSaleSport: existing.activeSaleSport ?? (remaining > 0 ? saleSport : null),
       }
     }
   }
 
-  const result: Record<string, { minutesRemaining: number; hasPackage: boolean; packageSaleId: string }> = {}
+  const result: Record<string, { minutesRemaining: number; hasPackage: boolean; packageSaleId: string; packageSport: string | null }> = {}
   for (const [key, v] of Object.entries(map)) {
-    result[key] = { minutesRemaining: v.minutesRemaining, hasPackage: true, packageSaleId: v.packageSaleId }
+    result[key] = { minutesRemaining: v.minutesRemaining, hasPackage: true, packageSaleId: v.packageSaleId, packageSport: v.packageSport }
   }
   return result
 }

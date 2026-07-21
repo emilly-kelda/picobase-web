@@ -110,7 +110,7 @@ export default function PendingLessons({
   checkins: Checkin[]
   instructors: Instructor[]
   activities?: ActivityRef[]
-  packageBalances?: Record<string, { minutesRemaining: number; hasPackage: boolean; packageSaleId?: string }>
+  packageBalances?: Record<string, { minutesRemaining: number; hasPackage: boolean; packageSaleId?: string; packageSport?: string | null }>
   packageTypes?: PackageOption[]
   schoolSlug: string
   schoolName: string
@@ -214,6 +214,24 @@ export default function PendingLessons({
             const exhausted  = balance?.hasPackage && balance.minutesRemaining <= 0
             const lastLesson = balance?.hasPackage && balance.minutesRemaining > 0 && balance.minutesRemaining <= 60
 
+            // Fallback when this checkin's own activity_id is null but the
+            // student has an active package for a specific sport — mainly
+            // covers checkins already broken before ensureActiveCheckinFor
+            // Today started backfilling activity_id at creation time (see
+            // scheduledLessonRepository.ts). Same normalize+startsWith
+            // match as lib/modality.ts.
+            const fallbackActivityId = (!checkin.activity_id && balance?.packageSport)
+              ? activities.find(a => {
+                  const n = a.name.toLowerCase().replace(/[^a-z]/g, '')
+                  const s = balance.packageSport!.toLowerCase().replace(/[^a-z]/g, '')
+                  return n.startsWith(s)
+                })?.id ?? null
+              : null
+            // Raw/untranslated either way (checkin.activities.name or the
+            // package's sport key) — translateModalityName is applied once
+            // at each render site below, same as before this fallback existed.
+            const displayActivityName = checkin.activities?.name ?? balance?.packageSport ?? null
+
             // Card layout follows picobase_design_system_dossie.md Fase 4's
             // Aguardando Vento spec. Per
             // fix_checkin_removido_e_estagio_errado.md, the button row
@@ -290,7 +308,7 @@ export default function PendingLessons({
                       )}
                     </div>
                     <div style={{ fontSize: '12px', color: 'var(--color-pb-mist)', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {checkin.activities?.name ? translateModalityName(checkin.activities.name, lang) : t.no_activity_label}
+                      {displayActivityName ? translateModalityName(displayActivityName, lang) : t.no_activity_label}
                       {' · '}
                       {instructor?.name ?? t.no_instructor_label}
                       {' · '}
@@ -339,7 +357,7 @@ export default function PendingLessons({
                     slug={schoolSlug}
                     schoolName={schoolName}
                     studentName={checkin.student_name}
-                    activityName={checkin.activities?.name ?? null}
+                    activityName={displayActivityName}
                     onCheckIn={() => checkIn(checkin)}
                     onSendToWater={() => sendToWater(checkin)}
                     onSellPackage={() => setSellModal(checkin)}
@@ -349,7 +367,7 @@ export default function PendingLessons({
                       var(--glacial-*) tokens — matches ScheduledLessons.tsx's
                       "+ Agendar Próxima Aula"/"Confirmar" treatment. */}
                   <button
-                    onClick={() => setScheduleModal(checkin)}
+                    onClick={() => setScheduleModal({ ...checkin, activity_id: checkin.activity_id ?? fallbackActivityId })}
                     className="bg-zinc-100 hover:bg-zinc-200 text-zinc-800 font-medium rounded-md px-3 py-1.5 text-xs transition-colors border-0 shadow-none whitespace-nowrap"
                   >
                     {t.schedule_lesson_btn}

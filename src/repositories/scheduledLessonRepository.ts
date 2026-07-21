@@ -403,13 +403,59 @@ export async function createScheduledLesson(payload: {
  *     with lgpd_consent/gdpr_consent forced true and waiver_signed_at set
  *     to now, representing consent given in person at the time.
  */
-export async function ensureActiveCheckinForToday(schoolId: string, studentName: string) {
+/** Resolves a package's short sport key ('kitesurf', 'windsurf', ...) to a
+ *  real activities.id for this school, using the same normalize +
+ *  startsWith prefix-match convention as lib/modality.ts's
+ *  MODALITY_LABELS / detectModality — activities.name is free text the
+ *  school typed in (no fixed catalog), so "Kitesurf" and "Kitesurf -
+ *  Avançado" both match a package.sport of "kitesurf". Returns null (never
+ *  throws) when there's no sport or no matching activity — callers treat
+ *  that as "couldn't infer one, leave activity_id alone". */
+async function findActivityIdBySport(
+  supabase: ReturnType<typeof createServiceClient>,
+  schoolId: string,
+  sport: string | null | undefined
+): Promise<string | null> {
+  if (!sport?.trim()) return null
+  const { data: activities } = await supabase
+    .from('activities')
+    .select('id, name')
+    .eq('school_id', schoolId)
+
+  const normalizedSport = sport.toLowerCase().replace(/[^a-z]/g, '')
+  const match = (activities ?? []).find(a =>
+    a.name.toLowerCase().replace(/[^a-z]/g, '').startsWith(normalizedSport)
+  )
+  return match?.id ?? null
+}
+
+/** `activityId` (a real FK — from a booking's or scheduled_lesson's own
+ *  activity_id) takes priority when the caller already has one; `sport` (a
+ *  package's short sport key, e.g. "kitesurf") is the fallback, resolved
+ *  via findActivityIdBySport. Used to backfill activity_id when this
+ *  checkin would otherwise have none — which is exactly what happened
+ *  before: a package bought via Spot's "Venda Rápida" (no activity picker
+ *  in that flow) produced a checkin with activity_id left null, showing
+ *  "Sem atividade" in Aguardando Vento despite the student's package
+ *  clearly being for a specific sport; same gap existed for bookings/
+ *  schedule confirmations that had a real activity_id but never passed it
+ *  through. Only fills a gap — never overrides an activity_id a real
+ *  check-in (QR/walk-in form) already set. */
+export async function ensureActiveCheckinForToday(
+  schoolId: string,
+  studentName: string,
+  opts?: { activityId?: string | null; sport?: string | null }
+) {
   const supabase = createServiceClient()
   const today = new Date().toISOString().slice(0, 10)
 
+  async function resolveActivityId() {
+    return opts?.activityId || (await findActivityIdBySport(supabase, schoolId, opts?.sport))
+  }
+
   const { data: todayCheckin } = await supabase
     .from('checkins')
-    .select('id, status, deferred_to_schedule')
+    .select('id, status, deferred_to_schedule, activity_id')
     .eq('school_id', schoolId)
     .ilike('student_name', studentName)
     .gte('checkin_at', `${today}T00:00:00`)
@@ -418,14 +464,25 @@ export async function ensureActiveCheckinForToday(schoolId: string, studentName:
     .maybeSingle()
 
   if (todayCheckin) {
-    if (todayCheckin.status === 'checked_in' && !todayCheckin.deferred_to_schedule) return
     if (todayCheckin.status === 'session_confirmed' || todayCheckin.status === 'cancelled') return
+    const backfillActivityId = !todayCheckin.activity_id ? await resolveActivityId() : null
+    if (todayCheckin.status === 'checked_in' && !todayCheckin.deferred_to_schedule) {
+      if (backfillActivityId) {
+        await supabase.from('checkins').update({ activity_id: backfillActivityId }).eq('id', todayCheckin.id)
+      }
+      return
+    }
     await supabase
       .from('checkins')
-      .update({ status: 'checked_in', deferred_to_schedule: false })
+      .update({
+        status: 'checked_in', deferred_to_schedule: false,
+        ...(backfillActivityId ? { activity_id: backfillActivityId } : {}),
+      })
       .eq('id', todayCheckin.id)
     return
   }
+
+  const resolvedActivityId = await resolveActivityId()
 
   const { data: priorCheckin } = await supabase
     .from('checkins')
@@ -454,12 +511,14 @@ export async function ensureActiveCheckinForToday(schoolId: string, studentName:
       gdpr_consent: true,
       waiver_signed_at: new Date().toISOString(),
       source: 'walk_in',
+      activity_id:  resolvedActivityId,
     })
     return
   }
 
   await supabase.from('checkins').insert({
     school_id:    schoolId,
+    activity_id:  resolvedActivityId,
     student_name: studentName,
     ...priorCheckin,
     status:       'checked_in',

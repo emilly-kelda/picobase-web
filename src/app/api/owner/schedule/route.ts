@@ -160,7 +160,7 @@ export async function POST(request: Request) {
   const today = new Date().toISOString().slice(0, 10)
   if (typeof body.scheduled_at === 'string' && body.scheduled_at.slice(0, 10) === today) {
     try {
-      await ensureActiveCheckinForToday(SCHOOL_ID, body.student_name)
+      await ensureActiveCheckinForToday(SCHOOL_ID, body.student_name, { activityId: body.activity_id })
     } catch {}
   }
 
