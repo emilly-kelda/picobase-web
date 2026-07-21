@@ -501,21 +501,31 @@ export async function ensureActiveCheckinForToday(
     .maybeSingle()
 
   if (!priorCheckin) {
-    // lgpd_consent/gdpr_consent/waiver_signed_at deliberately false/null,
-    // not true/now — a student with no prior checkin at all (e.g. a brand
-    // new package sold via Spot's "Venda Rápida", which has no waiver step
-    // of its own) has NOT actually gone through the legal waiver flow yet.
-    // Faking these as already-signed here used to make Aguardando Vento's
-    // "Termo Assinado" badge lie for that student — the badge should read
-    // the real value and prompt for an actual signature instead.
+    // lgpd_consent/gdpr_consent MUST be true — checkins has a hard CHECK
+    // constraint ("lgpd_required") that rejects any row where
+    // lgpd_consent isn't true, full stop. Setting it false here (an
+    // earlier attempt at not faking waiver_signed_at) made every Venda
+    // Rápida/booking/same-day-schedule checkin insert fail outright,
+    // silently swallowed by the try/catch around this call — the package
+    // sale still succeeded, but the student's checkin row was never
+    // created and they vanished from Aguardando Vento with no trace.
+    //
+    // waiver_signed_at stays null though — that's the actual signal this
+    // needs: lgpd_consent is baseline data-processing consent for holding
+    // a customer record at all (reasonable to assume true for the
+    // school's own customer), separate from the specific liability
+    // waiver being physically/digitally signed, which genuinely hasn't
+    // happened yet for a checkin created this way. The "Termo Assinado"
+    // badge in PendingLessons.tsx reads waiver_signed_at specifically,
+    // not lgpd_consent, so this still shows "Termo Pendente" correctly.
     await supabase.from('checkins').insert({
       school_id:    schoolId,
       student_name: studentName,
       status:       'checked_in',
       checkin_at:   new Date().toISOString(),
       deferred_to_schedule: false,
-      lgpd_consent: false,
-      gdpr_consent: false,
+      lgpd_consent: true,
+      gdpr_consent: true,
       waiver_signed_at: null,
       source: 'walk_in',
       activity_id:  resolvedActivityId,
