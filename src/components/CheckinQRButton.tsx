@@ -29,6 +29,7 @@ export default function CheckinQRButton({
   activityName,
   compact = false,
   iconOnly = false,
+  chip = false,
   onOpen,
   className,
 }: {
@@ -42,6 +43,12 @@ export default function CheckinQRButton({
   // state, restoring the QR/modal flow that used to be the primary action
   // there before it got replaced by a plain button).
   iconOnly?: boolean
+  // Same zinc-100 flat style as Agendar aula/Ver ficha in PendingLessons.tsx
+  // — this is the always-available "show me the QR again" utility (not
+  // gated on checked_in, unlike ChameleonButton's compact mode above), used
+  // to promote it out of the Ver ficha modal and into the card's own
+  // button row, next to those two.
+  chip?: boolean
   // Fires whenever the modal is opened, any trigger shape — lets a caller
   // (ChameleonButton) piggyback its own side effect (marking checked_in
   // true) on the same click without this component knowing anything about
@@ -96,6 +103,21 @@ export default function CheckinQRButton({
             <rect x="3" y="14" width="7" height="7" rx="1" />
             <path d="M14 14h3v3M14 21h3M21 17.5V21" />
           </svg>
+        </button>
+      ) : chip ? (
+        <button
+          type="button"
+          onClick={() => { onOpen?.(); setOpen(true) }}
+          title={studentName ? `QR Code de check-in — ${studentName}` : 'QR Code de check-in'}
+          className={`bg-zinc-100 hover:bg-zinc-200 text-zinc-800 font-medium rounded-md px-3 py-1.5 text-xs transition-colors border-0 shadow-none whitespace-nowrap inline-flex items-center gap-1.5 ${className ?? ''}`}
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="3" width="7" height="7" rx="1" />
+            <rect x="14" y="3" width="7" height="7" rx="1" />
+            <rect x="3" y="14" width="7" height="7" rx="1" />
+            <path d="M14 14h3v3M14 21h3M21 17.5V21" />
+          </svg>
+          Check-in
         </button>
       ) : compact ? (
         // Fase 3 of picobase_design_system_dossie.md: the old icon-only

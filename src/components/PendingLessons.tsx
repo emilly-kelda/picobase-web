@@ -372,6 +372,17 @@ export default function PendingLessons({
                   >
                     {t.schedule_lesson_btn}
                   </button>
+                  {/* Always-available "show QR again" trigger — not gated
+                      on checked_in like ChameleonButton's own Check-in
+                      state above. Previously only reachable one click deep,
+                      inside Ver ficha; promoted here per explicit ask. */}
+                  <CheckinQRButton
+                    slug={schoolSlug}
+                    schoolName={schoolName}
+                    studentName={checkin.student_name}
+                    activityName={displayActivityName}
+                    chip
+                  />
                   <button
                     onClick={() => setFichaModal(checkin)}
                     className="bg-zinc-100 hover:bg-zinc-200 text-zinc-800 font-medium rounded-md px-3 py-1.5 text-xs transition-colors border-0 shadow-none whitespace-nowrap"
