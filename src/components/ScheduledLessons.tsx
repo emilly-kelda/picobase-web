@@ -1042,28 +1042,13 @@ export default function ScheduledLessons({
                       : lesson.status === 'checked_in' ? t.status_checked_in
                       : t.status_scheduled}
                   </Badge>
-                  {lesson.status !== 'confirmed' && (
-                    <button
-                      onClick={() => setConfirmLessonModal(lesson)}
-                      style={{
-                        padding: '4px 8px',
-                        background: '#F5F3FF',
-                        color: '#6D28D9',
-                        border: 'none',
-                        borderRadius: 'var(--radius-md)',
-                        fontSize: '10px', fontWeight: '500',
-                        cursor: 'pointer',
-                        fontFamily: 'var(--font-sans)',
-                        transition: 'background-color 0.15s',
-                        whiteSpace: 'nowrap',
-                      }}
-                      onMouseEnter={e => { e.currentTarget.style.backgroundColor = '#6D28D9'; e.currentTarget.style.color = '#fff' }}
-                      onMouseLeave={e => { e.currentTarget.style.backgroundColor = '#F5F3FF'; e.currentTarget.style.color = '#6D28D9' }}
-                    >
-                      Confirmar
-                    </button>
-                  )}
-                  {/* "Iniciar Velejo"/"Start Session" — moves a scheduled
+                  {/* Ordem cronológica da operação: Iniciar Velejo →
+                      Confirmar → + Agendar Próxima Aula → WhatsApp. A ação
+                      de início ('Iniciar Velejo') vem primeiro por ser o
+                      primeiro passo da linha do tempo; Confirmar (liquidar a
+                      aula realizada) vem logo em seguida.
+
+                      "Iniciar Velejo"/"Start Session" — moves a scheduled
                       lesson to 'checked_in'. Bold dark primary — this is
                       the main action for a 'scheduled' row, Confirmar below
                       is the softer one since it's only relevant once the
@@ -1092,6 +1077,27 @@ export default function ScheduledLessons({
                       }}
                     >
                       {startingSession === lesson.id ? '...' : (lang === 'pt' ? 'Iniciar Velejo' : 'Start Session')}
+                    </button>
+                  )}
+                  {lesson.status !== 'confirmed' && (
+                    <button
+                      onClick={() => setConfirmLessonModal(lesson)}
+                      style={{
+                        padding: '4px 8px',
+                        background: '#F5F3FF',
+                        color: '#6D28D9',
+                        border: 'none',
+                        borderRadius: 'var(--radius-md)',
+                        fontSize: '10px', fontWeight: '500',
+                        cursor: 'pointer',
+                        fontFamily: 'var(--font-sans)',
+                        transition: 'background-color 0.15s',
+                        whiteSpace: 'nowrap',
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.backgroundColor = '#6D28D9'; e.currentTarget.style.color = '#fff' }}
+                      onMouseLeave={e => { e.currentTarget.style.backgroundColor = '#F5F3FF'; e.currentTarget.style.color = '#6D28D9' }}
+                    >
+                      Confirmar
                     </button>
                   )}
                   {/* "+ Agendar Próxima Aula" (re-engagement shortcut, NOT
@@ -1134,7 +1140,7 @@ export default function ScheduledLessons({
                   <button
                     onClick={() => setWhatsAppModal(lesson)}
                     style={{
-                      padding: '3px 8px',
+                      padding: '4px 8px',
                       background: 'var(--color-pb-glacial-light)',
                       color: 'var(--color-pb-glacial-dark)',
                       border: 'none',
