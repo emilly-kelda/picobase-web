@@ -37,6 +37,8 @@ const LANGS = {
     next: 'Next',
     back: 'Back',
     dob: 'Date of birth',
+    weight: 'Weight (kg)',
+    weight_hint: 'Optional — helps us suggest the right gear size',
     gdpr: 'I consent to the processing of my personal data for the purpose of scheduling, safety, and instruction in this activity, in accordance with applicable data protection law (LGPD/GDPR).',
     waiver_points: ['Water sports involve inherent risks', 'Participation is voluntary', 'I am physically fit to participate', 'All information provided is accurate'],
     package_active: 'Active package',
@@ -77,6 +79,8 @@ const LANGS = {
     next: 'Próximo',
     back: 'Voltar',
     dob: 'Data de nascimento',
+    weight: 'Peso (kg)',
+    weight_hint: 'Opcional — ajuda a sugerir o tamanho ideal do equipamento',
     gdpr: 'Consinto com o tratamento dos meus dados pessoais para a finalidade de agendamento, segurança e instrução nesta atividade, em conformidade com a Lei Geral de Proteção de Dados (LGPD).',
     waiver_points: ['Esportes aquáticos envolvem riscos inerentes', 'Participo voluntariamente', 'Estou fisicamente apto a participar', 'Todas as informações fornecidas são verdadeiras'],
     package_active: 'Pacote ativo',
@@ -117,6 +121,8 @@ const LANGS = {
     next: 'Suivant',
     back: 'Retour',
     dob: 'Date de naissance',
+    weight: 'Poids (kg)',
+    weight_hint: "Facultatif — aide à suggérer la bonne taille de matériel",
     gdpr: "Je consens au traitement de mes données personnelles aux fins de planification, de sécurité et d'instruction pour cette activité, conformément à la réglementation applicable en matière de protection des données (LGPD/RGPD).",
     waiver_points: ["Les sports nautiques comportent des risques inhérents", "La participation est volontaire", "Je suis physiquement apte à participer", "Toutes les informations fournies sont exactes"],
     package_active: 'Forfait actif',
@@ -157,6 +163,8 @@ const LANGS = {
     next: 'Siguiente',
     back: 'Volver',
     dob: 'Fecha de nacimiento',
+    weight: 'Peso (kg)',
+    weight_hint: 'Opcional — ayuda a sugerir el tamaño ideal del equipo',
     gdpr: 'Consiento el tratamiento de mis datos personales para la finalidad de programación, seguridad e instrucción en esta actividad, de conformidad con la normativa aplicable de protección de datos (LGPD/RGPD).',
     waiver_points: ['Los deportes acuáticos implican riesgos inherentes', 'La participación es voluntaria', 'Estoy físicamente apto para participar', 'Toda la información proporcionada es veraz'],
     package_active: 'Paquete activo',
@@ -555,6 +563,7 @@ export default function CheckinForm({
     student_nationality: '',
     document_number:     '',
     date_of_birth:       '',
+    weight_kg:           '',
     activity_id:         activities.find(a => a.name.toLowerCase() === prefillActivityName?.toLowerCase())?.id ?? '',
     instructor_id:       instructors.find(i => i.name.toLowerCase() === prefillInstructorName?.toLowerCase())?.id ?? '',
     health_condition:    '',
@@ -1012,6 +1021,21 @@ export default function CheckinForm({
                 </div>
               </div>
             )}
+
+            <div>
+              <label style={labelStyle}>{t.weight}</label>
+              <input
+                style={inputStyle}
+                type="number"
+                inputMode="decimal"
+                min={1}
+                max={300}
+                value={form.weight_kg}
+                onChange={e => setForm(f => ({ ...f, weight_kg: e.target.value }))}
+                placeholder="75"
+              />
+              <div style={{ fontSize: '11px', color: '#8A8C98', marginTop: '4px' }}>{t.weight_hint}</div>
+            </div>
 
             <div>
               <label style={labelStyle}>{t.email}</label>

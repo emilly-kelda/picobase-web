@@ -207,6 +207,7 @@ export default async function OwnerPage() {
             hoursMap={hoursMap}
             t={t}
             lang={lang}
+            weather={weather}
           />
 
           <ScheduledLessons

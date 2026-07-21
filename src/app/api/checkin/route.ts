@@ -87,6 +87,7 @@ export async function POST(request: Request) {
       emergency_name:      body.emergency_name || null,
       emergency_phone:     body.emergency_phone || null,
       birthdate:           body.date_of_birth || null,
+      weight_kg:           body.weight_kg ? Number(body.weight_kg) : null,
       is_minor:            body.is_minor ?? false,
       guardian_name:       body.guardian_name ?? null,
       guardian_consent:    body.guardian_consent ?? false,

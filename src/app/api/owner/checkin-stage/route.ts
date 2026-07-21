@@ -29,10 +29,21 @@ const VALID_STAGES: Stage[] = ['sala_de_espera', 'na_agua', 'concluido']
  *
  *  equipment_notes rides the same shape for the same reason — free-text
  *  edit from "Ver ficha", nothing else about the row changes when it's
- *  saved. */
+ *  saved.
+ *
+ *  The EDITABLE_TEXT_FIELDS block below is the "Editar" quick-edit form in
+ *  the same Ficha modal — a fixed allowlist of plain columns on `checkins`
+ *  (not the `students` table; this row is the denormalized per-checkin
+ *  copy), so a typo caught after check-in doesn't require deleting and
+ *  redoing the whole thing. weight_kg goes through the same allowlist. */
+const EDITABLE_TEXT_FIELDS = [
+  'student_name', 'student_whatsapp', 'student_email', 'student_nationality',
+  'document_number', 'emergency_name', 'emergency_phone',
+] as const
+
 export async function PATCH(request: Request) {
   const body = await request.json()
-  const { id, stage, checked_in, equipment_notes } = body
+  const { id, stage, checked_in, equipment_notes, weight_kg } = body
 
   if (!id) {
     return NextResponse.json({ error: 'id e obrigatorio' }, { status: 400 })
@@ -46,14 +57,27 @@ export async function PATCH(request: Request) {
   if (equipment_notes !== undefined && typeof equipment_notes !== 'string') {
     return NextResponse.json({ error: 'equipment_notes deve ser string' }, { status: 400 })
   }
-  if (stage === undefined && checked_in === undefined && equipment_notes === undefined) {
-    return NextResponse.json({ error: 'stage, checked_in ou equipment_notes e obrigatorio' }, { status: 400 })
+  if (weight_kg !== undefined && weight_kg !== null && typeof weight_kg !== 'number') {
+    return NextResponse.json({ error: 'weight_kg deve ser numero' }, { status: 400 })
+  }
+  for (const field of EDITABLE_TEXT_FIELDS) {
+    if (body[field] !== undefined && typeof body[field] !== 'string') {
+      return NextResponse.json({ error: `${field} deve ser string` }, { status: 400 })
+    }
+  }
+  const hasEditableField = EDITABLE_TEXT_FIELDS.some(f => body[f] !== undefined)
+  if (stage === undefined && checked_in === undefined && equipment_notes === undefined && weight_kg === undefined && !hasEditableField) {
+    return NextResponse.json({ error: 'nenhum campo valido informado' }, { status: 400 })
   }
 
-  const update: { stage?: Stage; checked_in?: boolean; equipment_notes?: string } = {}
+  const update: Record<string, unknown> = {}
   if (stage !== undefined) update.stage = stage as Stage
   if (checked_in !== undefined) update.checked_in = checked_in
   if (equipment_notes !== undefined) update.equipment_notes = equipment_notes
+  if (weight_kg !== undefined) update.weight_kg = weight_kg
+  for (const field of EDITABLE_TEXT_FIELDS) {
+    if (body[field] !== undefined) update[field] = body[field] || null
+  }
 
   const supabase = createServiceClient()
   const { error } = await supabase

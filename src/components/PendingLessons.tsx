@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, type CSSProperties } from 'react'
 import { useRouter } from 'next/navigation'
 import { normalizeStudentName } from '@/lib/text'
 import StudentPackageHistoryModal from '@/components/StudentPackageHistoryModal'
@@ -12,6 +12,9 @@ import Badge from '@/components/ui/Badge'
 import ChameleonButton from '@/components/ui/ChameleonButton'
 import PackageProgressBar from '@/components/PackageProgressBar'
 import type { Stage } from '@/lib/stage'
+import type { WeatherData } from '@/lib/weather'
+import { suggestKiteSizeM } from '@/lib/equipment'
+import { PencilIcon, LightbulbIcon } from '@/components/nav-icons'
 
 type ActivityRef = {
   id: string
@@ -32,6 +35,7 @@ type Checkin = {
   emergency_name: string | null
   emergency_phone: string | null
   birthdate: string | null
+  weight_kg: number | null
   checkin_at: string
   activity_id: string | null
   instructor_id: string | null
@@ -103,11 +107,18 @@ function fmtBirthdate(iso: string | null) {
  *  Deliberately its own component (not inline state in PendingLessons
  *  itself) so `key={fichaModal.id}` on its usage resets the draft cleanly
  *  when a different student's ficha opens. */
-function EquipmentNotesField({ checkin }: { checkin: Checkin }) {
+function EquipmentNotesField({ checkin, windKn }: { checkin: Checkin; windKn: number | null }) {
   const [draft, setDraft] = useState(checkin.equipment_notes ?? '')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const dirty = draft !== (checkin.equipment_notes ?? '')
+
+  // Rough starting point only — weight x current spot wind, generic
+  // school-agnostic matrix (see lib/equipment.ts). Never writes into
+  // equipment_notes itself; the operator still types the real gear below.
+  const suggestion = (checkin.weight_kg != null && windKn != null)
+    ? suggestKiteSizeM(checkin.weight_kg, windKn)
+    : null
 
   async function save() {
     setSaving(true)
@@ -129,6 +140,19 @@ function EquipmentNotesField({ checkin }: { checkin: Checkin }) {
       <div style={{ fontSize: '10px', fontWeight: '500', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--mist)', marginBottom: '6px' }}>
         Notas de equipamento
       </div>
+      {suggestion && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '6px',
+          padding: '8px 10px', marginBottom: '8px',
+          background: 'var(--color-pb-glacial-light)', color: 'var(--color-pb-glacial-dark)',
+          borderRadius: 'var(--radius-md)', fontSize: '12px',
+        }}>
+          <LightbulbIcon size={14} />
+          <span>
+            Sugestão ({windKn!.toFixed(0)}kn · {checkin.weight_kg}kg): kite {suggestion.min}m – {suggestion.max}m
+          </span>
+        </div>
+      )}
       <textarea
         value={draft}
         onChange={e => { setDraft(e.target.value); setSaved(false) }}
@@ -160,6 +184,218 @@ function EquipmentNotesField({ checkin }: { checkin: Checkin }) {
   )
 }
 
+const fichaLabelStyle: CSSProperties = {
+  fontSize: '10px', fontWeight: '500', letterSpacing: '0.08em',
+  textTransform: 'uppercase', color: 'var(--mist)', marginBottom: '3px',
+}
+const fichaInputStyle: CSSProperties = {
+  width: '100%', padding: '8px 10px', border: '0.5px solid var(--border-strong)',
+  borderRadius: 'var(--radius-md)', fontSize: '13px', color: 'var(--slate)',
+  fontFamily: 'var(--font-sans)', outline: 'none', boxSizing: 'border-box' as const,
+}
+
+/** The Ficha modal's header actions + info body — pulled out of the .map
+ *  loop's parent so the pencil-edit toggle (top-right, next to the close
+ *  ×) can sit above both the read-only rows list and its edit-mode
+ *  replacement without threading state through PendingLessons itself.
+ *  Editable fields are the same allowlist the API accepts
+ *  (EDITABLE_TEXT_FIELDS in checkin-stage/route.ts) plus weight_kg —
+ *  health_condition is encrypted server-side and stays read-only here,
+ *  a fuller edit flow if that's ever needed shouldn't ride this quick form. */
+function FichaModalContent({
+  checkin, onClose, onSaved, t,
+}: {
+  checkin: Checkin
+  onClose: () => void
+  onSaved: (patch: Partial<Checkin>) => void
+  t: Record<string, string>
+}) {
+  const [editing, setEditing] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [draft, setDraft] = useState({
+    student_name:        checkin.student_name,
+    student_whatsapp:    checkin.student_whatsapp ?? '',
+    student_email:       checkin.student_email ?? '',
+    student_nationality: checkin.student_nationality ?? '',
+    document_number:     checkin.document_number ?? '',
+    emergency_name:      checkin.emergency_name ?? '',
+    emergency_phone:     checkin.emergency_phone ?? '',
+    weight_kg:           checkin.weight_kg != null ? String(checkin.weight_kg) : '',
+  })
+
+  async function save() {
+    setSaving(true)
+    const patch: Partial<Checkin> = {
+      student_name:        draft.student_name.trim() || checkin.student_name,
+      student_whatsapp:    draft.student_whatsapp.trim() || null,
+      student_email:       draft.student_email.trim() || null,
+      student_nationality: draft.student_nationality.trim() || null,
+      document_number:     draft.document_number.trim() || null,
+      emergency_name:      draft.emergency_name.trim() || null,
+      emergency_phone:     draft.emergency_phone.trim() || null,
+      weight_kg:           draft.weight_kg.trim() ? Number(draft.weight_kg) : null,
+    }
+    try {
+      await fetch('/api/owner/checkin-stage', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: checkin.id, ...patch }),
+      })
+      onSaved(patch)
+      setEditing(false)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
+        <div>
+          <div style={{ fontSize: '18px', fontWeight: '500', color: 'var(--slate)', marginBottom: '2px' }}>
+            {checkin.student_name}
+          </div>
+          <div style={{ fontSize: '12px', color: 'var(--mist)' }}>
+            Check-in {fmtTime(checkin.checkin_at)} · {fmtRelative(checkin.checkin_at, t)}
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+          <button
+            onClick={() => setEditing(v => !v)}
+            title="Editar"
+            style={{
+              background: editing ? 'var(--color-pb-glacial-light)' : 'var(--powder)', border: 'none', borderRadius: '99px',
+              width: '30px', height: '30px', cursor: 'pointer',
+              color: editing ? 'var(--color-pb-glacial-dark)' : 'var(--mist)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}
+          >
+            <PencilIcon size={14} />
+          </button>
+          <button
+            onClick={onClose}
+            style={{
+              background: 'var(--powder)', border: 'none', borderRadius: '99px',
+              width: '30px', height: '30px', cursor: 'pointer',
+              fontSize: '14px', color: 'var(--mist)', flexShrink: 0,
+            }}
+          >
+            ×
+          </button>
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '18px' }}>
+        <div style={{
+          display: 'inline-flex', alignItems: 'center', gap: '6px',
+          fontSize: '11px', fontWeight: '500',
+          color: checkin.waiver_signed_at ? 'var(--color-pb-glacial-dark)' : 'var(--signal-dark)',
+          background: checkin.waiver_signed_at ? 'var(--color-pb-glacial-light)' : 'var(--signal-light)',
+          padding: '4px 10px', borderRadius: 'var(--radius-full)',
+        }}>
+          {checkin.waiver_signed_at ? '✓ Termo de Responsabilidade Assinado' : 'Termo de Responsabilidade Pendente'}
+        </div>
+      </div>
+
+      {editing ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div>
+            <label style={fichaLabelStyle}>Nome</label>
+            <input style={fichaInputStyle} value={draft.student_name}
+              onChange={e => setDraft(d => ({ ...d, student_name: e.target.value }))} />
+          </div>
+          <div>
+            <label style={fichaLabelStyle}>WhatsApp</label>
+            <input style={fichaInputStyle} value={draft.student_whatsapp}
+              onChange={e => setDraft(d => ({ ...d, student_whatsapp: e.target.value }))} />
+          </div>
+          <div>
+            <label style={fichaLabelStyle}>Email</label>
+            <input style={fichaInputStyle} value={draft.student_email}
+              onChange={e => setDraft(d => ({ ...d, student_email: e.target.value }))} />
+          </div>
+          <div>
+            <label style={fichaLabelStyle}>Peso (kg)</label>
+            <input style={fichaInputStyle} type="number" min={1} max={300} value={draft.weight_kg}
+              onChange={e => setDraft(d => ({ ...d, weight_kg: e.target.value }))} />
+          </div>
+          <div>
+            <label style={fichaLabelStyle}>Nacionalidade</label>
+            <input style={fichaInputStyle} value={draft.student_nationality}
+              onChange={e => setDraft(d => ({ ...d, student_nationality: e.target.value }))} />
+          </div>
+          <div>
+            <label style={fichaLabelStyle}>Documento</label>
+            <input style={fichaInputStyle} value={draft.document_number}
+              onChange={e => setDraft(d => ({ ...d, document_number: e.target.value }))} />
+          </div>
+          <div>
+            <label style={fichaLabelStyle}>Contato de emergência</label>
+            <input style={fichaInputStyle} value={draft.emergency_name}
+              onChange={e => setDraft(d => ({ ...d, emergency_name: e.target.value }))} />
+          </div>
+          <div>
+            <label style={fichaLabelStyle}>Telefone de emergência</label>
+            <input style={fichaInputStyle} value={draft.emergency_phone}
+              onChange={e => setDraft(d => ({ ...d, emergency_phone: e.target.value }))} />
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '4px' }}>
+            <button
+              onClick={() => setEditing(false)}
+              style={{
+                padding: '6px 14px', borderRadius: 'var(--radius-md)', border: '0.5px solid var(--border)',
+                background: '#fff', color: 'var(--mist)', fontSize: '12px', fontWeight: '500',
+                fontFamily: 'var(--font-sans)', cursor: 'pointer',
+              }}
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={save}
+              disabled={saving}
+              style={{
+                padding: '6px 14px', borderRadius: 'var(--radius-md)', border: 'none',
+                background: saving ? 'var(--border)' : 'var(--glacial)',
+                color: saving ? 'var(--mist)' : '#fff',
+                fontSize: '12px', fontWeight: '500', fontFamily: 'var(--font-sans)',
+                cursor: saving ? 'not-allowed' : 'pointer',
+              }}
+            >
+              {saving ? 'Salvando...' : 'Salvar'}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {[
+            { label: 'WhatsApp', value: checkin.student_whatsapp },
+            { label: 'Email', value: checkin.student_email },
+            { label: 'Contato de emergência', value: checkin.emergency_name },
+            { label: 'Telefone de emergência', value: checkin.emergency_phone },
+            { label: 'Condições de saúde', value: checkin.health_condition },
+            { label: 'Peso', value: checkin.weight_kg != null ? `${checkin.weight_kg} kg` : null },
+            { label: 'Nacionalidade', value: checkin.student_nationality },
+            {
+              label: checkin.document_type === 'cpf' ? 'CPF' : checkin.document_type === 'passport' ? 'Passaporte' : 'Documento',
+              value: checkin.document_number,
+            },
+            { label: 'Data de nascimento', value: fmtBirthdate(checkin.birthdate) },
+            { label: 'Responsável (menor de idade)', value: checkin.is_minor ? (checkin.guardian_name ?? '—') : null },
+            { label: 'Origem', value: checkin.source },
+          ].filter(row => row.value).map(row => (
+            <div key={row.label}>
+              <div style={fichaLabelStyle}>{row.label}</div>
+              <div style={{ fontSize: '13px', color: 'var(--slate)' }}>
+                {row.value}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </>
+  )
+}
+
 export default function PendingLessons({
   checkins: initialCheckins,
   instructors,
@@ -171,6 +407,7 @@ export default function PendingLessons({
   hoursMap,
   t,
   lang = 'pt',
+  weather = null,
 }: {
   checkins: Checkin[]
   instructors: Instructor[]
@@ -182,6 +419,7 @@ export default function PendingLessons({
   hoursMap?: Map<string, number>
   t: Record<string, string>
   lang?: 'en' | 'pt'
+  weather?: WeatherData | null
 }) {
   const router = useRouter()
   const [checkins, setCheckins]         = useState(initialCheckins)
@@ -221,6 +459,15 @@ export default function PendingLessons({
     try {
       await fetch(`/api/owner/checkin-stage?id=${checkin.id}`, { method: 'DELETE' })
     } catch {}
+  }
+
+  // Keeps the compact card (checkins) and the open Ficha modal (its own
+  // separate snapshot, set once via setFichaModal) in sync after a quick
+  // edit — otherwise the modal would show stale values until the next
+  // AutoRefresh-driven prop update.
+  function updateFichaFields(id: string, patch: Partial<Checkin>) {
+    setCheckins(prev => prev.map(c => c.id === id ? { ...c, ...patch } : c))
+    setFichaModal(prev => prev && prev.id === id ? { ...prev, ...patch } : prev)
   }
 
   return (
@@ -561,92 +808,25 @@ export default function PendingLessons({
             width: '100%', maxWidth: '440px',
             padding: '28px', maxHeight: '90vh', overflowY: 'auto',
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
-              <div>
-                <div style={{ fontSize: '18px', fontWeight: '500', color: 'var(--slate)', marginBottom: '2px' }}>
-                  {fichaModal.student_name}
-                </div>
-                <div style={{ fontSize: '12px', color: 'var(--mist)' }}>
-                  Check-in {fmtTime(fichaModal.checkin_at)} · {fmtRelative(fichaModal.checkin_at, t)}
-                </div>
-              </div>
-              <button
-                onClick={() => setFichaModal(null)}
-                style={{
-                  background: 'var(--powder)', border: 'none', borderRadius: '99px',
-                  width: '30px', height: '30px', cursor: 'pointer',
-                  fontSize: '14px', color: 'var(--mist)', flexShrink: 0,
-                }}
-              >
-                ×
-              </button>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '18px' }}>
-              <div style={{
-                display: 'inline-flex', alignItems: 'center', gap: '6px',
-                fontSize: '11px', fontWeight: '500',
-                color: fichaModal.waiver_signed_at ? 'var(--color-pb-glacial-dark)' : 'var(--signal-dark)',
-                background: fichaModal.waiver_signed_at ? 'var(--color-pb-glacial-light)' : 'var(--signal-light)',
-                padding: '4px 10px', borderRadius: 'var(--radius-full)',
-              }}>
-                {fichaModal.waiver_signed_at ? '✓ Termo de Responsabilidade Assinado' : 'Termo de Responsabilidade Pendente'}
-              </div>
-              {/* Moved here from the compact card's button row when that
-                  row became [ChameleonButton][⋮] only
-                  (picobase_chameleon_button_dossie.md Fase 4) — this is a
-                  less time-critical, per-student utility (re-showing the
-                  waiver/check-in link, e.g. for a companion), not something
-                  that needs to compete for the card's button budget. */}
-              {/* Same package-sport fallback as the card's own chip
-                  (displayActivityName, computed inside the .map loop above)
-                  — this button lives outside that loop, so without this it
-                  silently regenerated a QR/link missing the sport whenever
-                  activity_id was null but the student had an active
-                  package, reproducing exactly the "modality not pre-filled"
-                  symptom. */}
-              <CheckinQRButton
-                slug={schoolSlug}
-                schoolName={schoolName}
-                studentName={fichaModal.student_name}
-                activityName={fichaModal.activities?.name ?? packageBalances[normalizeStudentName(fichaModal.student_name)]?.packageSport ?? null}
-              />
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {[
-                { label: 'WhatsApp', value: fichaModal.student_whatsapp },
-                { label: 'Email', value: fichaModal.student_email },
-                { label: 'Contato de emergência', value: fichaModal.emergency_name },
-                { label: 'Telefone de emergência', value: fichaModal.emergency_phone },
-                { label: 'Condições de saúde', value: fichaModal.health_condition },
-                { label: 'Nacionalidade', value: fichaModal.student_nationality },
-                {
-                  label: fichaModal.document_type === 'cpf' ? 'CPF' : fichaModal.document_type === 'passport' ? 'Passaporte' : 'Documento',
-                  value: fichaModal.document_number,
-                },
-                { label: 'Data de nascimento', value: fmtBirthdate(fichaModal.birthdate) },
-                { label: 'Responsável (menor de idade)', value: fichaModal.is_minor ? (fichaModal.guardian_name ?? '—') : null },
-                { label: 'Origem', value: fichaModal.source },
-              ].filter(row => row.value).map(row => (
-                <div key={row.label}>
-                  <div style={{
-                    fontSize: '10px', fontWeight: '500', letterSpacing: '0.08em',
-                    textTransform: 'uppercase', color: 'var(--mist)', marginBottom: '3px',
-                  }}>
-                    {row.label}
-                  </div>
-                  <div style={{ fontSize: '13px', color: 'var(--slate)' }}>
-                    {row.value}
-                  </div>
-                </div>
-              ))}
-            </div>
+            {/* key={fichaModal.id} resets the header's editing state (and
+                edit-form drafts) if a different student's ficha is ever
+                opened without a full unmount in between. The QR/"show
+                check-in link again" trigger that used to live in this
+                header moved to the always-visible chip on the card itself
+                (see the .map loop above) — showing it here too was
+                redundant once that promotion happened. */}
+            <FichaModalContent
+              key={fichaModal.id}
+              checkin={fichaModal}
+              onClose={() => setFichaModal(null)}
+              onSaved={patch => updateFichaFields(fichaModal.id, patch)}
+              t={t}
+            />
 
             {/* key={fichaModal.id} forces a fresh mount (and fresh draft
                 state) whenever a different student's ficha opens — this
                 component's own useState wouldn't otherwise reset. */}
-            <EquipmentNotesField key={fichaModal.id} checkin={fichaModal} />
+            <EquipmentNotesField key={fichaModal.id} checkin={fichaModal} windKn={weather?.windSpeedKn ?? null} />
 
             <button
               onClick={() => setFichaModal(null)}

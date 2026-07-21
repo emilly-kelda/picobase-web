@@ -151,3 +151,21 @@ export function MoonIcon({ size = 18 }: IconProps) {
     </svg>
   )
 }
+
+export function PencilIcon({ size = 18 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...base}>
+      <path d="M15.5 4.5 19.5 8.5 8 20H4v-4Z" />
+      <path d="M13.5 6.5l4 4" />
+    </svg>
+  )
+}
+
+export function LightbulbIcon({ size = 18 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...base}>
+      <path d="M9 18.5h6M9.5 21.5h5" />
+      <path d="M12 2.5a6.5 6.5 0 0 0-3.5 12c.6.4 1 1.1 1 1.8v.7h5v-.7c0-.7.4-1.4 1-1.8a6.5 6.5 0 0 0-3.5-12Z" />
+    </svg>
+  )
+}
