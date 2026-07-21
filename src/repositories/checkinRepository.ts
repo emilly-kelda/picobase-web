@@ -165,4 +165,79 @@ export async function findDuplicateEmail(
   return candidates.find(name => normalizeStudentName(name) !== target) ?? null
 }
 
+/** Backs the on-demand "signed waiver record" PDF (api/owner/checkin-
+ *  waiver/[checkinId]) — same on-demand-regenerate pattern as
+ *  getCertificateData in packageRepository.ts: nothing is pre-rendered to
+ *  Storage, this just assembles the current row's data fresh on every
+ *  download. Returns null for a checkin that was never actually signed
+ *  (waiver_signed_at null) — nothing to compile yet. activity_id/
+ *  instructor_id are resolved with separate lookups rather than an
+ *  embedded join to avoid PostgREST relationship-ambiguity errors if
+ *  checkins ever gains a second FK into users (e.g. a future
+ *  created_by). */
+export async function getSignedWaiverData(schoolId: string, checkinId: string) {
+  const supabase = createServiceClient()
+
+  const { data: checkin, error } = await supabase
+    .from('checkins')
+    .select(`
+      id, student_name, student_nationality, document_number, document_type,
+      birthdate, is_minor, guardian_name, waiver_signed_at, waiver_source_type,
+      waiver_content_snapshot, waiver_version_hash, ip_address, user_agent,
+      signature_data, lgpd_consent, activity_id, instructor_id
+    `)
+    .eq('id', checkinId)
+    .eq('school_id', schoolId)
+    .single()
+
+  if (error || !checkin || !checkin.waiver_signed_at) return null
+
+  const [{ data: school }, { data: activity }, { data: instructor }] = await Promise.all([
+    supabase.from('schools').select('name').eq('id', schoolId).single(),
+    checkin.activity_id
+      ? supabase.from('activities').select('name').eq('id', checkin.activity_id).maybeSingle()
+      : Promise.resolve({ data: null }),
+    checkin.instructor_id
+      ? supabase.from('users').select('name').eq('id', checkin.instructor_id).maybeSingle()
+      : Promise.resolve({ data: null }),
+  ])
+
+  return {
+    checkinId:         checkin.id,
+    schoolName:        school?.name ?? 'Escola',
+    studentName:       checkin.student_name,
+    documentType:      checkin.document_type,
+    documentNumber:    checkin.document_number,
+    nationality:       checkin.student_nationality,
+    birthdate:         checkin.birthdate,
+    activityName:      activity?.name ?? null,
+    instructorName:    instructor?.name ?? null,
+    isMinor:           checkin.is_minor ?? false,
+    guardianName:      checkin.guardian_name,
+    waiverSourceType:  checkin.waiver_source_type,
+    waiverContent:     checkin.waiver_content_snapshot,
+    waiverVersionHash: checkin.waiver_version_hash,
+    signedAt:          checkin.waiver_signed_at,
+    ipAddress:         checkin.ip_address,
+    userAgent:         checkin.user_agent,
+    signatureDataUrl:  checkin.signature_data,
+    lgpdConsent:       checkin.lgpd_consent ?? false,
+  }
+}
+
+/** Recent signed waivers for a student's profile page — matched by name,
+ *  same convention as getSessionsByStudent (checkins has no direct
+ *  student_id column). Only rows with an actual signature on file. */
+export async function getSignedWaiversByStudent(schoolId: string, studentName: string) {
+  const supabase = createServiceClient()
+  const { data } = await supabase
+    .from('checkins')
+    .select('id, waiver_signed_at, document_number')
+    .eq('school_id', schoolId)
+    .ilike('student_name', studentName)
+    .not('waiver_signed_at', 'is', null)
+    .order('waiver_signed_at', { ascending: false })
+    .limit(10)
+  return data ?? []
+}
 

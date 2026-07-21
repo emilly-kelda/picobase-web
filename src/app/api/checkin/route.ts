@@ -3,6 +3,31 @@ import { NextResponse } from 'next/server'
 import { headers } from 'next/headers'
 import { normalizeStudentName } from '@/lib/text'
 import { encrypt } from '@/utils/crypto'
+import { createHash } from 'crypto'
+
+/** SHA-256 of the exact waiver content shown at signing — the file's raw
+ *  bytes for file-mode (fetched from its public Storage URL), the literal
+ *  displayed string otherwise. Tamper-evident proof of which wording/
+ *  document version was in force at the moment of signing, independent of
+ *  whatever the school's waiver settings say later (schools.waiver_pt/en/
+ *  fr/es or the uploaded file can both be edited after the fact). Never
+ *  blocks the check-in — a failed fetch just falls back to hashing the URL
+ *  string, still evidence of which document version link was shown even
+ *  if its bytes couldn't be captured this time (e.g. a Storage hiccup). */
+async function computeWaiverHash(sourceType: string, content: string): Promise<string> {
+  if (sourceType === 'file') {
+    try {
+      const res = await fetch(content)
+      if (res.ok) {
+        const buf = Buffer.from(await res.arrayBuffer())
+        return createHash('sha256').update(buf).digest('hex')
+      }
+    } catch {
+      // Falls through to hashing the URL string below.
+    }
+  }
+  return createHash('sha256').update(content, 'utf8').digest('hex')
+}
 
 /** Find the nearest scheduled_lessons row for this student so check-in can carry
  *  the agendamento straight into the owner's confirmation step. Window is bounded
@@ -70,6 +95,13 @@ export async function POST(request: Request) {
   const encryptedHealthCondition: string | null =
     body.health_condition ? encrypt(body.health_condition) : null
 
+  const waiverSourceType = body.waiver_source_type === 'file' ? 'file' : 'text'
+  const waiverContentSnapshot: string =
+    typeof body.waiver_content_snapshot === 'string' ? body.waiver_content_snapshot : ''
+  const waiverVersionHash = waiverContentSnapshot
+    ? await computeWaiverHash(waiverSourceType, waiverContentSnapshot)
+    : null
+
   const { error, data } = await supabase
     .from('checkins')
     .insert({
@@ -98,6 +130,9 @@ export async function POST(request: Request) {
       lgpd_consent:        body.gdpr_consent === true,
       gdpr_consent:        body.gdpr_consent === true,
       waiver_signed_at:    new Date().toISOString(),
+      waiver_source_type:      waiverSourceType,
+      waiver_content_snapshot: waiverContentSnapshot || null,
+      waiver_version_hash:     waiverVersionHash,
       signature_data:      body.signature_data || null,
       ip_address:          ip,
       user_agent:          ua,

@@ -564,28 +564,19 @@ export default function CheckinForm({
   const [gdpr, setGdpr]             = useState(false)
   const [hasHealth, setHasHealth]   = useState(false)
 
-  // Waiver scroll gate — only meaningful for the inline typed-text waiver
-  // (waiver_type !== 'file'); starts unlocked there too until the ref
-  // effect below checks whether the box actually overflows. If the text
-  // is short enough to show in full already, there's nothing to scroll
-  // to, so the checkbox shouldn't stay permanently disabled.
-  const [waiverScrolledToEnd, setWaiverScrolledToEnd] = useState(school.waiver_type === 'file')
+  // Waiver read/scroll gate — starts locked for every waiver source
+  // (typed text, embedded PDF, or non-embeddable file) so the accept
+  // checkbox below can never be enabled without an explicit read action.
+  // File-mode used to start pre-unlocked here (nothing forced the student
+  // to even open the document), which is exactly the kind of gap that
+  // makes a signed waiver hard to defend later — see the modal below.
+  const [waiverModalOpen, setWaiverModalOpen]     = useState(false)
+  const [waiverScrolledToEnd, setWaiverScrolledToEnd] = useState(false)
+  // Fallback for a school-uploaded file that isn't a PDF (Word doc) — the
+  // browser can't embed/scroll-track those, so reading is instead an
+  // explicit manual confirmation inside the modal, not a scroll proxy.
+  const [manualFileConfirm, setManualFileConfirm] = useState(false)
   const waiverBoxRef = useRef<HTMLDivElement>(null)
-
-  // If the waiver text is short enough to render without overflow, there's
-  // nothing to scroll to — checked whenever the waiver step becomes
-  // visible or the language (and therefore the text) changes. Only ever
-  // sets true: once genuinely unlocked (by this check or by scrolling),
-  // switching language shouldn't re-lock and punish the student for
-  // re-reading in a different language.
-  useEffect(() => {
-    if (waiverScrolledToEnd) return
-    const el = waiverBoxRef.current
-    if (el && el.scrollHeight <= el.clientHeight + 4) {
-      setWaiverScrolledToEnd(true)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, lang])
 
   const [form, setForm] = useState({
     student_name:        prefillStudentName ?? '',
@@ -634,6 +625,38 @@ export default function CheckinForm({
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const drawing   = useRef(false)
   const t = LANGS[lang]
+
+  const waiverFileUrl = school.waiver_type === 'file'
+    ? (school.waiver_files_by_lang?.[lang] ?? school.waiver_file_global_url ?? null)
+    : null
+  const waiverIsPdf = !!waiverFileUrl && waiverFileUrl.split('?')[0].toLowerCase().endsWith('.pdf')
+  const waiverKey = `waiver_${lang}` as keyof typeof school
+  const dbWaiverText = (school[waiverKey] as string | null) ?? null
+  const waiverText = dbWaiverText || t.waiver_text
+  // What actually gets hashed/stored server-side as the signed version —
+  // the file URL for file-mode (server fetches and hashes its bytes), the
+  // literal displayed text otherwise.
+  const waiverContentSnapshot = waiverFileUrl ?? waiverText
+  const waiverSourceType: 'text' | 'file' = waiverFileUrl ? 'file' : 'text'
+
+  // If the waiver content is short enough to render without overflow,
+  // there's nothing to scroll to — checked whenever the modal opens or the
+  // language (and therefore the content) changes. Only ever sets true:
+  // once genuinely unlocked (by this check or by scrolling), switching
+  // language shouldn't re-lock and punish the student for re-reading in a
+  // different language. Skipped for a non-PDF file (Word doc) — that case
+  // can only unlock via the explicit manual-confirm checkbox in the modal,
+  // never by this fits-without-scrolling shortcut, since there's no
+  // reliable way to tell whether the student actually opened the file.
+  useEffect(() => {
+    if (!waiverModalOpen || waiverScrolledToEnd) return
+    if (waiverFileUrl && !waiverIsPdf) return
+    const el = waiverBoxRef.current
+    if (el && el.scrollHeight <= el.clientHeight + 4) {
+      setWaiverScrolledToEnd(true)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [waiverModalOpen, lang, waiverFileUrl, waiverIsPdf])
 
   // Narrows the instructor list to whoever teaches the selected modality —
   // falls back to the full list when nobody has a matching sports tag (or
@@ -827,6 +850,15 @@ export default function CheckinForm({
           waiver_agreed:    agreed,
           gdpr_consent:     gdpr,
           accepted_at:      new Date().toISOString(),
+          // Legal audit trail (Lei 14.063/2020 / MP 2.200-2) — the server
+          // hashes this exact content (fetching waiver_content_snapshot's
+          // bytes when it's a file URL) so there's tamper-evident proof of
+          // which wording/document version was actually shown and scrolled
+          // through before signing, independent of whatever the school's
+          // waiver settings say later.
+          waiver_source_type:       waiverSourceType,
+          waiver_content_snapshot:  waiverContentSnapshot,
+          waiver_lang:              lang,
         }),
       })
       const data = await res.json()
@@ -1426,79 +1458,45 @@ export default function CheckinForm({
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <h2 style={{ fontSize: '22px', fontWeight: '700', color: '#1A1C22' }}>{t.waiver_title}</h2>
 
+            {/* Launcher — the actual term (typed text, embedded PDF, or a
+                link to an uploaded Word doc) only renders inside the modal
+                below, gated behind an explicit open + full-read action.
+                Nothing here can be missed by scrolling past a box that
+                happened to already be on-screen, which is what made the
+                previous always-visible version weak as legal evidence. */}
+            <button
+              type="button"
+              onClick={() => setWaiverModalOpen(true)}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
+                background: '#1A1C22', borderRadius: '14px', padding: '18px',
+                border: 'none', width: '100%', cursor: 'pointer', fontFamily: 'inherit',
+                fontSize: '15px', fontWeight: 700, color: '#fff',
+              }}
+            >
+              📄 {lang === 'pt' ? 'Ler e Assinar Termo de Responsabilidade Completo'
+                : lang === 'fr' ? 'Lire et signer les conditions générales complètes'
+                : lang === 'es' ? 'Leer y firmar el término de responsabilidad completo'
+                : 'Read and sign the full liability waiver'}
+            </button>
             <div style={{
-              background: '#E0F8F5', border: '0.5px solid #A0E8E0', borderRadius: '12px', padding: '16px',
-              display: 'flex', flexDirection: 'column', gap: '10px',
+              display: 'flex', alignItems: 'center', gap: '6px',
+              fontSize: '13px', fontWeight: 600, marginTop: '-8px',
+              color: waiverScrolledToEnd ? '#00695C' : '#D97706',
             }}>
-              {(t.waiver_points as string[]).map((point, i) => (
-                <div key={i} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
-                  <span style={{ color: '#00A896', fontSize: '14px', flexShrink: 0, marginTop: '1px' }}>✓</span>
-                  <span style={{ fontSize: '13px', color: '#1A1C22', lineHeight: '1.5' }}>{point}</span>
-                </div>
-              ))}
+              <span>{waiverScrolledToEnd ? '✓' : '⚠️'}</span>
+              <span>
+                {waiverScrolledToEnd
+                  ? (lang === 'pt' ? 'Termo lido na íntegra'
+                    : lang === 'fr' ? 'Document lu dans son intégralité'
+                    : lang === 'es' ? 'Documento leído en su totalidad'
+                    : 'Document read in full')
+                  : (lang === 'pt' ? 'Leitura pendente — clique acima para abrir e ler'
+                    : lang === 'fr' ? "Lecture en attente — cliquez ci-dessus pour ouvrir et lire"
+                    : lang === 'es' ? 'Lectura pendiente — haga clic arriba para abrir y leer'
+                    : 'Reading pending — click above to open and read')}
+              </span>
             </div>
-
-            {(() => {
-              // File mode: the student consults the official document (view
-              // only, never signed inside the PDF itself) instead of reading
-              // typed text inline. Falls back to the text flow below if the
-              // owner switched to file mode but never actually uploaded one.
-              const waiverFileUrl = school.waiver_type === 'file'
-                ? (school.waiver_files_by_lang?.[lang] ?? school.waiver_file_global_url ?? null)
-                : null
-
-              if (waiverFileUrl) {
-                return (
-                  <a
-                    href={waiverFileUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
-                      background: '#fff', borderRadius: '14px', padding: '18px',
-                      border: '1.5px solid #00A896', textDecoration: 'none',
-                      fontSize: '15px', fontWeight: 600, color: '#00A896',
-                    }}
-                  >
-                    📄 {lang === 'pt' ? 'Visualizar Termo de Responsabilidade (PDF)'
-                      : lang === 'fr' ? 'Consulter les conditions générales (PDF)'
-                      : lang === 'es' ? 'Ver términos y condiciones (PDF)'
-                      : 'View waiver document (PDF)'}
-                  </a>
-                )
-              }
-
-              const waiverKey = `waiver_${lang}` as keyof typeof school
-              const dbWaiver = school[waiverKey] as string | null
-              return (
-                <div>
-                  <div
-                    ref={waiverBoxRef}
-                    onScroll={e => {
-                      const el = e.currentTarget
-                      if (el.scrollTop + el.clientHeight >= el.scrollHeight - 4) {
-                        setWaiverScrolledToEnd(true)
-                      }
-                    }}
-                    style={{
-                      background: '#fff', borderRadius: '14px', padding: '16px',
-                      fontSize: '13px', color: '#4A4C58', lineHeight: '1.7',
-                      border: '0.5px solid #E4E0D8', maxHeight: '192px', overflowY: 'auto',
-                    }}
-                  >
-                    {dbWaiver || t.waiver_text}
-                  </div>
-                  {!waiverScrolledToEnd && (
-                    <div style={{ fontSize: '11px', color: '#8A8C98', marginTop: '6px', textAlign: 'center' }}>
-                      {lang === 'pt' ? '↓ Role até o final para habilitar a concordância'
-                        : lang === 'fr' ? "↓ Faites défiler jusqu'en bas pour continuer"
-                        : lang === 'es' ? '↓ Desplázate hasta el final para continuar'
-                        : '↓ Scroll to the end to continue'}
-                    </div>
-                  )}
-                </div>
-              )
-            })()}
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <label style={{
@@ -1668,6 +1666,200 @@ export default function CheckinForm({
         )}
 
       </div>
+
+      {/* Waiver read modal — sole place the actual term (typed text,
+          embedded PDF, or a link to an uploaded Word doc) is shown. Reading
+          is enforced by scrolling this modal's own body to the end (real
+          onScroll tracking, not the browser's opaque in-PDF viewer scroll
+          position, which a cross-origin/native-rendered iframe can't expose
+          to the page's JS anyway) — for a non-PDF file there's nothing to
+          scroll-track reliably, so that case falls back to an explicit
+          manual-confirm checkbox instead. */}
+      {waiverModalOpen && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 300, padding: '16px',
+          }}
+          onClick={e => { if (e.target === e.currentTarget) setWaiverModalOpen(false) }}
+        >
+          <div style={{
+            background: '#F0EEE9', borderRadius: '18px', width: '100%', maxWidth: '560px',
+            maxHeight: '92vh', display: 'flex', flexDirection: 'column', overflow: 'hidden',
+          }}>
+            <div style={{
+              padding: '18px 20px', background: '#1A1C22',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0,
+            }}>
+              <div style={{ fontSize: '15px', fontWeight: 700, color: '#fff' }}>{t.waiver_title}</div>
+              <button
+                type="button"
+                onClick={() => setWaiverModalOpen(false)}
+                style={{
+                  background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.6)',
+                  fontSize: '22px', cursor: 'pointer', lineHeight: 1, padding: '4px', fontFamily: 'inherit',
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            <div
+              ref={waiverBoxRef}
+              onScroll={e => {
+                const el = e.currentTarget
+                if (el.scrollTop + el.clientHeight >= el.scrollHeight - 4) {
+                  setWaiverScrolledToEnd(true)
+                }
+              }}
+              style={{ flex: 1, overflowY: 'auto', padding: '20px' }}
+            >
+              {/* Pré-preenchido com os dados que o aluno digitou nos passos
+                  anteriores — deixa claro para quem/o quê o termo abaixo
+                  está sendo assinado. */}
+              <div style={{
+                background: '#fff', border: '1.5px solid #E4E0D8', borderRadius: '14px',
+                padding: '16px', marginBottom: '16px',
+                display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 16px',
+              }}>
+                {([
+                  [t.name, form.student_name || '—'],
+                  [
+                    form.student_nationality === 'BR' ? 'CPF'
+                      : lang === 'pt' ? 'Passaporte'
+                      : lang === 'fr' ? 'Passeport'
+                      : lang === 'es' ? 'Pasaporte'
+                      : 'Passport',
+                    form.document_number || '—',
+                  ],
+                  [t.nationality, form.student_nationality || '—'],
+                  [t.dob, form.date_of_birth || '—'],
+                ] as Array<[string, string]>).map(([label, value]) => (
+                  <div key={label}>
+                    <div style={{
+                      fontSize: '10px', fontWeight: 600, letterSpacing: '0.06em',
+                      textTransform: 'uppercase', color: '#8A8C98', marginBottom: '2px',
+                    }}>
+                      {label}
+                    </div>
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: '#1A1C22' }}>{value}</div>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{
+                background: '#E0F8F5', border: '0.5px solid #A0E8E0', borderRadius: '12px', padding: '14px',
+                display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px',
+              }}>
+                {(t.waiver_points as string[]).map((point, i) => (
+                  <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                    <span style={{ color: '#00A896', fontSize: '13px', flexShrink: 0, marginTop: '1px' }}>✓</span>
+                    <span style={{ fontSize: '12px', color: '#1A1C22', lineHeight: '1.5' }}>{point}</span>
+                  </div>
+                ))}
+              </div>
+
+              {waiverFileUrl ? (
+                waiverIsPdf ? (
+                  <>
+                    <iframe
+                      src={waiverFileUrl}
+                      title="Termo de Responsabilidade"
+                      style={{
+                        width: '100%', height: '55vh', border: '1px solid #E4E0D8',
+                        borderRadius: '10px', background: '#fff', display: 'block',
+                      }}
+                    />
+                    <div style={{ fontSize: '12px', color: '#8A8C98', textAlign: 'center', padding: '18px 0' }}>
+                      {lang === 'pt' ? '— Fim do documento —'
+                        : lang === 'fr' ? '— Fin du document —'
+                        : lang === 'es' ? '— Fin del documento —'
+                        : '— End of document —'}
+                    </div>
+                  </>
+                ) : (
+                  <div style={{
+                    background: '#fff', border: '1.5px solid #E4E0D8', borderRadius: '14px',
+                    padding: '18px', display: 'flex', flexDirection: 'column', gap: '14px',
+                  }}>
+                    <a
+                      href={waiverFileUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
+                        padding: '14px', border: '1.5px solid #00A896', borderRadius: '12px',
+                        color: '#00A896', fontWeight: 600, fontSize: '14px', textDecoration: 'none',
+                      }}
+                    >
+                      📎 {lang === 'pt' ? 'Abrir documento oficial'
+                        : lang === 'fr' ? 'Ouvrir le document officiel'
+                        : lang === 'es' ? 'Abrir documento oficial'
+                        : 'Open official document'}
+                    </a>
+                    <label style={{
+                      display: 'flex', gap: '10px', alignItems: 'flex-start', cursor: 'pointer',
+                      fontSize: '13px', color: '#4A4C58', lineHeight: 1.5,
+                    }}>
+                      <input
+                        type="checkbox"
+                        checked={manualFileConfirm}
+                        onChange={e => {
+                          setManualFileConfirm(e.target.checked)
+                          setWaiverScrolledToEnd(e.target.checked)
+                        }}
+                        style={{ marginTop: '2px', accentColor: '#00A896', width: '18px', height: '18px', flexShrink: 0 }}
+                      />
+                      {lang === 'pt' ? 'Confirmo que abri e li o documento completo.'
+                        : lang === 'fr' ? 'Je confirme avoir ouvert et lu le document complet.'
+                        : lang === 'es' ? 'Confirmo que abrí y leí el documento completo.'
+                        : 'I confirm I opened and read the full document.'}
+                    </label>
+                  </div>
+                )
+              ) : (
+                <div style={{ fontSize: '13px', color: '#4A4C58', lineHeight: '1.8', whiteSpace: 'pre-wrap' }}>
+                  {waiverText}
+                </div>
+              )}
+            </div>
+
+            <div style={{ padding: '16px 20px', borderTop: '0.5px solid #DDD8CF', background: '#fff', flexShrink: 0 }}>
+              {!waiverScrolledToEnd && (!waiverFileUrl || waiverIsPdf) && (
+                <div style={{ fontSize: '11px', color: '#8A8C98', textAlign: 'center', marginBottom: '10px' }}>
+                  {lang === 'pt' ? '↓ Role até o final do documento para habilitar a concordância'
+                    : lang === 'fr' ? "↓ Faites défiler jusqu'en bas du document pour continuer"
+                    : lang === 'es' ? '↓ Desplázate hasta el final del documento para continuar'
+                    : '↓ Scroll to the end of the document to continue'}
+                </div>
+              )}
+              <button
+                type="button"
+                disabled={!waiverScrolledToEnd}
+                onClick={() => setWaiverModalOpen(false)}
+                style={{
+                  width: '100%', padding: '14px', borderRadius: '12px', border: 'none',
+                  fontSize: '14px', fontWeight: 700, fontFamily: 'inherit',
+                  background: waiverScrolledToEnd ? '#00A896' : '#E4E0D8',
+                  color: waiverScrolledToEnd ? '#fff' : '#8A8C98',
+                  cursor: waiverScrolledToEnd ? 'pointer' : 'not-allowed',
+                }}
+              >
+                {waiverScrolledToEnd
+                  ? (lang === 'pt' ? '✓ Concluir leitura e fechar'
+                    : lang === 'fr' ? '✓ Terminer la lecture et fermer'
+                    : lang === 'es' ? '✓ Concluir lectura y cerrar'
+                    : '✓ Finish reading and close')
+                  : (lang === 'pt' ? 'Role até o final para continuar'
+                    : lang === 'fr' ? "Faites défiler jusqu'en bas pour continuer"
+                    : lang === 'es' ? 'Desplázate hasta el final para continuar'
+                    : 'Scroll to the end to continue')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

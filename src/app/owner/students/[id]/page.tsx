@@ -1,5 +1,6 @@
 ﻿import { notFound } from 'next/navigation'
 import { getStudentById, getSessionsByStudent, getActivePackagesByStudent, getPackageSalesByStudentName } from '@/repositories/studentRepository'
+import { getSignedWaiversByStudent } from '@/repositories/checkinRepository'
 import ProgressionEditor from '@/components/ProgressionEditor'
 import ProgressionHistory from '@/components/ProgressionHistory'
 import StudentProfileHeader from './StudentProfileHeader'
@@ -33,6 +34,14 @@ function fmtDate(d: string | null) {
   })
 }
 
+function fmtDateTime(iso: string | null) {
+  if (!iso) return '—'
+  return new Date(iso).toLocaleString('pt-BR', {
+    timeZone: 'America/Fortaleza',
+    day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+  })
+}
+
 function fmtMin(m: number) {
   if (m >= 60) {
     const h = Math.floor(m / 60)
@@ -56,10 +65,11 @@ export default async function StudentDetailPage({
     notFound()
   }
 
-  const [sessions, packageMap, packageSales] = await Promise.all([
+  const [sessions, packageMap, packageSales, signedWaivers] = await Promise.all([
     getSessionsByStudent(SCHOOL_ID, student.name, student.id),
     getActivePackagesByStudent(SCHOOL_ID),
     getPackageSalesByStudentName(SCHOOL_ID, student.name),
+    getSignedWaiversByStudent(SCHOOL_ID, student.name),
   ])
 
   const pkg = packageMap.get(student.name)
@@ -304,6 +314,52 @@ export default async function StudentDetailPage({
               </div>
             )
           })
+        )}
+      </div>
+
+      {/* Signed waivers — compiled on-demand from each checkin's audit
+          trail (see api/owner/checkin-waiver), not a pre-rendered file, so
+          it can never drift from what's actually stored. */}
+      <div style={{
+        background: '#fff',
+        border: '0.5px solid var(--border)',
+        borderRadius: 'var(--radius-lg)',
+        padding: '16px 20px', marginBottom: '24px',
+        display: 'flex', flexDirection: 'column', gap: '10px',
+      }}>
+        <div style={{
+          fontSize: '11px', fontWeight: '500',
+          letterSpacing: '0.1em', textTransform: 'uppercase',
+          color: 'var(--mist)',
+        }}>
+          Termos assinados
+        </div>
+        {signedWaivers.length === 0 ? (
+          <span style={{ fontSize: '13px', color: 'var(--mist)' }}>Nenhum termo assinado ainda</span>
+        ) : (
+          signedWaivers.map(w => (
+            <div key={w.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '13px', color: 'var(--slate)' }}>
+                {fmtDateTime(w.waiver_signed_at)}
+                {w.document_number && ` · ${w.document_number}`}
+              </span>
+              <a
+                href={`/api/owner/checkin-waiver/${w.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '6px',
+                  padding: '6px 14px',
+                  background: 'var(--slate)', color: '#fff',
+                  borderRadius: '99px',
+                  fontSize: '12px', fontWeight: '500',
+                  textDecoration: 'none',
+                }}
+              >
+                📄 Ver Termo Assinado (PDF)
+              </a>
+            </div>
+          ))
         )}
       </div>
 
