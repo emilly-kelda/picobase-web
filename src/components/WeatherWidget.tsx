@@ -2,9 +2,10 @@
 
 import { useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { compassLabel, weatherIcon, type WeatherData, type WeatherSpot } from '@/lib/weather'
+import { compassLabel, weatherIcon, windViability, type WeatherData, type WeatherSpot } from '@/lib/weather'
 import { WeatherIcon } from '@/components/weather-icons'
 import { RefreshIcon } from '@/components/nav-icons'
+import Badge from '@/components/ui/Badge'
 
 // Same "set the cookie directly, then router.refresh()" pattern OwnerNav.tsx
 // already uses for the season switcher — no dedicated API route needed,
@@ -147,6 +148,14 @@ export default function WeatherWidget({ weather, spots }: { weather: WeatherData
                 {compassLabel(weather.windDirectionDeg)}
               </span>
             </div>
+            {(() => {
+              const viability = windViability(weather.windSpeedKn)
+              return (
+                <Badge variant={viability.variant} size="sm">
+                  {viability.label}
+                </Badge>
+              )
+            })()}
           </div>
         </div>
       </div>

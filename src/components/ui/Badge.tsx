@@ -1,6 +1,6 @@
 import type { HTMLAttributes, ReactNode } from 'react'
 
-export type BadgeVariant = 'success' | 'danger' | 'neutral'
+export type BadgeVariant = 'success' | 'danger' | 'neutral' | 'warning'
 export type BadgeSize = 'sm' | 'md'
 
 const VARIANT_CLASSES: Record<BadgeVariant, string> = {
@@ -12,6 +12,10 @@ const VARIANT_CLASSES: Record<BadgeVariant, string> = {
   // slate-100/slate-600 gives it enough contrast against the white card
   // while staying in the muted-palette family.
   neutral: 'bg-slate-100 text-slate-600',
+  // Stock Tailwind amber, not one of the 3 muted-palette tokens: none of
+  // slate/rose/emerald reads as "in-between/pending" the way amber does,
+  // and nothing elsewhere in this app already owns that color.
+  warning: 'bg-amber-50 text-amber-700',
 }
 
 // Exact values from the approved mockup (picobase_chameleon_button_

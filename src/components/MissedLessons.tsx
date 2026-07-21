@@ -33,8 +33,12 @@ export default function MissedLessons({
   const [dismissed, setDismissed] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState<string | null>(null)
   const [rescheduling, setRescheduling] = useState<MissedLesson | null>(null)
+  const [expanded, setExpanded] = useState(false)
 
   const visible = lessons.filter(l => !dismissed.has(l.id))
+  const COLLAPSED_COUNT = 3
+  const shown = expanded ? visible : visible.slice(0, COLLAPSED_COUNT)
+  const hiddenCount = visible.length - shown.length
 
   async function dismiss(id: string) {
     setLoading(id)
@@ -92,7 +96,7 @@ export default function MissedLessons({
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-        {visible.map(lesson => {
+        {shown.map(lesson => {
           const scheduledDate = new Date(lesson.scheduled_at)
           const hoursAgo = Math.round(
             (Date.now() - scheduledDate.getTime()) / (1000 * 60 * 60)
@@ -204,6 +208,21 @@ export default function MissedLessons({
           )
         })}
       </div>
+
+      {hiddenCount > 0 && (
+        <button
+          onClick={() => setExpanded(true)}
+          style={{
+            width: '100%', marginTop: '8px', padding: '6px',
+            background: 'transparent', color: 'var(--signal)',
+            border: 'none', borderRadius: 'var(--radius-md)',
+            fontSize: '11px', fontWeight: '500',
+            cursor: 'pointer', fontFamily: 'var(--font-sans)',
+          }}
+        >
+          Ver todas ({visible.length})
+        </button>
+      )}
 
       {rescheduling && (
         <RescheduleModal

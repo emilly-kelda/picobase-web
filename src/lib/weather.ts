@@ -89,6 +89,15 @@ export function compassLabel(deg: number): string {
   return COMPASS_16[Math.round(deg / 22.5) % 16]
 }
 
+/** Rough sailing-viability read on the current wind, for the WeatherWidget
+ *  badge — generic bands, not sport- or equipment-specific (that finer
+ *  judgment already lives in the kite-size suggestion, lib/equipment.ts). */
+export function windViability(kn: number): { label: string; variant: 'neutral' | 'success' | 'warning' } {
+  if (kn < 10) return { label: 'Sem vento', variant: 'neutral' }
+  if (kn <= 25) return { label: 'Ideal', variant: 'success' }
+  return { label: 'Vento forte', variant: 'warning' }
+}
+
 export type WeatherIconKind = 'sun' | 'partly-cloudy' | 'cloudy' | 'fog' | 'rain' | 'snow' | 'storm'
 
 /** WMO weather codes (used by Open-Meteo) collapsed to an icon kind — the

@@ -978,19 +978,29 @@ export default function ScheduledLessons({
                   </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-                  {/* picobase_design_system_dossie.md Fase 4: status badge
-                      via the shared Badge component. checked_in has no
-                      dedicated variant in the 3-color Fase 2 palette — it's
-                      not the fully-confirmed/paid state ("success"), so it
-                      folds into neutral alongside "scheduled" rather than
-                      overloading success with a different meaning. size="md"
-                      per the approved mockup's "Agendada" spec (10px/12px,
-                      distinct from Aguardando Vento's 8px/11px default). */}
-                  <Badge variant={lesson.status === 'confirmed' ? 'success' : 'neutral'} size="md">
-                    {lesson.status === 'confirmed' ? t.status_confirmed
-                      : lesson.status === 'checked_in' ? t.status_checked_in
-                      : t.status_scheduled}
-                  </Badge>
+                  {/* Merged status + Confirmar into one element: showing a
+                      neutral "Agendada"/"Check-in" badge right next to a
+                      separate "Confirmar" button (below) was the same
+                      information rendered twice. A confirmed lesson has
+                      nothing left to do here, so it stays a plain
+                      non-interactive success Badge — but scheduled/
+                      checked_in still needs a real click target (opens
+                      ConfirmLessonModal), so that state renders as a
+                      button styled like the Badge's warning variant
+                      instead, with its own status label preserved (not
+                      collapsed to a generic "Pendente" — losing the
+                      Agendada/Check-in distinction here would hide whether
+                      the student's actually arrived yet). */}
+                  {lesson.status === 'confirmed' ? (
+                    <Badge variant="success" size="md">{t.status_confirmed}</Badge>
+                  ) : (
+                    <button
+                      onClick={() => setConfirmLessonModal(lesson)}
+                      className="inline-flex items-center rounded-[6px] font-medium whitespace-nowrap px-2.5 py-[3px] text-xs bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors border-0 cursor-pointer"
+                    >
+                      {lesson.status === 'checked_in' ? t.status_checked_in : t.status_scheduled}
+                    </button>
+                  )}
                   {/* "Iniciar Velejo"/"Start Session" — moves a scheduled
                       lesson to 'checked_in'. Bold dark primary — this is
                       the main action for a 'scheduled' row, Confirmar below
@@ -1025,61 +1035,34 @@ export default function ScheduledLessons({
                   {/* "+ Agendar Próxima Aula" (re-engagement shortcut, NOT
                       "Reagendar" — that label/action is exclusive to
                       MissedLessons.tsx's sidebar, for actually-missed
-                      sessions) + Confirmar are both frequent actions — the
-                      approved mockup requires neither to hide behind "⋮".
-                      Same hide rule as before: only status 'confirmed'
-                      (shown as the "Confirmada" badge instead) drops them. */}
+                      sessions) — frequent enough the approved mockup
+                      requires it not hide behind "⋮". Confirmar itself
+                      moved into the status pill above (merged badge+
+                      button); only this one still needs its own gate. */}
                   {lesson.status !== 'confirmed' && (
-                    <>
-                      {/* Byte-for-byte the same recipe as Reagendar
-                          (MissedLessons.tsx) — var(--glacial-light)/
-                          var(--glacial-dark), not an approximated zinc-*
-                          Tailwind class. */}
-                      <button
-                        onClick={() => openRebookModal(lesson)}
-                        style={{
-                          padding: '4px 8px',
-                          background: 'var(--glacial-light)',
-                          color: 'var(--glacial-dark)',
-                          border: 'none',
-                          borderRadius: 'var(--radius-md)',
-                          fontSize: '10px', fontWeight: '500',
-                          cursor: 'pointer',
-                          fontFamily: 'var(--font-sans)',
-                          transition: 'background-color 0.15s',
-                          whiteSpace: 'nowrap',
-                        }}
-                        onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'var(--glacial)'; e.currentTarget.style.color = '#fff' }}
-                        onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'var(--glacial-light)'; e.currentTarget.style.color = 'var(--glacial-dark)' }}
-                      >
-                        + Agendar Próxima Aula
-                      </button>
-                      {/* Softer emerald "status tag" look, but still a real
-                          button — clicking it still opens
-                          ConfirmLessonModal to actually close/charge the
-                          lesson. --color-pb-glacial-light/dark is the
-                          actual emerald success pair in this design system
-                          (tokens.css) — same one the waiver-signed badge
-                          uses elsewhere — not an approximated Tailwind
-                          emerald-50/700 class, and same shape recipe as
-                          its neighbors (padding/radius/font-size). */}
-                      <button
-                        onClick={() => setConfirmLessonModal(lesson)}
-                        style={{
-                          padding: '4px 8px',
-                          background: 'var(--color-pb-glacial-light)',
-                          color: 'var(--color-pb-glacial-dark)',
-                          border: 'none',
-                          borderRadius: 'var(--radius-md)',
-                          fontSize: '10px', fontWeight: '500',
-                          cursor: 'pointer',
-                          fontFamily: 'var(--font-sans)',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        Confirmar
-                      </button>
-                    </>
+                    // Byte-for-byte the same recipe as Reagendar
+                    // (MissedLessons.tsx) — var(--glacial-light)/
+                    // var(--glacial-dark), not an approximated zinc-*
+                    // Tailwind class.
+                    <button
+                      onClick={() => openRebookModal(lesson)}
+                      style={{
+                        padding: '4px 8px',
+                        background: 'var(--glacial-light)',
+                        color: 'var(--glacial-dark)',
+                        border: 'none',
+                        borderRadius: 'var(--radius-md)',
+                        fontSize: '10px', fontWeight: '500',
+                        cursor: 'pointer',
+                        fontFamily: 'var(--font-sans)',
+                        transition: 'background-color 0.15s',
+                        whiteSpace: 'nowrap',
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'var(--glacial)'; e.currentTarget.style.color = '#fff' }}
+                      onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'var(--glacial-light)'; e.currentTarget.style.color = 'var(--glacial-dark)' }}
+                    >
+                      + Agendar Próxima Aula
+                    </button>
                   )}
                   {/* Text label on a pastel-green chip, not an icon-only
                       glyph — opens a small picker (student vs instructor
