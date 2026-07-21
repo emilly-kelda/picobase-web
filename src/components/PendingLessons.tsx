@@ -363,12 +363,30 @@ export default function PendingLessons({
                     onSellPackage={() => setSellModal(checkin)}
                     lang={lang}
                   />
-                  {/* Zinc-family flat style, not the slate-based
-                      var(--glacial-*) tokens — matches ScheduledLessons.tsx's
-                      "+ Agendar Próxima Aula"/"Confirmar" treatment. */}
+                  {/* Byte-for-byte the same recipe as Reagendar
+                      (MissedLessons.tsx) — var(--glacial-light)/
+                      var(--glacial-dark), not an approximated zinc-*
+                      Tailwind class. An earlier pass switched this to
+                      literal zinc utility classes, which was a mistake:
+                      "the same idea as Aulas Não Realizadas" means the
+                      literal same style object, not a close-but-different
+                      one. */}
                   <button
                     onClick={() => setScheduleModal({ ...checkin, activity_id: checkin.activity_id ?? fallbackActivityId })}
-                    className="bg-zinc-100 hover:bg-zinc-200 text-zinc-800 font-medium rounded-md px-3 py-1.5 text-xs transition-colors border-0 shadow-none whitespace-nowrap"
+                    style={{
+                      padding: '4px 8px',
+                      background: 'var(--glacial-light)',
+                      color: 'var(--glacial-dark)',
+                      border: 'none',
+                      borderRadius: 'var(--radius-md)',
+                      fontSize: '10px', fontWeight: '500',
+                      cursor: 'pointer',
+                      fontFamily: 'var(--font-sans)',
+                      transition: 'background-color 0.15s',
+                      whiteSpace: 'nowrap',
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'var(--glacial)'; e.currentTarget.style.color = '#fff' }}
+                    onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'var(--glacial-light)'; e.currentTarget.style.color = 'var(--glacial-dark)' }}
                   >
                     {t.schedule_lesson_btn}
                   </button>
@@ -385,7 +403,20 @@ export default function PendingLessons({
                   />
                   <button
                     onClick={() => setFichaModal(checkin)}
-                    className="bg-zinc-100 hover:bg-zinc-200 text-zinc-800 font-medium rounded-md px-3 py-1.5 text-xs transition-colors border-0 shadow-none whitespace-nowrap"
+                    style={{
+                      padding: '4px 8px',
+                      background: 'var(--glacial-light)',
+                      color: 'var(--glacial-dark)',
+                      border: 'none',
+                      borderRadius: 'var(--radius-md)',
+                      fontSize: '10px', fontWeight: '500',
+                      cursor: 'pointer',
+                      fontFamily: 'var(--font-sans)',
+                      transition: 'background-color 0.15s',
+                      whiteSpace: 'nowrap',
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'var(--glacial)'; e.currentTarget.style.color = '#fff' }}
+                    onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'var(--glacial-light)'; e.currentTarget.style.color = 'var(--glacial-dark)' }}
                   >
                     {t.view_ficha_full_btn}
                   </button>

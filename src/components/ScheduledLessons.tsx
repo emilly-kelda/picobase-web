@@ -977,14 +977,29 @@ export default function ScheduledLessons({
                       (shown as the "Confirmada" badge instead) drops them. */}
                   {lesson.status !== 'confirmed' && (
                     <>
-                      {/* Zinc-family flat style (not the slate-based
-                          var(--glacial-*) tokens) — explicit ask to match
-                          the sidebar's zinc-900/zinc-800 neutral, not the
-                          slightly blue-tinted slate scale. Literal Tailwind
-                          classes here since zinc-* needs no custom token. */}
+                      {/* Byte-for-byte the same recipe as Reagendar
+                          (MissedLessons.tsx) — var(--glacial-light)/
+                          var(--glacial-dark), not an approximated zinc-*
+                          Tailwind class. Confirmar right below stays the
+                          bold zinc-900 primary — a deliberately different,
+                          more prominent style for the actual charge/close
+                          action, not what this button matches. */}
                       <button
                         onClick={() => openRebookModal(lesson)}
-                        className="bg-zinc-100 hover:bg-zinc-200 text-zinc-800 font-medium rounded-md px-3 py-1.5 text-xs transition-colors border-0 shadow-none whitespace-nowrap"
+                        style={{
+                          padding: '4px 8px',
+                          background: 'var(--glacial-light)',
+                          color: 'var(--glacial-dark)',
+                          border: 'none',
+                          borderRadius: 'var(--radius-md)',
+                          fontSize: '10px', fontWeight: '500',
+                          cursor: 'pointer',
+                          fontFamily: 'var(--font-sans)',
+                          transition: 'background-color 0.15s',
+                          whiteSpace: 'nowrap',
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'var(--glacial)'; e.currentTarget.style.color = '#fff' }}
+                        onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'var(--glacial-light)'; e.currentTarget.style.color = 'var(--glacial-dark)' }}
                       >
                         + Agendar Próxima Aula
                       </button>
