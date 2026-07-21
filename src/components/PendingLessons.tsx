@@ -573,11 +573,18 @@ export default function PendingLessons({
                   less time-critical, per-student utility (re-showing the
                   waiver/check-in link, e.g. for a companion), not something
                   that needs to compete for the card's button budget. */}
+              {/* Same package-sport fallback as the card's own chip
+                  (displayActivityName, computed inside the .map loop above)
+                  — this button lives outside that loop, so without this it
+                  silently regenerated a QR/link missing the sport whenever
+                  activity_id was null but the student had an active
+                  package, reproducing exactly the "modality not pre-filled"
+                  symptom. */}
               <CheckinQRButton
                 slug={schoolSlug}
                 schoolName={schoolName}
                 studentName={fichaModal.student_name}
-                activityName={fichaModal.activities?.name}
+                activityName={fichaModal.activities?.name ?? packageBalances[normalizeStudentName(fichaModal.student_name)]?.packageSport ?? null}
               />
             </div>
 
