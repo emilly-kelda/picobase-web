@@ -161,6 +161,17 @@ export function PencilIcon({ size = 18 }: IconProps) {
   )
 }
 
+export function RefreshIcon({ size = 18 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...base}>
+      <path d="M20 11A8 8 0 0 0 6.3 6.3L4 8.5" />
+      <path d="M4 4v4.5h4.5" />
+      <path d="M4 13a8 8 0 0 0 13.7 4.7L20 15.5" />
+      <path d="M20 20v-4.5h-4.5" />
+    </svg>
+  )
+}
+
 export function LightbulbIcon({ size = 18 }: IconProps) {
   return (
     <svg width={size} height={size} {...base}>

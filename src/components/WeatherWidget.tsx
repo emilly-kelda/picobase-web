@@ -1,9 +1,10 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { compassLabel, weatherIcon, type WeatherData, type WeatherSpot } from '@/lib/weather'
 import { WeatherIcon } from '@/components/weather-icons'
+import { RefreshIcon } from '@/components/nav-icons'
 
 // Same "set the cookie directly, then router.refresh()" pattern OwnerNav.tsx
 // already uses for the season switcher — no dedicated API route needed,
@@ -18,7 +19,27 @@ const COOKIE_MAX_AGE = 60 * 60 * 24 * 365
 export default function WeatherWidget({ weather, spots }: { weather: WeatherData | null; spots: WeatherSpot[] }) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
+  const [posting, setPosting] = useState(false)
+  const [isPending, startTransition] = useTransition()
   const wrapRef = useRef<HTMLDivElement>(null)
+
+  // Two phases, both feed the spin animation: `posting` covers the POST
+  // that busts the tagged Data Cache entry (see lib/weather.ts), then
+  // startTransition's isPending covers router.refresh() actually re-
+  // rendering the server component with the now-fresh fetch. A transition
+  // callback has to stay synchronous for isPending to track it correctly
+  // (same reason AutoRefresh.tsx only wraps the bare router.refresh() call)
+  // — awaiting inside it wouldn't reliably hold isPending true.
+  async function refreshWeather() {
+    setPosting(true)
+    try {
+      await fetch('/api/owner/refresh-weather', { method: 'POST' })
+    } catch {} finally {
+      setPosting(false)
+    }
+    startTransition(() => { router.refresh() })
+  }
+  const refreshing = posting || isPending
 
   useEffect(() => {
     if (!open) return
@@ -57,27 +78,49 @@ export default function WeatherWidget({ weather, spots }: { weather: WeatherData
           <div style={{ fontSize: '10px', fontWeight: '500', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--mist)' }}>
             {weather.spotLabel}
           </div>
-          {hasPicker && (
-          <button
-            type="button"
-            onClick={() => setOpen(o => !o)}
-            title="Trocar local monitorado"
-            aria-label="Trocar local monitorado"
-            style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              width: '24px', height: '24px', flexShrink: 0,
-              border: '0.5px solid var(--border)', borderRadius: '999px',
-              background: open ? 'var(--powder)' : '#fff',
-              color: 'var(--mist)', cursor: 'pointer',
-              padding: 0,
-            }}
-          >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 21.5s7-6.5 7-12A7 7 0 0 0 5 9.5c0 5.5 7 12 7 12Z" />
-              <circle cx="12" cy="9.5" r="2.5" />
-            </svg>
-          </button>
-          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
+            <button
+              type="button"
+              onClick={refreshWeather}
+              disabled={refreshing}
+              title="Atualizar dados do clima"
+              aria-label="Atualizar dados do clima"
+              className={refreshing ? 'animate-spin' : undefined}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                width: '24px', height: '24px', flexShrink: 0,
+                border: 'none', borderRadius: 'var(--radius-md)',
+                background: 'transparent', color: 'var(--mist)',
+                cursor: refreshing ? 'default' : 'pointer', padding: 0,
+                transition: 'background-color 0.15s, color 0.15s',
+              }}
+              onMouseEnter={e => { if (!refreshing) { e.currentTarget.style.backgroundColor = 'var(--powder)'; e.currentTarget.style.color = 'var(--slate)' } }}
+              onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = 'var(--mist)' }}
+            >
+              <RefreshIcon size={13} />
+            </button>
+            {hasPicker && (
+            <button
+              type="button"
+              onClick={() => setOpen(o => !o)}
+              title="Trocar local monitorado"
+              aria-label="Trocar local monitorado"
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                width: '24px', height: '24px', flexShrink: 0,
+                border: '0.5px solid var(--border)', borderRadius: '999px',
+                background: open ? 'var(--powder)' : '#fff',
+                color: 'var(--mist)', cursor: 'pointer',
+                padding: 0,
+              }}
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 21.5s7-6.5 7-12A7 7 0 0 0 5 9.5c0 5.5 7 12 7 12Z" />
+                <circle cx="12" cy="9.5" r="2.5" />
+              </svg>
+            </button>
+            )}
+          </div>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
