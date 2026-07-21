@@ -992,16 +992,32 @@ export default function ScheduledLessons({
                       : t.status_scheduled}
                   </Badge>
                   {/* "Iniciar Velejo"/"Start Session" — moves a scheduled
-                      lesson to 'checked_in'. Now the bold zinc-900 primary
-                      (swapped from the light Reagendar-style fill it had
-                      before) — this is the main action for a 'scheduled'
-                      row, Confirmar below is now the softer one since it's
-                      only relevant once the lesson's already underway. */}
+                      lesson to 'checked_in'. Bold dark primary — this is
+                      the main action for a 'scheduled' row, Confirmar below
+                      is the softer one since it's only relevant once the
+                      lesson's already underway. Same shape recipe as
+                      Reagendar/WhatsApp below (padding/radius/font-size),
+                      just with --slate (the design system's actual
+                      "primary button" token) instead of an approximated
+                      Tailwind zinc-900 class — that mismatch in shape is
+                      what was making this one look narrower/more rounded
+                      than its neighbors. */}
                   {lesson.status === 'scheduled' && (
                     <button
                       onClick={() => startSession(lesson)}
                       disabled={startingSession === lesson.id}
-                      className="bg-zinc-900 hover:bg-zinc-800 text-white font-medium rounded-lg px-2.5 py-1.5 text-xs transition-colors border-0 disabled:opacity-60 disabled:cursor-not-allowed"
+                      style={{
+                        padding: '4px 8px',
+                        background: 'var(--slate)',
+                        color: '#fff',
+                        border: 'none',
+                        borderRadius: 'var(--radius-md)',
+                        fontSize: '10px', fontWeight: '500',
+                        cursor: startingSession === lesson.id ? 'not-allowed' : 'pointer',
+                        opacity: startingSession === lesson.id ? 0.6 : 1,
+                        fontFamily: 'var(--font-sans)',
+                        whiteSpace: 'nowrap',
+                      }}
                     >
                       {startingSession === lesson.id ? '...' : (lang === 'pt' ? 'Iniciar Velejo' : 'Start Session')}
                     </button>
@@ -1041,11 +1057,25 @@ export default function ScheduledLessons({
                       {/* Softer emerald "status tag" look, but still a real
                           button — clicking it still opens
                           ConfirmLessonModal to actually close/charge the
-                          lesson. Purely cosmetic swap from the bold
-                          zinc-900 it had before. */}
+                          lesson. --color-pb-glacial-light/dark is the
+                          actual emerald success pair in this design system
+                          (tokens.css) — same one the waiver-signed badge
+                          uses elsewhere — not an approximated Tailwind
+                          emerald-50/700 class, and same shape recipe as
+                          its neighbors (padding/radius/font-size). */}
                       <button
                         onClick={() => setConfirmLessonModal(lesson)}
-                        className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-[11px] px-2 py-1 rounded-md font-medium border-0 transition-colors cursor-pointer"
+                        style={{
+                          padding: '4px 8px',
+                          background: 'var(--color-pb-glacial-light)',
+                          color: 'var(--color-pb-glacial-dark)',
+                          border: 'none',
+                          borderRadius: 'var(--radius-md)',
+                          fontSize: '10px', fontWeight: '500',
+                          cursor: 'pointer',
+                          fontFamily: 'var(--font-sans)',
+                          whiteSpace: 'nowrap',
+                        }}
                       >
                         Confirmar
                       </button>
