@@ -284,6 +284,37 @@ function isValidCPF(masked: string): boolean {
   return checkDigit(9) === parseInt(d[9], 10) && checkDigit(10) === parseInt(d[10], 10)
 }
 
+/** Auto-inserts the DD/MM/AAAA slashes as the student types digits on a
+ *  physical or numeric-mobile keyboard — replaces the browser's native
+ *  date picker, which on many mobile browsers defaults to a slow
+ *  scroll-wheel widget for a field that's faster to just type. */
+function formatDateInput(raw: string): string {
+  const d = raw.replace(/\D/g, '').slice(0, 8)
+  if (d.length <= 2) return d
+  if (d.length <= 4) return `${d.slice(0, 2)}/${d.slice(2)}`
+  return `${d.slice(0, 2)}/${d.slice(2, 4)}/${d.slice(4)}`
+}
+
+function dateInputToISO(masked: string): string {
+  const d = masked.replace(/\D/g, '')
+  if (d.length !== 8) return ''
+  return `${d.slice(4, 8)}-${d.slice(2, 4)}-${d.slice(0, 2)}`
+}
+
+/** Guards against impossible dates (31/02) and future birthdates — a
+ *  naive `new Date(iso)` silently rolls 31/02 over into March instead of
+ *  rejecting it, so the day/month/year are checked against what actually
+ *  came back out. */
+function isValidDateInput(masked: string): boolean {
+  const iso = dateInputToISO(masked)
+  if (!iso) return false
+  const [y, m, day] = iso.split('-').map(Number)
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return false
+  return date.getUTCFullYear() === y && date.getUTCMonth() + 1 === m && date.getUTCDate() === day
+    && date.getTime() <= Date.now()
+}
+
 function activityIcon(name: string) {
   const n = name.toLowerCase()
   if (n.includes('kite'))            return '🪁'
@@ -584,6 +615,14 @@ export default function CheckinForm({
   const [packageBalance, setPackageBalance] = useState<PackageBalance | null>(null)
   const [packageChecked, setPackageChecked] = useState(false)
 
+  // Duplicate CPF/passport guard — existingName is set only when the
+  // document is already on file under a *different* name (see
+  // findDuplicateDocument for why a same-name match is allowed through,
+  // it's just a returning student). Cleared on every edit to the
+  // document or name field so a stale warning never survives a fix.
+  const [duplicateDocName, setDuplicateDocName] = useState<string | null>(null)
+  const [checkingDocument, setCheckingDocument] = useState(false)
+
   const [isMinor,         setIsMinor]         = useState(false)
   const [guardianName,    setGuardianName]    = useState('')
   const [guardianConsent, setGuardianConsent] = useState(false)
@@ -661,6 +700,26 @@ export default function CheckinForm({
     }
   }
 
+  async function checkDocumentDuplicate(documentNumber: string, studentName: string) {
+    if (!documentNumber.trim() || studentName.trim().length < 2) {
+      setDuplicateDocName(null)
+      return
+    }
+    setCheckingDocument(true)
+    try {
+      const res = await fetch(
+        `/api/checkin/check-document?school=${encodeURIComponent(school.slug)}` +
+        `&document_number=${encodeURIComponent(documentNumber)}&name=${encodeURIComponent(studentName.trim())}`
+      )
+      const data = await res.json()
+      setDuplicateDocName(data.duplicate ? data.existingName : null)
+    } catch {
+      setDuplicateDocName(null)
+    } finally {
+      setCheckingDocument(false)
+    }
+  }
+
   // A typed/selected name normally triggers this on blur or on picking a
   // scheduled-student suggestion — neither fires for a name that arrived
   // pre-filled from the URL, so it's kicked off explicitly here instead.
@@ -733,6 +792,7 @@ export default function CheckinForm({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...form,
+          date_of_birth:    dateInputToISO(form.date_of_birth) || null,
           document_type:    form.student_nationality === 'BR' ? 'cpf' : 'passport',
           school_id:        school.id,
           partner_id:       (source === 'hotel' || source === 'agencia') ? partnerId : null,
@@ -834,10 +894,13 @@ export default function CheckinForm({
   const canSubmitWaiver = agreed && gdpr && form.signature_data !== '' && !submitting
     && (!isMinor || (guardianName.trim().length > 2 && guardianConsent))
 
+  const dobDigits = form.date_of_birth.replace(/\D/g, '')
   const canAdvanceName = form.student_name.trim().length >= 2
     && form.student_nationality !== ''
     && form.document_number.trim().length > 0
     && (form.student_nationality !== 'BR' || isValidCPF(form.document_number))
+    && !duplicateDocName
+    && (dobDigits.length === 0 || isValidDateInput(form.date_of_birth))
   const canAdvanceActivity = form.activity_id !== ''
 
   return (
@@ -960,7 +1023,9 @@ export default function CheckinForm({
                       ? formatCPF(e.target.value)
                       : e.target.value.toUpperCase()
                     setForm(f => ({ ...f, document_number: val }))
+                    setDuplicateDocName(null)
                   }}
+                  onBlur={() => checkDocumentDuplicate(form.document_number, form.student_name)}
                   placeholder={form.student_nationality === 'BR' ? '000.000.000-00' : 'AB1234567'}
                   maxLength={form.student_nationality === 'BR' ? 14 : 20}
                 />
@@ -972,6 +1037,26 @@ export default function CheckinForm({
                       : 'Invalid CPF — please check the digits.'}
                   </div>
                 )}
+                {checkingDocument && (
+                  <div style={{ fontSize: '11px', color: '#8A8C98', marginTop: '4px' }}>
+                    {lang === 'pt' ? 'Verificando...' : 'Checking...'}
+                  </div>
+                )}
+                {duplicateDocName && (
+                  <div style={{
+                    fontSize: '12px', color: '#92400E', background: '#FEF3C7',
+                    border: '1px solid #F59E0B', borderRadius: '8px',
+                    padding: '8px 10px', marginTop: '6px', lineHeight: '1.4',
+                  }}>
+                    {lang === 'pt'
+                      ? `⚠️ Este ${form.student_nationality === 'BR' ? 'CPF' : 'passaporte'} já possui cadastro (${duplicateDocName}).`
+                      : lang === 'fr'
+                      ? `⚠️ Ce ${form.student_nationality === 'BR' ? 'CPF' : 'passeport'} est déjà enregistré (${duplicateDocName}).`
+                      : lang === 'es'
+                      ? `⚠️ Este ${form.student_nationality === 'BR' ? 'CPF' : 'pasaporte'} ya está registrado (${duplicateDocName}).`
+                      : `⚠️ This ${form.student_nationality === 'BR' ? 'CPF' : 'passport'} is already registered (${duplicateDocName}).`}
+                  </div>
+                )}
               </div>
             )}
 
@@ -979,20 +1064,31 @@ export default function CheckinForm({
               <label style={labelStyle}>{t.dob}</label>
               <input
                 style={inputStyle}
-                type="date"
+                type="text"
+                inputMode="numeric"
+                placeholder="DD/MM/AAAA"
+                maxLength={10}
                 value={form.date_of_birth}
-                max={new Date().toISOString().slice(0, 10)}
                 onChange={e => {
-                  const val = e.target.value
+                  const val = formatDateInput(e.target.value)
                   setForm(f => ({ ...f, date_of_birth: val }))
-                  if (val) {
-                    const age = Math.floor((Date.now() - new Date(val).getTime()) / (1000 * 60 * 60 * 24 * 365.25))
+                  if (isValidDateInput(val)) {
+                    const iso = dateInputToISO(val)
+                    const age = Math.floor((Date.now() - new Date(iso).getTime()) / (1000 * 60 * 60 * 24 * 365.25))
                     setIsMinor(age < 18)
                   } else {
                     setIsMinor(false)
                   }
                 }}
               />
+              {dobDigits.length === 8 && !isValidDateInput(form.date_of_birth) && (
+                <div style={{ fontSize: '11px', color: '#C0392B', marginTop: '4px' }}>
+                  {lang === 'pt' ? 'Data inválida — confira o formato DD/MM/AAAA.'
+                    : lang === 'fr' ? 'Date invalide — vérifiez le format JJ/MM/AAAA.'
+                    : lang === 'es' ? 'Fecha inválida — revise el formato DD/MM/AAAA.'
+                    : 'Invalid date — please check the DD/MM/YYYY format.'}
+                </div>
+              )}
             </div>
 
             {isMinor && (

@@ -102,4 +102,38 @@ export async function getTodayScheduledMatchForCheckin(schoolId: string, student
   }
 }
 
+/** Duplicate-document guard for the check-in form's CPF/passport field.
+ *  Flags a document already on file under a DIFFERENT student name — a
+ *  typo, or someone else's CPF entered by mistake — not the normal case
+ *  of a returning student re-checking-in under their own name/document,
+ *  which must stay allowed (this school's repeat customers check in every
+ *  visit). Checks both students (the canonical registry) and checkins
+ *  (a document can land there before students catches up — see the
+ *  find-or-create in api/checkin/route.ts) so a same-day double-submit
+ *  under two different names still gets caught. document_number is
+ *  compared exactly as stored (CPF formatted with dots/dash, passport
+ *  uppercased) — same format the client sends on submit. */
+export async function findDuplicateDocument(
+  schoolId: string,
+  documentNumber: string,
+  studentName: string
+): Promise<string | null> {
+  const supabase = createServiceClient()
+  const target = normalizeStudentName(studentName)
+
+  const [{ data: students }, { data: checkins }] = await Promise.all([
+    supabase.from('students').select('name')
+      .eq('school_id', schoolId).eq('document_number', documentNumber).limit(5),
+    supabase.from('checkins').select('student_name')
+      .eq('school_id', schoolId).eq('document_number', documentNumber).limit(5),
+  ])
+
+  const candidates = [
+    ...(students ?? []).map(s => s.name),
+    ...(checkins ?? []).map(c => c.student_name),
+  ]
+
+  return candidates.find(name => normalizeStudentName(name) !== target) ?? null
+}
+
 
