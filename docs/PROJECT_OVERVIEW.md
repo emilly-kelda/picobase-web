@@ -47,6 +47,7 @@ from the owner side.
 | Master admin | `/master/*` | Pico Base staff only (`role = 'master'`). Manages school tenants, billing, cross-school costs. |
 | Public booking | `/book/[school]` | No login. Customer-facing intake form, supports `?ref=` partner attribution. |
 | Public check-in | `/checkin/[school]` | No login. Waiver + check-in flow tourists/students fill out on arrival. |
+| Student self-service | `/aula/[token]` | No login (opaque per-lesson `public_token` is the access control). Confirm attendance, or request a reschedule/cancellation — requests queue in `lesson_requests` for owner approval, they don't apply immediately. |
 | Partner portal | `/partner/[id]` | No login (ID in URL is the access control). Partner's own referral/commission view. |
 | Instructor notice | `/instructor/[school]` | No login. **Not** a real instructor portal — just today's notice board (see gaps in README). |
 | Marketing | `/(marketing)/*` | Public landing pages, pricing, a standalone runway calculator. |
@@ -73,6 +74,13 @@ from the owner side.
   accent/case/whitespace-insensitive substring/equality matching, not a real
   join. A `students` table with a real `id` does exist and is used where
   possible, but package_sales/sessions predate it and were never migrated.
+- **`scheduled_lessons.status = 'confirmed'` means "class happened, revenue
+  recorded"** — it's set only by `/api/owner/confirm-lesson`, alongside
+  inserting a `sessions` row, computing instructor commission, and debiting
+  the linked package. The student-facing `/aula/[token]` self-confirm sets a
+  separate `student_confirmed_at` timestamp instead of touching `status`, on
+  purpose — anything that flips `status` to `'confirmed'` outside that one
+  route will silently corrupt revenue/commission tracking.
 
 ## Localization
 

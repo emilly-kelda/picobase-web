@@ -967,3 +967,54 @@ their commit message and diff.
   create/edit-lesson modals — none were named in the request and each
   is a large enough surface to warrant its own pass. Verified with
   `tsc --noEmit` and a clean production build before committing.
+
+## Student self-service (WhatsApp) + pending-request alerts (2026-07-21 → 2026-07-22)
+
+- `ce8518a` **feat**: WhatsApp-driven student self-service — a public,
+  no-login page (`/aula/[token]`) where a student can confirm attendance,
+  or request a reschedule/cancellation for their own `scheduled_lessons`
+  row. Two new columns on `scheduled_lessons`: `public_token` (uuid,
+  unique, `gen_random_uuid()` default — auto-backfilled with a distinct
+  value per existing row since the default is volatile) and
+  `student_confirmed_at`. Deliberately does **not** set
+  `status = 'confirmed'` on student self-confirm — that value already
+  means "class happened, revenue recorded" via
+  `/api/owner/confirm-lesson` (inserts a `sessions` row, computes
+  commission, debits package balance); flipping it early would both hide
+  the lesson from staff's own confirm queue and skip all of that. New
+  table `lesson_requests` (not `session_requests`, to avoid confusion
+  with the unrelated `sessions` table) holds pending reschedule/
+  cancellation requests, no RLS (same rationale as `bookings` — every
+  access goes through the service-role client). Reschedule/cancellation
+  requests are **not** applied immediately — they queue for operator
+  approval, surfaced as a recurring red-alert modal
+  (`PendingRequestsAlert.tsx`, mounted in `owner/layout.tsx`, polls
+  `/api/owner/lesson-requests` every 30s, `sessionStorage`-backed
+  3-minute snooze) that reappears until resolved. Approving reuses the
+  existing `/api/owner/schedule` `DELETE`/`PATCH` handlers **by direct
+  import**, not by re-implementing clash/capacity/cancellation-window
+  logic — approving a reschedule fetches the lesson's current
+  `instructor_id`/`student_name`/`duration_min` first, since the PATCH
+  handler only runs clash validation when those are present in the body
+  (a bare `{scheduled_at, duration_min}` PATCH would silently skip it;
+  confirmed live when a test reschedule correctly hit "Saldo de créditos
+  insuficiente" and stayed pending instead of silently applying).
+  Confirmation-link WhatsApp message added as a third option (next to
+  Aluno/Instrutor) in `ScheduledLessons.tsx`'s existing WhatsApp picker,
+  not a new button — not yet wired into `/owner/sessions`' "Agendadas"
+  tab (`getScheduledLessonsList` doesn't select `public_token`). Migrations
+  dated `20260809*` rather than the session date, since the last-applied
+  migration was already `20260808020000` and an earlier date would sort
+  out-of-order.
+- `c38fedf` **fix**: the pending-request alert wasn't showing for a
+  `master`-role login — it was gated on `!auth.isMaster`, mirroring
+  `getPendingBookingsCount`'s master-skip, but unlike that call,
+  `/api/owner/lesson-requests` doesn't need a real per-school
+  `auth.schoolId` (it reads the same hardcoded `SCHOOL_ID` every other
+  `/api/owner/*` route already uses), so the gate just made this one
+  feature inconsistent with the rest of `/owner`, which shows that one
+  hardcoded school's data regardless of who's logged in. Confirmed live:
+  a manual `fetch('/api/owner/lesson-requests')` from the master
+  session's own console returned the pending rows correctly, proving the
+  gate — not the data or the query — was the cause. Removed the gate;
+  alert now always mounts.

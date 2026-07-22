@@ -1,6 +1,6 @@
 # Pico Base — Documentation
 
-This folder documents the state of the `picobase-web` project as of **2026-07-18**.
+This folder documents the state of the `picobase-web` project as of **2026-07-22**.
 It's generated from the actual git history and codebase, not from memory or
 assumptions — see [CHANGELOG.md](./CHANGELOG.md) for the commit-by-commit source.
 
@@ -34,3 +34,12 @@ assumptions — see [CHANGELOG.md](./CHANGELOG.md) for the commit-by-commit sour
   URL Configuration needs to be confirmed in the Supabase project — the code
   side (`redirectTo` on invite/reset emails) is done, but that dashboard
   setting is out-of-repo.
+- **A pending reschedule request that fails package-capacity on approval
+  stays pending forever** — there's no path for the student to withdraw
+  their own request, and no automatic expiry. Staff has to notice and
+  reject it manually, or get the student a new package first and re-approve.
+- **The student self-service WhatsApp link is only sendable from Base
+  Camp's "Aulas Agendadas" list** (`ScheduledLessons.tsx`'s WhatsApp
+  picker). `/owner/sessions`' "Agendadas" tab uses a separate query
+  (`getScheduledLessonsList`) that doesn't select `public_token` yet, so the
+  option isn't available there.
