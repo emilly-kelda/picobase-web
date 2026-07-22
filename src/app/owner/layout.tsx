@@ -81,9 +81,14 @@ export default async function OwnerLayout({ children }: { children: React.ReactN
         >
           {children}
         </OwnerNav>
-        {/* Master has no single school to scope pending requests to — same
-            reasoning as skipping getPendingBookingsCount above. */}
-        {!auth.isMaster && <PendingRequestsAlert />}
+        {/* Unlike getPendingBookingsCount above, this doesn't need a real
+            per-school auth.schoolId — /api/owner/lesson-requests reads the
+            same hardcoded SCHOOL_ID every other /api/owner/* route already
+            uses, so it resolves the same for master or owner. Gating it on
+            !auth.isMaster would just make it inconsistent with the rest of
+            /owner, which shows that one hardcoded school's data regardless
+            of who's logged in. */}
+        <PendingRequestsAlert />
       </AuthGuard>
     </div>
   )
