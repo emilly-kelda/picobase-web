@@ -2,7 +2,7 @@
 import { getSessionsByStudentName, findStudentByName } from './studentRepository'
 import { getAvailablePackageMinutes } from './scheduledLessonRepository'
 import { normalizeStudentName } from '@/lib/text'
-import { normalizeSportKey } from '@/lib/modality'
+import { groupSessionsBySport, type SessionForGrouping } from '@/lib/modality'
 
 export async function getPackageDashboard(schoolId: string) {
   const supabase = createServiceClient()
@@ -261,6 +261,17 @@ export async function getPackageReceiptData(schoolId: string, packageSaleId: str
   ])
   const pkg = Array.isArray(sale.packages) ? sale.packages[0] : sale.packages
 
+  // Derived from this package's own realized sessions (via the same
+  // groupSessionsBySport the certificate route itself uses to look up
+  // hours), not packages.sport — a package's declared sport and the actual
+  // activity logged against its sessions can drift apart (wrong activity
+  // picked at confirm time, etc.), and a mismatch here would make the
+  // certificate link 404 even though the student has real completed hours.
+  // Picks the modality with the most minutes in this package's window, in
+  // case sessions span more than one (rare, but safer than "first").
+  const sportGroups = groupSessionsBySport((history?.sessions ?? []) as unknown as SessionForGrouping[])
+  const sport = [...sportGroups.entries()].sort((a, b) => b[1].minutes - a[1].minutes)[0]?.[0] ?? null
+
   return {
     studentName:      sale.student_name,
     packageName:      pkg?.name ?? null,
@@ -272,10 +283,10 @@ export async function getPackageReceiptData(schoolId: string, packageSaleId: str
     // For the new per-student+sport certificate link (see
     // /api/owner/certificate/[studentId]/[sport]) — both null when this
     // package belongs to a check-in-only "student" (no real students row)
-    // or a sport-less package, in which case the receipt modal simply
-    // doesn't offer a certificate link.
+    // or has no realized sessions yet, in which case the receipt modal
+    // simply doesn't offer a certificate link.
     studentId: student?.id ?? null,
-    sport:     normalizeSportKey(pkg?.sport ?? pkg?.name ?? null),
+    sport,
   }
 }
 

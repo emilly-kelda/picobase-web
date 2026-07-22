@@ -51,7 +51,7 @@ export function normalizeSportKey(activityName: string | null | undefined): stri
   return Object.keys(MODALITY_LABELS).find(k => normalized.startsWith(k)) ?? null
 }
 
-type SessionForGrouping = {
+export type SessionForGrouping = {
   duration_min: number | null
   session_date: string
   activities: { name: string } | null
