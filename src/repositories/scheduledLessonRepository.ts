@@ -36,6 +36,8 @@ export async function getScheduledLessons(
         level,
         group_id,
         package_sale_id,
+        public_token,
+        student_confirmed_at,
         activities ( id, name, default_price, default_duration_min ),
         instructor:users!scheduled_lessons_instructor_id_fkey ( id, name, whatsapp )
       `)
@@ -538,6 +540,54 @@ export async function createScheduledLesson(payload: {
     .insert({ ...payload, status: 'scheduled' })
     .select('id')
     .single()
+  if (error) throw error
+  return data
+}
+
+/** Public read for the /aula/[token] self-service page and its API route.
+ *  Returns id/school_id too (needed server-side to build a lesson_requests
+ *  row and to run the confirm mutation) — callers that render this to the
+ *  browser (the page component) must pick only the student-safe fields
+ *  (student_name, scheduled_at, duration_min, status, student_confirmed_at,
+ *  activity/instructor/school names) and must NOT forward notes, ids, or
+ *  any financial/package field to the client. */
+export async function getScheduledLessonByToken(token: string) {
+  const supabase = createServiceClient()
+  const { data, error } = await supabase
+    .from('scheduled_lessons')
+    .select(`
+      id,
+      school_id,
+      student_name,
+      scheduled_at,
+      duration_min,
+      status,
+      student_confirmed_at,
+      activities ( name ),
+      instructor:users!scheduled_lessons_instructor_id_fkey ( name ),
+      schools ( name )
+    `)
+    .eq('public_token', token)
+    .maybeSingle()
+  if (error || !data) return null
+  return data
+}
+
+/** Marks the student's self-service "I'll be there" click. Deliberately
+ *  never touches `status` — that field means "class happened, revenue
+ *  recorded" elsewhere (see /api/owner/confirm-lesson), and flipping it
+ *  here would both hide the lesson from staff's own confirm queue and skip
+ *  the revenue/commission/package-debit steps entirely. Returns null when
+ *  the token doesn't match anything or the lesson was already cancelled. */
+export async function markStudentConfirmedByToken(token: string) {
+  const supabase = createServiceClient()
+  const { data, error } = await supabase
+    .from('scheduled_lessons')
+    .update({ student_confirmed_at: new Date().toISOString() })
+    .eq('public_token', token)
+    .neq('status', 'cancelled')
+    .select('id, school_id')
+    .maybeSingle()
   if (error) throw error
   return data
 }

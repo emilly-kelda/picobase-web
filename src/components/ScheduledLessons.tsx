@@ -31,6 +31,10 @@ type Lesson = {
   // to, instead of independently re-guessing one — see that modal's
   // LessonToConfirm comment for why the mismatch mattered).
   package_sale_id?: string | null
+  // Already returned by getScheduledLessons — used to build the /aula/[token]
+  // self-service link and to show whether the student already RSVP'd.
+  public_token?: string | null
+  student_confirmed_at?: string | null
   activities: { id: string; name: string; default_price: number; default_duration_min: number } | null
   instructor: { id: string; name: string; whatsapp?: string | null } | null
 }
@@ -80,6 +84,14 @@ function studentConfirmationMessage(lesson: Lesson, dayLabel: string, schoolName
 function instructorConfirmationMessage(lesson: Lesson, dayLabel: string): string {
   const activityName = lesson.activities?.name ?? 'uma aula'
   return `Olá, ${lesson.instructor?.name ?? ''}! Você tem ${activityName} com ${lesson.student_name ?? 'o aluno'} agendada para ${dayLabel} às ${fmtTime(lesson.scheduled_at)}.`
+}
+
+/** /aula/[token] self-service link (confirm/reschedule/cancel without
+ *  login) — window.location.origin is safe here since this only runs from
+ *  a click inside the (client-only) WhatsApp picker modal below. */
+function studentSelfServiceMessage(lesson: Lesson, schoolName: string): string {
+  const link = `${window.location.origin}/aula/${lesson.public_token}`
+  return `Olá, ${lesson.student_name ?? ''}! Sua aula na ${schoolName} está agendada. Confirme sua presença, ou solicite reagendamento/cancelamento aqui: ${link}`
 }
 
 /** Fortaleza-local date/time parts for pre-filling the edit form's <input type="date">
@@ -2466,6 +2478,24 @@ export default function ScheduledLessons({
               >
                 <span>Instrutor{whatsAppModal.instructor?.name ? ` (${whatsAppModal.instructor.name})` : ''}</span>
                 {!whatsAppModal.instructor?.whatsapp && <span style={{ fontSize: '11px' }}>Sem WhatsApp</span>}
+              </a>
+              <a
+                href={(whatsAppModal.student_whatsapp && whatsAppModal.public_token) ? buildApiWhatsAppUrl(whatsAppModal.student_whatsapp, studentSelfServiceMessage(whatsAppModal, schoolName)) : undefined}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={e => { if (!whatsAppModal.student_whatsapp || !whatsAppModal.public_token) e.preventDefault(); else setWhatsAppModal(null) }}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '12px 14px', borderRadius: 'var(--radius-md)',
+                  background: (whatsAppModal.student_whatsapp && whatsAppModal.public_token) ? 'var(--color-pb-glacial-light)' : 'var(--powder)',
+                  color: (whatsAppModal.student_whatsapp && whatsAppModal.public_token) ? 'var(--color-pb-glacial-dark)' : 'var(--mist)',
+                  fontSize: '13px', fontWeight: '500', textDecoration: 'none',
+                  cursor: (whatsAppModal.student_whatsapp && whatsAppModal.public_token) ? 'pointer' : 'not-allowed',
+                  opacity: (whatsAppModal.student_whatsapp && whatsAppModal.public_token) ? 1 : 0.6,
+                }}
+              >
+                <span>Aluno — link de confirmação</span>
+                {!whatsAppModal.student_whatsapp && <span style={{ fontSize: '11px' }}>Sem WhatsApp</span>}
               </a>
             </div>
             <button

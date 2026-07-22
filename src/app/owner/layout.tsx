@@ -6,6 +6,7 @@
 
 import OwnerNav from '@/components/OwnerNav'
 import AuthGuard from '@/components/AuthGuard'
+import PendingRequestsAlert from '@/components/PendingRequestsAlert'
 import { createServerClient } from '@supabase/ssr'
 import { createServiceClient } from '@/lib/supabase-server'
 import { cookies } from 'next/headers'
@@ -80,6 +81,9 @@ export default async function OwnerLayout({ children }: { children: React.ReactN
         >
           {children}
         </OwnerNav>
+        {/* Master has no single school to scope pending requests to — same
+            reasoning as skipping getPendingBookingsCount above. */}
+        {!auth.isMaster && <PendingRequestsAlert />}
       </AuthGuard>
     </div>
   )
