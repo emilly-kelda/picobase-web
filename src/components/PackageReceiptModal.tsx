@@ -19,6 +19,8 @@ type ReceiptData = {
   pricePaid: number
   soldAt: string
   sessions: ReceiptSession[]
+  studentId: string | null
+  sport: string | null
 }
 
 function fmtBRL(n: number) {
@@ -147,14 +149,20 @@ export default function PackageReceiptModal({
               <div style={{ fontSize: '15px', fontWeight: '500', color: 'var(--glacial-dark)', marginBottom: '16px' }}>
                 {t.package_finalized_msg}
               </div>
-              <a
-                href={`/api/owner/certificate/${packageSaleId}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ fontSize: '13px', color: 'var(--glacial-dark)', textDecoration: 'underline' }}
-              >
-                {t.download_certificate_link}
-              </a>
+              {data.studentId && data.sport ? (
+                <a
+                  href={`/api/owner/certificate/${data.studentId}/${data.sport}?type=hours`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ fontSize: '13px', color: 'var(--glacial-dark)', textDecoration: 'underline' }}
+                >
+                  {t.download_certificate_link}
+                </a>
+              ) : (
+                <div style={{ fontSize: '12px', color: 'var(--mist)' }}>
+                  Certificado disponível na ficha do aluno assim que o cadastro estiver completo.
+                </div>
+              )}
             </div>
           ) : (
             <>

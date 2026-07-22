@@ -38,3 +38,60 @@ export function translateModalityName(
   const key = Object.keys(MODALITY_LABELS).find(k => normalized.startsWith(k))
   return key ? MODALITY_LABELS[key][lang] : activityName
 }
+
+/** Same prefix-match as translateModalityName above, but returns the raw
+ *  grouping key ('kitesurf', 'wingfoil', ...) instead of a display label —
+ *  for grouping sessions by modality (certificates, hours totals). Exported
+ *  so callers reuse this instead of adding a 4th copy of the same
+ *  normalize-then-startsWith heuristic already duplicated across
+ *  scheduledLessonRepository.ts/ScheduledLessons.tsx/sessions/page.tsx. */
+export function normalizeSportKey(activityName: string | null | undefined): string | null {
+  if (!activityName) return null
+  const normalized = activityName.toLowerCase().replace(/[^a-z]/g, '')
+  return Object.keys(MODALITY_LABELS).find(k => normalized.startsWith(k)) ?? null
+}
+
+type SessionForGrouping = {
+  duration_min: number | null
+  session_date: string
+  activities: { name: string } | null
+  users?: { name: string } | { name: string }[] | null
+}
+
+/** Groups a student's realized sessions (as returned by
+ *  studentRepository.ts's getSessionsByStudent) by modality, summing
+ *  duration and keeping the most recent session's instructor/date per
+ *  group — used to compute per-sport hours totals for the certificate
+ *  section on the student detail page. Sessions whose activity name
+ *  doesn't match a known modality (normalizeSportKey returns null) are
+ *  excluded, same fallback behavior as detectModality elsewhere. */
+export function groupSessionsBySport(
+  sessions: SessionForGrouping[]
+): Map<string, { minutes: number; lastInstructorName: string | null; lastDate: string }> {
+  const groups = new Map<string, { minutes: number; lastInstructorName: string | null; lastDate: string }>()
+
+  // Sessions are typically already ordered most-recent-first (see
+  // getSessionsByStudent's `.order('session_date', { ascending: false })`),
+  // but sort defensively so "last" is correct regardless of caller order.
+  const sorted = [...sessions].sort((a, b) => (a.session_date < b.session_date ? 1 : -1))
+
+  for (const s of sorted) {
+    const key = normalizeSportKey(s.activities?.name)
+    if (!key) continue
+
+    const instructor = Array.isArray(s.users) ? s.users[0] : s.users
+    const existing = groups.get(key)
+
+    if (!existing) {
+      groups.set(key, {
+        minutes: s.duration_min ?? 0,
+        lastInstructorName: instructor?.name ?? null,
+        lastDate: s.session_date,
+      })
+    } else {
+      existing.minutes += s.duration_min ?? 0
+    }
+  }
+
+  return groups
+}

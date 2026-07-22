@@ -1,7 +1,8 @@
 ﻿import { createServiceClient } from '@/lib/supabase-server'
-import { getSessionsByStudentName } from './studentRepository'
+import { getSessionsByStudentName, findStudentByName } from './studentRepository'
 import { getAvailablePackageMinutes } from './scheduledLessonRepository'
 import { normalizeStudentName } from '@/lib/text'
+import { normalizeSportKey } from '@/lib/modality'
 
 export async function getPackageDashboard(schoolId: string) {
   const supabase = createServiceClient()
@@ -247,14 +248,17 @@ export async function getPackageReceiptData(schoolId: string, packageSaleId: str
 
   const { data: sale, error } = await supabase
     .from('package_sales')
-    .select('id, student_name, minutes_purchased, minutes_used, price_paid, sold_at, packages ( name )')
+    .select('id, student_name, minutes_purchased, minutes_used, price_paid, sold_at, packages ( name, sport )')
     .eq('id', packageSaleId)
     .eq('school_id', schoolId)
     .single()
 
   if (error || !sale) return null
 
-  const history = await getSessionHistoryForPackageSale(schoolId, packageSaleId)
+  const [history, student] = await Promise.all([
+    getSessionHistoryForPackageSale(schoolId, packageSaleId),
+    findStudentByName(schoolId, sale.student_name),
+  ])
   const pkg = Array.isArray(sale.packages) ? sale.packages[0] : sale.packages
 
   return {
@@ -265,6 +269,13 @@ export async function getPackageReceiptData(schoolId: string, packageSaleId: str
     pricePaid:        sale.price_paid ?? 0,
     soldAt:           sale.sold_at,
     sessions:         history?.sessions ?? [],
+    // For the new per-student+sport certificate link (see
+    // /api/owner/certificate/[studentId]/[sport]) — both null when this
+    // package belongs to a check-in-only "student" (no real students row)
+    // or a sport-less package, in which case the receipt modal simply
+    // doesn't offer a certificate link.
+    studentId: student?.id ?? null,
+    sport:     normalizeSportKey(pkg?.sport ?? pkg?.name ?? null),
   }
 }
 
@@ -390,7 +401,7 @@ export async function deactivatePackageType(id: string, schoolId: string) {
 }
 
 /** Session history for one package_sale. There's no reliable FK from
- *  package_sales to sessions (see getCertificateData above) — this bounds
+ *  package_sales to sessions — this bounds
  *  the student's name-matched session list to the window between this
  *  sale's sold_at and their NEXT sale's sold_at (or now, if this is their
  *  latest), so a student who bought a second package doesn't have the
@@ -428,48 +439,4 @@ export async function getSessionHistoryForPackageSale(schoolId: string, packageS
 
   return { studentName: sale.student_name, sessions }
 }
-
-/** Data for a completion certificate. package_sales has no student_id/FK to
- *  sessions (nothing in this codebase ever writes checkins.package_sale_id —
- *  see lib/commission.ts) — level and instructor come from the student's most
- *  recent session by name match, same as everywhere else in this app that
- *  needs "this student's latest lesson" without a real join to lean on. */
-export async function getCertificateData(schoolId: string, packageSaleId: string) {
-  const supabase = createServiceClient()
-
-  const { data: sale, error } = await supabase
-    .from('package_sales')
-    .select('id, student_name, minutes_purchased, minutes_used, sold_at, packages ( name, sport )')
-    .eq('id', packageSaleId)
-    .eq('school_id', schoolId)
-    .single()
-
-  if (error || !sale) return null
-  if ((sale.minutes_used ?? 0) < (sale.minutes_purchased ?? 0)) return null
-
-  const [{ data: school }, { data: owner }, sessions] = await Promise.all([
-    supabase.from('schools').select('name').eq('id', schoolId).single(),
-    supabase.from('users').select('name').eq('school_id', schoolId).eq('role', 'owner').limit(1).maybeSingle(),
-    getSessionsByStudentName(schoolId, sale.student_name),
-  ])
-
-  const mostRecent = sessions[0] as any
-  const instructorUser = mostRecent
-    ? (Array.isArray(mostRecent.users) ? mostRecent.users[0] : mostRecent.users)
-    : null
-  const pkg = sale.packages as any
-
-  return {
-    studentName:    sale.student_name,
-    activityName:   pkg?.sport || pkg?.name || 'Atividade',
-    level:          mostRecent?.level ?? null,
-    hoursTotal:     Math.round(((sale.minutes_purchased ?? 0) / 60) * 10) / 10,
-    completedAt:    new Date().toISOString(),
-    instructorName: instructorUser?.name ?? null,
-    schoolName:     school?.name ?? 'Escola',
-    ownerName:      owner?.name ?? 'Diretor',
-    certificateId:  `PB-${sale.id.slice(0, 8).toUpperCase()}`,
-  }
-}
-
 

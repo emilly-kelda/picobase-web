@@ -5,7 +5,7 @@ const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
 
 export async function POST(request: Request) {
   const body = await request.json()
-  const { student_id, level, notes, skills, session_id } = body
+  const { student_id, level, notes, skills, session_id, sport } = body
   const supabase = createServiceClient()
 
   await supabase
@@ -23,6 +23,7 @@ export async function POST(request: Request) {
       notes:      notes || null,
       skills:     skills || [],
       session_id: session_id || null,
+      sport:      sport || null,
     })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

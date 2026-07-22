@@ -1,5 +1,6 @@
 ﻿import { createServiceClient } from '@/lib/supabase-server'
 import { decrypt } from '@/utils/crypto'
+import { normalizeSportKey } from '@/lib/modality'
 
 export async function getStudents(schoolId: string, search?: string) {
   const supabase = createServiceClient()
@@ -316,6 +317,34 @@ export async function getProgressionHistory(schoolId: string, studentId: string)
     .order('created_at', { ascending: false })
   if (error) throw error
   return data ?? []
+}
+
+/** Most recent proficiency level per sport, for the per-modality
+ *  certificate gate on the student detail page. Rows saved before the
+ *  `sport` column existed (or where the instructor picker somehow left it
+ *  blank) are excluded — there's no reliable way to guess which modality
+ *  an unscoped legacy row belonged to. */
+export async function getLatestProgressionBySport(
+  schoolId: string,
+  studentId: string
+): Promise<Map<string, { level: string; updatedAt: string }>> {
+  const supabase = createServiceClient()
+  const { data, error } = await supabase
+    .from('student_progression')
+    .select('level, sport, created_at')
+    .eq('school_id', schoolId)
+    .eq('student_id', studentId)
+    .not('sport', 'is', null)
+    .order('created_at', { ascending: false })
+  if (error) throw error
+
+  const bySport = new Map<string, { level: string; updatedAt: string }>()
+  for (const row of data ?? []) {
+    const key = normalizeSportKey(row.sport) ?? row.sport
+    if (!key || bySport.has(key)) continue
+    bySport.set(key, { level: row.level, updatedAt: row.created_at })
+  }
+  return bySport
 }
 
 export async function updateStudentLevel(

@@ -166,9 +166,10 @@ export async function findDuplicateEmail(
 }
 
 /** Backs the on-demand "signed waiver record" PDF (api/owner/checkin-
- *  waiver/[checkinId]) — same on-demand-regenerate pattern as
- *  getCertificateData in packageRepository.ts: nothing is pre-rendered to
- *  Storage, this just assembles the current row's data fresh on every
+ *  waiver/[checkinId]) — same on-demand-regenerate pattern as the
+ *  certificate route (api/owner/certificate/[studentId]/[sport]): nothing
+ *  is pre-rendered to Storage, this just assembles the current row's data
+ *  fresh on every
  *  download. Returns null for a checkin that was never actually signed
  *  (waiver_signed_at null) — nothing to compile yet. activity_id/
  *  instructor_id are resolved with separate lookups rather than an

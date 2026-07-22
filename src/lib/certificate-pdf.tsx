@@ -146,14 +146,22 @@ const styles = StyleSheet.create({
   },
 })
 
+// Covers both level vocabularies in the app: sessions.level
+// (experimental/iniciante/intermediario/avancado) and student_progression.level
+// (beginner/intermediate/advanced, IKO-style Nível 1/2/3) — the proficiency
+// certificate reads the latter, this file previously only handled the former.
 const LEVEL_LABELS: Record<string, string> = {
   experimental: 'Experimental',
   iniciante: 'Iniciante',
   intermediario: 'Intermediário',
   avancado: 'Avançado',
+  beginner: 'Iniciante',
+  intermediate: 'Intermediário',
+  advanced: 'Avançado',
 }
 
 export interface CertificateProps {
+  docType: 'hours' | 'proficiency'
   studentName: string
   activityName: string
   level: string | null
@@ -166,6 +174,7 @@ export interface CertificateProps {
 }
 
 export function CertificatePDF({
+  docType,
   studentName,
   activityName,
   level,
@@ -191,17 +200,21 @@ export function CertificatePDF({
 
           <View style={styles.divider} />
 
-          <Text style={styles.certTitle}>Certificado de Conclusão</Text>
+          <Text style={styles.certTitle}>
+            {docType === 'proficiency' ? 'Certificado de Proficiência' : 'Atestado de Horas Praticadas'}
+          </Text>
 
           <Text style={styles.studentName}>{studentName}</Text>
 
           <Text style={styles.bodyText}>
-            concluiu com êxito o programa de treinamento em
+            {docType === 'proficiency'
+              ? 'concluiu com êxito o programa de treinamento em'
+              : 'praticou aulas de'}
           </Text>
 
           <View style={styles.highlightBox}>
             <Text style={styles.highlightActivity}>{activityName}</Text>
-            {levelLabel && (
+            {docType === 'proficiency' && levelLabel && (
               <Text style={styles.highlightLevel}>Nível {levelLabel}</Text>
             )}
           </View>

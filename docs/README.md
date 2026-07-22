@@ -43,3 +43,10 @@ assumptions — see [CHANGELOG.md](./CHANGELOG.md) for the commit-by-commit sour
   picker). `/owner/sessions`' "Agendadas" tab uses a separate query
   (`getScheduledLessonsList`) that doesn't select `public_token` yet, so the
   option isn't available there.
+- **Per-sport certificate hours (student detail page) inherit the existing
+  group-lesson gap**: `groupSessionsBySport` sums `sessions.duration_min`
+  from `getSessionsByStudent`, which is checkin-keyed — group-confirmed
+  lessons have no `checkins` row (see `getCompletedHoursByStudent`'s own
+  doc comment), so their minutes aren't attributed to anyone. A student
+  whose hours came mostly from group lessons can under-count toward the
+  1h/"Atestado de Horas" threshold.

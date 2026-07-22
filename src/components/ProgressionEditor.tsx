@@ -92,6 +92,7 @@ export default function ProgressionEditor({
         notes,
         skills:     checkedSkills,
         session_id: sessionId || null,
+        sport:      sportKey,
       }),
     })
     setSaving(false)

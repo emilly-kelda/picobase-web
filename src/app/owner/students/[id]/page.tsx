@@ -1,8 +1,10 @@
 ﻿import { notFound } from 'next/navigation'
-import { getStudentById, getSessionsByStudent, getActivePackagesByStudent, getPackageSalesByStudentName } from '@/repositories/studentRepository'
+import { getStudentById, getSessionsByStudent, getActivePackagesByStudent, getLatestProgressionBySport } from '@/repositories/studentRepository'
 import { getSignedWaiversByStudent } from '@/repositories/checkinRepository'
+import { groupSessionsBySport } from '@/lib/modality'
 import ProgressionEditor from '@/components/ProgressionEditor'
 import ProgressionHistory from '@/components/ProgressionHistory'
+import CertificateSection from '@/components/CertificateSection'
 import StudentProfileHeader from './StudentProfileHeader'
 
 const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
@@ -65,18 +67,16 @@ export default async function StudentDetailPage({
     notFound()
   }
 
-  const [sessions, packageMap, packageSales, signedWaivers] = await Promise.all([
+  const [sessions, packageMap, signedWaivers, progressionBySport] = await Promise.all([
     getSessionsByStudent(SCHOOL_ID, student.name, student.id),
     getActivePackagesByStudent(SCHOOL_ID),
-    getPackageSalesByStudentName(SCHOOL_ID, student.name),
     getSignedWaiversByStudent(SCHOOL_ID, student.name),
+    getLatestProgressionBySport(SCHOOL_ID, student.id),
   ])
+  const sportGroups = groupSessionsBySport(sessions as any)
 
   const pkg = packageMap.get(student.name)
   const totalRevenue = sessions.reduce((s: number, r: any) => s + (r.price ?? 0), 0)
-  const completedPackages = packageSales.filter(
-    p => (p.minutes_used ?? 0) >= (p.minutes_purchased ?? 0) && (p.minutes_purchased ?? 0) > 0
-  )
 
   // IKO/VDWS autonomy certificate — 10h of completed (realized) water time.
   // sessions here already are "concluded" by construction (getSessionsByStudent
@@ -239,83 +239,11 @@ export default async function StudentDetailPage({
         )
       })()}
 
-      {/* Certificate — always visible; per-package button is only enabled
-          once that package is actually fully consumed (server-side route
-          returns 404 for an incomplete one, so a clickable-but-broken link
-          would be worse than showing it disabled with an explanation). */}
-      <div style={{
-        background: '#fff',
-        border: '0.5px solid var(--border)',
-        borderRadius: 'var(--radius-lg)',
-        padding: '16px 20px', marginBottom: '24px',
-        display: 'flex', flexDirection: 'column', gap: '10px',
-      }}>
-        <div style={{
-          fontSize: '11px', fontWeight: '500',
-          letterSpacing: '0.1em', textTransform: 'uppercase',
-          color: 'var(--mist)',
-        }}>
-          Certificado de conclusão
-        </div>
-        {packageSales.length === 0 ? (
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '13px', color: 'var(--mist)' }}>Nenhum pacote registrado ainda</span>
-            <span
-              title="Disponível após a conclusão de um pacote"
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: '6px',
-                padding: '6px 14px', background: 'var(--border)', color: 'var(--mist)',
-                borderRadius: '99px', fontSize: '12px', fontWeight: '500',
-                cursor: 'not-allowed',
-              }}
-            >
-              🎓 Gerar Certificado (PDF)
-            </span>
-          </div>
-        ) : (
-          packageSales.map(p => {
-            const isComplete = (p.minutes_used ?? 0) >= (p.minutes_purchased ?? 0) && (p.minutes_purchased ?? 0) > 0
-            return (
-              <div key={p.id} style={{
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-              }}>
-                <span style={{ fontSize: '13px', color: 'var(--slate)' }}>
-                  {(p.packages as any)?.name ?? 'Pacote'}
-                </span>
-                {isComplete ? (
-                  <a
-                    href={`/api/owner/certificate/${p.id}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      display: 'inline-flex', alignItems: 'center', gap: '6px',
-                      padding: '6px 14px',
-                      background: 'var(--slate)', color: '#fff',
-                      borderRadius: '99px',
-                      fontSize: '12px', fontWeight: '500',
-                      textDecoration: 'none',
-                    }}
-                  >
-                    🎓 Gerar Certificado (PDF)
-                  </a>
-                ) : (
-                  <span
-                    title="Disponível após a conclusão do pacote"
-                    style={{
-                      display: 'inline-flex', alignItems: 'center', gap: '6px',
-                      padding: '6px 14px', background: 'var(--border)', color: 'var(--mist)',
-                      borderRadius: '99px', fontSize: '12px', fontWeight: '500',
-                      cursor: 'not-allowed',
-                    }}
-                  >
-                    🎓 Gerar Certificado (PDF)
-                  </span>
-                )}
-              </div>
-            )
-          })
-        )}
-      </div>
+      <CertificateSection
+        studentId={student.id}
+        sportGroups={sportGroups}
+        progressionBySport={progressionBySport}
+      />
 
       {/* Signed waivers — compiled on-demand from each checkin's audit
           trail (see api/owner/checkin-waiver), not a pre-rendered file, so
