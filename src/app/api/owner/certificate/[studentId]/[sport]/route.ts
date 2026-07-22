@@ -4,6 +4,7 @@ import {
   getSessionsByStudent,
   getLatestProgressionBySport,
 } from '@/repositories/studentRepository'
+import { resolveCertificateTemplate } from '@/repositories/certificateTemplateRepository'
 import { groupSessionsBySport, normalizeSportKey, translateModalityName } from '@/lib/modality'
 import { renderToBuffer } from '@react-pdf/renderer'
 import { CertificatePDF } from '@/lib/certificate-pdf'
@@ -53,9 +54,10 @@ export async function GET(
   }
 
   const supabase = createServiceClient()
-  const [{ data: school }, { data: owner }] = await Promise.all([
-    supabase.from('schools').select('name').eq('id', SCHOOL_ID).single(),
+  const [{ data: school }, { data: owner }, template] = await Promise.all([
+    supabase.from('schools').select('name, logo_url').eq('id', SCHOOL_ID).single(),
     supabase.from('users').select('name').eq('school_id', SCHOOL_ID).eq('role', 'owner').limit(1).maybeSingle(),
+    resolveCertificateTemplate(SCHOOL_ID, sportKey),
   ])
 
   const data = {
@@ -69,6 +71,12 @@ export async function GET(
     schoolName: school?.name ?? 'Escola',
     ownerName: owner?.name ?? 'Diretor',
     certificateId: `PB-${studentId.slice(0, 8).toUpperCase()}-${sportKey.slice(0, 3).toUpperCase()}`,
+    schoolLogoUrl: school?.logo_url ?? null,
+    themeKey: template.theme_key,
+    backgroundImageUrl: template.background_image_url,
+    signatureType: template.signature_type,
+    signatureData: template.signature_data,
+    fontFamily: template.font_family,
   }
 
   const pdf = await renderToBuffer(React.createElement(CertificatePDF, data) as any)

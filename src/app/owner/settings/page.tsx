@@ -1,4 +1,5 @@
 import { getSchool, getSeasons } from '@/repositories/runwayRepository'
+import { getActivitiesForCheckin } from '@/repositories/checkinRepository'
 import { createServiceClient } from '@/lib/supabase-server'
 import { getPortalLang } from '@/lib/language'
 import { getT } from '@/lib/i18n'
@@ -12,9 +13,10 @@ const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
 export default async function SettingsPage() {
   const supabase = createServiceClient()
 
-  const [school, seasons, lang, { count: instructorCount }, { count: partnerCount }, { count: sessionCount }] = await Promise.all([
+  const [school, seasons, activities, lang, { count: instructorCount }, { count: partnerCount }, { count: sessionCount }] = await Promise.all([
     getSchool(SCHOOL_ID),
     getSeasons(SCHOOL_ID),
+    getActivitiesForCheckin(SCHOOL_ID),
     getPortalLang(),
     supabase.from('users').select('*', { count: 'exact', head: true }).eq('school_id', SCHOOL_ID).eq('role', 'instructor'),
     supabase.from('partners').select('*', { count: 'exact', head: true }).eq('school_id', SCHOOL_ID).eq('active', true),
@@ -95,7 +97,7 @@ export default async function SettingsPage() {
         <DailyNoticeEditor notice={(school as any)?.daily_notice ?? null} />
       </div>
 
-      <SettingsClient school={school} seasons={seasons} currentLang={lang} />
+      <SettingsClient school={school} seasons={seasons} activities={activities} currentLang={lang} />
     </div>
   )
 }

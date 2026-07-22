@@ -7,6 +7,7 @@ import FinancialSettingsModal from './FinancialSettingsModal'
 import SeasonsModal from './SeasonsModal'
 import WaiverModal from './WaiverModal'
 import NotificationsModal from './NotificationsModal'
+import CertificatesModal from '@/components/CertificatesModal'
 import { Toast, useToast } from '@/components/Toast'
 
 type School = {
@@ -38,6 +39,7 @@ type School = {
   spot_name: string | null
   latitude: number | null
   longitude: number | null
+  logo_url: string | null
 }
 
 type Season = {
@@ -48,7 +50,12 @@ type Season = {
   burn_rate: number
 }
 
-type ModalKey = 'general' | 'financial' | 'seasons' | 'waiver' | 'notifications'
+type Activity = {
+  id: string
+  name: string
+}
+
+type ModalKey = 'general' | 'financial' | 'seasons' | 'waiver' | 'notifications' | 'certificates'
 
 function fmt(n: number) {
   return new Intl.NumberFormat('pt-BR', {
@@ -70,10 +77,12 @@ const cardStyle: React.CSSProperties = {
 export default function SettingsClient({
   school: initialSchool,
   seasons: initialSeasons,
+  activities,
   currentLang,
 }: {
   school: School
   seasons: Season[]
+  activities: Activity[]
   currentLang: string
 }) {
   const router = useRouter()
@@ -137,6 +146,12 @@ export default function SettingsClient({
       title: 'Notificações',
       summary: `${notificationsOnCount}/6 ativos`,
       sub: 'Mensagens automáticas e gatilhos',
+    },
+    {
+      key: 'certificates',
+      title: 'Certificados',
+      summary: school.logo_url ? 'Personalizado' : 'Padrão',
+      sub: 'Fundo, assinatura e logo',
     },
   ]
 
@@ -228,6 +243,15 @@ export default function SettingsClient({
             closeAndRefresh()
             showToast('ok', 'Notificações atualizadas com sucesso')
           }}
+        />
+      )}
+
+      {activeModal === 'certificates' && (
+        <CertificatesModal
+          activities={activities}
+          logoUrl={school.logo_url}
+          onClose={() => setActiveModal(null)}
+          onLogoSaved={logoUrl => { setSchool(s => ({ ...s, logo_url: logoUrl })); router.refresh() }}
         />
       )}
 
