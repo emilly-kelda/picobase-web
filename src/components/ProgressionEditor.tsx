@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
 const LEVELS = [
@@ -53,6 +53,19 @@ type Props = {
   sport?: string
   onDone?: () => void
   compact?: boolean
+  /** Suppresses the internal save button + POST — for embedding inside a
+   *  parent that owns the actual save (e.g. ConfirmLessonModal, which
+   *  fires its own /api/owner/progression call after confirm-lesson
+   *  succeeds, using the level/skills reported via onChange). The
+   *  standalone student-profile usage doesn't pass this — unaffected. */
+  hideSaveButton?: boolean
+  /** Suppresses the internal notes textarea — for embedding inside a
+   *  parent that already has its own single notes field (ConfirmLessonModal)
+   *  and doesn't want two. */
+  hideNotes?: boolean
+  /** Fires whenever level/skills change — how a hideSaveButton parent reads
+   *  the current selection without this component knowing how to save. */
+  onChange?: (level: string, skills: string[]) => void
 }
 
 export default function ProgressionEditor({
@@ -64,6 +77,9 @@ export default function ProgressionEditor({
   sport = 'kitesurf',
   onDone,
   compact = false,
+  hideSaveButton = false,
+  hideNotes = false,
+  onChange,
 }: Props) {
   const router   = useRouter()
   const sportKey = sport.toLowerCase().replace(/\s.*/, '')
@@ -74,6 +90,11 @@ export default function ProgressionEditor({
   const [notes,         setNotes]         = useState('')
   const [saving,        setSaving]        = useState(false)
   const [saved,         setSaved]         = useState(false)
+
+  useEffect(() => {
+    onChange?.(level, checkedSkills)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [level, checkedSkills])
 
   function toggleSkill(key: string) {
     setCheckedSkills(prev =>
@@ -214,55 +235,59 @@ export default function ProgressionEditor({
         </div>
 
         {/* Notes */}
-        <div style={{ marginBottom: '16px' }}>
-          <div style={{
-            fontSize: '11px', fontWeight: '500',
-            letterSpacing: '0.08em', textTransform: 'uppercase',
-            color: 'var(--mist)', marginBottom: '8px',
-          }}>
-            Observações do instrutor
+        {!hideNotes && (
+          <div style={{ marginBottom: '16px' }}>
+            <div style={{
+              fontSize: '11px', fontWeight: '500',
+              letterSpacing: '0.08em', textTransform: 'uppercase',
+              color: 'var(--mist)', marginBottom: '8px',
+            }}>
+              Observações do instrutor
+            </div>
+            <textarea
+              value={notes}
+              onChange={e => setNotes(e.target.value)}
+              placeholder="Como foi a aula? O que o aluno aprendeu?"
+              style={{
+                width: '100%', padding: '10px 12px',
+                border: '0.5px solid var(--border-strong)',
+                borderRadius: 'var(--radius-md)',
+                fontSize: '13px', color: 'var(--slate)',
+                fontFamily: 'var(--font-sans)', outline: 'none',
+                minHeight: compact ? '60px' : '80px',
+                resize: 'vertical' as const,
+                boxSizing: 'border-box' as const,
+                lineHeight: '1.5',
+              }}
+            />
           </div>
-          <textarea
-            value={notes}
-            onChange={e => setNotes(e.target.value)}
-            placeholder="Como foi a aula? O que o aluno aprendeu?"
-            style={{
-              width: '100%', padding: '10px 12px',
-              border: '0.5px solid var(--border-strong)',
-              borderRadius: 'var(--radius-md)',
-              fontSize: '13px', color: 'var(--slate)',
-              fontFamily: 'var(--font-sans)', outline: 'none',
-              minHeight: compact ? '60px' : '80px',
-              resize: 'vertical' as const,
-              boxSizing: 'border-box' as const,
-              lineHeight: '1.5',
-            }}
-          />
-        </div>
+        )}
 
         {/* Save */}
-        <button
-          onClick={save}
-          disabled={saving || saved}
-          style={{
-            width: '100%', padding: '10px',
-            background: saved
-              ? 'var(--glacial-light)'
-              : saving ? 'var(--border)' : 'var(--slate)',
-            color: saved
-              ? 'var(--glacial-dark)'
-              : saving ? 'var(--mist)' : '#fff',
-            border: 'none', borderRadius: 'var(--radius-md)',
-            fontSize: '13px', fontWeight: '500',
-            cursor: saving || saved ? 'not-allowed' : 'pointer',
-            fontFamily: 'var(--font-sans)',
-            transition: 'all 0.2s',
-          }}
-        >
-          {saved ? '✓ Progressão salva'
-            : saving ? 'Salvando...'
-            : 'Salvar progressão'}
-        </button>
+        {!hideSaveButton && (
+          <button
+            onClick={save}
+            disabled={saving || saved}
+            style={{
+              width: '100%', padding: '10px',
+              background: saved
+                ? 'var(--glacial-light)'
+                : saving ? 'var(--border)' : 'var(--slate)',
+              color: saved
+                ? 'var(--glacial-dark)'
+                : saving ? 'var(--mist)' : '#fff',
+              border: 'none', borderRadius: 'var(--radius-md)',
+              fontSize: '13px', fontWeight: '500',
+              cursor: saving || saved ? 'not-allowed' : 'pointer',
+              fontFamily: 'var(--font-sans)',
+              transition: 'all 0.2s',
+            }}
+          >
+            {saved ? '✓ Progressão salva'
+              : saving ? 'Salvando...'
+              : 'Salvar progressão'}
+          </button>
+        )}
       </div>
     </div>
   )

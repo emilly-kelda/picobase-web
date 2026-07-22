@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from 'react'
 import { isLevel, LEVEL_LABELS, type Level } from '@/lib/levels'
-import { translateModalityName } from '@/lib/modality'
+import { translateModalityName, normalizeSportKey } from '@/lib/modality'
 import LevelPicker from '@/components/LevelPicker'
 import type { VariableCostInfo } from '@/lib/commission'
 import PackageReceiptModal from '@/components/PackageReceiptModal'
+import ProgressionEditor from '@/components/ProgressionEditor'
 
 type ActivityRef = {
   id: string
@@ -92,6 +93,10 @@ export type LessonToConfirm = {
   // this modal show a healthy balance right before the server rejected
   // the confirm for insufficient capacity.
   package_sale_id?: string | null
+  // Name-resolved by getScheduledLessons (not the raw, near-always-null
+  // scheduled_lessons column) — gates the progression section below; null
+  // for a check-in-only student with no real students row.
+  student_id?: string | null
 }
 
 /** "Confirmar / Iniciar Aula" for a scheduled lesson. Two very different
@@ -173,6 +178,8 @@ export default function ConfirmLessonModal({
   const [balanceLoading, setBalanceLoading] = useState(true)
   const [chargeNow, setChargeNow]       = useState(false)
   const [receiptFor, setReceiptFor]     = useState<string | null>(null)
+  const [progressionLevel, setProgressionLevel]   = useState('beginner')
+  const [progressionSkills, setProgressionSkills] = useState<string[]>([])
 
   function loadFxRates() {
     setFxError(false)
@@ -232,6 +239,8 @@ export default function ConfirmLessonModal({
       .catch(() => {})
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activityId])
+
+  const sportKey = normalizeSportKey(activities.find(a => a.id === activityId)?.name)
 
   const usesFixedPayout    = payoutModel === 'fixed'
   const selectedInstructor = instructors.find(i => i.id === instructorId)
@@ -299,6 +308,25 @@ export default function ConfirmLessonModal({
     setConfirming(false)
 
     if (data.ok) {
+      // Best-effort: the lesson is already confirmed (what matters
+      // financially) regardless of whether this secondary save succeeds —
+      // an operator can always record progression later from the student's
+      // profile page, same editor, same data.
+      if (lesson.student_id && sportKey) {
+        fetch('/api/owner/progression', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            student_id: lesson.student_id,
+            level:      progressionLevel,
+            notes,
+            skills:     progressionSkills,
+            session_id: data.session_id ?? null,
+            sport:      sportKey,
+          }),
+        }).catch(() => {})
+      }
+
       if (openReceipt && packageBalance?.packageSaleId) {
         setReceiptFor(packageBalance.packageSaleId)
       } else {
@@ -366,6 +394,30 @@ export default function ConfirmLessonModal({
         {activityId && (
           <div style={{ marginBottom: '20px' }}>
             <LevelPicker value={level} experimentalDisabled={experimentalDisabled} onChange={setLevel} lang={lang} />
+          </div>
+        )}
+
+        {/* Student progression (student_progression / Level 1-2-3 + skills,
+            the same vocabulary the certificate system reads) — separate
+            from the LevelPicker above (sessions.level, 4-value, financial/
+            operational). Only when a real student id resolved (skipped for
+            check-in-only students, same as CertificateSection.tsx) and a
+            recognized sport/modality. hideSaveButton+hideNotes: this modal's
+            own "Confirmar e Salvar" button and notes field below do the
+            saving — see confirm(). */}
+        {activityId && lesson.student_id && sportKey && (
+          <div style={{ marginBottom: '20px' }}>
+            <ProgressionEditor
+              compact
+              hideSaveButton
+              hideNotes
+              studentId={lesson.student_id}
+              studentName={lesson.student_name ?? ''}
+              currentLevel="beginner"
+              currentSkills={[]}
+              sport={sportKey}
+              onChange={(lvl, skills) => { setProgressionLevel(lvl); setProgressionSkills(skills) }}
+            />
           </div>
         )}
 

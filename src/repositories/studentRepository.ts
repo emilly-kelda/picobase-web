@@ -1,7 +1,6 @@
 ﻿import { createServiceClient } from '@/lib/supabase-server'
 import { decrypt } from '@/utils/crypto'
 import { normalizeSportKey } from '@/lib/modality'
-import { normalizeStudentName } from '@/lib/text'
 
 export async function getStudents(schoolId: string, search?: string) {
   const supabase = createServiceClient()

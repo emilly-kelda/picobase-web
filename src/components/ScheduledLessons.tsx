@@ -35,6 +35,9 @@ type Lesson = {
   // self-service link and to show whether the student already RSVP'd.
   public_token?: string | null
   student_confirmed_at?: string | null
+  // Name-resolved (not the raw, near-always-null scheduled_lessons column)
+  // — gates the progression section inside ConfirmLessonModal.
+  student_id?: string | null
   activities: { id: string; name: string; default_price: number; default_duration_min: number } | null
   instructor: { id: string; name: string; whatsapp?: string | null } | null
 }
