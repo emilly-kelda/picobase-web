@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation'
+import { headers } from 'next/headers'
 import {
   getSessionsByStudentName,
   getPackageSalesByStudentName,
@@ -55,12 +56,13 @@ export default async function StudentNameProfilePage({
   const { encodedName } = await params
   const studentName = decodeURIComponent(encodedName)
 
-  const [sessions, packageSales, studentRow, latestCheckin, lang] = await Promise.all([
+  const [sessions, packageSales, studentRow, latestCheckin, lang, requestHeaders] = await Promise.all([
     getSessionsByStudentName(SCHOOL_ID, studentName),
     getPackageSalesByStudentName(SCHOOL_ID, studentName),
     findStudentByName(SCHOOL_ID, studentName),
     getLatestCheckinByName(SCHOOL_ID, studentName),
     getPortalLang(),
+    headers(),
   ])
 
   if (!latestCheckin && sessions.length === 0 && packageSales.length === 0 && !studentRow) {
@@ -72,6 +74,7 @@ export default async function StudentNameProfilePage({
   const progressionBySport = studentRow
     ? await getLatestProgressionBySport(SCHOOL_ID, studentRow.id)
     : new Map()
+  const siteOrigin = `https://${requestHeaders.get('host')}`
 
   // Merge data: students table > checkin fields
   const displayName    = studentRow?.name             ?? latestCheckin?.student_name ?? studentName
@@ -277,6 +280,9 @@ export default async function StudentNameProfilePage({
 
       <CertificateSection
         studentId={studentRow?.id ?? null}
+        studentName={displayName}
+        whatsapp={whatsapp}
+        siteOrigin={siteOrigin}
         sportGroups={sportGroups}
         progressionBySport={progressionBySport}
       />

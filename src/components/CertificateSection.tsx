@@ -1,4 +1,8 @@
+'use client'
+
+import { useState } from 'react'
 import { translateModalityName } from '@/lib/modality'
+import CertificatePreviewModal from '@/components/CertificatePreviewModal'
 
 type SportGroup = { minutes: number; lastInstructorName: string | null; lastDate: string }
 type Progression = { level: string; updatedAt: string }
@@ -6,8 +10,8 @@ type Progression = { level: string; updatedAt: string }
 const pillBase = {
   display: 'inline-flex' as const, alignItems: 'center' as const, gap: '6px',
   padding: '6px 14px', borderRadius: '99px',
-  fontSize: '12px', fontWeight: '500' as const, textDecoration: 'none' as const,
-  whiteSpace: 'nowrap' as const,
+  fontSize: '12px', fontWeight: '500' as const,
+  whiteSpace: 'nowrap' as const, fontFamily: 'var(--font-sans)', border: 'none',
 }
 const pillEnabled = { ...pillBase, background: 'var(--slate)', color: '#fff', cursor: 'pointer' }
 const pillDisabled = { ...pillBase, background: 'var(--border)', color: 'var(--mist)', cursor: 'not-allowed' }
@@ -16,9 +20,14 @@ const pillDisabled = { ...pillBase, background: 'var(--border)', color: 'var(--m
  *  modality the student has completed sessions in, each with two documents
  *  (hours logbook, proficiency certificate) gated independently. Shared
  *  between /owner/students/[id] and /owner/students/name/[encodedName]
- *  since both need the exact same per-sport breakdown. */
+ *  since both need the exact same per-sport breakdown. Enabled pills open
+ *  CertificatePreviewModal (preview + download + WhatsApp) instead of
+ *  linking straight to the PDF. */
 export default function CertificateSection({
   studentId,
+  studentName,
+  whatsapp,
+  siteOrigin,
   sportGroups,
   progressionBySport,
 }: {
@@ -26,9 +35,14 @@ export default function CertificateSection({
    *  the certificate API is keyed by a real student id, so nothing here
    *  can be generated until the student has a proper record. */
   studentId: string | null
+  studentName: string
+  whatsapp: string | null
+  siteOrigin: string
   sportGroups: Map<string, SportGroup>
   progressionBySport: Map<string, Progression>
 }) {
+  const [preview, setPreview] = useState<{ sportKey: string; docType: 'hours' | 'proficiency' } | null>(null)
+
   return (
     <div style={{
       background: '#fff',
@@ -74,26 +88,18 @@ export default function CertificateSection({
               </span>
               <div style={{ display: 'flex', gap: '8px' }}>
                 {hoursOk ? (
-                  <a
-                    href={`/api/owner/certificate/${studentId}/${sportKey}?type=hours`}
-                    target="_blank" rel="noopener noreferrer"
-                    style={pillEnabled}
-                  >
+                  <button onClick={() => setPreview({ sportKey, docType: 'hours' })} style={pillEnabled}>
                     📄 Atestado de Horas
-                  </a>
+                  </button>
                 ) : (
                   <span title="Disponível a partir de 1h concluída" style={pillDisabled}>
                     📄 Atestado de Horas
                   </span>
                 )}
                 {proficiencyOk ? (
-                  <a
-                    href={`/api/owner/certificate/${studentId}/${sportKey}?type=proficiency`}
-                    target="_blank" rel="noopener noreferrer"
-                    style={pillEnabled}
-                  >
+                  <button onClick={() => setPreview({ sportKey, docType: 'proficiency' })} style={pillEnabled}>
                     🏆 Certificado de Proficiência
-                  </a>
+                  </button>
                 ) : (
                   <span title={proficiencyTitle} style={pillDisabled}>
                     🏆 Certificado de Proficiência
@@ -103,6 +109,20 @@ export default function CertificateSection({
             </div>
           )
         })
+      )}
+
+      {preview && studentId && (
+        <CertificatePreviewModal
+          key={`${preview.sportKey}-${preview.docType}`}
+          studentId={studentId}
+          studentName={studentName}
+          whatsapp={whatsapp}
+          sportKey={preview.sportKey}
+          sportLabel={translateModalityName(preview.sportKey, 'pt')}
+          docType={preview.docType}
+          siteOrigin={siteOrigin}
+          onClose={() => setPreview(null)}
+        />
       )}
     </div>
   )

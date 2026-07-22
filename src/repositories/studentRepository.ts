@@ -183,74 +183,6 @@ export async function getCompletedHoursByStudent(schoolId: string): Promise<Map<
   return totals
 }
 
-/** Same source as getCompletedHoursByStudent above (sessions -> checkins by
- *  checkin_id), but bucketed by modality instead of flattened across all
- *  sports — feeds the "send certificate via WhatsApp" column on
- *  /owner/sessions, where hundreds of rows can't each afford their own
- *  eligibility query. One school-wide read, resolved in memory per row
- *  after. Same known gap as getCompletedHoursByStudent: group-confirmed
- *  lessons have no checkins row, so their minutes aren't attributed here. */
-export async function getCompletedMinutesByStudentAndSport(
-  schoolId: string
-): Promise<Map<string, Map<string, number>>> {
-  const supabase = createServiceClient()
-  const { data: sessions, error } = await supabase
-    .from('sessions')
-    .select('checkin_id, duration_min, activities ( name )')
-    .eq('school_id', schoolId)
-    .not('checkin_id', 'is', null)
-  if (error) throw error
-
-  const checkinIds = [...new Set((sessions ?? []).map(s => s.checkin_id).filter(Boolean))]
-  if (checkinIds.length === 0) return new Map()
-
-  const { data: checkins, error: checkinsError } = await supabase
-    .from('checkins')
-    .select('id, student_name')
-    .in('id', checkinIds as string[])
-  if (checkinsError) throw checkinsError
-
-  const nameByCheckinId = new Map((checkins ?? []).map(c => [c.id, c.student_name]))
-
-  const totals = new Map<string, Map<string, number>>()
-  for (const s of sessions ?? []) {
-    if (!s.checkin_id) continue
-    const rawName = nameByCheckinId.get(s.checkin_id)
-    if (!rawName) continue
-    const activity = Array.isArray(s.activities) ? s.activities[0] : s.activities
-    const sportKey = normalizeSportKey((activity as { name: string } | null)?.name)
-    if (!sportKey) continue
-
-    const name = normalizeStudentName(rawName)
-    if (!totals.has(name)) totals.set(name, new Map())
-    const bySport = totals.get(name)!
-    bySport.set(sportKey, (bySport.get(sportKey) ?? 0) + (s.duration_min ?? 0))
-  }
-  return totals
-}
-
-/** id + whatsapp per student, keyed by normalized name — the join
- *  /owner/sessions' realized-sessions table needs (it only has
- *  checkins.student_name, no student_id/whatsapp) to build certificate
- *  WhatsApp links. null id/whatsapp for a name with no match (check-in-only
- *  "student", or no whatsapp on file) is the caller's cue to disable the
- *  send action. */
-export async function getStudentIdentityByName(
-  schoolId: string
-): Promise<Map<string, { id: string; whatsapp: string | null }>> {
-  const supabase = createServiceClient()
-  const { data } = await supabase
-    .from('students')
-    .select('id, name, whatsapp')
-    .eq('school_id', schoolId)
-
-  const byName = new Map<string, { id: string; whatsapp: string | null }>()
-  for (const s of data ?? []) {
-    byName.set(normalizeStudentName(s.name), { id: s.id, whatsapp: s.whatsapp })
-  }
-  return byName
-}
-
 /** Fetch sessions for a student by name (case-insensitive). Used for name-keyed profiles. */
 export async function getSessionsByStudentName(schoolId: string, studentName: string) {
   const supabase = createServiceClient()
@@ -414,39 +346,6 @@ export async function getLatestProgressionBySport(
     bySport.set(key, { level: row.level, updatedAt: row.created_at })
   }
   return bySport
-}
-
-/** School-wide version of getLatestProgressionBySport above, keyed by
- *  normalized student name instead of student_id — /owner/sessions'
- *  realized-sessions table only has student names per row (see
- *  getStudentIdentityByName), so this avoids one progression query per
- *  row. Same "most recent per (student, sport)" resolution, same
- *  sport-must-be-set exclusion for legacy unscoped rows. */
-export async function getLatestProgressionBySportForSchool(
-  schoolId: string
-): Promise<Map<string, Map<string, string>>> {
-  const supabase = createServiceClient()
-  const { data, error } = await supabase
-    .from('student_progression')
-    .select('level, sport, created_at, students ( name )')
-    .eq('school_id', schoolId)
-    .not('sport', 'is', null)
-    .order('created_at', { ascending: false })
-  if (error) throw error
-
-  const byName = new Map<string, Map<string, string>>()
-  for (const row of data ?? []) {
-    const student = Array.isArray(row.students) ? row.students[0] : row.students
-    const studentName = (student as { name: string } | null)?.name
-    const sportKey = normalizeSportKey(row.sport)
-    if (!studentName || !sportKey) continue
-
-    const name = normalizeStudentName(studentName)
-    if (!byName.has(name)) byName.set(name, new Map())
-    const bySportForName = byName.get(name)!
-    if (!bySportForName.has(sportKey)) bySportForName.set(sportKey, row.level)
-  }
-  return byName
 }
 
 export async function updateStudentLevel(

@@ -1,4 +1,5 @@
 ﻿import { notFound } from 'next/navigation'
+import { headers } from 'next/headers'
 import { getStudentById, getSessionsByStudent, getActivePackagesByStudent, getLatestProgressionBySport } from '@/repositories/studentRepository'
 import { getSignedWaiversByStudent } from '@/repositories/checkinRepository'
 import { groupSessionsBySport } from '@/lib/modality'
@@ -67,13 +68,15 @@ export default async function StudentDetailPage({
     notFound()
   }
 
-  const [sessions, packageMap, signedWaivers, progressionBySport] = await Promise.all([
+  const [sessions, packageMap, signedWaivers, progressionBySport, requestHeaders] = await Promise.all([
     getSessionsByStudent(SCHOOL_ID, student.name, student.id),
     getActivePackagesByStudent(SCHOOL_ID),
     getSignedWaiversByStudent(SCHOOL_ID, student.name),
     getLatestProgressionBySport(SCHOOL_ID, student.id),
+    headers(),
   ])
   const sportGroups = groupSessionsBySport(sessions as any)
+  const siteOrigin = `https://${requestHeaders.get('host')}`
 
   const pkg = packageMap.get(student.name)
   const totalRevenue = sessions.reduce((s: number, r: any) => s + (r.price ?? 0), 0)
@@ -241,6 +244,9 @@ export default async function StudentDetailPage({
 
       <CertificateSection
         studentId={student.id}
+        studentName={student.name}
+        whatsapp={student.whatsapp}
+        siteOrigin={siteOrigin}
         sportGroups={sportGroups}
         progressionBySport={progressionBySport}
       />
