@@ -178,7 +178,7 @@ export default function ConfirmLessonModal({
   const [balanceLoading, setBalanceLoading] = useState(true)
   const [chargeNow, setChargeNow]       = useState(false)
   const [receiptFor, setReceiptFor]     = useState<string | null>(null)
-  const [progressionLevel, setProgressionLevel]   = useState('beginner')
+  const [progressionLevel, setProgressionLevel]   = useState('level_1_discovery')
   const [progressionSkills, setProgressionSkills] = useState<string[]>([])
 
   function loadFxRates() {
@@ -413,7 +413,7 @@ export default function ConfirmLessonModal({
               hideNotes
               studentId={lesson.student_id}
               studentName={lesson.student_name ?? ''}
-              currentLevel="beginner"
+              currentLevel="level_1_discovery"
               currentSkills={[]}
               sport={sportKey}
               onChange={(lvl, skills) => { setProgressionLevel(lvl); setProgressionSkills(skills) }}

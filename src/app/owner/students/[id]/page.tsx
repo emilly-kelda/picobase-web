@@ -10,13 +10,22 @@ import StudentProfileHeader from './StudentProfileHeader'
 
 const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
 
+// New IKO-style keys, plus the old beginner/intermediate/advanced ones kept
+// as a display-only fallback for any row not yet touched by the
+// 20260809000003 data migration.
 const SKILL_LABELS: Record<string, string> = {
+  level_1_discovery:    'Nível 1 · Discovery',
+  level_2_intermediate: 'Nível 2 · Intermediate',
+  level_3_independent:  'Nível 3 · Independent',
   beginner:     'Iniciante',
   intermediate: 'Intermediário',
   advanced:     'Avançado',
 }
 
 const SKILL_COLORS: Record<string, { bg: string; color: string }> = {
+  level_1_discovery:    { bg: 'var(--glacial-light)', color: 'var(--glacial-dark)' },
+  level_2_intermediate: { bg: 'var(--amber-light)',   color: 'var(--amber)'        },
+  level_3_independent:  { bg: 'var(--signal-light)',  color: 'var(--signal-dark)'  },
   beginner:     { bg: 'var(--glacial-light)', color: 'var(--glacial-dark)' },
   intermediate: { bg: 'var(--amber-light)',   color: 'var(--amber)'        },
   advanced:     { bg: 'var(--signal-light)',   color: 'var(--signal-dark)'  },
@@ -302,7 +311,7 @@ export default async function StudentDetailPage({
         <ProgressionEditor
           studentId={student.id}
           studentName={student.name}
-          currentLevel={student.skill_level ?? 'beginner'}
+          currentLevel={student.skill_level ?? 'level_1_discovery'}
           currentSkills={[]}
           sport="kitesurf"
         />

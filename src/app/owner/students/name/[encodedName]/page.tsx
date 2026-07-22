@@ -14,13 +14,22 @@ import CertificateSection from '@/components/CertificateSection'
 
 const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
 
+// New IKO-style keys, plus the old beginner/intermediate/advanced ones kept
+// as a display-only fallback for any row not yet touched by the
+// 20260809000003 data migration.
 const SKILL_LABELS: Record<string, string> = {
+  level_1_discovery:    'Level 1 · Discovery',
+  level_2_intermediate: 'Level 2 · Intermediate',
+  level_3_independent:  'Level 3 · Independent',
   beginner:     'Beginner',
   intermediate: 'Intermediate',
   advanced:     'Advanced',
 }
 
 const SKILL_COLORS: Record<string, { bg: string; color: string }> = {
+  level_1_discovery:    { bg: 'var(--glacial-light)', color: 'var(--glacial-dark)' },
+  level_2_intermediate: { bg: 'var(--amber-light)',   color: 'var(--amber)'        },
+  level_3_independent:  { bg: 'var(--signal-light)',  color: 'var(--signal-dark)'  },
   beginner:     { bg: 'var(--glacial-light)', color: 'var(--glacial-dark)' },
   intermediate: { bg: 'var(--amber-light)',   color: 'var(--amber)'        },
   advanced:     { bg: 'var(--signal-light)',   color: 'var(--signal-dark)'  },

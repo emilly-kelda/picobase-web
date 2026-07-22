@@ -71,10 +71,16 @@ export default function CertificateSection({
         [...sportGroups.entries()].map(([sportKey, group]) => {
           const hoursOk = group.minutes >= 60
           const level = progressionBySport.get(sportKey)?.level ?? null
-          const proficiencyOk = level === 'intermediate' || level === 'advanced'
+          // Checks both the new IKO-style keys and the old
+          // beginner/intermediate/advanced ones — a brief window can exist
+          // between this code deploying and the 20260809000003 data
+          // migration actually running against production.
+          const proficiencyOk = level === 'level_2_intermediate' || level === 'level_3_independent'
+            || level === 'intermediate' || level === 'advanced'
+          const isBeginnerLevel = level === 'level_1_discovery' || level === 'beginner'
           const proficiencyTitle = proficiencyOk
             ? undefined
-            : level === 'beginner'
+            : isBeginnerLevel
               ? 'Disponível a partir do Nível 2'
               : 'Aguardando avaliação do instrutor'
 

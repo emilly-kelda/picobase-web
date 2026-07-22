@@ -1,6 +1,12 @@
 import { getProgressionHistory } from '@/repositories/studentRepository'
 
+// New IKO-style keys, plus the old beginner/intermediate/advanced ones kept
+// as a display-only fallback for any row not yet touched by the
+// 20260809000003 data migration.
 const LEVEL_LABELS: Record<string, { label: string; color: string; bg: string }> = {
+  level_1_discovery:    { label: 'Nível 1 · Discovery',    color: 'var(--glacial-dark)', bg: 'var(--glacial-light)' },
+  level_2_intermediate: { label: 'Nível 2 · Intermediate', color: 'var(--amber)',        bg: 'var(--amber-light)'   },
+  level_3_independent:  { label: 'Nível 3 · Independent',  color: 'var(--signal-dark)',  bg: 'var(--signal-light)'  },
   beginner:     { label: 'Iniciante',    color: 'var(--glacial-dark)', bg: 'var(--glacial-light)' },
   intermediate: { label: 'Intermediário',color: 'var(--amber)',        bg: 'var(--amber-light)'   },
   advanced:     { label: 'Avançado',     color: 'var(--signal-dark)',  bg: 'var(--signal-light)'  },

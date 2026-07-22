@@ -3,10 +3,15 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
+// IKO/VDWS-style international keys — student_progression.level and
+// students.skill_level (both free text, no CHECK constraint) store these
+// directly. Kept deliberately separate from sessions.level's own 4-value,
+// CHECK-constrained vocabulary (LevelPicker.tsx/lib/levels.ts) — see the
+// note above ConfirmLessonModal's progression section.
 const LEVELS = [
-  { key: 'beginner',     label: 'Iniciante',    color: 'var(--glacial-dark)', bg: 'var(--glacial-light)' },
-  { key: 'intermediate', label: 'Intermediário', color: 'var(--amber)',        bg: 'var(--amber-light)'   },
-  { key: 'advanced',     label: 'Avançado',      color: 'var(--signal-dark)',  bg: 'var(--signal-light)'  },
+  { key: 'level_1_discovery',    label: 'Nível 1 · Discovery',     color: 'var(--glacial-dark)', bg: 'var(--glacial-light)' },
+  { key: 'level_2_intermediate', label: 'Nível 2 · Intermediate',  color: 'var(--amber)',        bg: 'var(--amber-light)'   },
+  { key: 'level_3_independent',  label: 'Nível 3 · Independent',   color: 'var(--signal-dark)',  bg: 'var(--signal-light)'  },
 ]
 
 const SKILLS_BY_SPORT: Record<string, { key: string; label: string }[]> = {
@@ -85,7 +90,7 @@ export default function ProgressionEditor({
   const sportKey = sport.toLowerCase().replace(/\s.*/, '')
   const skills   = SKILLS_BY_SPORT[sportKey] ?? SKILLS_BY_SPORT.default
 
-  const [level,         setLevel]         = useState(currentLevel ?? 'beginner')
+  const [level,         setLevel]         = useState(currentLevel ?? 'level_1_discovery')
   const [checkedSkills, setCheckedSkills] = useState<string[]>(currentSkills)
   const [notes,         setNotes]         = useState('')
   const [saving,        setSaving]        = useState(false)

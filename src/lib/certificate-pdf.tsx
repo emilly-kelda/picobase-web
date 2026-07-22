@@ -148,13 +148,18 @@ const styles = StyleSheet.create({
 
 // Covers both level vocabularies in the app: sessions.level
 // (experimental/iniciante/intermediario/avancado) and student_progression.level
-// (beginner/intermediate/advanced, IKO-style Nível 1/2/3) — the proficiency
-// certificate reads the latter, this file previously only handled the former.
+// (level_1_discovery/level_2_intermediate/level_3_independent, IKO-style —
+// the proficiency certificate reads the latter). The old
+// beginner/intermediate/advanced keys are kept as a fallback for any row
+// not yet touched by the 20260809000003 data migration.
 const LEVEL_LABELS: Record<string, string> = {
   experimental: 'Experimental',
   iniciante: 'Iniciante',
   intermediario: 'Intermediário',
   avancado: 'Avançado',
+  level_1_discovery: 'Nível 1 · Discovery',
+  level_2_intermediate: 'Nível 2 · Intermediate',
+  level_3_independent: 'Nível 3 · Independent',
   beginner: 'Iniciante',
   intermediate: 'Intermediário',
   advanced: 'Avançado',

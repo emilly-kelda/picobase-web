@@ -43,7 +43,11 @@ export async function GET(
   if (docType === 'proficiency') {
     const progressionBySport = await getLatestProgressionBySport(SCHOOL_ID, studentId)
     level = progressionBySport.get(sportKey)?.level ?? null
-    if (level !== 'intermediate' && level !== 'advanced') {
+    // Both the new IKO-style keys and the old beginner/intermediate/advanced
+    // ones — see CertificateSection.tsx's identical check for why.
+    const isProficient = level === 'level_2_intermediate' || level === 'level_3_independent'
+      || level === 'intermediate' || level === 'advanced'
+    if (!isProficient) {
       return jsonError('Nível de proficiência ainda não atingido nessa modalidade', 404)
     }
   }
