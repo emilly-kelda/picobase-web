@@ -220,7 +220,7 @@ export function CertificatePDF({
           <View style={styles.highlightBox}>
             <Text style={styles.highlightActivity}>{activityName}</Text>
             {docType === 'proficiency' && levelLabel && (
-              <Text style={styles.highlightLevel}>Nível {levelLabel}</Text>
+              <Text style={styles.highlightLevel}>{levelLabel}</Text>
             )}
           </View>
 
