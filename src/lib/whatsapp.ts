@@ -13,3 +13,11 @@ export function whatsappDigitsWithCountryCode(raw: string | null | undefined): s
 export function buildWhatsAppUrl(phone: string | null | undefined, message: string): string {
   return `https://wa.me/${whatsappDigitsWithCountryCode(phone)}?text=${encodeURIComponent(message)}`
 }
+
+/** api.whatsapp.com/send variant (not the wa.me short-link above) — same
+ *  digits-with-country-code normalization either way. Was previously only
+ *  a local copy inside ScheduledLessons.tsx; exported here so new call
+ *  sites (e.g. sessions/page.tsx) reuse it instead of duplicating it again. */
+export function buildApiWhatsAppUrl(phone: string | null | undefined, message: string): string {
+  return `https://api.whatsapp.com/send?phone=${whatsappDigitsWithCountryCode(phone)}&text=${encodeURIComponent(message)}`
+}

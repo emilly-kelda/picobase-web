@@ -1,9 +1,18 @@
-﻿import { getSessions, getSessionTotals } from '@/repositories/sessionRepository'
+﻿import { headers } from 'next/headers'
+import { getSessions, getSessionTotals } from '@/repositories/sessionRepository'
 import { getScheduledLessonsList } from '@/repositories/scheduledLessonRepository'
-import { getInstructors } from '@/repositories/studentRepository'
+import {
+  getInstructors,
+  getCompletedMinutesByStudentAndSport,
+  getStudentIdentityByName,
+  getLatestProgressionBySportForSchool,
+} from '@/repositories/studentRepository'
 import { getPortalLang } from '@/lib/language'
 import { getT } from '@/lib/i18n'
 import { LEVEL_LABELS, isLevel } from '@/lib/levels'
+import { normalizeSportKey, translateModalityName } from '@/lib/modality'
+import { normalizeStudentName } from '@/lib/text'
+import { buildApiWhatsAppUrl } from '@/lib/whatsapp'
 import AutoRefresh from '@/components/AutoRefresh'
 
 const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
@@ -129,14 +138,25 @@ export default async function SessionsPage({
     origin: activeOrigin,
   }
 
-  const [sessions, totals, instructors, lang, scheduledLessons] = await Promise.all([
+  const [
+    sessions, totals, instructors, lang, scheduledLessons,
+    certHoursMap, certIdentityMap, certProgressionMap, requestHeaders,
+  ] = await Promise.all([
     getSessions(SCHOOL_ID, filters),
     getSessionTotals(SCHOOL_ID, filters),
     getInstructors(SCHOOL_ID),
     getPortalLang(),
     getScheduledLessonsList(SCHOOL_ID, filters),
+    // Certificate-via-WhatsApp column below — 3 school-wide lookups
+    // (not per-row) so the realized-sessions table doesn't pay one query
+    // per line to know who's eligible for what.
+    getCompletedMinutesByStudentAndSport(SCHOOL_ID),
+    getStudentIdentityByName(SCHOOL_ID),
+    getLatestProgressionBySportForSchool(SCHOOL_ID),
+    headers(),
   ])
   const t = getT(lang)
+  const siteOrigin = `https://${requestHeaders.get('host')}`
 
   const forecastRevenue = scheduledLessons.reduce(
     (sum, l) => sum + (((l.activities as any)?.default_price as number | null) ?? 0), 0
@@ -186,6 +206,65 @@ export default async function SessionsPage({
     if (instructor) params.set('instructor', instructor)
     if (activeOrigin) params.set('origin', activeOrigin)
     return `?${params.toString()}`
+  }
+
+  // Two compact WhatsApp send links per realized-session row — same gating
+  // rules as CertificateSection.tsx (>=60min for the hours doc, Nível
+  // 2/3 for proficiency), resolved from the 3 school-wide maps above
+  // instead of a per-row query. Disabled (gray, no link) with a title
+  // explaining why whenever the student has no real record, no WhatsApp
+  // on file, an unrecognized activity, or hasn't hit the threshold yet.
+  function certificateCell(studentName: string | null, activityName: string | null) {
+    if (!studentName) return <span style={{ fontSize: '11px', color: 'var(--mist)' }}>—</span>
+
+    const normName = normalizeStudentName(studentName)
+    const identity = certIdentityMap.get(normName)
+    const studentId = identity?.id ?? null
+    const whatsapp = identity?.whatsapp ?? null
+    const sportKey = normalizeSportKey(activityName)
+    const minutes = sportKey ? (certHoursMap.get(normName)?.get(sportKey) ?? 0) : 0
+    const level = sportKey ? (certProgressionMap.get(normName)?.get(sportKey) ?? null) : null
+
+    const canSend = !!studentId && !!whatsapp && !!sportKey
+    const hoursOk = canSend && minutes >= 60
+    const proficiencyOk = canSend && (level === 'intermediate' || level === 'advanced')
+
+    function reason(kind: 'hours' | 'proficiency') {
+      if (!studentId) return 'Aluno sem cadastro completo'
+      if (!whatsapp) return 'Aluno sem WhatsApp cadastrado'
+      if (!sportKey) return 'Modalidade não reconhecida'
+      if (kind === 'hours') return 'Menos de 1h concluída nessa modalidade'
+      return level === 'beginner' ? 'Disponível a partir do Nível 2' : 'Aguardando avaliação do instrutor'
+    }
+
+    function link(kind: 'hours' | 'proficiency', label: string, ok: boolean) {
+      if (!ok) {
+        return (
+          <span title={reason(kind)} style={{ fontSize: '11px', color: 'var(--mist)', cursor: 'not-allowed' }}>
+            {label}
+          </span>
+        )
+      }
+      const docLabel = kind === 'hours' ? 'atestado de horas' : 'certificado de proficiência'
+      const url = `${siteOrigin}/api/owner/certificate/${studentId}/${sportKey}?type=${kind}`
+      const message = `Olá, ${studentName}! Segue seu ${docLabel} de ${translateModalityName(sportKey, 'pt')}: ${url}`
+      return (
+        <a
+          href={buildApiWhatsAppUrl(whatsapp, message)}
+          target="_blank" rel="noopener noreferrer"
+          style={{ fontSize: '11px', color: 'var(--glacial-dark)', textDecoration: 'none' }}
+        >
+          {label}
+        </a>
+      )
+    }
+
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', whiteSpace: 'nowrap' }}>
+        {link('hours', '📱 Atestado', hoursOk)}
+        {link('proficiency', '📱 Proficiência', proficiencyOk)}
+      </div>
+    )
   }
 
   function originHref(target: 'all' | 'direct' | 'partner') {
@@ -491,7 +570,7 @@ export default async function SessionsPage({
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr>
-              {[t.th_date, t.th_student, t.th_activity, t.th_instructor, t.th_duration, t.th_origin, 'Pagamento', t.th_price, t.th_comm_pct, t.th_commission].map(h => (
+              {[t.th_date, t.th_student, t.th_activity, t.th_instructor, t.th_duration, t.th_origin, 'Pagamento', t.th_price, t.th_comm_pct, t.th_commission, 'Certificado'].map(h => (
                 <th key={h} style={{
                   padding: '10px 20px',
                   textAlign: 'left',
@@ -510,7 +589,7 @@ export default async function SessionsPage({
           <tbody>
             {sessions.length === 0 ? (
               <tr>
-                <td colSpan={10} style={{
+                <td colSpan={11} style={{
                   padding: '48px 20px',
                   textAlign: 'center',
                   fontSize: '13px', color: 'var(--mist)',
@@ -622,6 +701,9 @@ export default async function SessionsPage({
                     </td>
                     <td style={{ padding: '13px 20px', fontSize: '13px', color: 'var(--mist)', fontVariantNumeric: 'tabular-nums' }}>
                       {fmt(s.commission_amount)}
+                    </td>
+                    <td style={{ padding: '13px 20px' }}>
+                      {certificateCell((s.checkins as any)?.student_name ?? null, (s.activities as any)?.name ?? null)}
                     </td>
                   </tr>
                 )
