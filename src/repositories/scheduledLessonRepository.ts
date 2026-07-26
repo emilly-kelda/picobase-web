@@ -767,11 +767,16 @@ async function findActivityIdBySport(
  *  schedule confirmations that had a real activity_id but never passed it
  *  through. Only fills a gap — never overrides an activity_id a real
  *  check-in (QR/walk-in form) already set. */
+/** Returns the id of the checkin row it created/touched — UnifiedSaleBookingModal's
+ *  Step 2 (sell-package) uses it to later mark that same row
+ *  deferred_to_schedule if Step 3 goes on to actually book a lesson, same
+ *  mechanism schedule-from-checkin/route.ts already uses to keep a checkin
+ *  that's been folded into a scheduled lesson off Aguardando Vento. */
 export async function ensureActiveCheckinForToday(
   schoolId: string,
   studentName: string,
   opts?: { activityId?: string | null; sport?: string | null }
-) {
+): Promise<string | null> {
   const supabase = createServiceClient()
   const today = new Date().toISOString().slice(0, 10)
 
@@ -790,13 +795,13 @@ export async function ensureActiveCheckinForToday(
     .maybeSingle()
 
   if (todayCheckin) {
-    if (todayCheckin.status === 'session_confirmed' || todayCheckin.status === 'cancelled') return
+    if (todayCheckin.status === 'session_confirmed' || todayCheckin.status === 'cancelled') return null
     const backfillActivityId = !todayCheckin.activity_id ? await resolveActivityId() : null
     if (todayCheckin.status === 'checked_in' && !todayCheckin.deferred_to_schedule) {
       if (backfillActivityId) {
         await supabase.from('checkins').update({ activity_id: backfillActivityId }).eq('id', todayCheckin.id)
       }
-      return
+      return todayCheckin.id
     }
     await supabase
       .from('checkins')
@@ -805,7 +810,7 @@ export async function ensureActiveCheckinForToday(
         ...(backfillActivityId ? { activity_id: backfillActivityId } : {}),
       })
       .eq('id', todayCheckin.id)
-    return
+    return todayCheckin.id
   }
 
   const resolvedActivityId = await resolveActivityId()
@@ -844,7 +849,7 @@ export async function ensureActiveCheckinForToday(
     // happened yet for a checkin created this way. The "Termo Assinado"
     // badge in PendingLessons.tsx reads waiver_signed_at specifically,
     // not lgpd_consent, so this still shows "Termo Pendente" correctly.
-    await supabase.from('checkins').insert({
+    const { data: inserted } = await supabase.from('checkins').insert({
       school_id:    schoolId,
       student_name: studentName,
       status:       'checked_in',
@@ -855,11 +860,11 @@ export async function ensureActiveCheckinForToday(
       waiver_signed_at: null,
       source: 'walk_in',
       activity_id:  resolvedActivityId,
-    })
-    return
+    }).select('id').single()
+    return inserted?.id ?? null
   }
 
-  await supabase.from('checkins').insert({
+  const { data: inserted } = await supabase.from('checkins').insert({
     school_id:    schoolId,
     activity_id:  resolvedActivityId,
     student_name: studentName,
@@ -867,5 +872,6 @@ export async function ensureActiveCheckinForToday(
     status:       'checked_in',
     checkin_at:   new Date().toISOString(),
     deferred_to_schedule: false,
-  })
+  }).select('id').single()
+  return inserted?.id ?? null
 }

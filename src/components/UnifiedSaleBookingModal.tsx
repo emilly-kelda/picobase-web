@@ -194,6 +194,13 @@ export default function UnifiedSaleBookingModal({
   // Nothing before Step 2's "Registrar venda" is destructive/persisted.
   const [packageSaleId, setPackageSaleId] = useState<string | null>(null)
   const [publicToken, setPublicToken]     = useState<string | null>(null)
+  // The Aguardando Vento checkin sell-package creates as a side effect —
+  // deferred once Step 3 actually books a lesson (see confirmSchedule), so
+  // the student lands in Aulas Agendadas instead of staying stuck in
+  // Aguardando Vento next to the lesson that was just scheduled for them.
+  // Left alone (still showing in Aguardando Vento, as before) if scheduling
+  // is skipped — that's the one case where it should still show there.
+  const [checkinId, setCheckinId] = useState<string | null>(null)
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
@@ -260,6 +267,7 @@ export default function UnifiedSaleBookingModal({
       return
     }
     setPackageSaleId(data.package_sale_id ?? null)
+    setCheckinId(data.checkin_id ?? null)
     setStep(3)
   }
 
@@ -289,6 +297,24 @@ export default function UnifiedSaleBookingModal({
       return
     }
     if (data.public_token) setPublicToken(data.public_token)
+
+    // A lesson now exists for this sale — take the checkin sell-package
+    // created off Aguardando Vento so the student shows up in Aulas
+    // Agendadas instead, not both places at once. Best-effort: the sale and
+    // the lesson are already both committed and correct either way; this is
+    // just where the student is displayed in the meantime.
+    if (checkinId) {
+      fetch('/api/owner/checkin-stage', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: checkinId,
+          deferred_to_schedule: true,
+          scheduled_lesson_id: data.id,
+        }),
+      }).catch(() => {})
+    }
+
     setStep(4)
   }
 

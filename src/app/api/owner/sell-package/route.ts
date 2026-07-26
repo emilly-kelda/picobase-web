@@ -74,8 +74,13 @@ export async function POST(request: Request) {
   // for today at all, so they never appear in Aguardando Vento afterward — that's
   // the actual bug. Best-effort: never let this block the sale response, since
   // package_sales is the real source of truth for the transaction.
+  // checkin_id returned so a caller that goes on to actually schedule a
+  // lesson right after this sale (UnifiedSaleBookingModal's Step 3) can mark
+  // this same checkin deferred_to_schedule instead of leaving it visible in
+  // Aguardando Vento alongside the now-scheduled lesson.
+  let checkinId: string | null = null
   try {
-    await ensureActiveCheckinForToday(SCHOOL_ID, student_name.trim(), { sport: pkg.sport })
+    checkinId = await ensureActiveCheckinForToday(SCHOOL_ID, student_name.trim(), { sport: pkg.sport })
   } catch (err) {
     // Still never blocks the sale response (package_sales already
     // committed above is the real source of truth for the transaction) —
@@ -85,5 +90,5 @@ export async function POST(request: Request) {
     console.error('ensureActiveCheckinForToday failed for', student_name, err)
   }
 
-  return NextResponse.json({ ok: true, package_sale_id: sale.id })
+  return NextResponse.json({ ok: true, package_sale_id: sale.id, checkin_id: checkinId })
 }

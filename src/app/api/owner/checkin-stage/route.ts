@@ -43,7 +43,7 @@ const EDITABLE_TEXT_FIELDS = [
 
 export async function PATCH(request: Request) {
   const body = await request.json()
-  const { id, stage, checked_in, equipment_notes, weight_kg } = body
+  const { id, stage, checked_in, equipment_notes, weight_kg, deferred_to_schedule, scheduled_lesson_id } = body
 
   if (!id) {
     return NextResponse.json({ error: 'id e obrigatorio' }, { status: 400 })
@@ -60,13 +60,28 @@ export async function PATCH(request: Request) {
   if (weight_kg !== undefined && weight_kg !== null && typeof weight_kg !== 'number') {
     return NextResponse.json({ error: 'weight_kg deve ser numero' }, { status: 400 })
   }
+  // deferred_to_schedule/scheduled_lesson_id: same pair schedule-from-checkin
+  // already writes when it folds an existing checkin into a new scheduled
+  // lesson — exposed here too for UnifiedSaleBookingModal's Step 3, which
+  // creates its own scheduled_lessons row directly (package_sale_id-bound)
+  // instead of going through that route, but still needs to keep Step 2's
+  // checkin off Aguardando Vento once the lesson actually lands.
+  if (deferred_to_schedule !== undefined && typeof deferred_to_schedule !== 'boolean') {
+    return NextResponse.json({ error: 'deferred_to_schedule deve ser boolean' }, { status: 400 })
+  }
+  if (scheduled_lesson_id !== undefined && typeof scheduled_lesson_id !== 'string') {
+    return NextResponse.json({ error: 'scheduled_lesson_id deve ser string' }, { status: 400 })
+  }
   for (const field of EDITABLE_TEXT_FIELDS) {
     if (body[field] !== undefined && typeof body[field] !== 'string') {
       return NextResponse.json({ error: `${field} deve ser string` }, { status: 400 })
     }
   }
   const hasEditableField = EDITABLE_TEXT_FIELDS.some(f => body[f] !== undefined)
-  if (stage === undefined && checked_in === undefined && equipment_notes === undefined && weight_kg === undefined && !hasEditableField) {
+  if (
+    stage === undefined && checked_in === undefined && equipment_notes === undefined && weight_kg === undefined
+    && deferred_to_schedule === undefined && scheduled_lesson_id === undefined && !hasEditableField
+  ) {
     return NextResponse.json({ error: 'nenhum campo valido informado' }, { status: 400 })
   }
 
@@ -75,6 +90,8 @@ export async function PATCH(request: Request) {
   if (checked_in !== undefined) update.checked_in = checked_in
   if (equipment_notes !== undefined) update.equipment_notes = equipment_notes
   if (weight_kg !== undefined) update.weight_kg = weight_kg
+  if (deferred_to_schedule !== undefined) update.deferred_to_schedule = deferred_to_schedule
+  if (scheduled_lesson_id !== undefined) update.scheduled_lesson_id = scheduled_lesson_id
   for (const field of EDITABLE_TEXT_FIELDS) {
     if (body[field] !== undefined) update[field] = body[field] || null
   }
