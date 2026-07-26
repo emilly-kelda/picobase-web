@@ -264,6 +264,60 @@ export async function getTodayStats(schoolId: string) {
   }
 }
 
+/** Backs the "Hoje" widget's click-through detail modals (Alunos/Aulas/
+ *  Receita/Comissões) — one fetch covering all four, since they're all
+ *  slices of the same day's data rather than independent queries. checkins
+ *  drives Alunos; sessions (today's realized/confirmed lessons — same
+ *  session_date filter getTodayStats' own sessions/revenue/commissions
+ *  figures use, so the modal totals match the card numbers exactly) drives
+ *  Aulas/Receita/Comissões; scheduledToday (still-pending, not yet
+ *  confirmed) is Aulas' secondary "ainda agendadas hoje" section. */
+export async function getTodayDetail(schoolId: string) {
+  const supabase = createServiceClient()
+  const today = new Date().toISOString().slice(0, 10)
+
+  const [{ data: checkins }, { data: sessions }, { data: scheduledToday }] = await Promise.all([
+    supabase
+      .from('checkins')
+      .select('id, student_name, checkin_at, waiver_signed_at, stage, activities ( name )')
+      .eq('school_id', schoolId)
+      .gte('checkin_at', `${today}T00:00:00`)
+      .neq('status', 'cancelled')
+      .order('checkin_at', { ascending: false }),
+
+    supabase
+      .from('sessions')
+      .select(`
+        id, duration_min, price, commission_amount, payment_method,
+        activities ( name ),
+        users!sessions_instructor_id_fkey ( name ),
+        checkins ( student_name )
+      `)
+      .eq('school_id', schoolId)
+      .eq('session_date', today)
+      .order('confirmed_at', { ascending: false }),
+
+    supabase
+      .from('scheduled_lessons')
+      .select(`
+        id, student_name, scheduled_at, duration_min,
+        activities ( name ),
+        instructor:users!scheduled_lessons_instructor_id_fkey ( name )
+      `)
+      .eq('school_id', schoolId)
+      .eq('status', 'scheduled')
+      .gte('scheduled_at', `${today}T00:00:00-03:00`)
+      .lte('scheduled_at', `${today}T23:59:59-03:00`)
+      .order('scheduled_at', { ascending: true }),
+  ])
+
+  return {
+    checkins: checkins ?? [],
+    sessions: sessions ?? [],
+    scheduledToday: scheduledToday ?? [],
+  }
+}
+
 /** Month-to-date revenue/lesson count vs. the same day-range last month, for
  *  the Spot "vs. last month" indicator. Clamps the last-month cutoff
  *  day to that month's actual length (e.g. May 31 → Apr 30, not an

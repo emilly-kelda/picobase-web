@@ -15,7 +15,7 @@ import QuickSaleCard from '@/components/QuickSaleCard'
 import { ReceptionModeProvider } from '@/components/ReceptionModeContext'
 import ReceptionModeToggle from '@/components/ReceptionModeToggle'
 import AutoRefresh from '@/components/AutoRefresh'
-import MaskableValue from '@/components/MaskableValue'
+import SpotTodayStats from '@/components/SpotTodayStats'
 import { getWeather, buildWeatherSpots, resolveWeatherSpot } from '@/lib/weather'
 import { formatCurrency } from '@/lib/currency'
 import { getPortalLang } from '@/lib/language'
@@ -244,133 +244,13 @@ export default async function OwnerPage() {
 
           <WeatherWidget weather={weather} spots={weatherSpots} />
 
-          {/* Today stats */}
-          <div style={{
-            position: 'relative',
-            background: 'var(--surface)',
-            border: '0.5px solid var(--border)',
-            borderRadius: 'var(--radius-xl)',
-            boxShadow: 'var(--shadow-sm)',
-            padding: '16px',
-          }}>
-            {studentsInWaterNow > 0 && (
-              <div
-                title="Alunos com aula em andamento agora, com base no horário e duração agendados"
-                style={{
-                  position: 'absolute', top: '-8px', right: '12px',
-                  display: 'flex', alignItems: 'center', gap: '5px',
-                  padding: '4px 10px', borderRadius: 'var(--radius-md)',
-                  background: 'var(--color-pb-live-bg)',
-                  color: 'var(--color-pb-live)', fontSize: '11px', fontWeight: '600',
-                  boxShadow: 'var(--shadow-sm)', whiteSpace: 'nowrap',
-                }}
-              >
-                {studentsInWaterNow} na água agora
-              </div>
-            )}
-            <div style={{
-              fontSize: '10px', fontWeight: '600',
-              letterSpacing: '0.14em', textTransform: 'uppercase',
-              color: 'var(--mist)', marginBottom: '14px',
-            }}>
-              {t.today_label}
-            </div>
-            {/* pb-powder metric cells inside this white card, per
-                picobase_design_system_dossie.md Fase 4's "metric cards
-                usam pb-powder de fundo dentro de card branco". */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-              <div className="pb-card-interactive" style={{ background: 'var(--color-pb-powder)', borderRadius: 'var(--radius-md)', padding: '10px 12px' }}>
-                <div style={{ fontSize: '11px', color: 'var(--mist)', marginBottom: '4px', fontWeight: '500' }}>
-                  Alunos
-                </div>
-                <div style={{ fontSize: '17px', fontWeight: '600', color: 'var(--slate)', fontVariantNumeric: 'tabular-nums' }}>
-                  {today.students}
-                </div>
-              </div>
-              <div className="pb-card-interactive" style={{ background: 'var(--color-pb-powder)', borderRadius: 'var(--radius-md)', padding: '10px 12px' }}>
-                <div style={{ fontSize: '11px', color: 'var(--mist)', marginBottom: '4px', fontWeight: '500' }}>
-                  Aulas
-                </div>
-                <div style={{ fontSize: '17px', fontWeight: '600', color: 'var(--slate)', fontVariantNumeric: 'tabular-nums' }}>
-                  {today.sessions}
-                  {monthComparison.lessonDelta !== null && monthComparison.thisMonthLessons > 0 && (
-                    <span style={{
-                      fontSize: '11px',
-                      color: monthComparison.lessonDelta >= 0 ? 'var(--color-pb-glacial-dark)' : '#DC2626',
-                      marginLeft: '6px',
-                    }}>
-                      {monthComparison.lessonDelta >= 0 ? '▲' : '▼'}{Math.abs(monthComparison.lessonDelta).toFixed(0)}%
-                    </span>
-                  )}
-                </div>
-                {monthComparison.thisMonthLessons === 0 && (
-                  <div style={{ fontSize: '12px', color: 'var(--mist)', marginTop: '4px' }}>
-                    Início do período
-                  </div>
-                )}
-              </div>
-              <div className="pb-card-interactive" style={{ background: 'var(--color-pb-powder)', borderRadius: 'var(--radius-md)', padding: '10px 12px' }}>
-                <div style={{ fontSize: '11px', color: 'var(--mist)', marginBottom: '4px', fontWeight: '500' }}>
-                  Receita
-                </div>
-                <div style={{ fontSize: '17px', fontWeight: '600', color: 'var(--slate)', fontVariantNumeric: 'tabular-nums' }}>
-                  <MaskableValue>{fmt(today.revenue ?? 0)}</MaskableValue>
-                </div>
-                {monthComparison.thisMonthRevenue === 0 ? (
-                  <div style={{ fontSize: '12px', color: 'var(--mist)', marginTop: '4px' }}>
-                    Início do período
-                  </div>
-                ) : monthComparison.revenueDelta !== null ? (
-                  <div style={{
-                    display: 'flex', alignItems: 'center', gap: '6px',
-                    fontSize: '12px', marginTop: '4px', flexWrap: 'wrap',
-                  }}>
-                    <span style={{
-                      color: monthComparison.revenueDelta >= 0 ? 'var(--color-pb-glacial-dark)' : '#DC2626',
-                      fontWeight: '600',
-                    }}>
-                      {monthComparison.revenueDelta >= 0 ? '▲' : '▼'} {Math.abs(monthComparison.revenueDelta).toFixed(1)}%
-                    </span>
-                    <span style={{ color: 'var(--mist)' }}>
-                      vs. mês passado
-                    </span>
-                  </div>
-                ) : monthComparison.lastMonthRevenue === 0 && (
-                  <div style={{ fontSize: '12px', color: 'var(--mist)', marginTop: '4px' }}>
-                    Primeiro mês de operação
-                  </div>
-                )}
-              </div>
-              <div className="pb-card-interactive" style={{ background: 'var(--color-pb-powder)', borderRadius: 'var(--radius-md)', padding: '10px 12px' }}>
-                <div style={{ fontSize: '11px', color: 'var(--mist)', marginBottom: '4px', fontWeight: '500' }}>
-                  Comissões
-                </div>
-                <div style={{ fontSize: '17px', fontWeight: '600', color: 'var(--slate)', fontVariantNumeric: 'tabular-nums' }}>
-                  <MaskableValue>{fmt(today.commissions ?? 0)}</MaskableValue>
-                </div>
-              </div>
-            </div>
-
-            <div style={{ height: '1px', background: 'var(--border)', margin: '14px 0 10px' }} />
-
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '8px' }}>
-              <span style={{ fontSize: '11px', color: 'var(--mist)', fontWeight: '500' }}>
-                Ocupação da Equipe
-              </span>
-              <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--slate)', fontVariantNumeric: 'tabular-nums' }}>
-                {occupancyPct === null ? '—' : `${occupancyPct}%`}
-              </span>
-            </div>
-            <div style={{ height: '6px', background: 'var(--powder)', borderRadius: '99px', overflow: 'hidden' }}>
-              <div style={{
-                height: '100%',
-                width: `${occupancyPct === null ? 0 : Math.min(100, Math.max(0, occupancyPct))}%`,
-                background: 'var(--glacial-dark)',
-                borderRadius: '99px',
-                transition: 'width 0.4s ease',
-              }} />
-            </div>
-          </div>
+          <SpotTodayStats
+            today={today}
+            monthComparison={monthComparison}
+            occupancyPct={occupancyPct}
+            studentsInWaterNow={studentsInWaterNow}
+            todayLabel={t.today_label}
+          />
 
           {/* Moved here from the left column — a red alert list that grows
               unboundedly (every missed lesson stacks) was the single
@@ -407,81 +287,93 @@ export default async function OwnerPage() {
           </Link>
         </div>
 
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr>
-              {colHeaders.map(h => (
-                <th key={h} style={{
-                  padding: '10px 24px', textAlign: 'left',
-                  fontSize: '10px', fontWeight: '500',
-                  letterSpacing: '0.12em', textTransform: 'uppercase',
-                  color: 'var(--mist)', background: 'var(--powder)',
-                  borderBottom: '0.5px solid var(--border)',
-                  whiteSpace: 'nowrap',
-                }}>
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {sessions.length === 0 ? (
+        {/* Wrapped in the same white/border/radius/shadow card treatment
+            every other block on this page already uses — this table used
+            to sit bare on the page background, the one visibly inconsistent
+            element here. */}
+        <div style={{
+          background: 'var(--surface)',
+          border: '0.5px solid var(--border)',
+          borderRadius: 'var(--radius-xl)',
+          boxShadow: 'var(--shadow-sm)',
+          overflow: 'hidden',
+        }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
               <tr>
-                <td colSpan={6} style={{
-                  padding: '40px 24px', textAlign: 'center',
-                  fontSize: '13px', color: 'var(--mist)',
-                }}>
-                  {t.no_sessions}
-                </td>
+                {colHeaders.map(h => (
+                  <th key={h} style={{
+                    padding: '10px 24px', textAlign: 'left',
+                    fontSize: '10px', fontWeight: '500',
+                    letterSpacing: '0.12em', textTransform: 'uppercase',
+                    color: 'var(--mist)', background: 'var(--powder)',
+                    borderBottom: '0.5px solid var(--border)',
+                    whiteSpace: 'nowrap',
+                  }}>
+                    {h}
+                  </th>
+                ))}
               </tr>
-            ) : sessions.slice(0, 8).map((s, i) => (
-              <tr
-                key={s.id}
-                className="tbl-row"
-                style={{ borderBottom: i < Math.min(sessions.length, 8) - 1 ? '1px solid var(--border)' : 'none' }}
-              >
-                <td style={{ padding: '20px 24px', fontSize: '12px', color: 'var(--mist)', whiteSpace: 'nowrap' }}>
-                  {fmtDate(s.session_date)}
-                </td>
-                <td style={{ padding: '20px 24px', fontSize: '13px', fontWeight: '500', color: 'var(--slate)' }}>
-                  {(s.checkins as any)?.student_name ? (
-                    <a
-                      className="tbl-link"
-                      href={`/owner/students/name/${encodeURIComponent((s.checkins as any).student_name)}`}
-                    >
-                      {(s.checkins as any).student_name}
-                    </a>
-                  ) : '—'}
-                </td>
-                <td style={{ padding: '20px 24px', fontSize: '13px', color: 'var(--slate)' }}>
-                  {(s.activities as any)?.name ?? '—'}
-                </td>
-                <td style={{ padding: '20px 24px', fontSize: '13px', color: 'var(--mist)' }}>
-                  {(s as any).instructor?.name ?? '—'}
-                  {(s as any).instructor?.role === 'owner' && (
-                    <span style={{
-                      padding: '1px 6px',
-                      borderRadius: '4px',
-                      background: '#F5F3FF',
-                      color: '#6D28D9',
-                      fontSize: '10px',
-                      fontWeight: '600',
-                      marginLeft: '4px',
-                    }}>
-                      Dono
-                    </span>
-                  )}
-                </td>
-                <td style={{ padding: '20px 24px', fontSize: '13px', color: 'var(--mist)', whiteSpace: 'nowrap' }}>
-                  {s.duration_min ? `${s.duration_min}min` : '—'}
-                </td>
-                <td style={{ padding: '20px 24px', fontSize: '13px', fontWeight: '500', color: 'var(--slate)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
-                  {fmt(s.price)}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {sessions.length === 0 ? (
+                <tr>
+                  <td colSpan={6} style={{
+                    padding: '40px 24px', textAlign: 'center',
+                    fontSize: '13px', color: 'var(--mist)',
+                  }}>
+                    {t.no_sessions}
+                  </td>
+                </tr>
+              ) : sessions.slice(0, 8).map((s, i) => (
+                <tr
+                  key={s.id}
+                  className="tbl-row"
+                  style={{ borderBottom: i < Math.min(sessions.length, 8) - 1 ? '0.5px solid var(--border)' : 'none' }}
+                >
+                  <td style={{ padding: '20px 24px', fontSize: '12px', color: 'var(--mist)', whiteSpace: 'nowrap' }}>
+                    {fmtDate(s.session_date)}
+                  </td>
+                  <td style={{ padding: '20px 24px', fontSize: '13px', fontWeight: '500', color: 'var(--slate)' }}>
+                    {(s.checkins as any)?.student_name ? (
+                      <a
+                        className="tbl-link"
+                        href={`/owner/students/name/${encodeURIComponent((s.checkins as any).student_name)}`}
+                      >
+                        {(s.checkins as any).student_name}
+                      </a>
+                    ) : '—'}
+                  </td>
+                  <td style={{ padding: '20px 24px', fontSize: '13px', color: 'var(--slate)' }}>
+                    {(s.activities as any)?.name ?? '—'}
+                  </td>
+                  <td style={{ padding: '20px 24px', fontSize: '13px', color: 'var(--mist)' }}>
+                    {(s as any).instructor?.name ?? '—'}
+                    {(s as any).instructor?.role === 'owner' && (
+                      <span style={{
+                        padding: '1px 6px',
+                        borderRadius: '4px',
+                        background: '#F5F3FF',
+                        color: '#6D28D9',
+                        fontSize: '10px',
+                        fontWeight: '600',
+                        marginLeft: '4px',
+                      }}>
+                        Dono
+                      </span>
+                    )}
+                  </td>
+                  <td style={{ padding: '20px 24px', fontSize: '13px', color: 'var(--mist)', whiteSpace: 'nowrap' }}>
+                    {s.duration_min ? `${s.duration_min}min` : '—'}
+                  </td>
+                  <td style={{ padding: '20px 24px', fontSize: '13px', fontWeight: '500', color: 'var(--slate)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+                    {fmt(s.price)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
     </div>
