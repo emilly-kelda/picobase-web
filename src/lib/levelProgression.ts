@@ -5,21 +5,16 @@
 // pulled into a 'use client' component — this file has zero dependencies so
 // both sides can share the exact same rule instead of drifting apart.
 
-// IKO-aligned skill→level requirement map for the auto-advance rule below.
-// kitesurf follows the IKO's published 3-stage curriculum (Discovery:
-// wind/safety/kite control/body drag; Intermediate: water start; Independent:
-// upwind riding, transitions, self-rescue, first jumps) exactly. wingfoil/
-// windsurf/default mirror the same "control fundamentals -> first ride ->
-// autonomous riding" shape against ProgressionEditor.tsx's own SKILLS_BY_SPORT
-// keys, since no equivalent governing body was given for those sports.
+// wingfoil/windsurf/default follow the IKO-style "control fundamentals ->
+// first ride -> autonomous riding" shape against ProgressionEditor.tsx's own
+// SKILLS_BY_SPORT keys, since no equivalent governing body was given for
+// those sports. kitesurf uses this school's own real grading criteria
+// instead (see deriveKitesurfLevel below), which isn't a flat "every skill
+// in this bucket" list — Level 3 has three alternate qualifying paths, not
+// one all-of-four requirement.
 export const LEVEL_ORDER = ['level_1_discovery', 'level_2_intermediate', 'level_3_independent'] as const
 
 export const LEVEL_SKILLS: Record<string, Record<string, string[]>> = {
-  kitesurf: {
-    level_1_discovery:    ['kite_control', 'body_drag'],
-    level_2_intermediate: ['water_start'],
-    level_3_independent:  ['upwind', 'transitions', 'jumps', 'independent'],
-  },
   wingfoil: {
     level_1_discovery:    ['wing_control', 'body_drag'],
     level_2_intermediate: ['water_start', 'foil_takeoff'],
@@ -37,19 +32,46 @@ export const LEVEL_SKILLS: Record<string, Record<string, string[]>> = {
   },
 }
 
+/** This school's real kitesurf grading criteria — an OR/AND decision tree,
+ *  not "every skill in a bucket" like the other sports below. Evaluated
+ *  top-down (Level 3's condition checked first) since its three qualifying
+ *  paths overlap with Level 2's:
+ *  - Level 3 (Independent): 'independent' alone, OR 'jumps' alone, OR
+ *    'upwind' AND 'transitions' together.
+ *  - Level 2 (Intermediate): 'water_start' alone, OR 'upwind' alone.
+ *  - Level 1 (Discovery): none of the above yet. */
+function deriveKitesurfLevel(skills: string[]): string {
+  const has = (key: string) => skills.includes(key)
+  if (has('independent') || has('jumps') || (has('upwind') && has('transitions'))) {
+    return 'level_3_independent'
+  }
+  if (has('water_start') || has('upwind')) {
+    return 'level_2_intermediate'
+  }
+  return 'level_1_discovery'
+}
+
 /** Given the level being saved and the full set of currently-checked skill
- *  keys, returns the level to actually persist: the next level up if every
- *  skill required for `level` is already checked, otherwise `level`
- *  unchanged. No-op past the top of LEVEL_ORDER, and falls back to the
- *  'default' bucket for a sport with no dedicated mapping. Never downgrades
- *  — a manually-picked higher level is always left as-is, since the
- *  required-skills check for that level either passes (stays) or fails
- *  (also stays, just doesn't advance further). */
+ *  keys, returns the level to actually persist. kitesurf derives the target
+ *  level directly from skills (deriveKitesurfLevel) and only ever advances
+ *  — never downgrades — relative to `level`, so a manually-picked higher
+ *  level from an experienced walk-in is never silently reset back down by
+ *  an incomplete skill set. Other sports keep the simpler "every skill
+ *  required for `level` is checked -> advance one step" rule, falling back
+ *  to the 'default' bucket for a sport with no dedicated mapping. */
 export function resolveLevelAfterSkillsUpdate(
   sport: string,
   level: string,
   skills: string[]
 ): string {
+  if (sport === 'kitesurf') {
+    const derived = deriveKitesurfLevel(skills)
+    const currentIdx = LEVEL_ORDER.indexOf(level as typeof LEVEL_ORDER[number])
+    const derivedIdx = LEVEL_ORDER.indexOf(derived as typeof LEVEL_ORDER[number])
+    if (currentIdx === -1) return derived
+    return derivedIdx > currentIdx ? derived : level
+  }
+
   const required = LEVEL_SKILLS[sport]?.[level] ?? LEVEL_SKILLS.default[level]
   if (!required || required.length === 0) return level
   const complete = required.every(key => skills.includes(key))
