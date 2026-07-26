@@ -10,7 +10,6 @@ import ScheduleFromCheckinModal from '@/components/ScheduleFromCheckinModal'
 import { translateModalityName } from '@/lib/modality'
 import Badge from '@/components/ui/Badge'
 import ChameleonButton from '@/components/ui/ChameleonButton'
-import PackageProgressBar from '@/components/PackageProgressBar'
 import type { Stage } from '@/lib/stage'
 import type { WeatherData } from '@/lib/weather'
 import { suggestKiteSizeM } from '@/lib/equipment'
@@ -766,8 +765,11 @@ export default function PendingLessons({
                   </div>
                 </div>
 
-                {/* Badge row */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginBottom: '12px' }}>
+                {/* Badge row — last element in the card now that the
+                    package progress bar below it is gone, so no
+                    marginBottom (the card's own 16px padding handles
+                    bottom spacing, matching every other edge). */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                   {checkin.waiver_signed_at ? (
                     <Badge variant="success">✓ {t.waiver_signed_badge}</Badge>
                   ) : (
@@ -795,17 +797,6 @@ export default function PendingLessons({
                     <Badge variant="danger">{t.no_credits_badge}</Badge>
                   )}
                 </div>
-
-                {/* Graphical complement to the "Xh restantes" badge above —
-                    the text stays as the precise reading, this just adds an
-                    at-a-glance visual for hours consumed vs. total. */}
-                {hasCredit && balance?.minutesPurchased ? (
-                  <div style={{ marginBottom: '4px' }}>
-                    <PackageProgressBar
-                      pctUsed={((balance.minutesPurchased - balance.minutesRemaining) / balance.minutesPurchased) * 100}
-                    />
-                  </div>
-                ) : null}
               </div>
             )
           })}
