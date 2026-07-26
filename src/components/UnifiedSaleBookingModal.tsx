@@ -85,14 +85,38 @@ const inputStyle: React.CSSProperties = {
   outline: 'none', boxSizing: 'border-box',
 }
 
-function toggleButtonStyle(active: boolean): React.CSSProperties {
+// Solid dark fill on select (not the app's usual light-tint toggle — see
+// package picker above) — the light-tint version read as disabled/unpicked
+// at a glance for payment method specifically, since 'var(--mist)' text on
+// a near-white fill has too little contrast against genuinely disabled
+// controls elsewhere in this modal. var(--white)/var(--slate-light)/
+// var(--slate-border) don't exist as tokens in this codebase (checked
+// tokens.css/globals.css) — using the real equivalents: #fff (the literal
+// value every "white" background in this file already uses) and
+// var(--border-strong) for a crisper unselected border.
+function paymentButtonStyle(active: boolean): React.CSSProperties {
   return {
     flex: 1, padding: '10px 8px',
     borderRadius: 'var(--radius-md)',
-    border: `1.5px solid ${active ? 'var(--glacial)' : 'var(--border)'}`,
+    border: `1.5px solid ${active ? 'var(--slate)' : 'var(--border-strong)'}`,
+    background: active ? 'var(--slate)' : '#fff',
+    color: active ? '#fff' : 'var(--slate)',
+    fontSize: '13px', fontWeight: active ? '600' : '500',
+    cursor: 'pointer', fontFamily: 'var(--font-sans)',
+    transition: 'all 0.15s',
+  }
+}
+
+// Compact segmented control for the optional card sub-type — same shape as
+// paymentButtonStyle but sized for a two-way choice nested under Cartão.
+function subChoiceStyle(active: boolean): React.CSSProperties {
+  return {
+    flex: 1, padding: '8px',
+    borderRadius: 'var(--radius-md)',
+    border: `1px solid ${active ? 'var(--glacial)' : 'var(--border-strong)'}`,
     background: active ? 'var(--glacial-light)' : '#fff',
-    color: active ? 'var(--glacial-dark)' : 'var(--mist)',
-    fontSize: '13px', fontWeight: '500',
+    color: active ? 'var(--glacial-dark)' : 'var(--slate)',
+    fontSize: '12px', fontWeight: active ? '600' : '500',
     cursor: 'pointer', fontFamily: 'var(--font-sans)',
     transition: 'all 0.15s',
   }
@@ -141,8 +165,18 @@ export default function UnifiedSaleBookingModal({
   // Step 1 — package
   const [packageId, setPackageId] = useState('')
 
-  // Step 2 — payment
+  // Step 2 — payment. cashReceived/cardType are display-only aids (change
+  // calc, informational card sub-type) — sell-package/route.ts only stores
+  // payment_method as a notes prefix, so neither is sent to the backend.
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null)
+  const [cashReceived, setCashReceived] = useState('')
+  const [cardType, setCardType] = useState<'debito' | 'credito' | null>(null)
+
+  function selectPaymentMethod(pm: PaymentMethod) {
+    setPaymentMethod(pm)
+    if (pm !== 'dinheiro') setCashReceived('')
+    if (pm !== 'cartao') setCardType(null)
+  }
 
   // Step 3 — scheduling
   const [scheduleNow, setScheduleNow]   = useState(true)
@@ -503,13 +537,63 @@ export default function UnifiedSaleBookingModal({
                 <button
                   key={pm.value}
                   type="button"
-                  onClick={() => setPaymentMethod(pm.value)}
-                  style={toggleButtonStyle(paymentMethod === pm.value)}
+                  onClick={() => selectPaymentMethod(pm.value)}
+                  style={paymentButtonStyle(paymentMethod === pm.value)}
                 >
                   {pm.label}
                 </button>
               ))}
             </div>
+
+            {paymentMethod === 'dinheiro' && (
+              <div style={{ marginTop: '16px' }}>
+                <label style={labelStyle}>Valor recebido em dinheiro</label>
+                <input
+                  style={inputStyle}
+                  type="number"
+                  min={0}
+                  step={5}
+                  value={cashReceived}
+                  onChange={e => setCashReceived(e.target.value)}
+                  placeholder={String(packagePrice(selectedPackage))}
+                />
+                {cashReceived !== '' && (() => {
+                  const troco = Number(cashReceived) - packagePrice(selectedPackage)
+                  return (
+                    <div style={{
+                      marginTop: '8px', fontSize: '13px', fontWeight: '600',
+                      color: troco < 0 ? 'var(--signal-dark)' : 'var(--glacial-dark)',
+                    }}>
+                      {troco < 0
+                        ? `Faltam ${formatCurrency(Math.abs(troco))}`
+                        : `Troco: ${formatCurrency(troco)}`}
+                    </div>
+                  )
+                })()}
+              </div>
+            )}
+
+            {paymentMethod === 'cartao' && (
+              <div style={{ marginTop: '16px' }}>
+                <label style={labelStyle}>Débito ou crédito (opcional)</label>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setCardType(t => t === 'debito' ? null : 'debito')}
+                    style={subChoiceStyle(cardType === 'debito')}
+                  >
+                    Débito
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCardType(t => t === 'credito' ? null : 'credito')}
+                    style={subChoiceStyle(cardType === 'credito')}
+                  >
+                    Crédito
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -659,7 +743,7 @@ export default function UnifiedSaleBookingModal({
                 disabled={!paymentMethod || saving}
                 style={navPrimaryStyle(!!paymentMethod && !saving)}
               >
-                {saving ? 'Registrando...' : 'Registrar venda'}
+                {saving ? 'Registrando...' : 'Confirmar Pagamento e Prosseguir ➔'}
               </button>
             </>
           )}
