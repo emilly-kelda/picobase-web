@@ -348,6 +348,100 @@ export async function getBookingSuggestion(
   return firstAvailable
 }
 
+/** Every free (hour, instructor) slot on one specific date — not a single
+ *  best guess like getRescheduleSuggestion/getBookingSuggestion above, but
+ *  the full list, for UnifiedSaleBookingModal's Step 3 slot picker (pick a
+ *  date, see every actually-bookable time instead of guessing one and
+ *  hitting a conflict error). Same RESCHEDULE_CANDIDATE_HOURS/overlap math
+ *  as those two, just scoped to one day and returning every match instead
+ *  of stopping at the first.
+ *
+ *  Slots where the instructor is genuinely busy are omitted outright —
+ *  nothing useful to show. Slots where the instructor is free but
+ *  studentName already has a lesson at that time (with any instructor) are
+ *  still included, flagged via studentConflict, so the picker can show and
+ *  visually disable them rather than silently hiding a time the owner might
+ *  otherwise expect to see. */
+export async function getAvailableSlotsForDate(
+  schoolId: string,
+  dateStr: string,
+  activityName: string | null | undefined,
+  durationMin: number,
+  studentName?: string | null
+): Promise<Array<{
+  time: string
+  instructor_id: string
+  instructor_name: string
+  studentConflict: boolean
+}>> {
+  const supabase = createServiceClient()
+  const modality = detectModality(activityName)
+
+  const { data: allInstructors } = await supabase
+    .from('users')
+    .select('id, name, sports')
+    .eq('school_id', schoolId)
+    .in('role', ['instructor', 'owner'])
+    .eq('active', true)
+    .order('name')
+
+  const compatible = modality
+    ? (allInstructors ?? []).filter(i => (i.sports ?? []).includes(modality))
+    : []
+  const pool = compatible.length > 0 ? compatible : (allInstructors ?? [])
+  if (pool.length === 0) return []
+
+  const dayStart = new Date(`${dateStr}T00:00:00-03:00`)
+  const dayEnd   = new Date(`${dateStr}T23:59:59-03:00`)
+
+  const { data: busy } = await supabase
+    .from('scheduled_lessons')
+    .select('instructor_id, student_name, scheduled_at, duration_min')
+    .eq('school_id', schoolId)
+    .neq('status', 'cancelled')
+    .gte('scheduled_at', dayStart.toISOString())
+    .lte('scheduled_at', dayEnd.toISOString())
+
+  const busyByInstructor = new Map<string, Array<{ start: number; end: number }>>()
+  const studentBusy: Array<{ start: number; end: number }> = []
+  const targetName = studentName ? normalizeStudentName(studentName) : null
+
+  for (const b of busy ?? []) {
+    const start = new Date(b.scheduled_at).getTime()
+    const end   = start + (b.duration_min ?? 60) * 60000
+    if (b.instructor_id) {
+      if (!busyByInstructor.has(b.instructor_id)) busyByInstructor.set(b.instructor_id, [])
+      busyByInstructor.get(b.instructor_id)!.push({ start, end })
+    }
+    if (targetName && normalizeStudentName(b.student_name) === targetName) {
+      studentBusy.push({ start, end })
+    }
+  }
+
+  const slots: Array<{ time: string; instructor_id: string; instructor_name: string; studentConflict: boolean }> = []
+
+  for (const hour of RESCHEDULE_CANDIDATE_HOURS) {
+    const slotStart = new Date(`${dateStr}T${String(hour).padStart(2, '0')}:00:00-03:00`).getTime()
+    const slotEnd   = slotStart + durationMin * 60000
+    const studentConflict = studentBusy.some(b => slotStart < b.end && slotEnd > b.start)
+
+    for (const instructor of pool) {
+      const busySlots = busyByInstructor.get(instructor.id) ?? []
+      const instructorConflict = busySlots.some(b => slotStart < b.end && slotEnd > b.start)
+      if (instructorConflict) continue
+
+      slots.push({
+        time: `${String(hour).padStart(2, '0')}:00`,
+        instructor_id: instructor.id,
+        instructor_name: instructor.name,
+        studentConflict,
+      })
+    }
+  }
+
+  return slots
+}
+
 /** Instructor-clash + student-double-booking check, run before creating or
  *  editing a scheduled_lessons row. Same overlap math as
  *  getRescheduleSuggestion above (interval intersection, not exact-time

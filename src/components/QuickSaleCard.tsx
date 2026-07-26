@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import UnifiedSaleBookingModal, { type PackageOption } from './UnifiedSaleBookingModal'
 
 type Activity = { id: string; name: string; default_price: number; default_duration_min: number }
-type Instructor = { id: string; name: string }
 
 /** Replaces the old "Mural de Avisos" slot at the top of Spot — that
  *  widget had no operational use for a receptionist mid-shift; a one-click
@@ -22,13 +21,11 @@ type Instructor = { id: string; name: string }
 export default function QuickSaleCard({
   packageTypes,
   activities,
-  instructors,
   schoolSlug,
   schoolName,
 }: {
   packageTypes: PackageOption[]
   activities: Activity[]
-  instructors: Instructor[]
   schoolSlug: string
   schoolName: string
 }) {
@@ -72,7 +69,6 @@ export default function QuickSaleCard({
         <UnifiedSaleBookingModal
           packageTypes={packageTypes}
           activities={activities}
-          instructors={instructors}
           schoolSlug={schoolSlug}
           schoolName={schoolName}
           onClose={() => setOpen(false)}

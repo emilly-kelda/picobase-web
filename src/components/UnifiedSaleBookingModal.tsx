@@ -21,11 +21,6 @@ type Activity = {
   default_duration_min: number
 }
 
-type Instructor = {
-  id: string
-  name: string
-}
-
 type FoundStudent = {
   id: string
   name: string
@@ -137,7 +132,6 @@ function subChoiceStyle(active: boolean): React.CSSProperties {
 export default function UnifiedSaleBookingModal({
   packageTypes,
   activities,
-  instructors,
   schoolSlug,
   schoolName,
   onClose,
@@ -145,7 +139,6 @@ export default function UnifiedSaleBookingModal({
 }: {
   packageTypes: PackageOption[]
   activities: Activity[]
-  instructors: Instructor[]
   schoolSlug: string
   schoolName: string
   onClose: () => void
@@ -179,11 +172,20 @@ export default function UnifiedSaleBookingModal({
     if (pm !== 'cartao') setCardType(null)
   }
 
-  // Step 3 — scheduling
-  const [scheduleNow, setScheduleNow]   = useState(true)
-  const [date, setDate]                 = useState(() => new Date(Date.now() + 86400000).toISOString().slice(0, 10))
-  const [time, setTime]                 = useState('09:00')
-  const [instructorId, setInstructorId] = useState('')
+  // Step 3 — scheduling. Replaces free-typed time/instructor inputs (the
+  // owner had to guess-and-check against conflict errors) with a fetched
+  // list of every actually-free (time, instructor) slot for the chosen
+  // date, reusing the same instructor-availability scan getRescheduleSuggestion/
+  // getBookingSuggestion already use — see getAvailableSlotsForDate.
+  const [scheduleNow, setScheduleNow] = useState(true)
+  const [date, setDate]               = useState(() => new Date(Date.now() + 86400000).toISOString().slice(0, 10))
+  const [slots, setSlots]             = useState<Array<{
+    time: string; instructor_id: string; instructor_name: string; studentConflict: boolean
+  }>>([])
+  const [slotsLoading, setSlotsLoading] = useState(false)
+  const [selectedSlot, setSelectedSlot] = useState<{
+    time: string; instructor_id: string; instructor_name: string; studentConflict: boolean
+  } | null>(null)
 
   const [saving, setSaving] = useState(false)
   const [error, setError]   = useState<string | null>(null)
@@ -216,7 +218,28 @@ export default function UnifiedSaleBookingModal({
   const selectedPackage = packageTypes.find(p => p.id === packageId) ?? null
 
   const canStep1 = packageId !== '' && (selectedStudent != null || (manualMode && manualName.trim().length >= 2))
-  const canStep3 = !scheduleNow || (date !== '' && time !== '' && instructorId !== '')
+  const canStep3 = !scheduleNow || (date !== '' && selectedSlot !== null)
+
+  const scheduleActivity = findActivityBySport(activities, selectedPackage?.sport ?? null)
+  const scheduleDuration = scheduleActivity?.default_duration_min ?? 60
+
+  useEffect(() => {
+    if (step !== 3 || !scheduleNow || !date) return
+    setSlotsLoading(true)
+    setSelectedSlot(null)
+    const params = new URLSearchParams({
+      date,
+      durationMin: String(scheduleDuration),
+      studentName,
+    })
+    if (scheduleActivity?.name) params.set('activityName', scheduleActivity.name)
+    fetch(`/api/owner/available-slots?${params.toString()}`)
+      .then(r => r.json())
+      .then(data => setSlots(data.slots ?? []))
+      .catch(() => setSlots([]))
+      .finally(() => setSlotsLoading(false))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, scheduleNow, date, scheduleActivity?.id, scheduleDuration])
 
   async function confirmSale() {
     setSaving(true)
@@ -243,19 +266,18 @@ export default function UnifiedSaleBookingModal({
   async function confirmSchedule() {
     if (!packageSaleId) return
     if (!scheduleNow) { setStep(4); return }
+    if (!selectedSlot) return
     setSaving(true)
     setError(null)
-    const activity    = findActivityBySport(activities, selectedPackage?.sport ?? null)
-    const durationMin = activity?.default_duration_min ?? 60
     const res = await fetch('/api/owner/schedule', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         student_name:    studentName,
-        activity_id:     activity?.id ?? null,
-        instructor_id:   instructorId,
-        scheduled_at:    `${date}T${time}:00-03:00`,
-        duration_min:    durationMin,
+        activity_id:     scheduleActivity?.id ?? null,
+        instructor_id:   selectedSlot.instructor_id,
+        scheduled_at:    `${date}T${selectedSlot.time}:00-03:00`,
+        duration_min:    scheduleDuration,
         // Fixed to the exact sale just created — never a name-only re-guess.
         package_sale_id: packageSaleId,
       }),
@@ -614,29 +636,64 @@ export default function UnifiedSaleBookingModal({
             </div>
 
             {scheduleNow && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                  <div>
-                    <label style={labelStyle}>Data</label>
-                    <input style={inputStyle} type="date" value={date} onChange={e => setDate(e.target.value)} />
-                  </div>
-                  <div>
-                    <label style={labelStyle}>Horário</label>
-                    <input style={inputStyle} type="time" value={time} onChange={e => setTime(e.target.value)} />
-                  </div>
-                </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 <div>
-                  <label style={labelStyle}>Instrutor</label>
-                  <select
-                    style={{ ...inputStyle, cursor: 'pointer' }}
-                    value={instructorId}
-                    onChange={e => setInstructorId(e.target.value)}
-                  >
-                    <option value="">Selecione...</option>
-                    {instructors.map(i => (
-                      <option key={i.id} value={i.id}>{i.name}</option>
-                    ))}
-                  </select>
+                  <label style={labelStyle}>Data</label>
+                  <input style={inputStyle} type="date" value={date} onChange={e => setDate(e.target.value)} />
+                </div>
+
+                <div>
+                  <label style={labelStyle}>Horários disponíveis</label>
+                  {slotsLoading ? (
+                    <div style={{ fontSize: '12px', color: 'var(--mist)', padding: '8px 0' }}>
+                      Buscando horários livres...
+                    </div>
+                  ) : slots.length === 0 ? (
+                    <div style={{
+                      fontSize: '12px', color: 'var(--mist)',
+                      background: 'var(--powder)', borderRadius: 'var(--radius-md)',
+                      padding: '10px 14px',
+                    }}>
+                      Nenhum horário livre encontrado nesta data — tente outra data.
+                    </div>
+                  ) : (
+                    <div style={{
+                      display: 'flex', flexWrap: 'wrap', gap: '8px',
+                      maxHeight: '220px', overflowY: 'auto', padding: '2px',
+                    }}>
+                      {slots.map(slot => {
+                        const active = selectedSlot?.time === slot.time
+                          && selectedSlot?.instructor_id === slot.instructor_id
+                        return (
+                          <button
+                            key={`${slot.time}-${slot.instructor_id}`}
+                            type="button"
+                            disabled={slot.studentConflict}
+                            onClick={() => setSelectedSlot(slot)}
+                            title={slot.studentConflict ? 'Aluno já tem uma aula marcada para este horário' : undefined}
+                            style={{
+                              padding: '8px 12px',
+                              borderRadius: 'var(--radius-md)',
+                              border: `1.5px solid ${
+                                slot.studentConflict ? 'var(--border)' : active ? 'var(--glacial)' : 'var(--border-strong)'
+                              }`,
+                              background: slot.studentConflict ? 'var(--powder)' : active ? 'var(--glacial-light)' : '#fff',
+                              color: slot.studentConflict ? 'var(--mist)' : active ? 'var(--glacial-dark)' : 'var(--slate)',
+                              fontSize: '12px', fontWeight: active ? '600' : '500',
+                              cursor: slot.studentConflict ? 'not-allowed' : 'pointer',
+                              fontFamily: 'var(--font-sans)',
+                              textDecoration: slot.studentConflict ? 'line-through' : 'none',
+                              opacity: slot.studentConflict ? 0.6 : 1,
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {slot.time} · {slot.instructor_name}
+                            {slot.studentConflict && ' (aluno ocupado)'}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
                 </div>
               </div>
             )}

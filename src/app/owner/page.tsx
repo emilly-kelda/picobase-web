@@ -198,7 +198,6 @@ export default async function OwnerPage() {
           <QuickSaleCard
             packageTypes={packageTypes as any}
             activities={activities}
-            instructors={instructorList}
             schoolSlug={(school as any)?.slug ?? runway.slug ?? ''}
             schoolName={runway.school_name ?? 'Pico Base'}
           />
