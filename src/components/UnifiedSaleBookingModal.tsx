@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { formatCurrency } from '@/lib/currency'
 import { buildWhatsAppUrl } from '@/lib/whatsapp'
+import CheckinQRButton from '@/components/CheckinQRButton'
 
 export type PackageOption = {
   id: string
@@ -282,20 +283,6 @@ export default function UnifiedSaleBookingModal({
   const checkinUrl = publicToken
     ? `${origin}/aula/${publicToken}`
     : `${origin}/checkin/${schoolSlug}?student=${encodeURIComponent(studentName)}`
-
-  const qrParams = new URLSearchParams({ format: 'png' })
-  if (publicToken) qrParams.set('token', publicToken)
-  else qrParams.set('student', studentName)
-
-  const [qrImgSrc, setQrImgSrc] = useState<string | null>(null)
-  useEffect(() => {
-    if (step !== 4) return
-    fetch(`/api/owner/qr?${qrParams.toString()}`)
-      .then(r => r.blob())
-      .then(blob => setQrImgSrc(URL.createObjectURL(blob)))
-      .catch(() => setQrImgSrc(null))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step])
 
   const whatsappMessage = publicToken
     ? `Olá ${studentName}! Sua compra na ${schoolName} foi confirmada e sua primeira aula já está agendada. Confirme sua presença ou peça reagendamento aqui: ${checkinUrl}`
@@ -672,23 +659,22 @@ export default function UnifiedSaleBookingModal({
             <div style={{ fontSize: '15px', fontWeight: '600', color: 'var(--slate)', marginBottom: '4px' }}>
               Venda registrada
             </div>
-            <div style={{ fontSize: '12px', color: 'var(--mist)', marginBottom: '20px' }}>
+            <div style={{ fontSize: '12px', color: 'var(--mist)', marginBottom: '16px' }}>
               {publicToken
-                ? 'Peça para o cliente escanear para confirmar a primeira aula'
+                ? 'Confirme a presença do cliente escaneando o QR abaixo'
                 : 'Peça para o cliente escanear para fazer o check-in'}
             </div>
 
-            <div style={{
-              width: '220px', height: '220px', margin: '0 auto 20px',
-              background: 'var(--powder)', borderRadius: 'var(--radius-lg)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              overflow: 'hidden',
-            }}>
-              {qrImgSrc ? (
-                <img src={qrImgSrc} alt="QR Code" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-              ) : (
-                <div style={{ fontSize: '12px', color: 'var(--mist)' }}>Gerando...</div>
-              )}
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
+              <CheckinQRButton
+                slug={schoolSlug}
+                schoolName={schoolName}
+                studentName={studentName}
+                activityName={selectedPackage?.sport ?? null}
+                token={publicToken ?? undefined}
+                defaultOpen
+                compact
+              />
             </div>
 
             <a

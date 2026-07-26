@@ -27,6 +27,8 @@ export default function CheckinQRButton({
   schoolName,
   studentName,
   activityName,
+  token,
+  defaultOpen = false,
   compact = false,
   iconOnly = false,
   chip = false,
@@ -37,6 +39,16 @@ export default function CheckinQRButton({
   schoolName: string
   studentName?: string
   activityName?: string | null
+  // A specific scheduled lesson's public_token (e.g. UnifiedSaleBookingModal's
+  // Step 4, right after booking a first lesson) — points the QR/link at that
+  // lesson's own /aula/[token] self-service page instead of the general
+  // /checkin/[slug] intake form. Same api/owner/qr `token` param this
+  // component's own fetch already forwards to.
+  token?: string
+  // Opens the QR modal immediately instead of waiting for a click — for
+  // embedding this as Step 4's actual content rather than a trigger the
+  // owner has to click again right after finishing the wizard.
+  defaultOpen?: boolean
   compact?: boolean
   // Tiny square glyph-only trigger — no text label at all — for contexts
   // too tight for even the compact pill (ChameleonButton's not-checked-in
@@ -56,13 +68,17 @@ export default function CheckinQRButton({
   onOpen?: () => void
   className?: string
 }) {
-  const [open, setOpen]       = useState(false)
+  const [open, setOpen]       = useState(defaultOpen)
   const [imgSrc, setImgSrc]   = useState<string | null>(null)
   const [origin, setOrigin]   = useState('')
 
   const qrParams = new URLSearchParams({ format: 'png' })
-  if (studentName) qrParams.set('student', studentName)
-  if (activityName) qrParams.set('activity', activityName)
+  if (token) {
+    qrParams.set('token', token)
+  } else {
+    if (studentName) qrParams.set('student', studentName)
+    if (activityName) qrParams.set('activity', activityName)
+  }
 
   useEffect(() => {
     if (!open) return
@@ -70,16 +86,19 @@ export default function CheckinQRButton({
     fetch(`/api/owner/qr?${qrParams.toString()}`)
       .then(r => r.blob())
       .then(blob => setImgSrc(URL.createObjectURL(blob)))
-    // Re-fetch whenever the target student changes, unlike the school-wide
-    // QR (fixed URL, safe to cache once per open).
+    // Re-fetch whenever the target student/token changes, unlike the
+    // school-wide QR (fixed URL, safe to cache once per open).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, studentName, activityName])
+  }, [open, studentName, activityName, token])
 
-  const linkParams = new URLSearchParams()
-  if (studentName) linkParams.set('student', studentName)
-  if (activityName) linkParams.set('activity', activityName)
-  const query = linkParams.toString()
-  const checkinUrl = `${origin || ''}/checkin/${slug}${query ? `?${query}` : ''}`
+  const checkinUrl = (() => {
+    if (token) return `${origin || ''}/aula/${token}`
+    const linkParams = new URLSearchParams()
+    if (studentName) linkParams.set('student', studentName)
+    if (activityName) linkParams.set('activity', activityName)
+    const query = linkParams.toString()
+    return `${origin || ''}/checkin/${slug}${query ? `?${query}` : ''}`
+  })()
 
   return (
     <>
@@ -194,9 +213,11 @@ export default function CheckinQRButton({
               {studentName ?? schoolName}
             </div>
             <div style={{ fontSize: '12px', color: 'var(--mist)', marginBottom: '20px' }}>
-              {studentName
-                ? 'Peça para o cliente escanear — termo já vem com o nome preenchido'
-                : 'Peça para o cliente escanear'}
+              {token
+                ? 'Peça para o cliente escanear para confirmar a aula agendada'
+                : studentName
+                  ? 'Peça para o cliente escanear — termo já vem com o nome preenchido'
+                  : 'Peça para o cliente escanear'}
             </div>
 
             <div style={{
