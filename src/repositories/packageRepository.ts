@@ -416,13 +416,17 @@ export async function deactivatePackageType(id: string, schoolId: string) {
   return { ok: true }
 }
 
-/** Session history for one package_sale. There's no reliable FK from
- *  package_sales to sessions — this bounds
- *  the student's name-matched session list to the window between this
- *  sale's sold_at and their NEXT sale's sold_at (or now, if this is their
- *  latest), so a student who bought a second package doesn't have the
- *  first package's history bleed into the second's. Approximate, not exact
- *  — the best available given the schema. */
+/** Session history for one package_sale. Primary path: sessions.package_sale_id
+ *  is stamped directly at confirm time (api/owner/confirm-lesson, from the
+ *  exact sale the capacity check resolved) — a real FK match, not a guess.
+ *
+ *  Sessions confirmed before that write existed (or via the opportunistic-
+ *  FIFO walk-in path, which resolves its sale after the insert already ran
+ *  — see that route's own comment) have package_sale_id null, so those fall
+ *  back to the old approximation: the student's name-matched sessions
+ *  windowed between this sale's sold_at and their NEXT sale's sold_at (or
+ *  now, if this is their latest), so a second package's history doesn't
+ *  bleed into the first's. */
 export async function getSessionHistoryForPackageSale(schoolId: string, packageSaleId: string) {
   const supabase = createServiceClient()
 
@@ -434,6 +438,21 @@ export async function getSessionHistoryForPackageSale(schoolId: string, packageS
     .single()
 
   if (error || !sale) return null
+
+  const { data: linkedSessions } = await supabase
+    .from('sessions')
+    .select(`
+      id, session_date, duration_min, price, commission_amount, level,
+      users!sessions_instructor_id_fkey ( name ),
+      activities ( name )
+    `)
+    .eq('school_id', schoolId)
+    .eq('package_sale_id', packageSaleId)
+    .order('session_date', { ascending: false })
+
+  if (linkedSessions && linkedSessions.length > 0) {
+    return { studentName: sale.student_name, sessions: linkedSessions }
+  }
 
   const { data: laterSales } = await supabase
     .from('package_sales')

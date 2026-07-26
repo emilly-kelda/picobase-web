@@ -188,6 +188,14 @@ export async function POST(request: Request) {
       currency:         currency ?? 'BRL',
       price_original:   price_original ?? price,
       variable_cost_deduction: costDeduction > 0 ? costDeduction : null,
+      // Same sale the capacity check above already resolved (the linked
+      // sale, or its FIFO fallback) — a direct, permanent link for
+      // PackageReceiptModal's session history to query on, instead of the
+      // date-range guess getSessionHistoryForPackageSale otherwise falls
+      // back to. Null for walk-ins/avulsa with no package involved, and for
+      // the opportunistic-FIFO auto-debit path further below (that one
+      // resolves its sale AFTER this insert already ran).
+      package_sale_id: resolvedPackageSaleId,
     })
     .select('id')
     .single()
