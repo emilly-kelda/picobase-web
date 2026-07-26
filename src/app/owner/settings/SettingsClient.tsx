@@ -40,6 +40,9 @@ type School = {
   latitude: number | null
   longitude: number | null
   logo_url: string | null
+  reserve_target_months: number
+  high_season_start_month: number | null
+  high_season_end_month: number | null
 }
 
 type Season = {
@@ -197,8 +200,11 @@ export default function SettingsClient({
       {activeModal === 'financial' && (
         <FinancialSettingsModal
           burnRate={school.burn_rate}
+          reserveTargetMonths={school.reserve_target_months}
+          highSeasonStartMonth={school.high_season_start_month}
+          highSeasonEndMonth={school.high_season_end_month}
           onClose={() => setActiveModal(null)}
-          onSaved={burnRate => { setSchool(s => ({ ...s, burn_rate: burnRate })); closeAndRefresh() }}
+          onSaved={patch => { setSchool(s => ({ ...s, burn_rate: patch.burn_rate, reserve_target_months: patch.reserve_target_months, high_season_start_month: patch.high_season_start_month, high_season_end_month: patch.high_season_end_month })); closeAndRefresh() }}
         />
       )}
 

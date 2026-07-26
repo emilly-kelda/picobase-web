@@ -15,6 +15,9 @@ type Props = {
   // in which case the package-equivalent line just doesn't render.
   avgPackagePrice?: number
   avgPackageMinutes?: number
+  // Configurações → Financeiro's "Meta de Reserva de Caixa" (schools.
+  // reserve_target_months) — defaults to 6 for schools that haven't set one.
+  targetMonths?: number
 }
 
 function fmt(n: number) {
@@ -24,7 +27,7 @@ function fmt(n: number) {
   }).format(n)
 }
 
-export default function RunwayCalculator({ seasonProfit, burnRate, currency = 'BRL', daysLeft, projectedRunway, gap, avgPackagePrice = 0, avgPackageMinutes = 0 }: Props) {
+export default function RunwayCalculator({ seasonProfit, burnRate, currency = 'BRL', daysLeft, projectedRunway, gap, avgPackagePrice = 0, avgPackageMinutes = 0, targetMonths = 6 }: Props) {
   const [burn, setBurn] = useState(burnRate > 0 ? burnRate : 5000)
   const [profit, setProfit] = useState(seasonProfit > 0 ? seasonProfit : 0)
 
@@ -34,8 +37,6 @@ export default function RunwayCalculator({ seasonProfit, burnRate, currency = 'B
   const barPct = Math.min(100, (runwayMonths / 12) * 100)
 
   const monthsCovered = burn > 0 ? profit / burn : 0
-
-  const targetMonths = 6
 
   const targetProfit = burn * targetMonths
 
@@ -237,7 +238,7 @@ export default function RunwayCalculator({ seasonProfit, burnRate, currency = 'B
               )}
               {gap !== undefined && gap > 0 && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-                  <span style={{ color: 'var(--mist)' }}>Faltam para 6 meses</span>
+                  <span style={{ color: 'var(--mist)' }}>Faltam para {targetMonths} meses</span>
                   <span style={{ fontWeight: '600', color: 'var(--error)', fontVariantNumeric: 'tabular-nums' }}>
                     {fmt(gap)}
                   </span>

@@ -22,7 +22,7 @@ export async function PATCH(request: Request) {
       'notify_package_low', 'notify_late_cancellation', 'notify_post_class_feedback',
       'payout_model', 'fixed_payout_value', 'privacy_policy_url',
       'spot_name', 'latitude', 'longitude', 'cancellation_window_hours',
-      'logo_url',
+      'logo_url', 'reserve_target_months', 'high_season_start_month', 'high_season_end_month',
     ]
     const update: Record<string, unknown> = { updated_at: new Date().toISOString() }
     for (const key of schoolFields) {

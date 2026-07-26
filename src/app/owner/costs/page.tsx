@@ -81,7 +81,11 @@ export default async function CostsPage({
   const runwayMonths = monthlyBurn > 0
     ? adjustedNetProfit / monthlyBurn
     : ((runway as any).winter_runway_months ?? 0)
-  const gapToTarget  = Math.max(0, 6 * monthlyBurn - adjustedNetProfit)
+  // Configured in Configurações → Financeiro (schools.reserve_target_months,
+  // default 6) — projection already resolved it server-side, same value
+  // getRunwayProjection used for its own gap/projectedGap.
+  const targetMonths = projection?.targetMonths ?? 6
+  const gapToTarget  = Math.max(0, targetMonths * monthlyBurn - adjustedNetProfit)
 
   // Informational only — deliberately NOT fed into runwayMonths/gapToTarget
   // above. Those divide rawNetProfit by monthlyBurn to get "months
@@ -200,6 +204,7 @@ export default async function CostsPage({
             netAfterOperationalCosts={netAfterOperationalCosts}
             monthlyBurn={monthlyBurn}
             gapToTarget={gapToTarget}
+            targetMonths={targetMonths}
             projectedRunway={projection?.projectedRunway}
             daysLeft={projection?.daysLeft}
           />
@@ -220,6 +225,7 @@ export default async function CostsPage({
             daysLeft={projection?.daysLeft}
             projectedRunway={projection?.projectedRunway}
             gap={projection?.gap}
+            targetMonths={targetMonths}
             avgPackagePrice={avgPackagePrice}
             avgPackageMinutes={avgPackageMinutes}
           />

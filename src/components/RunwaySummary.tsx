@@ -18,6 +18,9 @@ type Props = {
   gapToTarget: number
   projectedRunway?: number
   daysLeft?: number
+  // Configurações → Financeiro's "Meta de Reserva de Caixa" (schools.
+  // reserve_target_months) — defaults to 6 for schools that haven't set one.
+  targetMonths?: number
 }
 
 function fmt(n: number) {
@@ -36,7 +39,7 @@ function fmt(n: number) {
  *  the breakdown itself. */
 export default function RunwaySummary({
   runwayMonths, seasonRevenue, commissions, netProfit, netAfterOperationalCosts, monthlyBurn,
-  gapToTarget, projectedRunway, daysLeft,
+  gapToTarget, projectedRunway, daysLeft, targetMonths = 6,
 }: Props) {
   const [isOpen, setIsOpen] = useState(true)
 
@@ -167,7 +170,7 @@ export default function RunwaySummary({
             )}
           </div>
 
-          {runwayMonths < 6 && (
+          {runwayMonths < targetMonths && (
             <div style={{ marginTop: '16px' }}>
               <div style={{
                 height: '6px', background: 'rgba(255,255,255,0.1)',
@@ -175,7 +178,7 @@ export default function RunwaySummary({
               }}>
                 <div style={{
                   height: '100%',
-                  width: `${Math.min(100, Math.max(0, (runwayMonths / 6) * 100))}%`,
+                  width: `${Math.min(100, Math.max(0, (runwayMonths / targetMonths) * 100))}%`,
                   background: safetyScore.color,
                   borderRadius: '99px',
                   transition: 'width 0.4s ease',
@@ -189,7 +192,7 @@ export default function RunwaySummary({
                   fontSize: '12px', color: 'rgba(255,255,255,0.6)',
                   lineHeight: '1.5',
                 }}>
-                  Faltam <MaskableValue>{fmt(gapToTarget)}</MaskableValue> para 6 meses de reserva
+                  Faltam <MaskableValue>{fmt(gapToTarget)}</MaskableValue> para {targetMonths} meses de reserva (configurado)
                 </div>
               )}
             </div>

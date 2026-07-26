@@ -5,7 +5,7 @@ export async function getSchool(schoolId: string) {
   const supabase = createServiceClient()
   const { data, error } = await supabase
     .from('schools')
-    .select('id, name, slug, burn_rate, currency, language, sport_types, country, waiver_en, waiver_pt, waiver_fr, waiver_es, daily_notice, waiver_type, waiver_file_global_url, waiver_files_by_lang, notify_student_before_class, notify_payment_and_waiver, notify_instructor_on_checkin, notify_package_low, notify_late_cancellation, notify_post_class_feedback, payout_model, fixed_payout_value, privacy_policy_url, spot_name, latitude, longitude, cancellation_window_hours, logo_url')
+    .select('id, name, slug, burn_rate, currency, language, sport_types, country, waiver_en, waiver_pt, waiver_fr, waiver_es, daily_notice, waiver_type, waiver_file_global_url, waiver_files_by_lang, notify_student_before_class, notify_payment_and_waiver, notify_instructor_on_checkin, notify_package_low, notify_late_cancellation, notify_post_class_feedback, payout_model, fixed_payout_value, privacy_policy_url, spot_name, latitude, longitude, cancellation_window_hours, logo_url, reserve_target_months, high_season_start_month, high_season_end_month')
     .eq('id', schoolId)
     .single()
   if (error) throw error
@@ -52,7 +52,16 @@ export async function getRunwayProjection(schoolId: string, seasonId?: string) {
     ? supabase.rpc('get_runway_by_season', { p_school_id: schoolId, p_season_id: seasonId }).single()
     : supabase.from('v_runway').select('*').eq('school_id', schoolId).single()
 
-  const [{ data: season }, { data: runway }] = await Promise.all([seasonQuery, runwayQuery])
+  // Per-school reserve target (Configurações → Financeiro), not a fixed 6 —
+  // seasonality/working-capital needs differ per school.
+  const reserveTargetQuery = supabase
+    .from('schools')
+    .select('reserve_target_months')
+    .eq('id', schoolId)
+    .single()
+
+  const [{ data: season }, { data: runway }, { data: reserveTarget }] =
+    await Promise.all([seasonQuery, runwayQuery, reserveTargetQuery])
 
   if (!season || !runway) return null
 
@@ -102,7 +111,7 @@ export async function getRunwayProjection(schoolId: string, seasonId?: string) {
   const projectedProfit = adjustedNetProfit + projectedExtra * 0.62
   const projectedRunway = burnRate > 0 ? projectedProfit / burnRate : 0
 
-  const targetMonths  = 6
+  const targetMonths  = reserveTarget?.reserve_target_months ?? 6
   const targetProfit  = targetMonths * burnRate
   const gap           = Math.max(0, targetProfit - adjustedNetProfit)
   const projectedGap  = Math.max(0, targetProfit - projectedProfit)

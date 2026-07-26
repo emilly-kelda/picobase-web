@@ -24,16 +24,35 @@ function fmt(n: number) {
   }).format(n)
 }
 
+const MONTHS = [
+  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
+]
+
 export default function FinancialSettingsModal({
   burnRate,
+  reserveTargetMonths,
+  highSeasonStartMonth,
+  highSeasonEndMonth,
   onClose,
   onSaved,
 }: {
   burnRate: number | null
+  reserveTargetMonths: number | null
+  highSeasonStartMonth: number | null
+  highSeasonEndMonth: number | null
   onClose: () => void
-  onSaved: (burnRate: number) => void
+  onSaved: (patch: {
+    burn_rate: number
+    reserve_target_months: number
+    high_season_start_month: number | null
+    high_season_end_month: number | null
+  }) => void
 }) {
   const [value, setValue] = useState(burnRate ?? 0)
+  const [targetMonths, setTargetMonths] = useState(reserveTargetMonths ?? 6)
+  const [highStart, setHighStart] = useState(highSeasonStartMonth ?? '')
+  const [highEnd, setHighEnd]     = useState(highSeasonEndMonth ?? '')
   const [saving, setSaving] = useState(false)
   const [error, setError]   = useState<string | null>(null)
 
@@ -41,15 +60,21 @@ export default function FinancialSettingsModal({
     if (saving) return
     setSaving(true)
     setError(null)
+    const patch = {
+      burn_rate:                value,
+      reserve_target_months:    targetMonths > 0 ? targetMonths : 6,
+      high_season_start_month:  highStart === '' ? null : Number(highStart),
+      high_season_end_month:    highEnd === '' ? null : Number(highEnd),
+    }
     try {
       const res = await fetch('/api/owner/settings', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'school', burn_rate: value }),
+        body: JSON.stringify({ type: 'school', ...patch }),
       })
       const data = await res.json()
       if (data.ok) {
-        onSaved(value)
+        onSaved(patch)
       } else {
         setError(data.error ?? 'Não foi possível salvar.')
         setSaving(false)
@@ -98,6 +123,54 @@ export default function FinancialSettingsModal({
         <BurnRateCalculator
           onApply={total => setValue(total)}
         />
+
+        <div style={{ height: '0.5px', background: 'var(--border)', margin: '20px 0' }} />
+
+        <div style={{ fontSize: '13px', fontWeight: '600', color: 'var(--slate)', marginBottom: '14px' }}>
+          Metas Financeiras &amp; Sazonalidade
+        </div>
+
+        <label style={labelStyle} title="Quantos meses de custo operacional a escola quer ter guardados como reserva de baixa temporada. Usado no cálculo do Off-Season Runway (Custos).">
+          Meta de Reserva de Caixa (Meses)
+        </label>
+        <input
+          style={inputStyle}
+          type="number"
+          min={1}
+          value={targetMonths}
+          placeholder="6"
+          onChange={e => setTargetMonths(Number(e.target.value))}
+        />
+        <div style={{ fontSize: '11px', color: 'var(--mist)', marginTop: '4px', marginBottom: '16px' }}>
+          Quantos meses de custo operacional a reserva deve cobrir — substitui os "6 meses" fixos do cálculo de runway.
+        </div>
+
+        <label style={labelStyle}>Alta Temporada (meses de vento forte)</label>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+          <select
+            style={{ ...inputStyle, cursor: 'pointer' }}
+            value={highStart}
+            onChange={e => setHighStart(e.target.value === '' ? '' : Number(e.target.value))}
+          >
+            <option value="">Início...</option>
+            {MONTHS.map((m, i) => (
+              <option key={m} value={i + 1}>{m}</option>
+            ))}
+          </select>
+          <select
+            style={{ ...inputStyle, cursor: 'pointer' }}
+            value={highEnd}
+            onChange={e => setHighEnd(e.target.value === '' ? '' : Number(e.target.value))}
+          >
+            <option value="">Fim...</option>
+            {MONTHS.map((m, i) => (
+              <option key={m} value={i + 1}>{m}</option>
+            ))}
+          </select>
+        </div>
+        <div style={{ fontSize: '11px', color: 'var(--mist)', marginTop: '4px' }}>
+          Opcional — usado para projeções de sazonalidade futuras.
+        </div>
 
         {error && (
           <div style={{
