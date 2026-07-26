@@ -94,3 +94,17 @@ body { background: var(--powder); color: var(--slate); }
   border-top-color: #E8471A;
   animation: pb-spin 0.8s linear infinite;
 }
+
+.pb-card-interactive {
+  transition: transform 0.2s ease-out,
+              box-shadow 0.2s ease-out;
+  cursor: pointer;
+}
+.pb-card-interactive:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+.pb-card-interactive:active {
+  transform: translateY(0);
+  box-shadow: var(--shadow-sm);
+}

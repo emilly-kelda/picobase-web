@@ -24,4 +24,6 @@
   --color-pb-signal-light:  #FFF1F2; /* was #FDF0EC — rose-50 */
   --color-pb-mist:          #9CA3AF; /* was #8A8C98 — gray-400 */
   --color-pb-border:        #E2E8F0; /* was #E4E2DB — slate-200 */
+  --color-pb-live:          #00A896;
+  --color-pb-live-bg:       #E0F8F5;
 }

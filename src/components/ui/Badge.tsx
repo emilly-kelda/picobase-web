@@ -1,6 +1,6 @@
 import type { HTMLAttributes, ReactNode } from 'react'
 
-export type BadgeVariant = 'success' | 'danger' | 'neutral' | 'warning'
+export type BadgeVariant = 'success' | 'danger' | 'neutral' | 'warning' | 'paid'
 export type BadgeSize = 'sm' | 'md'
 
 const VARIANT_CLASSES: Record<BadgeVariant, string> = {
@@ -16,6 +16,9 @@ const VARIANT_CLASSES: Record<BadgeVariant, string> = {
   // slate/rose/emerald reads as "in-between/pending" the way amber does,
   // and nothing elsewhere in this app already owns that color.
   warning: 'bg-amber-50 text-amber-700',
+  // Visually distinct from 'success' ("approved/active") — 'paid' means
+  // "money received".
+  paid: 'bg-emerald-100 text-emerald-800',
 }
 
 // Exact values from the approved mockup (picobase_chameleon_button_

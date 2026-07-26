@@ -61,7 +61,7 @@ export default function Button({
       // was quietly rendering at 12px instead of 8px everywhere, which is
       // why buttons read as too round/pill-ish. An arbitrary value
       // compiles to a literal border-radius, bypassing the collision.
-      className={`inline-flex items-center justify-center gap-2 rounded-[8px] whitespace-nowrap transition-opacity disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none ${SIZE_CLASSES[size]} ${VARIANT_CLASSES[variant]} ${className}`}
+      className={`inline-flex items-center justify-center gap-2 rounded-[8px] whitespace-nowrap transition-[transform,box-shadow,opacity] duration-150 ease-out hover:-translate-y-px hover:shadow-[var(--shadow-sm)] active:translate-y-0 active:shadow-none disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none disabled:translate-y-0 disabled:shadow-none ${SIZE_CLASSES[size]} ${VARIANT_CLASSES[variant]} ${className}`}
       {...rest}
     >
       {children}

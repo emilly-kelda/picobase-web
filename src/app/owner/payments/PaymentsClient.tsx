@@ -6,6 +6,8 @@ import ReceivablesView from '@/components/ReceivablesView'
 import { formatCurrency } from '@/lib/currency'
 import { whatsappDigitsWithCountryCode } from '@/lib/whatsapp'
 import AutoRefresh from '@/components/AutoRefresh'
+import Badge from '@/components/ui/Badge'
+import type { BadgeVariant } from '@/components/ui/Badge'
 
 type Advance = {
   id: string
@@ -84,11 +86,11 @@ function getInitials(name: string) {
   return name.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase()
 }
 
-const STATUS: Record<string, { label: string; bg: string; color: string }> = {
-  pending:  { label: 'Pendente',  bg: '#FFF8E8', color: '#8A5E00' },
-  approved: { label: 'Aprovado',  bg: '#E0F8F5', color: '#007868' },
-  paid:     { label: 'Pago',      bg: '#E8F5E9', color: '#2E7D32' },
-  overdue:  { label: 'Atrasado',  bg: '#FEE2E2', color: '#DC2626' },
+const STATUS: Record<string, { label: string; variant: BadgeVariant }> = {
+  pending:  { label: 'Pendente',  variant: 'warning' },
+  approved: { label: 'Aprovado',  variant: 'success' },
+  paid:     { label: 'Pago',      variant: 'paid'    },
+  overdue:  { label: 'Atrasado',  variant: 'danger'  },
 }
 
 /** "Atrasado" isn't a stored status — there's no such column anywhere in
@@ -731,13 +733,7 @@ export default function PaymentsClient({
                             )}
                           </td>
                           <td style={{ padding: '14px 20px' }}>
-                            <span style={{
-                              display: 'inline-block', padding: '3px 10px', borderRadius: '99px',
-                              fontSize: '11px', fontWeight: '500',
-                              background: st.bg, color: st.color, whiteSpace: 'nowrap',
-                            }}>
-                              {st.label}
-                            </span>
+                            <Badge variant={st.variant}>{st.label}</Badge>
                           </td>
                           <td style={{ padding: '14px 20px' }}>
                             <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
@@ -884,13 +880,7 @@ export default function PaymentsClient({
                             {fmt(p.commission)}
                           </td>
                           <td style={{ padding: '14px 20px' }}>
-                            <span style={{
-                              display: 'inline-block', padding: '3px 10px', borderRadius: '99px',
-                              fontSize: '11px', fontWeight: '500',
-                              background: st.bg, color: st.color, whiteSpace: 'nowrap',
-                            }}>
-                              {st.label}
-                            </span>
+                            <Badge variant={st.variant}>{st.label}</Badge>
                           </td>
                           <td style={{ padding: '14px 20px' }}>
                             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>

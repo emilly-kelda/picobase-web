@@ -255,8 +255,8 @@ export default async function OwnerPage() {
                   position: 'absolute', top: '-8px', right: '12px',
                   display: 'flex', alignItems: 'center', gap: '5px',
                   padding: '4px 10px', borderRadius: 'var(--radius-md)',
-                  background: 'var(--glacial-light)',
-                  color: 'var(--glacial-dark)', fontSize: '11px', fontWeight: '600',
+                  background: 'var(--color-pb-live-bg)',
+                  color: 'var(--color-pb-live)', fontSize: '11px', fontWeight: '600',
                   boxShadow: 'var(--shadow-sm)', whiteSpace: 'nowrap',
                 }}
               >
@@ -274,7 +274,7 @@ export default async function OwnerPage() {
                 picobase_design_system_dossie.md Fase 4's "metric cards
                 usam pb-powder de fundo dentro de card branco". */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-              <div style={{ background: 'var(--color-pb-powder)', borderRadius: 'var(--radius-md)', padding: '10px 12px' }}>
+              <div className="pb-card-interactive" style={{ background: 'var(--color-pb-powder)', borderRadius: 'var(--radius-md)', padding: '10px 12px' }}>
                 <div style={{ fontSize: '11px', color: 'var(--mist)', marginBottom: '4px', fontWeight: '500' }}>
                   Alunos
                 </div>
@@ -282,7 +282,7 @@ export default async function OwnerPage() {
                   {today.students}
                 </div>
               </div>
-              <div style={{ background: 'var(--color-pb-powder)', borderRadius: 'var(--radius-md)', padding: '10px 12px' }}>
+              <div className="pb-card-interactive" style={{ background: 'var(--color-pb-powder)', borderRadius: 'var(--radius-md)', padding: '10px 12px' }}>
                 <div style={{ fontSize: '11px', color: 'var(--mist)', marginBottom: '4px', fontWeight: '500' }}>
                   Aulas
                 </div>
@@ -304,7 +304,7 @@ export default async function OwnerPage() {
                   </div>
                 )}
               </div>
-              <div style={{ background: 'var(--color-pb-powder)', borderRadius: 'var(--radius-md)', padding: '10px 12px' }}>
+              <div className="pb-card-interactive" style={{ background: 'var(--color-pb-powder)', borderRadius: 'var(--radius-md)', padding: '10px 12px' }}>
                 <div style={{ fontSize: '11px', color: 'var(--mist)', marginBottom: '4px', fontWeight: '500' }}>
                   Receita
                 </div>
@@ -336,7 +336,7 @@ export default async function OwnerPage() {
                   </div>
                 )}
               </div>
-              <div style={{ background: 'var(--color-pb-powder)', borderRadius: 'var(--radius-md)', padding: '10px 12px' }}>
+              <div className="pb-card-interactive" style={{ background: 'var(--color-pb-powder)', borderRadius: 'var(--radius-md)', padding: '10px 12px' }}>
                 <div style={{ fontSize: '11px', color: 'var(--mist)', marginBottom: '4px', fontWeight: '500' }}>
                   Comissões
                 </div>
