@@ -14,20 +14,33 @@ export async function GET(request: Request) {
   // encoded into a QR instead of typed into a URL.
   const student  = searchParams.get('student')
   const activity = searchParams.get('activity')
+  // UnifiedSaleBookingModal's Step 4: a just-scheduled lesson gets a QR for
+  // its own /aula/[token] self-service page instead of the general check-in
+  // form — same public_token scheduled_lessons already generates (migration
+  // 20260809000000), same URL ScheduledLessons.tsx's WhatsApp picker sends.
+  const token = searchParams.get('token')
 
-  const supabase = createServiceClient()
-  const { data: school } = await supabase
-    .from('schools')
-    .select('slug')
-    .eq('id', SCHOOL_ID)
-    .single()
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://picobase.com.br'
 
-  const slug = school?.slug ?? 'escola'
-  const targetParams = new URLSearchParams()
-  if (student) targetParams.set('student', student)
-  if (activity) targetParams.set('activity', activity)
-  const query = targetParams.toString()
-  const url = `${process.env.NEXT_PUBLIC_BASE_URL ?? 'https://picobase.com.br'}/checkin/${slug}${query ? `?${query}` : ''}`
+  let url: string
+  let slug = 'escola'
+  if (token) {
+    url = `${baseUrl}/aula/${token}`
+  } else {
+    const supabase = createServiceClient()
+    const { data: school } = await supabase
+      .from('schools')
+      .select('slug')
+      .eq('id', SCHOOL_ID)
+      .single()
+
+    slug = school?.slug ?? 'escola'
+    const targetParams = new URLSearchParams()
+    if (student) targetParams.set('student', student)
+    if (activity) targetParams.set('activity', activity)
+    const query = targetParams.toString()
+    url = `${baseUrl}/checkin/${slug}${query ? `?${query}` : ''}`
+  }
 
   if (format === 'png') {
     const buffer = await QRCode.toBuffer(url, {

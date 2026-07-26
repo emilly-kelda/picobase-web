@@ -195,7 +195,13 @@ export default async function OwnerPage() {
         ════════════════════════════════════════════════════════════ */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '28px', minWidth: 0 }}>
 
-          <QuickSaleCard packageTypes={packageTypes as any} />
+          <QuickSaleCard
+            packageTypes={packageTypes as any}
+            activities={activities}
+            instructors={instructorList}
+            schoolSlug={(school as any)?.slug ?? runway.slug ?? ''}
+            schoolName={runway.school_name ?? 'Pico Base'}
+          />
 
           <PendingLessons
             checkins={pending as any}

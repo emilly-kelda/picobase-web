@@ -149,7 +149,11 @@ export async function POST(request: Request) {
       package_sale_id: body.package_sale_id ?? null,
       status:       'scheduled',
     })
-    .select('id')
+    // public_token is DB-generated (gen_random_uuid() default, migration
+    // 20260809000000) — returned here so callers that need the /aula/[token]
+    // self-service link right after creating the lesson (UnifiedSaleBookingModal's
+    // check-in/QR step) don't need a second round-trip to fetch it.
+    .select('id, public_token')
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -167,7 +171,7 @@ export async function POST(request: Request) {
     }
   }
 
-  return NextResponse.json({ ok: true, id: data.id })
+  return NextResponse.json({ ok: true, id: data.id, public_token: data.public_token })
 }
 
 export async function DELETE(request: Request) {

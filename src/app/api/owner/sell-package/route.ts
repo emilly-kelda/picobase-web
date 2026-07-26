@@ -5,7 +5,7 @@ import { NextResponse } from 'next/server'
 const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
 
 export async function POST(request: Request) {
-  const { package_id, student_name } = await request.json()
+  const { package_id, student_name, payment_method } = await request.json()
 
   if (!package_id || !student_name?.trim()) {
     return NextResponse.json({ error: 'package_id e student_name são obrigatórios' }, { status: 400 })
@@ -39,7 +39,16 @@ export async function POST(request: Request) {
       .insert({ school_id: SCHOOL_ID, name: student_name.trim() })
   }
 
-  const { error: saleError } = await supabase
+  // package_sales has no dedicated payment_method column (only sessions
+  // does, per migration 20260808020000) — recorded as a note prefix instead
+  // of a schema change, same "[Tag] rest of notes" convention api/owner/
+  // schedule's cancellation-penalty path already uses.
+  const PAYMENT_LABELS: Record<string, string> = { pix: 'PIX', dinheiro: 'Dinheiro', cartao: 'Cartão' }
+  const paymentNote = payment_method && PAYMENT_LABELS[payment_method]
+    ? `[Pagamento: ${PAYMENT_LABELS[payment_method]}]`
+    : null
+
+  const { data: sale, error: saleError } = await supabase
     .from('package_sales')
     .insert({
       school_id:         SCHOOL_ID,
@@ -48,10 +57,13 @@ export async function POST(request: Request) {
       minutes_purchased: pkg.total_minutes ?? 60,
       minutes_used:      0,
       price_paid:        pkg.final_price ?? pkg.base_price ?? 0,
+      notes:             paymentNote,
     })
+    .select('id')
+    .single()
 
-  if (saleError) {
-    return NextResponse.json({ error: saleError.message }, { status: 500 })
+  if (saleError || !sale) {
+    return NextResponse.json({ error: saleError?.message ?? 'Falha ao registrar venda' }, { status: 500 })
   }
 
   // Credit balance is derived live from package_sales (getPackageBalancesForCheckins
@@ -73,5 +85,5 @@ export async function POST(request: Request) {
     console.error('ensureActiveCheckinForToday failed for', student_name, err)
   }
 
-  return NextResponse.json({ ok: true })
+  return NextResponse.json({ ok: true, package_sale_id: sale.id })
 }
