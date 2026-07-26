@@ -122,7 +122,13 @@ export default function ProgressionEditor({
       }),
     })
     setSaving(false)
-    if ((await res.json()).ok) {
+    const data = await res.json()
+    if (data.ok) {
+      // Reflects an auto-advance (see resolveLevelAfterSkillsUpdate) the
+      // instant the save succeeds — the level badge above wouldn't otherwise
+      // pick up a server-decided bump until this component remounts, which
+      // router.refresh() alone doesn't guarantee for a locally-`useState`d prop.
+      if (data.level) setLevel(data.level)
       setSaved(true)
       setTimeout(() => {
         setSaved(false)
