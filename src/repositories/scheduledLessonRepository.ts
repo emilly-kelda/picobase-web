@@ -505,23 +505,34 @@ export async function checkPackageCapacity(
 ): Promise<{ ok: true; resolvedSaleId: string | null } | { ok: false }> {
   const supabase = createServiceClient()
 
-  const { data: sales } = await supabase
+  // Matched by normalizeStudentName, not a raw ilike string — package_sales
+  // rows for the same real student can carry a different accent/case/whitespace
+  // variant than whatever's on the lesson being (re)scheduled (see
+  // checkSchedulingConflicts above and getPackageBalancesForCheckins in
+  // packageRepository.ts, already normalized for the same reason — commit
+  // 2931c05). An exact ilike miss here used to silently drop the student's own
+  // active package out of both the primary check and the FIFO fallback list,
+  // producing a false "insufficient balance" rejection despite the (correctly
+  // normalized) dashboard showing real remaining balance.
+  const { data: allSales } = await supabase
     .from('package_sales')
-    .select('id')
+    .select('id, student_name')
     .eq('school_id', schoolId)
-    .ilike('student_name', params.studentName)
     .order('sold_at', { ascending: true })
+
+  const targetName = normalizeStudentName(params.studentName)
+  const sales = (allSales ?? []).filter(s => normalizeStudentName(s.student_name) === targetName)
 
   // The linked sale was deleted since scheduling — nothing left to
   // enforce a balance against (matches the old behavior for an unknown
   // sale id).
-  if (!(sales ?? []).some(s => s.id === params.packageSaleId)) {
+  if (!sales.some(s => s.id === params.packageSaleId)) {
     return { ok: true, resolvedSaleId: null }
   }
 
   const candidateIds = [
     params.packageSaleId,
-    ...(sales ?? []).map(s => s.id).filter(id => id !== params.packageSaleId),
+    ...sales.map(s => s.id).filter(id => id !== params.packageSaleId),
   ]
 
   for (const saleId of candidateIds) {

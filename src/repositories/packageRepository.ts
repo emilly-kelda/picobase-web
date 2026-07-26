@@ -208,14 +208,19 @@ export async function getPackageBalanceForStudent(
   if (!studentName?.trim()) return NONE
 
   const supabase = createServiceClient()
-  const { data: sales } = await supabase
+  // normalizeStudentName match, not raw ilike — see checkPackageCapacity's own
+  // identical fix in scheduledLessonRepository.ts for why an exact-string
+  // match here can silently miss the student's own active package.
+  const { data: allSales } = await supabase
     .from('package_sales')
-    .select('id, minutes_purchased, minutes_used, price_paid')
+    .select('id, student_name, minutes_purchased, minutes_used, price_paid')
     .eq('school_id', schoolId)
-    .ilike('student_name', studentName.trim())
     .order('sold_at', { ascending: true })
 
-  if (!sales || sales.length === 0) return NONE
+  const targetName = normalizeStudentName(studentName)
+  const sales = (allSales ?? []).filter(s => normalizeStudentName(s.student_name) === targetName)
+
+  if (sales.length === 0) return NONE
 
   const candidateIds = opts.packageSaleId
     ? [opts.packageSaleId, ...sales.map(s => s.id).filter(id => id !== opts.packageSaleId)]
