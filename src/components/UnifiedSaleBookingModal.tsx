@@ -433,13 +433,13 @@ export default function UnifiedSaleBookingModal({
                     fontFamily: 'var(--font-sans)', textDecoration: 'underline',
                   }}
                 >
-                  + Venda avulsa (cliente não cadastrado)
+                  + Adicionar aluno não cadastrado
                 </button>
               </div>
             ) : (
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                  <span style={labelStyle}>Venda avulsa</span>
+                  <span style={labelStyle}>Aluno não cadastrado</span>
                   <button
                     type="button"
                     onClick={() => { setManualMode(false); setManualName('') }}
