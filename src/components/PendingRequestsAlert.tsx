@@ -113,7 +113,7 @@ export default function PendingRequestsAlert() {
         padding: '28px', maxHeight: '90vh', overflowY: 'auto',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
-          <span style={{ fontSize: '20px' }}>🔴</span>
+          <span style={{ fontSize: '20px' }}></span>
           <div style={{ fontSize: '16px', fontWeight: '600', color: 'var(--signal)' }}>
             Pedidos de alunos pendentes
           </div>
