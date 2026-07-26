@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { resolveLevelAfterSkillsUpdate } from '@/lib/levelProgression'
 
 // IKO/VDWS-style international keys — student_progression.level and
 // students.skill_level (both free text, no CHECK constraint) store these
@@ -95,6 +96,22 @@ export default function ProgressionEditor({
   const [notes,         setNotes]         = useState('')
   const [saving,        setSaving]        = useState(false)
   const [saved,         setSaved]         = useState(false)
+
+  // Live preview: bumps the visible level the instant the checked skills
+  // satisfy the current level's requirements, instead of only learning about
+  // the auto-advance after save (invisible entirely in hideSaveButton
+  // embeds like ConfirmLessonModal, whose save is fire-and-forget).
+  // resolveLevelAfterSkillsUpdate is the exact same rule api/owner/
+  // progression applies server-side at save time — sharing it here means
+  // the live preview and the persisted result can never disagree. Re-runs
+  // on its own output (level in the dep array) so checking every box for
+  // two levels at once cascades Discovery -> Intermediate -> Independent
+  // across a couple of renders instead of stopping one level short; never
+  // downgrades a manual pick (see that function's own comment).
+  useEffect(() => {
+    const resolved = resolveLevelAfterSkillsUpdate(sportKey, level, checkedSkills)
+    if (resolved !== level) setLevel(resolved)
+  }, [checkedSkills, level, sportKey])
 
   useEffect(() => {
     onChange?.(level, checkedSkills)
