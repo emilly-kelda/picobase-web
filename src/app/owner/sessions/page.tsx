@@ -5,6 +5,7 @@ import { getPortalLang } from '@/lib/language'
 import { getT } from '@/lib/i18n'
 import { LEVEL_LABELS, isLevel } from '@/lib/levels'
 import AutoRefresh from '@/components/AutoRefresh'
+import ScheduleGrid, { type GridLesson } from '@/components/owner/sessions/ScheduleGrid'
 
 const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
 
@@ -36,12 +37,6 @@ function fmtBRL2(n: number) {
 function fmtDate(d: string) {
   return new Date(d + 'T12:00:00').toLocaleDateString('pt-BR', {
     day: '2-digit', month: 'short',
-  })
-}
-
-function fmtDateTime(iso: string) {
-  return new Date(iso).toLocaleString('pt-BR', {
-    day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit',
   })
 }
 
@@ -141,6 +136,24 @@ export default async function SessionsPage({
   const forecastRevenue = scheduledLessons.reduce(
     (sum, l) => sum + (((l.activities as any)?.default_price as number | null) ?? 0), 0
   )
+
+  // Agendadas' matrix view (ScheduleGrid) needs a single instructor shape
+  // and no relation-array/object ambiguity — normalized once here rather
+  // than inside the grid component, same Array.isArray guard
+  // renderInstructorCell already needs for this exact relation.
+  const gridLessons: GridLesson[] = scheduledLessons.map(s => {
+    const instructor = Array.isArray((s as any).instructor) ? (s as any).instructor[0] : (s as any).instructor
+    const activity = Array.isArray(s.activities) ? s.activities[0] : s.activities
+    return {
+      id: s.id,
+      student_name: s.student_name,
+      scheduled_at: s.scheduled_at,
+      duration_min: s.duration_min,
+      level: s.level,
+      instructor: instructor?.id ? { id: instructor.id, name: instructor.name } : null,
+      activityName: (activity as any)?.name ?? null,
+    }
+  })
 
   // Origin mix — binary Partner vs. everything-else ("Direct"), matching
   // the same two buckets the quick filters above offer, not the full
@@ -631,89 +644,7 @@ export default async function SessionsPage({
         </table>
       </div>
       ) : (
-      <div style={{
-        background: '#fff',
-        border: '0.5px solid var(--border)',
-        borderRadius: 'var(--radius-lg)',
-        overflow: 'hidden',
-      }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr>
-              {[t.th_datetime, t.th_student, t.th_activity, t.th_instructor, t.th_duration, t.th_skill, t.th_status].map(h => (
-                <th key={h} style={{
-                  padding: '10px 20px',
-                  textAlign: 'left',
-                  fontSize: '11px', fontWeight: '500',
-                  letterSpacing: '0.08em', textTransform: 'uppercase',
-                  color: 'var(--mist)',
-                  background: 'var(--powder)',
-                  borderBottom: '0.5px solid var(--border)',
-                  whiteSpace: 'nowrap',
-                }}>
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {scheduledLessons.length === 0 ? (
-              <tr>
-                <td colSpan={7} style={{
-                  padding: '48px 20px',
-                  textAlign: 'center',
-                  fontSize: '13px', color: 'var(--mist)',
-                }}>
-                  {t.no_scheduled_lessons}
-                </td>
-              </tr>
-            ) : (
-              scheduledLessons.map((s, i) => (
-                <tr key={s.id} style={{
-                  borderBottom: i < scheduledLessons.length - 1
-                    ? '0.5px solid var(--border)' : 'none',
-                }}>
-                  <td style={{ padding: '13px 20px', fontSize: '13px', color: 'var(--mist)', whiteSpace: 'nowrap' }}>
-                    {fmtDateTime(s.scheduled_at)}
-                  </td>
-                  <td style={{ padding: '13px 20px', fontSize: '13px', fontWeight: '500', color: 'var(--slate)' }}>
-                    <a
-                      className="tbl-name-link"
-                      style={{ fontWeight: '500' }}
-                      href={`/owner/students/name/${encodeURIComponent(s.student_name)}`}
-                    >
-                      {s.student_name}
-                    </a>
-                  </td>
-                  <td style={{ padding: '13px 20px', fontSize: '13px', color: 'var(--slate)' }}>
-                    {(s.activities as any)?.name ?? '—'}
-                  </td>
-                  <td style={{ padding: '13px 20px', fontSize: '13px', color: 'var(--slate)' }}>
-                    {renderInstructorCell(Array.isArray((s as any).instructor) ? (s as any).instructor[0] : (s as any).instructor)}
-                  </td>
-                  <td style={{ padding: '13px 20px', fontSize: '13px', color: 'var(--mist)' }}>
-                    {s.duration_min}min
-                  </td>
-                  <td style={{ padding: '13px 20px', fontSize: '13px', color: 'var(--slate)' }}>
-                    {isLevel(s.level) ? LEVEL_LABELS[s.level][lang] : '—'}
-                  </td>
-                  <td style={{ padding: '13px 20px' }}>
-                    <span style={{
-                      display: 'inline-block',
-                      padding: '3px 10px',
-                      borderRadius: 'var(--radius-full)',
-                      fontSize: '11px', fontWeight: '500',
-                      background: 'var(--amber-light)', color: 'var(--amber)',
-                    }}>
-                      {t.status_scheduled}
-                    </span>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+        <ScheduleGrid lessons={gridLessons} instructors={instructors} lang={lang} />
       )}
 
     </div>
