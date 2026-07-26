@@ -347,6 +347,33 @@ export async function getLatestProgressionBySport(
   return bySport
 }
 
+/** Most recent level+skills for one student+sport — what ConfirmLessonModal's
+ *  embedded ProgressionEditor needs to seed itself correctly. Without this,
+ *  it always opened on a blank level_1_discovery/no-skills slate regardless
+ *  of the student's real progress, so confirming a lesson without the
+ *  instructor manually re-picking the correct level could silently regress
+ *  an already-advanced student's skill_level back to Discovery on save. */
+export async function getLatestProgressionForSport(
+  schoolId: string,
+  studentId: string,
+  sport: string
+): Promise<{ level: string; skills: string[] } | null> {
+  const supabase = createServiceClient()
+  const targetKey = normalizeSportKey(sport)
+  const { data, error } = await supabase
+    .from('student_progression')
+    .select('level, skills, sport, created_at')
+    .eq('school_id', schoolId)
+    .eq('student_id', studentId)
+    .not('sport', 'is', null)
+    .order('created_at', { ascending: false })
+  if (error) throw error
+
+  const match = (data ?? []).find(row => normalizeSportKey(row.sport) === targetKey)
+  if (!match) return null
+  return { level: match.level, skills: match.skills ?? [] }
+}
+
 // IKO-aligned skill→level requirement map for the auto-advance rule below.
 // kitesurf follows the IKO's published 3-stage curriculum (Discovery:
 // wind/safety/kite control/body drag; Intermediate: water start; Independent:

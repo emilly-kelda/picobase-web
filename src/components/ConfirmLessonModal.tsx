@@ -180,6 +180,11 @@ export default function ConfirmLessonModal({
   const [receiptFor, setReceiptFor]     = useState<string | null>(null)
   const [progressionLevel, setProgressionLevel]   = useState('level_1_discovery')
   const [progressionSkills, setProgressionSkills] = useState<string[]>([])
+  // Gates ProgressionEditor's render until its seed data actually arrives —
+  // ProgressionEditor only reads currentLevel/currentSkills on its own first
+  // mount (useState initializer), so mounting it before the fetch below
+  // resolves would still show the wrong starting point.
+  const [progressionLoaded, setProgressionLoaded] = useState(false)
 
   function loadFxRates() {
     setFxError(false)
@@ -241,6 +246,26 @@ export default function ConfirmLessonModal({
   }, [activityId])
 
   const sportKey = normalizeSportKey(activities.find(a => a.id === activityId)?.name)
+
+  // Seeds the embedded ProgressionEditor below with the student's real
+  // current level/skills for this sport (see getLatestProgressionForSport) —
+  // without this it always opened on a blank level_1_discovery slate, so
+  // confirming a lesson without the instructor manually re-picking the
+  // correct level could silently regress an already-advanced student back
+  // to Discovery on save.
+  useEffect(() => {
+    if (!lesson.student_id || !sportKey) { setProgressionLoaded(true); return }
+    setProgressionLoaded(false)
+    fetch(`/api/owner/progression?student_id=${lesson.student_id}&sport=${sportKey}`)
+      .then(r => r.json())
+      .then(data => {
+        setProgressionLevel(data.level ?? 'level_1_discovery')
+        setProgressionSkills(data.skills ?? [])
+      })
+      .catch(() => {})
+      .finally(() => setProgressionLoaded(true))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lesson.student_id, sportKey])
 
   const usesFixedPayout    = payoutModel === 'fixed'
   const selectedInstructor = instructors.find(i => i.id === instructorId)
@@ -407,17 +432,22 @@ export default function ConfirmLessonModal({
             saving — see confirm(). */}
         {activityId && lesson.student_id && sportKey && (
           <div style={{ marginBottom: '20px' }}>
-            <ProgressionEditor
-              compact
-              hideSaveButton
-              hideNotes
-              studentId={lesson.student_id}
-              studentName={lesson.student_name ?? ''}
-              currentLevel="level_1_discovery"
-              currentSkills={[]}
-              sport={sportKey}
-              onChange={(lvl, skills) => { setProgressionLevel(lvl); setProgressionSkills(skills) }}
-            />
+            {progressionLoaded ? (
+              <ProgressionEditor
+                key={`${lesson.student_id}-${sportKey}`}
+                compact
+                hideSaveButton
+                hideNotes
+                studentId={lesson.student_id}
+                studentName={lesson.student_name ?? ''}
+                currentLevel={progressionLevel}
+                currentSkills={progressionSkills}
+                sport={sportKey}
+                onChange={(lvl, skills) => { setProgressionLevel(lvl); setProgressionSkills(skills) }}
+              />
+            ) : (
+              <div style={{ fontSize: '12px', color: 'var(--mist)' }}>Carregando progressão...</div>
+            )}
           </div>
         )}
 
