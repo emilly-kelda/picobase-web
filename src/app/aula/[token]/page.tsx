@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
 import { getScheduledLessonByToken } from '@/repositories/scheduledLessonRepository'
+import { getPendingOwnerProposalForLesson } from '@/repositories/lessonRequestRepository'
 import LessonActionForm from './LessonActionForm'
 
 export default async function AulaPage({
@@ -10,6 +11,9 @@ export default async function AulaPage({
   const { token } = await params
   const lesson = await getScheduledLessonByToken(token)
   if (!lesson) notFound()
+
+  const proposal = await getPendingOwnerProposalForLesson(lesson.id)
+  const rd = proposal?.requested_data as { proposed_date?: string; proposed_time?: string } | null
 
   // Only student-safe fields cross into the client component — no ids,
   // notes, or financial/package data (see getScheduledLessonByToken).
@@ -24,6 +28,11 @@ export default async function AulaPage({
       activityName={(lesson.activities as unknown as { name: string } | null)?.name ?? null}
       instructorName={(lesson.instructor as unknown as { name: string } | null)?.name ?? null}
       schoolName={(lesson.schools as unknown as { name: string } | null)?.name ?? 'Pico Base'}
+      pendingProposal={
+        rd?.proposed_date && rd?.proposed_time
+          ? { proposedDate: rd.proposed_date, proposedTime: rd.proposed_time }
+          : null
+      }
     />
   )
 }

@@ -12,6 +12,9 @@ type Props = {
   activityName: string | null
   instructorName: string | null
   schoolName: string
+  // Owner-proposed new time (RescheduleModal, missed lessons) awaiting this
+  // student's accept/decline — null when there's no active proposal.
+  pendingProposal: { proposedDate: string; proposedTime: string } | null
 }
 
 const inputStyle: React.CSSProperties = {
@@ -44,14 +47,18 @@ function fmtDateTime(iso: string) {
   return `${date} às ${time}`
 }
 
+function fmtProposedDateTime(date: string, time: string) {
+  return fmtDateTime(`${date}T${time}:00-03:00`)
+}
+
 export default function LessonActionForm({
   token, studentName, scheduledAt, durationMin, status, studentConfirmedAt,
-  activityName, instructorName, schoolName,
+  activityName, instructorName, schoolName, pendingProposal,
 }: Props) {
   const [mode, setMode] = useState<'default' | 'reschedule' | 'cancel'>('default')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [done, setDone] = useState<'reschedule' | 'cancel' | null>(null)
+  const [done, setDone] = useState<'reschedule' | 'cancel' | 'accept_reschedule' | 'decline_reschedule' | null>(null)
   const [confirmedAt, setConfirmedAt] = useState(studentConfirmedAt)
 
   const [proposedDate, setProposedDate] = useState('')
@@ -133,7 +140,53 @@ export default function LessonActionForm({
           }}>
             ✓ {done === 'reschedule'
               ? 'Pedido de reagendamento enviado! A equipe vai confirmar em breve.'
-              : 'Pedido de cancelamento enviado! A equipe vai confirmar em breve.'}
+              : done === 'cancel'
+              ? 'Pedido de cancelamento enviado! A equipe vai confirmar em breve.'
+              : done === 'accept_reschedule'
+              ? 'Nova data confirmada! Te esperamos no novo horário.'
+              : 'Horário anterior mantido. Qualquer coisa, é só chamar a gente.'}
+          </div>
+        ) : pendingProposal ? (
+          // Owner proposed a new time for this lesson — resolving that
+          // takes priority over the normal confirm/reschedule/cancel
+          // actions below, so those don't show at the same time (avoids
+          // "which button do I press" with five options at once).
+          <div style={{ background: '#FFF8E8', border: '1.5px solid #F5D061', borderRadius: '14px', padding: '18px 20px' }}>
+            <div style={{ fontSize: '12px', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: '#8A5E00', marginBottom: '8px' }}>
+              Nova data proposta
+            </div>
+            <div style={{ fontSize: '17px', fontWeight: 700, color: '#1A1C22', marginBottom: '16px' }}>
+              {fmtProposedDateTime(pendingProposal.proposedDate, pendingProposal.proposedTime)}
+            </div>
+            {error && <ErrorBox message={error} />}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: error ? '12px' : '0' }}>
+              <button
+                onClick={() => submitAction({ action: 'accept_reschedule' })}
+                disabled={submitting}
+                style={{
+                  padding: '16px', borderRadius: '14px', border: 'none',
+                  fontSize: '15px', fontWeight: 700, fontFamily: 'inherit',
+                  background: '#00A896', color: '#fff',
+                  cursor: submitting ? 'not-allowed' : 'pointer',
+                  opacity: submitting ? 0.7 : 1,
+                }}
+              >
+                {submitting ? 'Enviando...' : 'Aceitar Nova Data'}
+              </button>
+              <button
+                onClick={() => submitAction({ action: 'decline_reschedule' })}
+                disabled={submitting}
+                style={{
+                  padding: '16px', borderRadius: '14px', border: '1.5px solid #E4E0D8',
+                  fontSize: '15px', fontWeight: 600, fontFamily: 'inherit',
+                  background: '#fff', color: '#1A1C22',
+                  cursor: submitting ? 'not-allowed' : 'pointer',
+                  opacity: submitting ? 0.7 : 1,
+                }}
+              >
+                Manter Horário Anterior
+              </button>
+            </div>
           </div>
         ) : (
           <>

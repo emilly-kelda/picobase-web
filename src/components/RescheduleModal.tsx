@@ -10,6 +10,7 @@ type MissedLesson = {
   scheduled_at: string
   duration_min: number | null
   package_sale_id: string | null
+  public_token?: string | null
   activities: { id: string; name: string } | null
 }
 
@@ -105,49 +106,36 @@ export default function RescheduleModal({
     setSaving(true)
     setError(null)
     try {
-      const scheduledAt = `${date}T${time}:00-03:00`
-      const createRes = await fetch('/api/owner/schedule', {
+      // Proposes a new time instead of moving the lesson immediately — the
+      // original scheduled_lessons row (still its old, already-past
+      // scheduled_at) is untouched until the student accepts via the
+      // WhatsApp link below. See api/owner/reschedule-request and
+      // api/aula/[token]'s accept_reschedule/decline_reschedule actions.
+      const res = await fetch('/api/owner/reschedule-request', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          student_name:    lesson.student_name,
-          activity_id:     lesson.activities?.id ?? null,
-          instructor_id:   instructorId,
-          scheduled_at:    scheduledAt,
-          duration_min:    durationMin,
-          // Carries the credit tracking over to the new slot — without this
-          // the reschedule kept the old row's package_sale_id on a lesson
-          // about to be deleted and dropped it on the new one, so the
-          // rebooked lesson stopped drawing against the student's package
-          // at all (a pre-existing gap, unrelated to the skip_penalty flag
-          // below — that only prevents double-charging on top of it).
-          package_sale_id:    lesson.package_sale_id ?? null,
-          // Tells the capacity/clash checks not to count the old (not yet
-          // deleted) lesson against itself — same package, same duration,
-          // so it would otherwise look like this capacity is already spent.
-          reschedule_from_id: lesson.id,
+          scheduled_lesson_id:    lesson.id,
+          proposed_date:          date,
+          proposed_time:          time,
+          proposed_instructor_id: instructorId,
         }),
       })
-      const createData = await createRes.json()
-      if (!createData.ok) {
-        setError(createData.error ?? 'Não foi possível reagendar.')
+      const data = await res.json()
+      if (!data.ok) {
+        setError(data.error ?? 'Não foi possível enviar a proposta de reagendamento.')
         setSaving(false)
         return
       }
 
-      // skip_penalty: this is a reschedule, not a real cancellation — the
-      // student isn't losing the lesson, just moving it (the replacement
-      // above already carries the same package_sale_id forward). Regra 4's
-      // penalty window would otherwise always trigger here anyway, since a
-      // missed lesson's scheduled_at is by definition already in the past.
-      await fetch(`/api/owner/schedule?id=${lesson.id}&skip_penalty=1`, { method: 'DELETE' })
-
+      const publicToken = data.public_token ?? lesson.public_token
       const instructorName = instructors.find(i => i.id === instructorId)?.name ?? suggestedInstructorName ?? ''
       const sport = lesson.activities?.name ?? 'sua aula'
+      const link = publicToken ? `${window.location.origin}/aula/${publicToken}` : ''
       const message =
         `Olá ${lesson.student_name}, vimos que sua aula de ${sport} do dia ${fmtOldDate(lesson.scheduled_at)} ` +
-        `não pôde ser realizada. Conseguimos reagendar para ${fmtNewDate(date)} às ${time} ` +
-        `com o instrutor ${instructorName} na ${schoolName}. Fica bom para você?`
+        `não pôde ser realizada. Propomos reagendar para ${fmtNewDate(date)} às ${time} ` +
+        `com o instrutor ${instructorName} na ${schoolName}. Toque aqui para aceitar a nova data ou manter o horário anterior: ${link}`
 
       if (lesson.student_whatsapp) {
         window.open(buildWhatsAppUrl(lesson.student_whatsapp, message), '_blank', 'noopener,noreferrer')
@@ -272,7 +260,7 @@ export default function RescheduleModal({
               fontFamily: 'var(--font-sans)',
             }}
           >
-            {saving ? 'Salvando...' : 'Confirmar e Enviar WhatsApp'}
+            {saving ? 'Enviando...' : 'Enviar Proposta por WhatsApp'}
           </button>
         </div>
       </div>

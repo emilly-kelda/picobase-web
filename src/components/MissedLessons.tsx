@@ -13,6 +13,7 @@ type MissedLesson = {
   scheduled_at: string
   duration_min: number | null
   package_sale_id: string | null
+  public_token?: string | null
   activities: { id: string; name: string } | null
   instructor: { name: string } | null
 }
