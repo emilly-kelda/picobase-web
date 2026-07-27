@@ -18,6 +18,10 @@ type InstructorData = {
   commission: number
   hours: number
   net: number
+  // null when this instructor has no weekly_capacity_hours configured yet
+  // (Equipe settings) — "no data" and "configured at zero" render
+  // differently, same reasoning as Metrics.occupancyPct below.
+  capacityHours: number | null
 }
 
 type SportData = {
@@ -48,6 +52,9 @@ type Metrics = {
   renewalRatePct: number | null
   renewalCompletions: number
   renewalRenewed: number
+  hoursLiability: number
+  revenueRealized: number
+  revenuePending: number
 }
 
 type GroupRow = { key: string; label: string; lessons: number; revenue: number; commissions: number; net: number }
@@ -99,6 +106,63 @@ function groupRows(
 
 const GROUP_LABELS: Record<GroupBy, string> = {
   month: 'Mês', instructor: 'Instrutor', sport: 'Modalidade',
+}
+
+/** Catmull-Rom → cubic Bézier, tension 1/6 — the standard construction for
+ *  a smooth curve that actually passes through every point (not just an
+ *  approximation), which is what the monthly revenue trend line needs:
+ *  each control point IS a real month's figure. */
+function smoothPath(points: { x: number; y: number }[]): string {
+  if (points.length === 0) return ''
+  if (points.length === 1) return `M ${points[0].x} ${points[0].y}`
+  let d = `M ${points[0].x} ${points[0].y}`
+  for (let i = 0; i < points.length - 1; i++) {
+    const p0 = points[i - 1] ?? points[i]
+    const p1 = points[i]
+    const p2 = points[i + 1]
+    const p3 = points[i + 2] ?? p2
+    const cp1x = p1.x + (p2.x - p0.x) / 6
+    const cp1y = p1.y + (p2.y - p0.y) / 6
+    const cp2x = p2.x - (p3.x - p1.x) / 6
+    const cp2y = p2.y - (p3.y - p1.y) / 6
+    d += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2.x} ${p2.y}`
+  }
+  return d
+}
+
+/** Bar with square bottom corners (sits flush on the chart's baseline) and
+ *  rounded top ones — an SVG <rect> only takes one uniform `rx` for all 4
+ *  corners, so a top-only radius needs an explicit path. h <= 0 (a month
+ *  with literally 0 revenue) draws nothing rather than a degenerate rect. */
+function roundedTopRectPath(x: number, y: number, w: number, h: number, r: number): string {
+  if (h <= 0 || w <= 0) return ''
+  const rr = Math.min(r, w / 2, h)
+  if (rr <= 0) return `M ${x} ${y} H ${x + w} V ${y + h} H ${x} Z`
+  return `M ${x} ${y + rr}
+    A ${rr} ${rr} 0 0 1 ${x + rr} ${y}
+    H ${x + w - rr}
+    A ${rr} ${rr} 0 0 1 ${x + w} ${y + rr}
+    V ${y + h}
+    H ${x} Z`
+}
+
+/** Friendly centered placeholder for tabs/charts with nothing to show yet —
+ *  replaces bare "Nenhum dado disponível" text in three places below. */
+function EmptyState({ text }: { text: string }) {
+  return (
+    <div style={{
+      display: 'flex', flexDirection: 'column', alignItems: 'center',
+      justifyContent: 'center', gap: '10px', padding: '48px 24px', textAlign: 'center',
+    }}>
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--border-strong)" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 3v16a2 2 0 0 0 2 2h16" />
+        <path d="M7 14l4-4 3 3 5-6" />
+      </svg>
+      <div style={{ fontSize: '13px', color: 'var(--mist)', maxWidth: '260px', lineHeight: '1.5' }}>
+        {text}
+      </div>
+    </div>
+  )
 }
 
 const cardStyle: React.CSSProperties = {
@@ -175,6 +239,30 @@ export default function ReportsPage() {
 
   const rows = groupRows(data.monthly, data.instructors, data.sports, groupBy)
 
+  // SVG chart geometry for the Faturamento tab — one coordinate space (a
+  // 0..100 x 0..60 viewBox) so the stacked bars and the smooth revenue
+  // trend line agree on exactly where each month sits, instead of trying
+  // to eyeball an SVG overlay on top of separately-positioned flex divs.
+  const CHART_BASE_Y  = 54
+  const CHART_TOP_Y   = 6
+  const CHART_USABLE_H = CHART_BASE_Y - CHART_TOP_Y
+  const chartCols = Math.max(1, data.monthly.length)
+  const barPoints = data.monthly.map((m, i) => {
+    const colW    = 100 / chartCols
+    const barW    = colW * 0.55
+    const xCenter = i * colW + colW / 2
+    const revH    = maxRevenue > 0 ? (m.revenue / maxRevenue) * CHART_USABLE_H : 0
+    const commH   = maxRevenue > 0 ? (m.commissions / maxRevenue) * CHART_USABLE_H : 0
+    const netH    = Math.max(0, revH - commH)
+    return {
+      month: m.month, xCenter, barX: xCenter - barW / 2, barW,
+      commY: CHART_BASE_Y - commH, commH,
+      netY:  CHART_BASE_Y - revH,  netH,
+      lineY: CHART_BASE_Y - revH,
+    }
+  })
+  const revenueTrendPath = smoothPath(barPoints.map(p => ({ x: p.xCenter, y: p.lineY })))
+
   const metricCards: { label: string; value: string; color: string; sub?: string }[] = [
     { label: 'Receita total',     value: fmt(totalRevenue),        color: 'var(--slate)' },
     { label: 'Comissões pagas',   value: fmt(totalCommissions),    color: '#DC2626'      },
@@ -210,6 +298,30 @@ export default function ReportsPage() {
         ? `${data.metrics.renewalRenewed} de ${data.metrics.renewalCompletions} pacotes concluídos renovados`
         : undefined,
     },
+    {
+      // Passivo de Horas — hours already paid for on active packages but
+      // not yet taught. A liability in the accounting sense: the school
+      // owes these hours, not cash it can still call "profit" until
+      // they're delivered (or the package lapses).
+      label: 'Passivo de horas (pacotes ativos)',
+      value: `${data.metrics.hoursLiability.toFixed(0)}h`,
+      color: 'var(--slate)',
+      sub: 'Horas vendidas ainda não agendadas ou consumidas',
+    },
+  ]
+
+  const heroCards: { label: string; value: string; sub?: string }[] = [
+    {
+      label: 'Receita líquida', value: fmt(totalNet),
+      // Realizado vs pendente right under the headline number — "receita"
+      // on its own reads as cash in hand, which isn't true for whatever's
+      // still sitting on a_receber sessions nobody's collected yet.
+      sub: data.metrics.revenuePending > 0
+        ? `${fmt(data.metrics.revenueRealized)} recebido · ${fmt(data.metrics.revenuePending)} pendente`
+        : 'Tudo recebido, nada pendente',
+    },
+    { label: 'Horas na água',    value: `${data.metrics.occupancyHoursTaught.toFixed(0)}h` },
+    { label: 'Taxa de ocupação', value: data.metrics.occupancyPct != null ? `${data.metrics.occupancyPct.toFixed(0)}%` : '—' },
   ]
 
   return (
@@ -232,7 +344,43 @@ export default function ReportsPage() {
         </h1>
       </div>
 
-      {/* Summary metrics */}
+      {/* Hero KPIs — the 3 numbers an owner actually needs before anything
+          else: what's left after paying instructors, how much water time
+          actually happened, and whether the team's capacity is being used.
+          Everything below (the full metric grid, tabs, tables) is detail
+          in support of these three, not competing with them for attention. */}
+      <div style={{
+        display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)',
+        gap: '12px', marginBottom: '20px',
+      }}>
+        {heroCards.map(h => (
+          <div key={h.label} style={{
+            background: 'var(--surface)', border: '0.5px solid var(--border)',
+            borderRadius: 'var(--radius-xl)', boxShadow: 'var(--shadow-sm)',
+            padding: '22px 24px',
+          }}>
+            <div style={{
+              fontSize: '11px', fontWeight: '500', letterSpacing: '0.08em',
+              textTransform: 'uppercase', color: 'var(--mist)', marginBottom: '10px',
+            }}>
+              {h.label}
+            </div>
+            <div style={{
+              fontSize: '34px', fontWeight: '700', color: 'var(--slate)',
+              letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums',
+            }}>
+              {h.value}
+            </div>
+            {h.sub && (
+              <div style={{ fontSize: '11px', color: 'var(--mist)', marginTop: '8px' }}>
+                {h.sub}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Everything else — supporting detail below the hero row */}
       <div style={{
         display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
         gap: '12px', marginBottom: '32px',
@@ -311,91 +459,57 @@ export default function ReportsPage() {
             </div>
 
             {data.monthly.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '40px', color: 'var(--mist)', fontSize: '13px' }}>
-                Nenhum dado disponível ainda.
-              </div>
+              <EmptyState text="Nenhum dado disponível ainda. Assim que houver aulas confirmadas, a receita mensal aparece aqui." />
             ) : (
-              <div style={{
-                display: 'flex',
-                alignItems: 'flex-end',
-                gap: '8px',
-                height: '180px',
-                paddingBottom: '32px',
-                position: 'relative',
-                borderBottom: '0.5px solid var(--border)',
-              }}>
-                {data.monthly.map(m => {
-                  const heightPct = (m.revenue / maxRevenue) * 100
-                  const netPct    = (m.net / maxRevenue) * 100
-                  return (
-                    <div
-                      key={m.month}
-                      style={{
-                        flex: 1,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        height: '100%',
-                        justifyContent: 'flex-end',
-                        gap: '4px',
-                        position: 'relative',
-                      }}
-                      title={`${fmtMonth(m.month)}: ${fmt(m.revenue)} receita · ${fmt(m.net)} líquido`}
-                    >
-                      {/* Revenue bar */}
-                      <div style={{
-                        width: '100%',
-                        position: 'relative',
-                        height: `${heightPct}%`,
-                        minHeight: m.revenue > 0 ? '4px' : '0',
-                      }}>
-                        {/* Commission portion (red overlay) */}
-                        <div style={{
-                          position: 'absolute',
-                          bottom: 0, left: 0, right: 0,
-                          height: `${heightPct > 0 ? ((m.commissions / m.revenue) * 100) : 0}%`,
-                          background: '#FEE2E2',
-                          borderRadius: '4px 4px 0 0',
-                        }} />
-                        {/* Net portion (teal) */}
-                        <div style={{
-                          position: 'absolute',
-                          bottom: `${heightPct > 0 ? ((m.commissions / m.revenue) * 100) : 0}%`,
-                          left: 0, right: 0,
-                          height: `${heightPct > 0 ? (netPct / heightPct) * 100 : 0}%`,
-                          background: 'var(--glacial)',
-                          borderRadius: '4px 4px 0 0',
-                          opacity: 0.8,
-                        }} />
-                      </div>
-                      {/* Month label */}
-                      <div style={{
-                        position: 'absolute',
-                        bottom: '-28px',
-                        fontSize: '10px',
-                        color: 'var(--mist)',
-                        whiteSpace: 'nowrap',
-                        textAlign: 'center',
-                      }}>
-                        {m.month.slice(5)} {/* MM */}
-                      </div>
+              <>
+                <svg viewBox={`0 0 100 ${CHART_BASE_Y + 2}`} preserveAspectRatio="none" style={{ width: '100%', height: '180px', overflow: 'visible' }}>
+                  <line x1={0} y1={CHART_BASE_Y} x2={100} y2={CHART_BASE_Y} stroke="var(--border)" strokeWidth={0.3} />
+                  {barPoints.map(p => (
+                    <g key={p.month}>
+                      <title>{`${fmtMonth(p.month)}: ${fmt(data.monthly.find(m => m.month === p.month)!.revenue)} receita`}</title>
+                      {/* Commission portion — flat-bottom, sits flush on the
+                          baseline; only the net portion above it (or this
+                          one, if net is 0) gets the rounded top. */}
+                      <path d={p.netH > 0.01
+                        ? `M ${p.barX} ${p.commY} H ${p.barX + p.barW} V ${CHART_BASE_Y} H ${p.barX} Z`
+                        : roundedTopRectPath(p.barX, p.commY, p.barW, p.commH, 1.2)}
+                        fill="var(--signal-light)" />
+                      {/* Net portion */}
+                      <path d={roundedTopRectPath(p.barX, p.netY, p.barW, p.netH, 1.2)} fill="var(--glacial)" opacity={0.85} />
+                    </g>
+                  ))}
+                  {/* Smooth revenue trend — same coordinate space as the
+                      bars above, so it actually traces their tops. */}
+                  <path d={revenueTrendPath} fill="none" stroke="var(--glacial-dark)" strokeWidth={0.6} strokeLinecap="round" />
+                  {barPoints.map(p => (
+                    <circle key={`dot-${p.month}`} cx={p.xCenter} cy={p.lineY} r={0.9} fill="var(--glacial-dark)" />
+                  ))}
+                </svg>
+                <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
+                  {data.monthly.map(m => (
+                    <div key={m.month} style={{ flex: 1, textAlign: 'center', fontSize: '10px', color: 'var(--mist)' }}>
+                      {m.month.slice(5)}
                     </div>
-                  )
-                })}
-              </div>
+                  ))}
+                </div>
+              </>
             )}
 
             {/* Legend */}
             <div style={{
               display: 'flex', gap: '20px',
-              marginTop: '40px',
+              marginTop: '20px',
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--mist)' }}>
-                <div style={{ width: '12px', height: '12px', background: 'var(--glacial)', borderRadius: '3px', opacity: 0.8 }} />
+                <div style={{ width: '12px', height: '2px', background: 'var(--glacial-dark)', borderRadius: '2px' }} />
+                Receita (tendência)
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--mist)' }}>
+                <div style={{ width: '12px', height: '12px', background: 'var(--glacial)', borderRadius: '3px', opacity: 0.85 }} />
                 Lucro líquido
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--mist)' }}>
-                <div style={{ width: '12px', height: '12px', background: '#FEE2E2', borderRadius: '3px' }} />
+                <div style={{ width: '12px', height: '12px', background: 'var(--signal-light)', borderRadius: '3px' }} />
                 Comissões
               </div>
             </div>
@@ -491,9 +605,7 @@ export default function ReportsPage() {
             </div>
 
             {data.sports.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '40px', color: 'var(--mist)', fontSize: '13px' }}>
-                Nenhum dado disponível ainda.
-              </div>
+              <EmptyState text="Nenhum dado disponível ainda. O desempenho por modalidade aparece assim que houver aulas confirmadas." />
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 {data.sports.map(sp => {
@@ -509,7 +621,7 @@ export default function ReportsPage() {
                       }}>
                         <div style={{
                           height: '100%', width: `${pct}%`,
-                          background: 'var(--glacial)', borderRadius: '99px', opacity: 0.85,
+                          background: 'var(--glacial-dark)', borderRadius: '99px',
                         }} />
                       </div>
                       <div style={{
@@ -572,7 +684,7 @@ export default function ReportsPage() {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ background: 'var(--powder)' }}>
-                {['Instrutor', 'Aulas', 'Receita gerada', 'Comissão total', '% do total'].map((h, i) => (
+                {['Instrutor', 'Aulas', 'Receita gerada', 'Comissão total', '% do total', 'Ocupação'].map((h, i) => (
                   <th key={h} style={thStyle(i === 0 ? 'left' : 'right')}>
                     {h}
                   </th>
@@ -621,6 +733,29 @@ export default function ReportsPage() {
                       </span>
                     </div>
                   </td>
+                  <td style={{ padding: '14px 16px', textAlign: 'right' }}>
+                    {inst.capacityHours == null ? (
+                      <span style={{ fontSize: '11px', color: 'var(--mist)' }}>Sem capacidade configurada</span>
+                    ) : (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>
+                        <div style={{
+                          width: '60px', height: '4px',
+                          background: 'var(--border)',
+                          borderRadius: '99px', overflow: 'hidden',
+                        }}>
+                          <div style={{
+                            height: '100%',
+                            width: `${inst.capacityHours > 0 ? Math.min(100, (inst.hours / inst.capacityHours) * 100) : 0}%`,
+                            background: 'var(--glacial-dark)',
+                            borderRadius: '99px',
+                          }} />
+                        </div>
+                        <span style={{ fontSize: '12px', color: 'var(--mist)', width: '76px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                          {inst.hours.toFixed(0)}h / {inst.capacityHours.toFixed(0)}h
+                        </span>
+                      </div>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -637,6 +772,7 @@ export default function ReportsPage() {
                   {fmt(totalCommissions)}
                 </td>
                 <td />
+                <td />
               </tr>
             </tfoot>
           </table>
@@ -647,9 +783,7 @@ export default function ReportsPage() {
       {tab === 'partners' && (
         <div style={tableWrapStyle}>
           {data.partners.length === 0 ? (
-            <div style={{ padding: '48px', textAlign: 'center', fontSize: '13px', color: 'var(--mist)' }}>
-              Nenhuma indicação de parceiro registrada ainda.
-            </div>
+            <EmptyState text="Nenhuma indicação de parceiro registrada ainda. Parcerias com hotéis e agências aparecem aqui assim que gerarem uma indicação." />
           ) : (
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>

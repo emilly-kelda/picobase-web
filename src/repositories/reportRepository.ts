@@ -15,7 +15,7 @@ export async function getReportData(schoolId: string) {
     supabase
       .from('sessions')
       .select(`
-        session_date, price, commission_amount, payment_method,
+        session_date, price, commission_amount, payment_method, received_at,
         currency, price_original, duration_min, instructor_id,
         checkins ( student_name ),
         instructor:users!sessions_instructor_id_fkey ( name ),
@@ -31,7 +31,7 @@ export async function getReportData(schoolId: string) {
 
     supabase
       .from('package_sales')
-      .select('student_name, sold_at, minutes_purchased, minutes_used')
+      .select('student_name, sold_at, minutes_purchased, minutes_used, status')
       .eq('school_id', schoolId)
       .order('sold_at', { ascending: true }),
 
@@ -77,6 +77,16 @@ export async function getReportData(schoolId: string) {
     acc[id].hours      += (s.duration_min ?? 0) / 60
     return acc
   }, {} as Record<string, { id: string; name: string; lessons: number; revenue: number; commission: number; hours: number }>)
+
+  // weekly_capacity_hours per instructor (same source as the school-wide
+  // occupancyPct below) joined onto each row so the Instrutores tab can show
+  // an individual "hours taught vs their own capacity" figure, not just the
+  // team-wide aggregate. weeksSpan is computed further down (shared with
+  // occupancyCapacityHours) — capacityHours here uses that same span so an
+  // instructor's bar and the team's overall % are directly comparable.
+  const capacityById = new Map(
+    (instructorsData ?? []).map(u => [u.id, u.weekly_capacity_hours ?? null])
+  )
 
   const instructorData = Object.values(instructorMap).map(i => ({ ...i, net: i.revenue - i.commission }))
 
@@ -144,6 +154,37 @@ export async function getReportData(schoolId: string) {
     ? (totalHoursTaught / occupancyCapacityHours) * 100
     : null
 
+  // Per-instructor capacity, same weeksSpan as the team-wide figure above so
+  // an individual's bar and the team % mean the same thing. null (not 0)
+  // when that instructor has no weekly_capacity_hours configured — "no data"
+  // and "configured at zero" need to render differently on the Instrutores
+  // tab, same reasoning as occupancyPct itself being null above.
+  const instructorDataWithCapacity = instructorData.map(i => {
+    const weeklyCapacity = capacityById.get(i.id) ?? null
+    return {
+      ...i,
+      capacityHours: weeklyCapacity != null ? weeklyCapacity * weeksSpan : null,
+    }
+  })
+
+  // Receita realizada vs pendente — same "a_receber + not yet received"
+  // definition alertRepository's outstanding-receivables alert already
+  // uses, just totalled here instead of listed row by row.
+  const revenuePending = sessions
+    .filter(s => s.payment_method === 'a_receber' && !s.received_at)
+    .reduce((s, r) => s + (r.price ?? 0), 0)
+  const revenueRealized = sessions.reduce((s, r) => s + (r.price ?? 0), 0) - revenuePending
+
+  // Passivo de Horas — hours already sold (paid for) on still-active
+  // packages but not yet taught. Only 'active' packages count: a package
+  // marked otherwise was deliberately closed out (PackageReceiptModal /
+  // closePackageSale) and its leftover minutes, if any, are no longer a
+  // real future obligation — same status gate getAvailablePackageMinutes
+  // applies per-sale, summed here school-wide.
+  const hoursLiability = (packageSalesData ?? [])
+    .filter(p => !p.status || p.status === 'active')
+    .reduce((s, p) => s + Math.max(0, (p.minutes_purchased ?? 0) - (p.minutes_used ?? 0)), 0) / 60
+
   // Renewal rate — a package_sales row "completes" when fully consumed (same
   // inference getPackageDashboard uses for activeStudents); it's "renewed"
   // if that student bought another package afterward.
@@ -173,7 +214,7 @@ export async function getReportData(schoolId: string) {
 
   return {
     monthly:     Object.values(monthlyMap).sort((a, b) => a.month.localeCompare(b.month)),
-    instructors: instructorData.sort((a, b) => b.commission - a.commission),
+    instructors: instructorDataWithCapacity.sort((a, b) => b.commission - a.commission),
     sports:      sportData.sort((a, b) => b.revenue - a.revenue),
     partners:    Object.values(partnerMap).sort((a, b) => b.revenue - a.revenue),
     payments:    paymentSummary,
@@ -186,6 +227,9 @@ export async function getReportData(schoolId: string) {
       renewalRatePct,
       renewalCompletions,
       renewalRenewed,
+      hoursLiability,
+      revenueRealized,
+      revenuePending,
     },
   }
 }
