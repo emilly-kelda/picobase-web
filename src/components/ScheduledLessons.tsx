@@ -82,12 +82,6 @@ function buildApiWhatsAppUrl(phone: string | null | undefined, message: string):
   return `https://api.whatsapp.com/send?phone=${whatsappDigitsWithCountryCode(phone)}&text=${encodeURIComponent(message)}`
 }
 
-function studentConfirmationMessage(lesson: Lesson, dayLabel: string, schoolName: string): string {
-  const activityName = lesson.activities?.name ?? 'sua aula'
-  const instructorName = lesson.instructor?.name ?? 'nosso instrutor'
-  return `Olá, ${lesson.student_name ?? ''}! Confirmando sua aula de ${activityName} com ${instructorName}, agendada para ${dayLabel} às ${fmtTime(lesson.scheduled_at)} na ${schoolName}. Até lá!`
-}
-
 function instructorConfirmationMessage(lesson: Lesson, dayLabel: string): string {
   const activityName = lesson.activities?.name ?? 'uma aula'
   return `Olá, ${lesson.instructor?.name ?? ''}! Você tem ${activityName} com ${lesson.student_name ?? 'o aluno'} agendada para ${dayLabel} às ${fmtTime(lesson.scheduled_at)}.`
@@ -2516,21 +2510,21 @@ export default function ScheduledLessons({
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <a
-                href={whatsAppModal.student_whatsapp ? buildApiWhatsAppUrl(whatsAppModal.student_whatsapp, studentConfirmationMessage(whatsAppModal, dayLabel, schoolName)) : undefined}
+                href={(whatsAppModal.student_whatsapp && whatsAppModal.public_token) ? buildApiWhatsAppUrl(whatsAppModal.student_whatsapp, studentSelfServiceMessage(whatsAppModal, schoolName)) : undefined}
                 target="_blank"
                 rel="noopener noreferrer"
-                onClick={e => { if (!whatsAppModal.student_whatsapp) e.preventDefault(); else setWhatsAppModal(null) }}
+                onClick={e => { if (!whatsAppModal.student_whatsapp || !whatsAppModal.public_token) e.preventDefault(); else setWhatsAppModal(null) }}
                 style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                   padding: '12px 14px', borderRadius: 'var(--radius-md)',
-                  background: whatsAppModal.student_whatsapp ? 'var(--color-pb-glacial-light)' : 'var(--powder)',
-                  color: whatsAppModal.student_whatsapp ? 'var(--color-pb-glacial-dark)' : 'var(--mist)',
+                  background: (whatsAppModal.student_whatsapp && whatsAppModal.public_token) ? 'var(--color-pb-glacial-light)' : 'var(--powder)',
+                  color: (whatsAppModal.student_whatsapp && whatsAppModal.public_token) ? 'var(--color-pb-glacial-dark)' : 'var(--mist)',
                   fontSize: '13px', fontWeight: '500', textDecoration: 'none',
-                  cursor: whatsAppModal.student_whatsapp ? 'pointer' : 'not-allowed',
-                  opacity: whatsAppModal.student_whatsapp ? 1 : 0.6,
+                  cursor: (whatsAppModal.student_whatsapp && whatsAppModal.public_token) ? 'pointer' : 'not-allowed',
+                  opacity: (whatsAppModal.student_whatsapp && whatsAppModal.public_token) ? 1 : 0.6,
                 }}
               >
-                <span>Aluno{whatsAppModal.student_name ? ` (${whatsAppModal.student_name})` : ''}</span>
+                <span>Aluno — Link de confirmação</span>
                 {!whatsAppModal.student_whatsapp && <span style={{ fontSize: '11px' }}>Sem WhatsApp</span>}
               </a>
               <a
@@ -2550,24 +2544,6 @@ export default function ScheduledLessons({
               >
                 <span>Instrutor{whatsAppModal.instructor?.name ? ` (${whatsAppModal.instructor.name})` : ''}</span>
                 {!whatsAppModal.instructor?.whatsapp && <span style={{ fontSize: '11px' }}>Sem WhatsApp</span>}
-              </a>
-              <a
-                href={(whatsAppModal.student_whatsapp && whatsAppModal.public_token) ? buildApiWhatsAppUrl(whatsAppModal.student_whatsapp, studentSelfServiceMessage(whatsAppModal, schoolName)) : undefined}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={e => { if (!whatsAppModal.student_whatsapp || !whatsAppModal.public_token) e.preventDefault(); else setWhatsAppModal(null) }}
-                style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  padding: '12px 14px', borderRadius: 'var(--radius-md)',
-                  background: (whatsAppModal.student_whatsapp && whatsAppModal.public_token) ? 'var(--color-pb-glacial-light)' : 'var(--powder)',
-                  color: (whatsAppModal.student_whatsapp && whatsAppModal.public_token) ? 'var(--color-pb-glacial-dark)' : 'var(--mist)',
-                  fontSize: '13px', fontWeight: '500', textDecoration: 'none',
-                  cursor: (whatsAppModal.student_whatsapp && whatsAppModal.public_token) ? 'pointer' : 'not-allowed',
-                  opacity: (whatsAppModal.student_whatsapp && whatsAppModal.public_token) ? 1 : 0.6,
-                }}
-              >
-                <span>Aluno — link de confirmação</span>
-                {!whatsAppModal.student_whatsapp && <span style={{ fontSize: '11px' }}>Sem WhatsApp</span>}
               </a>
             </div>
             <button
