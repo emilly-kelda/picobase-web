@@ -35,6 +35,16 @@ export async function POST(
       if (!body.proposed_date || !body.proposed_time) {
         return NextResponse.json({ error: 'Data e horário são obrigatórios' }, { status: 400 })
       }
+      // A student can reach this same form as a counter-proposal from the
+      // pendingProposal view ("Sugerir outro dia" instead of accepting the
+      // owner's suggested time) — if there's a pending owner-proposed
+      // reschedule for this lesson, resolve it as rejected so it doesn't
+      // keep showing on the next visit alongside this new request, and the
+      // owner isn't left thinking their original proposal is still open.
+      const existingProposal = await getPendingOwnerProposalForLesson(lesson.id)
+      if (existingProposal) {
+        await resolveLessonRequest(existingProposal.id, 'rejected')
+      }
       await createLessonRequest({
         school_id: lesson.school_id,
         scheduled_lesson_id: lesson.id,

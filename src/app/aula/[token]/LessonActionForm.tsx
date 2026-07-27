@@ -58,7 +58,7 @@ export default function LessonActionForm({
   const [mode, setMode] = useState<'default' | 'reschedule' | 'cancel'>('default')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [done, setDone] = useState<'reschedule' | 'cancel' | 'accept_reschedule' | 'decline_reschedule' | null>(null)
+  const [done, setDone] = useState<'reschedule' | 'cancel' | 'accept_reschedule' | null>(null)
   const [confirmedAt, setConfirmedAt] = useState(studentConfirmedAt)
 
   const [proposedDate, setProposedDate] = useState('')
@@ -142,15 +142,19 @@ export default function LessonActionForm({
               ? 'Pedido de reagendamento enviado! A equipe vai confirmar em breve.'
               : done === 'cancel'
               ? 'Pedido de cancelamento enviado! A equipe vai confirmar em breve.'
-              : done === 'accept_reschedule'
-              ? 'Nova data confirmada! Te esperamos no novo horário.'
-              : 'Horário anterior mantido. Qualquer coisa, é só chamar a gente.'}
+              : 'Nova data confirmada! Te esperamos no novo horário.'}
           </div>
-        ) : pendingProposal ? (
+        ) : pendingProposal && mode !== 'reschedule' ? (
           // Owner proposed a new time for this lesson — resolving that
           // takes priority over the normal confirm/reschedule/cancel
           // actions below, so those don't show at the same time (avoids
           // "which button do I press" with five options at once).
+          // "Manter horário anterior" didn't make sense here (the old
+          // slot already passed for a missed lesson in most cases it
+          // fires) — the real choice is accept the school's suggested
+          // time, or counter-propose one of the student's own via the
+          // same reschedule form used below, entered through
+          // mode: 'reschedule' rather than a separate component.
           <div style={{ background: '#FFF8E8', border: '1.5px solid #F5D061', borderRadius: '14px', padding: '18px 20px' }}>
             <div style={{ fontSize: '12px', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: '#8A5E00', marginBottom: '8px' }}>
               Nova data proposta
@@ -171,10 +175,10 @@ export default function LessonActionForm({
                   opacity: submitting ? 0.7 : 1,
                 }}
               >
-                {submitting ? 'Enviando...' : 'Aceitar Nova Data'}
+                {submitting ? 'Enviando...' : `Aceitar ${fmtProposedDateTime(pendingProposal.proposedDate, pendingProposal.proposedTime)}`}
               </button>
               <button
-                onClick={() => submitAction({ action: 'decline_reschedule' })}
+                onClick={() => setMode('reschedule')}
                 disabled={submitting}
                 style={{
                   padding: '16px', borderRadius: '14px', border: '1.5px solid #E4E0D8',
@@ -184,7 +188,7 @@ export default function LessonActionForm({
                   opacity: submitting ? 0.7 : 1,
                 }}
               >
-                Manter Horário Anterior
+                Sugerir outro dia / horário
               </button>
             </div>
           </div>
