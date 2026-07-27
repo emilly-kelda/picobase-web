@@ -171,8 +171,17 @@ export default async function StudentDetailPage({
         </div>
       )}
 
-      {/* Active package progress */}
+      {/* Active package progress — pkg.minutes_purchased/minutes_used are
+          already summed across every active package_sales row this
+          student holds (getActivePackagesByStudent), so this card, the
+          alerts, and every other balance display in the app describe the
+          exact same purchased-minus-used figure. Deliberately not netted
+          against other pending/future scheduled lessons (that's a
+          separate, capacity-check-only concern — see
+          getAvailablePackageMinutes) — "restantes" here always means
+          "hours this student has left to use", full stop. */}
       {pkg && (() => {
+        const remaining = Math.max(0, pkg.minutes_purchased - pkg.minutes_used)
         const pct = pkg.minutes_purchased > 0
           ? Math.round((pkg.minutes_used / pkg.minutes_purchased) * 100)
           : 0
@@ -201,7 +210,7 @@ export default async function StudentDetailPage({
                   letterSpacing: '0.1em', textTransform: 'uppercase',
                   color: 'var(--mist)', marginBottom: '4px',
                 }}>
-                  Pacote ativo
+                  Pacote ativo ({fmtMin(pkg.minutes_purchased)} totais)
                 </div>
                 <div style={{
                   fontSize: '15px', fontWeight: '500',
@@ -238,14 +247,9 @@ export default async function StudentDetailPage({
               }} />
             </div>
 
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              fontSize: '12px',
-              color: 'var(--mist)',
-            }}>
-              <span>{fmtMin(pkg.minutes_used)} utilizado</span>
-              <span>{fmtMin(pkg.minutes_purchased - pkg.minutes_used)} restante</span>
+            <div style={{ fontSize: '12px', color: 'var(--mist)' }}>
+              <span style={{ color: 'var(--slate)', fontWeight: '500' }}>{fmtMin(remaining)} restantes</span>
+              {' • '}{fmtMin(pkg.minutes_used)} concluídas ({pct}%)
             </div>
           </div>
         )

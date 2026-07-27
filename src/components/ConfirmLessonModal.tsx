@@ -568,8 +568,17 @@ export default function ConfirmLessonModal({
               marginBottom: '20px', padding: '12px 14px', borderRadius: 'var(--radius-md)',
               background: 'var(--glacial-light)', color: 'var(--glacial-dark)', fontSize: '13px',
             }}>
+              {/* minutesRemainingRaw (not the netted minutesRemaining) —
+                  same reasoning as willExhaust above. Every other balance
+                  display in the app (student profile, ScheduledLessons'
+                  badge, PendingLessons' credit badge, the alerts) already
+                  shows purchased-minus-used with no deduction for other
+                  pending lessons; this was the one place still netted,
+                  which made this same package look like it had less room
+                  than the student's own profile page showed at the same
+                  moment. */}
               {t.will_consume_label} {fmtHoursMin(finalDuration)} — {t.remaining_after_label}{' '}
-              {fmtHoursMin(Math.max(0, (packageBalance?.minutesRemaining ?? 0) - finalDuration))} {t.in_package_label}
+              {fmtHoursMin(Math.max(0, (packageBalance?.minutesRemainingRaw ?? 0) - finalDuration))} {t.in_package_label}
             </div>
           )
         )}

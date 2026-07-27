@@ -95,6 +95,17 @@ export async function getSessionsByStudent(schoolId: string, studentName: string
   return data ?? []
 }
 
+/** A student can hold more than one active package_sales row at once
+ *  (package_sales.student_id is rarely populated, so nothing merges them
+ *  automatically) — this used to keep only the LAST sale the query
+ *  happened to return per student name (map.set overwrote any earlier
+ *  one, with no ORDER BY to even make that deterministic), silently
+ *  dropping every other active package that student had. Same class of
+ *  bug already fixed in getPackageBalancesForCheckins (see its own
+ *  comment) and getPackageBadge in ScheduledLessons.tsx — this was the
+ *  one caller still on the old single-sale behavior, which is why the
+ *  student profile page (this function's only caller) could show a
+ *  smaller remaining balance than every other view of the same student. */
 export async function getActivePackagesByStudent(schoolId: string) {
   const supabase = createServiceClient()
   const { data, error } = await supabase
@@ -104,11 +115,13 @@ export async function getActivePackagesByStudent(schoolId: string) {
       student_name,
       minutes_purchased,
       minutes_used,
+      sold_at,
       status,
       packages ( name )
     `)
     .eq('school_id', schoolId)
     .eq('status', 'active')
+    .order('sold_at', { ascending: true })
   if (error) throw error
 
   const map = new Map<string, {
@@ -119,12 +132,24 @@ export async function getActivePackagesByStudent(schoolId: string) {
   }>()
 
   for (const sale of data ?? []) {
-    map.set(sale.student_name, {
-      id: sale.id,
-      minutes_purchased: sale.minutes_purchased,
-      minutes_used: sale.minutes_used,
-      package_name: (sale.packages as any)?.name ?? 'Package',
-    })
+    const existing = map.get(sale.student_name)
+    if (!existing) {
+      map.set(sale.student_name, {
+        id: sale.id,
+        minutes_purchased: sale.minutes_purchased,
+        minutes_used: sale.minutes_used,
+        // Oldest sale's own name/id represent the card (FIFO — the one
+        // actually drawn down first) — purchased/used below are already
+        // summed across every active sale, same as everywhere else.
+        package_name: (sale.packages as any)?.name ?? 'Package',
+      })
+    } else {
+      map.set(sale.student_name, {
+        ...existing,
+        minutes_purchased: existing.minutes_purchased + sale.minutes_purchased,
+        minutes_used: existing.minutes_used + sale.minutes_used,
+      })
+    }
   }
 
   return map
