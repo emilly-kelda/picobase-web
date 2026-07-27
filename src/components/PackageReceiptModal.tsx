@@ -163,6 +163,23 @@ export default function PackageReceiptModal({
                   Certificado disponível na ficha do aluno assim que o cadastro estiver completo.
                 </div>
               )}
+              {/* The certificate link above is optional (missing student_id/
+                  sport hides it entirely) and opens a PDF in a new tab either
+                  way — neither is "take me back to a valid screen". This is
+                  the one actual navigation action out of the finalized
+                  state, previously only the header's small × close button. */}
+              <button
+                onClick={onFinalized}
+                style={{
+                  display: 'block', width: '100%', marginTop: '20px',
+                  padding: '11px', background: 'var(--slate)', color: '#fff',
+                  border: 'none', borderRadius: 'var(--radius-md)',
+                  fontSize: '14px', fontWeight: '500', cursor: 'pointer',
+                  fontFamily: 'var(--font-sans)',
+                }}
+              >
+                Concluir
+              </button>
             </div>
           ) : (
             <>
