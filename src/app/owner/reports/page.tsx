@@ -67,13 +67,6 @@ function fmt(n: number) {
   }).format(n)
 }
 
-function fmtEUR(n: number) {
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency', currency: 'EUR',
-    minimumFractionDigits: 0,
-  }).format(n)
-}
-
 function fmtMonth(ym: string) {
   const [y, m] = ym.split('-')
   const date = new Date(Number(y), Number(m) - 1, 1)
@@ -165,19 +158,6 @@ function EmptyState({ text }: { text: string }) {
   )
 }
 
-const cardStyle: React.CSSProperties = {
-  background: '#fff',
-  border: '0.5px solid var(--border)',
-  borderRadius: '12px',
-  padding: '18px 20px',
-}
-
-const cardLabelStyle: React.CSSProperties = {
-  fontSize: '10px', fontWeight: '600',
-  letterSpacing: '0.1em', textTransform: 'uppercase',
-  color: 'var(--mist)', marginBottom: '8px',
-}
-
 const tableWrapStyle: React.CSSProperties = {
   background: '#fff',
   border: '0.5px solid var(--border)',
@@ -263,65 +243,39 @@ export default function ReportsPage() {
   })
   const revenueTrendPath = smoothPath(barPoints.map(p => ({ x: p.xCenter, y: p.lineY })))
 
-  const metricCards: { label: string; value: string; color: string; sub?: string }[] = [
-    { label: 'Receita total',     value: fmt(totalRevenue),        color: 'var(--slate)' },
-    { label: 'Comissões pagas',   value: fmt(totalCommissions),    color: '#DC2626'      },
-    { label: 'Lucro líquido',     value: fmt(totalNet),            color: '#007868'      },
+  // Was two separate card systems (a 3-card hero row + a 9-card grid right
+  // below it) added in two different passes — Lucro líquido and Receita
+  // líquida were both just fmt(totalNet) under different labels, and Taxa
+  // de ocupação appeared in both, plus again per-instructor in the
+  // Instrutores tab below. Down to exactly the 4 numbers an owner needs
+  // before anything else, plus one consolidated DRE line for the
+  // revenue -> commissions -> costs -> profit breakdown those 4 cards used
+  // to need 4 more cards just to show the arithmetic behind. Taxa de
+  // renovação (also dropped from here) is still visible per-package
+  // completion in the Modalidade/Instrutores tabs, not lost entirely.
+  const totalCosts = data.monthlyCostTotal * data.monthly.length
+  const kpiCards: { label: string; value: string; color?: string; sub?: string }[] = [
+    { label: 'Faturamento Bruto', value: fmt(totalRevenue), sub: 'Total recebido de vendas' },
     {
-      label: 'Lucro após custos operacionais',
+      label: 'Lucro Operacional Real',
       value: fmt(netAfterOperationalCosts),
       color: netAfterOperationalCosts < 0 ? '#DC2626' : '#047857',
-      sub: data.monthlyCostTotal > 0 ? `${fmt(data.monthlyCostTotal)}/mês × ${data.monthly.length} meses` : undefined,
-    },
-    { label: 'Aulas confirmadas', value: totalLessons.toString(),  color: 'var(--slate)' },
-    {
-      label: 'Ticket médio',
-      value: data.metrics.ticketMedioBRL != null ? fmt(data.metrics.ticketMedioBRL) : '—',
-      color: 'var(--slate)',
-      sub: data.metrics.ticketMedioEUR != null
-        ? `${fmtEUR(data.metrics.ticketMedioEUR)} ticket médio (EUR)`
-        : undefined,
+      sub: 'Após comissões e custos fixos',
     },
     {
-      label: 'Taxa de ocupação',
-      value: data.metrics.occupancyPct != null ? `${data.metrics.occupancyPct.toFixed(0)}%` : '—',
-      color: 'var(--slate)',
-      sub: data.metrics.occupancyPct != null
-        ? `${data.metrics.occupancyHoursTaught.toFixed(0)}h de ${data.metrics.occupancyCapacityHours.toFixed(0)}h de capacidade`
-        : 'Configure a capacidade em Equipe',
+      label: 'Horas Ministradas',
+      value: `${data.metrics.occupancyHoursTaught.toFixed(0)}h`,
+      sub: `${totalLessons} aula${totalLessons !== 1 ? 's' : ''}`
+        + (data.metrics.ticketMedioBRL != null ? ` · Ticket médio: ${fmt(data.metrics.ticketMedioBRL)}` : ''),
     },
     {
-      label: 'Taxa de renovação',
-      value: data.metrics.renewalRatePct != null ? `${data.metrics.renewalRatePct.toFixed(0)}%` : '—',
-      color: 'var(--slate)',
-      sub: data.metrics.renewalCompletions > 0
-        ? `${data.metrics.renewalRenewed} de ${data.metrics.renewalCompletions} pacotes concluídos renovados`
-        : undefined,
-    },
-    {
-      // Passivo de Horas — hours already paid for on active packages but
-      // not yet taught. A liability in the accounting sense: the school
-      // owes these hours, not cash it can still call "profit" until
-      // they're delivered (or the package lapses).
-      label: 'Passivo de horas (pacotes ativos)',
+      // Hours already paid for on active packages but not yet taught — a
+      // liability in the accounting sense: the school owes these hours,
+      // not cash it can still call "profit" until they're delivered.
+      label: 'Passivo de Horas',
       value: `${data.metrics.hoursLiability.toFixed(0)}h`,
-      color: 'var(--slate)',
-      sub: 'Horas vendidas ainda não agendadas ou consumidas',
+      sub: 'Horas vendidas a realizar',
     },
-  ]
-
-  const heroCards: { label: string; value: string; sub?: string }[] = [
-    {
-      label: 'Receita líquida', value: fmt(totalNet),
-      // Realizado vs pendente right under the headline number — "receita"
-      // on its own reads as cash in hand, which isn't true for whatever's
-      // still sitting on a_receber sessions nobody's collected yet.
-      sub: data.metrics.revenuePending > 0
-        ? `${fmt(data.metrics.revenueRealized)} recebido · ${fmt(data.metrics.revenuePending)} pendente`
-        : 'Tudo recebido, nada pendente',
-    },
-    { label: 'Horas na água',    value: `${data.metrics.occupancyHoursTaught.toFixed(0)}h` },
-    { label: 'Taxa de ocupação', value: data.metrics.occupancyPct != null ? `${data.metrics.occupancyPct.toFixed(0)}%` : '—' },
   ]
 
   return (
@@ -344,17 +298,17 @@ export default function ReportsPage() {
         </h1>
       </div>
 
-      {/* Hero KPIs — the 3 numbers an owner actually needs before anything
-          else: what's left after paying instructors, how much water time
-          actually happened, and whether the team's capacity is being used.
-          Everything below (the full metric grid, tabs, tables) is detail
-          in support of these three, not competing with them for attention. */}
+      {/* Hero KPIs — the 4 numbers an owner actually needs before anything
+          else: what came in, what's actually left after paying instructors
+          and fixed costs, how much water time happened, and how many hours
+          are still owed on active packages. Everything below (DRE strip,
+          tabs, tables) is detail in support of these four. */}
       <div style={{
-        display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)',
-        gap: '12px', marginBottom: '20px',
+        display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)',
+        gap: '12px', marginBottom: '12px',
       }}>
-        {heroCards.map(h => (
-          <div key={h.label} style={{
+        {kpiCards.map(k => (
+          <div key={k.label} style={{
             background: 'var(--surface)', border: '0.5px solid var(--border)',
             borderRadius: 'var(--radius-xl)', boxShadow: 'var(--shadow-sm)',
             padding: '22px 24px',
@@ -363,43 +317,61 @@ export default function ReportsPage() {
               fontSize: '11px', fontWeight: '500', letterSpacing: '0.08em',
               textTransform: 'uppercase', color: 'var(--mist)', marginBottom: '10px',
             }}>
-              {h.label}
+              {k.label}
             </div>
             <div style={{
-              fontSize: '34px', fontWeight: '700', color: 'var(--slate)',
+              fontSize: '28px', fontWeight: '700', color: k.color ?? 'var(--slate)',
               letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums',
             }}>
-              {h.value}
+              {k.value}
             </div>
-            {h.sub && (
+            {k.sub && (
               <div style={{ fontSize: '11px', color: 'var(--mist)', marginTop: '8px' }}>
-                {h.sub}
+                {k.sub}
               </div>
             )}
           </div>
         ))}
       </div>
 
-      {/* Everything else — supporting detail below the hero row */}
+      {/* DRE sintética — the arithmetic behind "Lucro Operacional Real"
+          above, spelled out as one line instead of 4 separate cards a
+          reader had to mentally subtract themselves. */}
       <div style={{
-        display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-        gap: '12px', marginBottom: '32px',
+        display: 'flex', alignItems: 'stretch', flexWrap: 'wrap',
+        background: 'var(--surface)', border: '0.5px solid var(--border)',
+        borderRadius: 'var(--radius-xl)', boxShadow: 'var(--shadow-sm)',
+        marginBottom: '32px', overflow: 'hidden',
       }}>
-        {metricCards.map(metric => (
-          <div key={metric.label} style={cardStyle}>
-            <div style={cardLabelStyle}>{metric.label}</div>
+        {[
+          { label: 'Receita Total', value: fmt(totalRevenue) },
+          { label: 'Comissões',     value: `- ${fmt(totalCommissions)}` },
+          { label: 'Custos Fixos',  value: `- ${fmt(totalCosts)}` },
+          {
+            label: 'Lucro Líquido',
+            value: `= ${fmt(netAfterOperationalCosts)}`,
+            color: netAfterOperationalCosts < 0 ? '#DC2626' : '#047857',
+            emphasize: true,
+          },
+        ].map((seg, i) => (
+          <div key={seg.label} style={{
+            flex: '1 1 160px', padding: '16px 20px',
+            borderLeft: i > 0 ? '0.5px solid var(--border)' : 'none',
+            background: (seg as any).emphasize ? 'var(--powder)' : 'transparent',
+          }}>
             <div style={{
-              fontSize: '22px', fontWeight: '700',
-              color: metric.color,
-              fontVariantNumeric: 'tabular-nums',
+              fontSize: '10px', fontWeight: '600', letterSpacing: '0.08em',
+              textTransform: 'uppercase', color: 'var(--mist)', marginBottom: '6px',
             }}>
-              {metric.value}
+              {seg.label}
             </div>
-            {metric.sub && (
-              <div style={{ fontSize: '11px', color: 'var(--mist)', marginTop: '6px' }}>
-                {metric.sub}
-              </div>
-            )}
+            <div style={{
+              fontSize: '16px', fontWeight: '700',
+              color: (seg as any).color ?? 'var(--slate)',
+              fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap',
+            }}>
+              {seg.value}
+            </div>
           </div>
         ))}
       </div>
