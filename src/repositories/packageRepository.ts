@@ -277,6 +277,15 @@ export async function getPackageReceiptData(schoolId: string, packageSaleId: str
   const sportGroups = groupSessionsBySport((history?.sessions ?? []) as unknown as SessionForGrouping[])
   const sport = [...sportGroups.entries()].sort((a, b) => b[1].minutes - a[1].minutes)[0]?.[0] ?? null
 
+  // PackageReceiptModal ("Extrato do Pacote") is a customer-facing closing
+  // receipt, not an owner-internal view — commission_amount (what the
+  // school pays its OWN instructor per session) has no business leaving
+  // this endpoint at all, not just being unrendered client-side. Stripped
+  // here rather than in getSessionHistoryForPackageSale itself, since that
+  // function is the shared, generic session-history lookup and other
+  // (genuinely owner-only) callers may still need the figure.
+  const sessions = (history?.sessions ?? []).map(({ commission_amount: _commission_amount, ...rest }) => rest)
+
   return {
     studentName:      sale.student_name,
     packageName:      pkg?.name ?? null,
@@ -284,7 +293,7 @@ export async function getPackageReceiptData(schoolId: string, packageSaleId: str
     minutesUsed:      sale.minutes_used ?? 0,
     pricePaid:        sale.price_paid ?? 0,
     soldAt:           sale.sold_at,
-    sessions:         history?.sessions ?? [],
+    sessions,
     // For the new per-student+sport certificate link (see
     // /api/owner/certificate/[studentId]/[sport]) — both null when this
     // package belongs to a check-in-only "student" (no real students row)

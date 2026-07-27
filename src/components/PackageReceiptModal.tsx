@@ -6,7 +6,6 @@ type ReceiptSession = {
   id: string
   session_date: string
   duration_min: number
-  commission_amount: number | null
   activities: { name: string } | null
   users: { name: string } | null
 }
@@ -85,21 +84,6 @@ export default function PackageReceiptModal({
     if (result.ok) setFinalized(true)
     else setError(result.error ?? 'Erro ao encerrar pacote')
   }
-
-  // Instructor payout rollup — commission_amount already comes attached to
-  // each session (getSessionsByStudentName selects it directly), so this is
-  // a pure client-side grouping, no extra query.
-  const payouts = data
-    ? Object.values(
-        data.sessions.reduce((acc, s) => {
-          const name = s.users?.name ?? '—'
-          if (!acc[name]) acc[name] = { name, total: 0, count: 0 }
-          acc[name].total += s.commission_amount ?? 0
-          acc[name].count += 1
-          return acc
-        }, {} as Record<string, { name: string; total: number; count: number }>)
-      )
-    : []
 
   return (
     <div
@@ -231,21 +215,11 @@ export default function PackageReceiptModal({
                 </tbody>
               </table>
 
-              {payouts.length > 0 && (
-                <>
-                  <div style={{ fontSize: '11px', fontWeight: '500', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--mist)', marginBottom: '8px' }}>
-                    {t.instructor_payouts_label}
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '20px' }}>
-                    {payouts.map(p => (
-                      <div key={p.name} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-                        <span style={{ color: 'var(--slate)' }}>{p.name} <span style={{ color: 'var(--mist)' }}>({p.count})</span></span>
-                        <span style={{ fontWeight: '500', color: 'var(--slate)', fontVariantNumeric: 'tabular-nums' }}>{fmtBRL(p.total)}</span>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              )}
+              {/* No instructor payout breakdown here — this modal is a
+                  customer-facing closing receipt (see the docstring above),
+                  and per-instructor commission is internal payroll data
+                  with no business on it. getPackageReceiptData already
+                  strips commission_amount server-side, not just here. */}
 
               {/* No payment-method line here — package_sales has no
                   currency/payment_method column, only price_paid (always
