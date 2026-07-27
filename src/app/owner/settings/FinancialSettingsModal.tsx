@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import BurnRateCalculator from '@/components/BurnRateCalculator'
 
 const inputStyle: React.CSSProperties = {
   width: '100%', padding: '9px 12px',
@@ -18,38 +17,33 @@ const labelStyle: React.CSSProperties = {
   color: 'var(--mist)', marginBottom: '6px', display: 'block',
 }
 
-function fmt(n: number) {
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency', currency: 'BRL', minimumFractionDigits: 0,
-  }).format(n)
-}
-
 const MONTHS = [
   'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
   'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
 ]
 
+// Custo operacional mensal (burn_rate) used to be editable here, but
+// /owner/costs' own itemized recurring costs now take priority over it
+// whenever any exist (see that page's monthlyBurn fallback) — this modal
+// is deliberately scoped down to just the two settings /owner/costs has
+// no edit UI for at all: the cash-reserve target and high-season months.
 export default function FinancialSettingsModal({
-  burnRate,
   reserveTargetMonths,
   highSeasonStartMonth,
   highSeasonEndMonth,
   onClose,
   onSaved,
 }: {
-  burnRate: number | null
   reserveTargetMonths: number | null
   highSeasonStartMonth: number | null
   highSeasonEndMonth: number | null
   onClose: () => void
   onSaved: (patch: {
-    burn_rate: number
     reserve_target_months: number
     high_season_start_month: number | null
     high_season_end_month: number | null
   }) => void
 }) {
-  const [value, setValue] = useState(burnRate ?? 0)
   const [targetMonths, setTargetMonths] = useState(reserveTargetMonths ?? 6)
   const [highStart, setHighStart] = useState(highSeasonStartMonth ?? '')
   const [highEnd, setHighEnd]     = useState(highSeasonEndMonth ?? '')
@@ -61,7 +55,6 @@ export default function FinancialSettingsModal({
     setSaving(true)
     setError(null)
     const patch = {
-      burn_rate:                value,
       reserve_target_months:    targetMonths > 0 ? targetMonths : 6,
       high_season_start_month:  highStart === '' ? null : Number(highStart),
       high_season_end_month:    highEnd === '' ? null : Number(highEnd),
@@ -99,34 +92,10 @@ export default function FinancialSettingsModal({
         width: '100%', maxWidth: '480px',
         padding: '28px', maxHeight: '90vh', overflowY: 'auto',
       }}>
-        <div style={{ fontSize: '18px', fontWeight: '500', color: 'var(--slate)', marginBottom: '20px' }}>
+        <div style={{ fontSize: '18px', fontWeight: '500', color: 'var(--slate)', marginBottom: '4px' }}>
           Financeiro
         </div>
-
-        <label style={labelStyle}>
-          Custo operacional mensal
-          <span style={{ marginLeft: '6px', color: 'var(--glacial)', fontWeight: '400', textTransform: 'none', letterSpacing: 0 }}>
-            {value ? fmt(value) : '—'}
-          </span>
-        </label>
-        <input
-          style={inputStyle}
-          type="number"
-          value={value}
-          placeholder="5000"
-          onChange={e => setValue(Number(e.target.value))}
-        />
-        <div style={{ fontSize: '11px', color: 'var(--mist)', marginTop: '4px', marginBottom: '4px' }}>
-          Custos fixos mensais na baixa temporada. Usado para calcular a Reserva de Baixa Temporada.
-        </div>
-
-        <BurnRateCalculator
-          onApply={total => setValue(total)}
-        />
-
-        <div style={{ height: '0.5px', background: 'var(--border)', margin: '20px 0' }} />
-
-        <div style={{ fontSize: '13px', fontWeight: '600', color: 'var(--slate)', marginBottom: '14px' }}>
+        <div style={{ fontSize: '12px', color: 'var(--mist)', marginBottom: '20px' }}>
           Metas Financeiras &amp; Sazonalidade
         </div>
 

@@ -58,12 +58,6 @@ type Activity = {
 
 type ModalKey = 'general' | 'financial' | 'seasons' | 'waiver' | 'notifications' | 'certificates'
 
-function fmt(n: number) {
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency', currency: 'BRL', minimumFractionDigits: 0,
-  }).format(n)
-}
-
 const cardStyle: React.CSSProperties = {
   background: '#fff',
   border: '0.5px solid var(--border)',
@@ -127,8 +121,8 @@ export default function SettingsClient({
     {
       key: 'financial',
       title: 'Financeiro',
-      summary: school.burn_rate ? fmt(school.burn_rate) : 'Não definido',
-      sub: 'Custo operacional mensal',
+      summary: `${school.reserve_target_months ?? 6} meses de reserva`,
+      sub: 'Metas financeiras e sazonalidade',
     },
     {
       key: 'seasons',
@@ -197,12 +191,11 @@ export default function SettingsClient({
 
       {activeModal === 'financial' && (
         <FinancialSettingsModal
-          burnRate={school.burn_rate}
           reserveTargetMonths={school.reserve_target_months}
           highSeasonStartMonth={school.high_season_start_month}
           highSeasonEndMonth={school.high_season_end_month}
           onClose={() => setActiveModal(null)}
-          onSaved={patch => { setSchool(s => ({ ...s, burn_rate: patch.burn_rate, reserve_target_months: patch.reserve_target_months, high_season_start_month: patch.high_season_start_month, high_season_end_month: patch.high_season_end_month })); closeAndRefresh() }}
+          onSaved={patch => { setSchool(s => ({ ...s, reserve_target_months: patch.reserve_target_months, high_season_start_month: patch.high_season_start_month, high_season_end_month: patch.high_season_end_month })); closeAndRefresh() }}
         />
       )}
 
