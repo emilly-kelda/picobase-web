@@ -19,18 +19,32 @@ export async function POST(request: Request) {
   // Re-derive from the instructor's saved rate — same reasoning as
   // /api/owner/confirm-lesson: a client-supplied commission_pct never
   // reflects fixed hourly-rate instructors and can go stale.
-  const { data: instructor } = await supabase
-    .from('users')
-    .select('commission_pct, commission_mode, fixed_per_hour')
-    .eq('id', instructor_id)
-    .single()
+  const [{ data: instructor }, { data: schoolRow }] = await Promise.all([
+    supabase
+      .from('users')
+      .select('commission_pct, commission_mode, fixed_per_hour')
+      .eq('id', instructor_id)
+      .single(),
+    // Same school-wide override as /api/owner/confirm-lesson: payout_model
+    // 'fixed' ignores every instructor's own commission_pct/fixed_per_hour
+    // entirely. This route used to skip this check and always fall back to
+    // percentage, even for schools configured with a flat fixed payout.
+    supabase
+      .from('schools')
+      .select('payout_model, fixed_payout_value')
+      .eq('id', school_id)
+      .single(),
+  ])
+  const usesFixedPayout = schoolRow?.payout_model === 'fixed'
 
-  const commission_pct    = instructor?.commission_pct ?? null
-  const commission_amount = computeCommissionAmount(
-    instructor ?? { commission_pct: null },
-    price,
-    duration_min
-  )
+  const commission_pct    = usesFixedPayout ? null : (instructor?.commission_pct ?? null)
+  const commission_amount = usesFixedPayout
+    ? (schoolRow?.fixed_payout_value ?? 0)
+    : computeCommissionAmount(
+        instructor ?? { commission_pct: null },
+        price,
+        duration_min
+      )
   const today = new Date().toISOString().slice(0, 10)
 
   const { error: sessionError } = await supabase
