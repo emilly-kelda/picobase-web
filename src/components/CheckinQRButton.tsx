@@ -32,6 +32,7 @@ export default function CheckinQRButton({
   compact = false,
   iconOnly = false,
   chip = false,
+  hideTrigger = false,
   onOpen,
   className,
 }: {
@@ -61,6 +62,14 @@ export default function CheckinQRButton({
   // to promote it out of the Ver ficha modal and into the card's own
   // button row, next to those two.
   chip?: boolean
+  // Renders only the modal (with defaultOpen), no trigger shape at all —
+  // for a caller with its own pre-existing clickable element (e.g. Spot's
+  // "Termo pendente" badge) that wants this component's QR-fetch+modal
+  // behavior without also getting a second, redundant visible trigger next
+  // to its own. Pair with a `key` that changes per open request (e.g. a
+  // click counter) so each click forces a fresh mount — defaultOpen only
+  // seeds this component's internal `open` state once, at mount.
+  hideTrigger?: boolean
   // Fires whenever the modal is opened, any trigger shape — lets a caller
   // (ChameleonButton) piggyback its own side effect (marking checked_in
   // true) on the same click without this component knowing anything about
@@ -102,7 +111,7 @@ export default function CheckinQRButton({
 
   return (
     <>
-      {iconOnly ? (
+      {!hideTrigger && (iconOnly ? (
         // Restored per the approved redesign: check-in's primary action in
         // Aguardando Vento goes back to a compact QR trigger instead of the
         // plain "Check-in" button ChameleonButton had — 36px square (avatar
@@ -192,7 +201,7 @@ export default function CheckinQRButton({
         >
           Exibir QR Code de Check-in
         </button>
-      )}
+      ))}
 
       {open && (
         <div

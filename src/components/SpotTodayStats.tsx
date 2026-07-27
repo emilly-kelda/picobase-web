@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import MaskableValue from '@/components/MaskableValue'
+import CheckinQRButton from '@/components/CheckinQRButton'
 import { formatCurrency } from '@/lib/currency'
 
 type TodayStats = { students: number; sessions: number; revenue: number; commissions: number }
@@ -76,12 +77,15 @@ const modalTitles: Record<ModalType, string> = {
  *  the first card click so switching between modals doesn't re-fetch. */
 export default function SpotTodayStats({
   today, monthComparison, occupancyPct, studentsInWaterNow, todayLabel,
+  slug, schoolName,
 }: {
   today: TodayStats
   monthComparison: MonthComparison
   occupancyPct: number | null
   studentsInWaterNow: number
   todayLabel: string
+  slug: string
+  schoolName: string
 }) {
   const [activeModal, setActiveModal] = useState<ModalType | null>(null)
   const [detail, setDetail] = useState<DetailData | null>(null)
@@ -239,6 +243,8 @@ export default function SpotTodayStats({
           detail={detail}
           loading={loading}
           onClose={() => setActiveModal(null)}
+          slug={slug}
+          schoolName={schoolName}
         />
       )}
     </div>
@@ -246,12 +252,14 @@ export default function SpotTodayStats({
 }
 
 function DetailModal({
-  type, detail, loading, onClose,
+  type, detail, loading, onClose, slug, schoolName,
 }: {
   type: ModalType
   detail: DetailData | null
   loading: boolean
   onClose: () => void
+  slug: string
+  schoolName: string
 }) {
   return (
     <div
@@ -291,7 +299,7 @@ function DetailModal({
               Carregando...
             </div>
           ) : type === 'students' ? (
-            <StudentsList checkins={detail.checkins} />
+            <StudentsList checkins={detail.checkins} slug={slug} schoolName={schoolName} />
           ) : type === 'lessons' ? (
             <LessonsList sessions={detail.sessions} scheduledToday={detail.scheduledToday} />
           ) : type === 'revenue' ? (
@@ -318,7 +326,13 @@ function EmptyRow({ text }: { text: string }) {
   )
 }
 
-function StudentsList({ checkins }: { checkins: CheckinRow[] }) {
+function StudentsList({ checkins, slug, schoolName }: { checkins: CheckinRow[]; slug: string; schoolName: string }) {
+  // Which student's QR is currently requested, plus a per-click nonce —
+  // CheckinQRButton (hideTrigger) only reads its defaultOpen prop once at
+  // mount, so re-requesting the SAME student after closing needs a fresh
+  // key to force a remount, not just the same studentName again.
+  const [qrRequest, setQrRequest] = useState<{ student: string; nonce: number } | null>(null)
+
   if (checkins.length === 0) return <EmptyRow text="Nenhum check-in hoje." />
   return (
     <div>
@@ -331,15 +345,40 @@ function StudentsList({ checkins }: { checkins: CheckinRow[] }) {
               {c.stage && ` · ${STAGE_LABELS[c.stage] ?? c.stage}`}
             </div>
           </div>
-          <span style={{
-            padding: '2px 8px', borderRadius: '99px', fontSize: '11px', fontWeight: '500',
-            background: c.waiver_signed_at ? 'var(--color-pb-glacial-light)' : 'var(--signal-light)',
-            color: c.waiver_signed_at ? 'var(--color-pb-glacial-dark)' : 'var(--signal-dark)',
-          }}>
-            {c.waiver_signed_at ? 'Termo OK' : 'Termo pendente'}
-          </span>
+          {c.waiver_signed_at ? (
+            <span style={{
+              padding: '2px 8px', borderRadius: '99px', fontSize: '11px', fontWeight: '500',
+              background: 'var(--color-pb-glacial-light)', color: 'var(--color-pb-glacial-dark)',
+            }}>
+              Termo OK
+            </span>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setQrRequest(prev => ({ student: c.student_name, nonce: (prev?.nonce ?? 0) + 1 }))}
+              title={`Abrir QR Code de check-in — ${c.student_name}`}
+              style={{
+                padding: '2px 8px', borderRadius: '99px', fontSize: '11px', fontWeight: '500',
+                background: 'var(--signal-light)', color: 'var(--signal-dark)',
+                border: 'none', cursor: 'pointer', fontFamily: 'var(--font-sans)',
+              }}
+            >
+              Termo pendente
+            </button>
+          )}
         </div>
       ))}
+
+      {qrRequest && (
+        <CheckinQRButton
+          key={`${qrRequest.student}-${qrRequest.nonce}`}
+          hideTrigger
+          defaultOpen
+          slug={slug}
+          schoolName={schoolName}
+          studentName={qrRequest.student}
+        />
+      )}
     </div>
   )
 }

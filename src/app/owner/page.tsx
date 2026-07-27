@@ -266,6 +266,8 @@ export default async function OwnerPage() {
             occupancyPct={occupancyPct}
             studentsInWaterNow={studentsInWaterNow}
             todayLabel={t.today_label}
+            slug={(school as any)?.slug ?? runway.slug ?? ''}
+            schoolName={runway.school_name ?? 'Pico Base'}
           />
 
           {/* Moved here from the left column — a red alert list that grows
