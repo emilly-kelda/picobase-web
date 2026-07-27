@@ -4,6 +4,7 @@ import { headers } from 'next/headers'
 import { normalizeStudentName } from '@/lib/text'
 import { encrypt } from '@/utils/crypto'
 import { createHash } from 'crypto'
+import { todayBR } from '@/lib/date'
 
 /** SHA-256 of the exact waiver content shown at signing — the file's raw
  *  bytes for file-mode (fetched from its public Storage URL), the literal
@@ -102,46 +103,78 @@ export async function POST(request: Request) {
     ? await computeWaiverHash(waiverSourceType, waiverContentSnapshot)
     : null
 
-  const { error, data } = await supabase
+  const checkinFields = {
+    school_id:           body.school_id,
+    student_name:        body.student_name,
+    student_email:       body.student_email || null,
+    student_whatsapp:    body.student_whatsapp || null,
+    student_nationality: body.student_nationality || null,
+    document_number:     body.document_number || null,
+    document_type:       body.document_type || null,
+    activity_id:         body.activity_id || null,
+    instructor_id:       body.instructor_id || null,
+    partner_id:          body.partner_id ?? null,
+    health_condition:    encryptedHealthCondition,
+    emergency_name:      body.emergency_name || null,
+    emergency_phone:     body.emergency_phone || null,
+    birthdate:           body.date_of_birth || null,
+    weight_kg:           body.weight_kg ? Number(body.weight_kg) : null,
+    is_minor:            body.is_minor ?? false,
+    guardian_name:       body.guardian_name ?? null,
+    guardian_consent:    body.guardian_consent ?? false,
+    // Both already validated true above — this records the real
+    // submitted values rather than an assumption, so the audit trail
+    // reflects what actually happened even if that validation is ever
+    // relaxed later.
+    lgpd_consent:        body.gdpr_consent === true,
+    gdpr_consent:        body.gdpr_consent === true,
+    waiver_signed_at:    new Date().toISOString(),
+    waiver_source_type:      waiverSourceType,
+    waiver_content_snapshot: waiverContentSnapshot || null,
+    waiver_version_hash:     waiverVersionHash,
+    signature_data:      body.signature_data || null,
+    ip_address:          ip,
+    user_agent:          ua,
+    status:              'checked_in',
+    scheduled_lesson_id: scheduledLesson?.id ?? null,
+    source:              body.source ?? null,
+  }
+
+  // Same "find an existing today-checkin before inserting a fresh one" rule
+  // ensureActiveCheckinForToday already applies for the sell-package/schedule
+  // side effects — this route was the one path that skipped it, so a
+  // student who already had a pending Aguardando Vento entry (e.g. from a
+  // package sale) and then went through the full waiver form got a SECOND
+  // checkins row instead of that same row picking up the signed waiver,
+  // duplicating them in the list. Matched by name + today only (not
+  // status), so a checkin left in 'checked_in' from earlier today gets
+  // updated in place rather than doubled; one already 'session_confirmed'
+  // or 'cancelled' is left alone and this still inserts fresh, same as a
+  // genuinely new visit.
+  const { data: existingToday } = await supabase
     .from('checkins')
-    .insert({
-      school_id:           body.school_id,
-      student_name:        body.student_name,
-      student_email:       body.student_email || null,
-      student_whatsapp:    body.student_whatsapp || null,
-      student_nationality: body.student_nationality || null,
-      document_number:     body.document_number || null,
-      document_type:       body.document_type || null,
-      activity_id:         body.activity_id || null,
-      instructor_id:       body.instructor_id || null,
-      partner_id:          body.partner_id ?? null,
-      health_condition:    encryptedHealthCondition,
-      emergency_name:      body.emergency_name || null,
-      emergency_phone:     body.emergency_phone || null,
-      birthdate:           body.date_of_birth || null,
-      weight_kg:           body.weight_kg ? Number(body.weight_kg) : null,
-      is_minor:            body.is_minor ?? false,
-      guardian_name:       body.guardian_name ?? null,
-      guardian_consent:    body.guardian_consent ?? false,
-      // Both already validated true above — this records the real
-      // submitted values rather than an assumption, so the audit trail
-      // reflects what actually happened even if that validation is ever
-      // relaxed later.
-      lgpd_consent:        body.gdpr_consent === true,
-      gdpr_consent:        body.gdpr_consent === true,
-      waiver_signed_at:    new Date().toISOString(),
-      waiver_source_type:      waiverSourceType,
-      waiver_content_snapshot: waiverContentSnapshot || null,
-      waiver_version_hash:     waiverVersionHash,
-      signature_data:      body.signature_data || null,
-      ip_address:          ip,
-      user_agent:          ua,
-      status:              'checked_in',
-      scheduled_lesson_id: scheduledLesson?.id ?? null,
-      source:              body.source ?? null,
-    })
-    .select('id')
-    .single()
+    .select('id, status')
+    .eq('school_id', body.school_id)
+    .ilike('student_name', body.student_name)
+    .gte('checkin_at', `${todayBR()}T00:00:00-03:00`)
+    .order('checkin_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  const reusable = existingToday && existingToday.status !== 'session_confirmed' && existingToday.status !== 'cancelled'
+
+  const { error, data } = reusable
+    ? await supabase
+        .from('checkins')
+        .update(checkinFields)
+        .eq('id', existingToday!.id)
+        .select('id')
+        .single()
+    : await supabase
+        .from('checkins')
+        .insert(checkinFields)
+        .select('id')
+        .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
