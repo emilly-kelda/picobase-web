@@ -1,73 +1,22 @@
 import { getSchool, getSeasons } from '@/repositories/runwayRepository'
 import { getActivitiesForCheckin } from '@/repositories/checkinRepository'
-import { createServiceClient } from '@/lib/supabase-server'
 import { getPortalLang } from '@/lib/language'
 import { getT } from '@/lib/i18n'
 import SettingsClient from './SettingsClient'
 import QRCodeDisplay from '@/components/QRCodeDisplay'
-import SeasonLaunchChecklist from '@/components/SeasonLaunchChecklist'
 import DailyNoticeEditor from '@/components/DailyNoticeEditor'
 
 const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
 
 export default async function SettingsPage() {
-  const supabase = createServiceClient()
-
-  const [school, seasons, activities, lang, { count: instructorCount }, { count: partnerCount }, { count: sessionCount }] = await Promise.all([
+  const [school, seasons, activities, lang] = await Promise.all([
     getSchool(SCHOOL_ID),
     getSeasons(SCHOOL_ID),
     getActivitiesForCheckin(SCHOOL_ID),
     getPortalLang(),
-    supabase.from('users').select('*', { count: 'exact', head: true }).eq('school_id', SCHOOL_ID).eq('role', 'instructor'),
-    supabase.from('partners').select('*', { count: 'exact', head: true }).eq('school_id', SCHOOL_ID).eq('active', true),
-    supabase.from('sessions').select('*', { count: 'exact', head: true }).eq('school_id', SCHOOL_ID),
   ])
 
   const t = getT(lang)
-
-  const checklistItems = [
-    {
-      label: 'Escola configurada',
-      done:  !!school?.name,
-      sub:   school?.name ?? 'Nome da escola não definido',
-    },
-    {
-      label: 'Primeiro instrutor adicionado',
-      done:  (instructorCount ?? 0) > 0,
-      sub:   `${instructorCount ?? 0} instrutor${(instructorCount ?? 0) !== 1 ? 'es' : ''} configurado${(instructorCount ?? 0) !== 1 ? 's' : ''}`,
-      href:  '/owner/crew',
-    },
-    {
-      label: 'Parceiros configurados',
-      done:  (partnerCount ?? 0) > 0,
-      sub:   (partnerCount ?? 0) > 0
-        ? `${partnerCount} parceiro${(partnerCount ?? 0) !== 1 ? 's' : ''} ativo${(partnerCount ?? 0) !== 1 ? 's' : ''}`
-        : 'Hotéis, agências e operadores de turismo',
-      href:  '/owner/crew',
-    },
-    {
-      label: 'Custo operacional mensal definido',
-      done:  !!(school?.burn_rate),
-      sub:   'Necessário para calcular a Reserva de Baixa Temporada',
-      href:  '/owner/settings',
-    },
-    {
-      label: 'Waiver configurado',
-      done:  school?.waiver_type === 'file'
-        ? !!(school?.waiver_file_global_url) || Object.keys(school?.waiver_files_by_lang ?? {}).length > 0
-        : !!(school?.waiver_pt),
-      sub:   'Termo de responsabilidade para os alunos',
-      href:  '/owner/settings',
-    },
-    {
-      label: 'Primeira aula confirmada',
-      done:  (sessionCount ?? 0) > 0,
-      sub:   (sessionCount ?? 0) > 0
-        ? `${sessionCount} aula${(sessionCount ?? 0) !== 1 ? 's' : ''} confirmada${(sessionCount ?? 0) !== 1 ? 's' : ''}`
-        : 'Confirme a primeira aula pelo Spot',
-      href:  '/owner',
-    },
-  ]
 
   return (
     <div>
@@ -82,8 +31,6 @@ export default async function SettingsPage() {
           {t.settings_sub}
         </p>
       </div>
-
-      <SeasonLaunchChecklist items={checklistItems} />
 
       <QRCodeDisplay
         slug={school?.slug ?? 'escola'}
