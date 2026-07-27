@@ -12,13 +12,17 @@ export type Partner = {
   active: boolean
 }
 
+/** Owner-facing admin listing — deliberately NOT filtered to active=true
+ *  (unlike getPartnerByReferralCode below, whose job is gating whether a
+ *  real /book/[school]?ref= link still works) so a deactivated partner
+ *  stays visible/reactivatable here instead of silently disappearing with
+ *  no way back short of re-creating it under a new referral code. */
 export async function getPartners(schoolId: string): Promise<Partner[]> {
   const supabase = createServiceClient()
   const { data, error } = await supabase
     .from('partners')
     .select('id, name, type, commission_pct, discount_pct, referral_code, finance_email, logo_url, active')
     .eq('school_id', schoolId)
-    .eq('active', true)
     .order('name')
   if (error) throw error
   return data ?? []
@@ -112,6 +116,17 @@ export async function deactivatePartner(id: string, schoolId: string) {
   const { error } = await supabase
     .from('partners')
     .update({ active: false })
+    .eq('id', id)
+    .eq('school_id', schoolId)
+  if (error) throw error
+  return { ok: true }
+}
+
+export async function reactivatePartner(id: string, schoolId: string) {
+  const supabase = createServiceClient()
+  const { error } = await supabase
+    .from('partners')
+    .update({ active: true })
     .eq('id', id)
     .eq('school_id', schoolId)
   if (error) throw error

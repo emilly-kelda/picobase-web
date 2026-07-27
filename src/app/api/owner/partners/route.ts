@@ -1,4 +1,4 @@
-import { getPartners, createPartner, updatePartner, deactivatePartner } from '@/repositories/partnerRepository'
+import { getPartners, createPartner, updatePartner, deactivatePartner, reactivatePartner } from '@/repositories/partnerRepository'
 import { NextResponse } from 'next/server'
 
 const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
@@ -46,6 +46,20 @@ export async function POST(request: Request) {
 export async function PATCH(request: Request) {
   const body = await request.json()
   if (!body.id) return NextResponse.json({ error: 'id é obrigatório' }, { status: 400 })
+
+  // Reactivating is a single-field toggle — bypasses the full name/
+  // commission validation below, which is for the edit form's complete
+  // payload, not this narrower action.
+  if (body.action === 'reactivate') {
+    try {
+      await reactivatePartner(body.id, SCHOOL_ID)
+      return NextResponse.json({ ok: true })
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error'
+      return NextResponse.json({ error: message }, { status: 500 })
+    }
+  }
+
   const error = validate(body)
   if (error) return NextResponse.json({ error }, { status: 400 })
 
