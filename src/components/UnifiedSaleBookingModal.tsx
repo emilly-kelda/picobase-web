@@ -800,7 +800,7 @@ export default function UnifiedSaleBookingModal({
                 disabled={!canStep1}
                 style={navPrimaryStyle(canStep1)}
               >
-                Continuar
+                Continuar para Pagamento
               </button>
             </>
           )}
@@ -812,25 +812,25 @@ export default function UnifiedSaleBookingModal({
                 disabled={!paymentMethod || saving}
                 style={navPrimaryStyle(!!paymentMethod && !saving)}
               >
-                {saving ? 'Registrando...' : 'Confirmar Pagamento e Prosseguir ➔'}
+                {saving ? 'Registrando...' : 'Confirmar Pagamento'}
               </button>
             </>
           )}
           {step === 3 && (
             <>
-              <button onClick={skipScheduling} disabled={saving} style={navSecondaryStyle}>Pular</button>
+              <button onClick={skipScheduling} disabled={saving} style={navSecondaryStyle}>Pular Agendamento</button>
               <button
                 onClick={confirmSchedule}
                 disabled={!canStep3 || saving}
                 style={navPrimaryStyle(canStep3 && !saving)}
               >
-                {saving ? 'Agendando...' : scheduleNow ? 'Agendar e continuar' : 'Continuar'}
+                {saving ? 'Agendando...' : scheduleNow ? 'Agendar e Concluir' : 'Concluir sem Agendar'}
               </button>
             </>
           )}
           {step === 4 && (
             <button onClick={onSold} style={{ ...navPrimaryStyle(true), flex: 1 }}>
-              Concluir
+              Concluir Venda
             </button>
           )}
         </div>
