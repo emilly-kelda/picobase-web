@@ -111,6 +111,8 @@ export default function PaymentsClient({
   partnerCommissions,
   instructors,
   activeInstructor,
+  payoutModel,
+  fixedPayoutValue,
 }: {
   payments: Payment[]
   period: string
@@ -119,7 +121,10 @@ export default function PaymentsClient({
   partnerCommissions: PartnerRow[]
   instructors: { id: string; name: string }[]
   activeInstructor: string
+  payoutModel: string
+  fixedPayoutValue: number | null
 }) {
+  const usesFixedPayout = payoutModel === 'fixed'
   const router  = useRouter()
   const [payments,    setPayments]    = useState(initialPayments)
   const [summary,     setSummary]     = useState(initialSummary)
@@ -650,7 +655,7 @@ export default function PaymentsClient({
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
                     <tr style={{ background: 'var(--powder)' }}>
-                      {['Instrutor', 'Sessões', 'Receita', '%', 'A receber', 'Status', 'Ações'].map((h, i) => (
+                      {['Instrutor', 'Sessões', 'Receita', usesFixedPayout ? 'Repasse' : '%', 'A receber', 'Status', 'Ações'].map((h, i) => (
                         <th key={h} style={{
                           padding: '10px 20px', textAlign: i >= 1 && i <= 4 ? 'right' : 'left',
                           fontSize: '10px', fontWeight: '600',
@@ -712,8 +717,10 @@ export default function PaymentsClient({
                           <td style={{ padding: '14px 20px', textAlign: 'right', fontSize: '13px', color: 'var(--slate)', fontVariantNumeric: 'tabular-nums' }}>
                             {fmt(p.revenue_generated)}
                           </td>
-                          <td style={{ padding: '14px 20px', textAlign: 'right', fontSize: '13px', color: 'var(--mist)' }}>
-                            {fmtPct(p.commission_pct)}
+                          <td style={{ padding: '14px 20px', textAlign: 'right', fontSize: '12px', color: 'var(--mist)', whiteSpace: 'nowrap' }}>
+                            {usesFixedPayout
+                              ? `${p.sessions_count} aula${p.sessions_count !== 1 ? 's' : ''} × ${fmt(fixedPayoutValue ?? 0)}`
+                              : fmtPct(p.commission_pct)}
                           </td>
                           <td style={{ padding: '14px 20px', textAlign: 'right' }}>
                             <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--slate)', fontVariantNumeric: 'tabular-nums' }}>
