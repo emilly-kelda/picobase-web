@@ -292,7 +292,8 @@ export async function getTodayDetail(schoolId: string) {
         id, duration_min, price, commission_amount, payment_method,
         activities ( name ),
         users!sessions_instructor_id_fkey ( name ),
-        checkins ( student_name )
+        checkins ( student_name ),
+        scheduled_lessons ( student_name )
       `)
       .eq('school_id', schoolId)
       .eq('session_date', today)

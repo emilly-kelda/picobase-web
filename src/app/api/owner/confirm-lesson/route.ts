@@ -172,6 +172,13 @@ export async function POST(request: Request) {
     .insert({
       school_id:        SCHOOL_ID,
       checkin_id:       checkin_id ?? null,
+      // For group-confirmed lessons (no checkin at all — see
+      // linkedScheduledLessonId's own comment above) and any individual
+      // lesson confirmed without going through the check-in kiosk,
+      // checkin_id is null and this is the only remaining way to recover
+      // the student's name from this session row later (getTodayDetail's
+      // "Aulas Confirmadas" list, etc.).
+      scheduled_lesson_id: linkedScheduledLessonId,
       instructor_id,
       activity_id:      activity_id || null,
       session_date:     session_date ?? new Date().toISOString().slice(0, 10),

@@ -23,6 +23,14 @@ type SessionRow = {
   activities: { name: string } | { name: string }[] | null
   users: { name: string } | { name: string }[] | null
   checkins: { student_name: string } | { student_name: string }[] | null
+  // Fallback source when checkins is null — group-confirmed lessons (and
+  // any individual one confirmed without going through the check-in
+  // kiosk) have no checkin at all, see confirm-lesson/route.ts.
+  scheduled_lessons: { student_name: string } | { student_name: string }[] | null
+}
+
+function sessionStudentName(s: SessionRow): string {
+  return one(s.checkins)?.student_name ?? one(s.scheduled_lessons)?.student_name ?? '—'
 }
 type ScheduledRow = {
   id: string; student_name: string; scheduled_at: string; duration_min: number
@@ -349,7 +357,7 @@ function LessonsList({ sessions, scheduledToday }: { sessions: SessionRow[]; sch
             <div key={s.id} style={rowStyle}>
               <div>
                 <div style={{ fontSize: '13px', fontWeight: '500', color: 'var(--slate)' }}>
-                  {one(s.checkins)?.student_name ?? '—'}
+                  {sessionStudentName(s)}
                 </div>
                 <div style={{ fontSize: '11px', color: 'var(--mist)', marginTop: '2px' }}>
                   {one(s.activities)?.name ?? '—'} · {one(s.users)?.name ?? '—'} · {s.duration_min}min
@@ -401,7 +409,7 @@ function RevenueList({ sessions }: { sessions: SessionRow[] }) {
         <div key={s.id} style={rowStyle}>
           <div>
             <div style={{ fontSize: '13px', fontWeight: '500', color: 'var(--slate)' }}>
-              {one(s.checkins)?.student_name ?? '—'}
+              {sessionStudentName(s)}
             </div>
             <div style={{ fontSize: '11px', color: 'var(--mist)', marginTop: '2px' }}>
               {one(s.activities)?.name ?? '—'}
