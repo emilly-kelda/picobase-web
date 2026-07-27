@@ -12,6 +12,8 @@ type CrewMember = {
   email: string | null
   whatsapp: string | null
   commission_pct: number | null
+  commission_mode?: string | null
+  fixed_per_hour?: number | null
   pix_key: string | null
   wise_email: string | null
   active: boolean
@@ -42,6 +44,16 @@ function fmt(n: number) {
 function fmtPct(n: number | null | undefined) {
   if (n == null) return '—'
   return `${Math.round(n * 100)}%`
+}
+
+/** The card's headline rate — fixed_per_hour instructors have no
+ *  commission_pct at all (correctly null), so fmtPct alone always showed
+ *  "—" for them regardless of their real R$/h rate. */
+function fmtRate(member: CrewMember): string {
+  if (member.commission_mode === 'fixed_per_hour') {
+    return `${fmt(member.fixed_per_hour ?? 0)}/h`
+  }
+  return fmtPct(member.commission_pct)
 }
 
 function getInitials(name: string) {
@@ -402,10 +414,10 @@ export default function CrewClient({ initialCrew }: { initialCrew: CrewMember[] 
                     fontSize: '22px', fontWeight: '600',
                     color: 'var(--glacial)', fontVariantNumeric: 'tabular-nums',
                   }}>
-                    {fmtPct(member.commission_pct)}
+                    {fmtRate(member)}
                   </div>
                   <div style={{ fontSize: '10px', color: 'var(--mist)', letterSpacing: '0.06em' }}>
-                    comissão
+                    {member.commission_mode === 'fixed_per_hour' ? 'fixo' : 'comissão'}
                   </div>
                 </div>
               </div>
