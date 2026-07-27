@@ -1144,10 +1144,16 @@ export default function ScheduledLessons({
                       instead of worded, with the word still available on
                       hover/for screen readers via title/aria-label so the
                       information itself isn't lost, just decluttered.
-                      checked_in gets its own amber (#B45309, the same
-                      in-file token as the low-balance warning further
-                      down) rather than reusing neutral's grey — those two
-                      were previously indistinguishable once text is gone. */}
+                      checked_in gets blue (#3B82F6) rather than reusing
+                      neutral's grey — those two were previously
+                      indistinguishable once text is gone. Deliberately not
+                      the in-file amber (#B45309, still used a few lines
+                      down for the low-balance warning, a genuinely
+                      different "pay attention" signal): amber/orange reads
+                      as "waiting, something pending" per design-system
+                      guidance, which is wrong for "Em Aula" — a lesson
+                      actually in progress isn't a problem, it's the
+                      expected, active state. */}
                   <span
                     title={lesson.status === 'confirmed' ? t.status_confirmed
                       : lesson.status === 'checked_in' ? t.status_checked_in
@@ -1159,7 +1165,7 @@ export default function ScheduledLessons({
                       display: 'inline-block', width: '8px', height: '8px',
                       borderRadius: '50%', flexShrink: 0,
                       background: lesson.status === 'confirmed' ? 'var(--glacial-dark)'
-                        : lesson.status === 'checked_in' ? '#B45309'
+                        : lesson.status === 'checked_in' ? '#3B82F6'
                         : 'var(--color-pb-mist)',
                     }}
                   />
