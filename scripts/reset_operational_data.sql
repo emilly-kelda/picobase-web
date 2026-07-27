@@ -7,7 +7,13 @@
 -- Deliberately NOT in supabase/migrations/ — this is a one-time data wipe,
 -- not a schema change, and has no business being replayed if the DB is
 -- ever rebuilt from the migration history. Run manually, once, in the
--- Supabase SQL Editor when you're ready.
+-- Supabase SQL Editor when you're ready — select this file's ENTIRE
+-- contents (BEGIN through the final COMMIT) and run it as ONE execution.
+-- Do not split BEGIN/DELETE and COMMIT into separate "Run" actions — if
+-- COMMIT lands on a different connection than the one that ran the
+-- deletes, it silently does nothing while the real transaction
+-- auto-rolls-back in the background (this happened on a real attempt:
+-- the deletes reported success, but nothing was actually gone afterward).
 --
 -- KEPT (config/team/pricing — untouched):
 --   schools                 school settings, waiver text, notifications, etc.
@@ -102,9 +108,13 @@ BEGIN
   DELETE FROM public.students                    WHERE school_id = v_school_id;
 END $$;
 
--- Review the row counts below BEFORE running COMMIT. If anything looks
--- wrong, run ROLLBACK instead — nothing above is permanent until COMMIT
--- actually runs.
+-- Verification pass already happened (this ordering was confirmed correct
+-- against the live FK graph, all-zero result). The row counts below are
+-- now just a receipt, not a manual gate — COMMIT is part of this same
+-- execution, on purpose: running it as a separate step last time meant it
+-- landed on a fresh connection with no open transaction, silently doing
+-- nothing while the real one auto-rolled-back. Select ALL of this file's
+-- text (BEGIN through the final COMMIT) and run it as ONE paste.
 SELECT 'students' t, count(*) FROM public.students
 UNION ALL SELECT 'checkins', count(*) FROM public.checkins
 UNION ALL SELECT 'package_sales', count(*) FROM public.package_sales
@@ -130,5 +140,5 @@ UNION ALL SELECT 'partners (should be unchanged)', count(*) FROM public.partners
 UNION ALL SELECT 'certificate_templates (should be unchanged)', count(*) FROM public.certificate_templates;
 
 -- Everything above should read 0, except the five "should be unchanged"
--- rows. Only once that's confirmed:
--- COMMIT;
+-- rows.
+COMMIT;
