@@ -227,8 +227,18 @@ export default function ConfirmLessonModal({
       // here could read "10h left" while several other not-yet-confirmed
       // lessons already have that package's real remaining capacity
       // mostly spoken for, so confirming this one still got rejected.
+      //
+      // activity_id: when the lesson has no package_sale_id already linked
+      // (checkin-originated or group-confirmed lessons), the route falls
+      // back to a name-based FIFO search across this student's packages —
+      // without a sport hint that could land on a different sport's
+      // package that just happens to have room (same cross-sport risk
+      // checkPackageCapacity guards against at confirm time), showing a
+      // balance preview here that then disagreed with what confirming
+      // actually charged against.
       const balanceParams = new URLSearchParams({ student_name: lesson.student_name })
       if (lesson.package_sale_id) balanceParams.set('package_sale_id', lesson.package_sale_id)
+      if (activityId) balanceParams.set('activity_id', activityId)
       balanceParams.set('exclude_lesson_id', lesson.id)
       fetch(`/api/owner/package-balance?${balanceParams}`)
         .then(r => r.json())
