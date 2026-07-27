@@ -79,7 +79,7 @@ export default function OwnerNav({
 
   const navItems: Array<{ href: string; label: string; icon: NavIcon; badge?: number }> = [
     { href: '/owner',           label: t.nav_basecamp, icon: HomeIcon    },
-    { href: '/owner/pulse',     label: t.nav_pulse,     icon: BellIcon, badge: pulseCount },
+    { href: '/owner/alerts',    label: t.nav_pulse,     icon: BellIcon, badge: pulseCount },
     { href: '/owner/sessions',  label: t.nav_sessions,  icon: CalendarIcon },
     { href: '/owner/students',  label: t.nav_students,  icon: UserIcon     },
     { href: '/owner/bookings',  label: t.nav_bookings,  icon: InboxIcon, badge: pendingBookingsCount },

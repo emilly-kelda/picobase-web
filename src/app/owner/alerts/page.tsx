@@ -7,10 +7,11 @@ const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
  *  moved here (separate sidebar entry, bell icon + badge) so the main
  *  dashboard's top can stay focused on the high-level KPIs (revenue,
  *  occupancy) without a variable-height alerts panel pushing them around.
- *  Same getAlerts data and the same OperationalPulse list rendering,
- *  just its own page instead of embedded — nothing about what counts as
- *  an alert changed, only where it's shown. */
-export default async function PulsePage() {
+ *  Renamed Pulso Operacional -> Alertas (route moved from /owner/pulse to
+ *  /owner/alerts) per owner feedback — same getAlerts data and the same
+ *  OperationalPulse list rendering either way, only the name and URL
+ *  changed. */
+export default async function AlertsPage() {
   const alerts = await getAlerts(SCHOOL_ID)
 
   return (
@@ -20,7 +21,7 @@ export default async function PulsePage() {
           fontSize: '22px', fontWeight: '500',
           color: 'var(--slate)', marginBottom: '4px',
         }}>
-          Pulso Operacional
+          Alertas
         </h1>
         <p style={{ fontSize: '13px', color: 'var(--mist)' }}>
           Tudo que precisa de uma decisão hoje — pacotes a esgotar, termos pendentes, pagamentos em aberto.
@@ -34,7 +35,7 @@ export default async function PulsePage() {
           padding: '48px', textAlign: 'center',
         }}>
           <div style={{ fontSize: '14px', fontWeight: '500', color: 'var(--slate)', marginBottom: '4px' }}>
-            Tudo em ordem
+            Tudo em dia!
           </div>
           <div style={{ fontSize: '13px', color: 'var(--mist)' }}>
             Nenhum alerta no momento — nada a exigir uma decisão agora.

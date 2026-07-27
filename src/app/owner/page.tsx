@@ -155,11 +155,11 @@ export default async function OwnerPage() {
       <ReceptionModeProvider>
 
       {/* Page title — the Reception Mode toggle sits inline right next to
-          "The Spot". Alerts/Pulso Operacional used to be inline here
-          (before that, a floating bell in this same top-right corner) —
-          now its own page (/owner/pulse, linked from the sidebar) so this
-          dashboard's top stays on the high-level KPIs below, not a
-          variable-height alerts panel. */}
+          "The Spot". Alerts used to be inline here (before that, a
+          floating bell in this same top-right corner) — now its own page
+          (/owner/alerts, linked from the sidebar) so this dashboard's top
+          stays on the high-level KPIs below, not a variable-height
+          alerts panel. */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
