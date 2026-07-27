@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import type { OperationalCost } from '@/repositories/costRepository'
+import type { OperationalCost } from '@/lib/costTypes'
 
 const inputStyle: React.CSSProperties = {
   width: '100%',
@@ -37,6 +37,8 @@ const RECURRENCES = [
   { value: 'unico',  label: 'Evento único' },
 ]
 
+const CATEGORY_OTHER = '__other__'
+
 export default function AddCostModal({
   editing,
   knownCategories,
@@ -54,7 +56,14 @@ export default function AddCostModal({
   const [costType, setCostType]       = useState(editing?.cost_type ?? 'fixo')
   const [recurrence, setRecurrence]   = useState(editing?.recurrence ?? 'mensal')
   const [dueDate, setDueDate]         = useState(editing?.due_date ?? new Date().toISOString().slice(0, 10))
-  const [category, setCategory]       = useState(editing?.category ?? '')
+  // Editing a cost whose saved category isn't in the known list (shouldn't
+  // normally happen since knownCategories already includes it, but a
+  // filter/list race could pass a stale list) still falls into "Outra"
+  // with the real value pre-filled, rather than silently discarding it.
+  const [category, setCategory] = useState(editing?.category ?? '')
+  const [categoryChoice, setCategoryChoice] = useState(
+    editing?.category && !knownCategories.includes(editing.category) ? CATEGORY_OTHER : (editing?.category ?? '')
+  )
   const [saving, setSaving]           = useState(false)
   const [error, setError]             = useState<string | null>(null)
 
@@ -184,17 +193,29 @@ export default function AddCostModal({
 
           <div>
             <label style={labelStyle}>Centro de custo / Categoria</label>
-            <input
-              style={inputStyle}
-              type="text"
-              list="cost-categories"
-              value={category}
-              onChange={e => setCategory(e.target.value)}
-              placeholder="Ex: Administrativo, Estrutura"
-            />
-            <datalist id="cost-categories">
-              {knownCategories.map(c => <option key={c} value={c} />)}
-            </datalist>
+            <select
+              style={{ ...inputStyle, cursor: 'pointer' }}
+              value={categoryChoice}
+              onChange={e => {
+                const value = e.target.value
+                setCategoryChoice(value)
+                if (value !== CATEGORY_OTHER) setCategory(value)
+              }}
+            >
+              <option value="">Sem categoria</option>
+              {knownCategories.map(c => <option key={c} value={c}>{c}</option>)}
+              <option value={CATEGORY_OTHER}>Outra (especificar)</option>
+            </select>
+            {categoryChoice === CATEGORY_OTHER && (
+              <input
+                style={{ ...inputStyle, marginTop: '8px' }}
+                type="text"
+                value={category}
+                onChange={e => setCategory(e.target.value)}
+                placeholder="Nome da categoria"
+                autoFocus
+              />
+            )}
           </div>
         </div>
 
