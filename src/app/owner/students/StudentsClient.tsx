@@ -49,9 +49,15 @@ function fmtHours(minutes: number) {
 // IKO certification is skill-based, not time-based — eligibility here
 // mirrors CertificateSection's own per-sport proficiency gate (Level 2+),
 // not an hours count, so a fast learner isn't shown as ineligible just
-// because they haven't logged many hours yet.
+// because they haven't logged many hours yet. Still requires minutes > 0
+// though: skillLevel is sourced from students.skill_level, which a
+// progression editor can set directly regardless of session history — the
+// same real bug as the student-profile badge (see the detailed comment in
+// owner/students/[id]/page.tsx), just without a per-sport breakdown
+// available here, so total minutes > 0 is the closest reasonable proxy
+// this compact roster pill can check for "has an actual completed lesson".
 function HoursOfSailing({ minutes, skillLevel }: { minutes: number; skillLevel: string | null }) {
-  const eligible = isProficientLevel(skillLevel)
+  const eligible = minutes > 0 && isProficientLevel(skillLevel)
   return (
     <div>
       <div style={{ fontSize: '13px', color: 'var(--slate)', whiteSpace: 'nowrap' }}>

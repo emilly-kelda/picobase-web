@@ -106,10 +106,17 @@ export default async function StudentDetailPage({
 
   const totalSailingMinutes = sessions.reduce((s: number, r: any) => s + (r.duration_min ?? 0), 0)
   // IKO certification is skill-based, not time-based — a fast learner
-  // shouldn't be blocked by an hours count. Eligible once ANY sport has
-  // reached proficiency (see isProficientLevel and CertificateSection's own
-  // per-sport, per-document gating just below, which this badge summarizes).
-  const certificateEligible = [...progressionBySport.values()].some(p => isProficientLevel(p.level))
+  // shouldn't be blocked by an hours count. But it still requires the
+  // sport to have at least one actual completed lesson: progressionBySport
+  // is sourced from student_progression, which a level can be saved into
+  // directly from this same page's ProgressionTabs regardless of session
+  // history, so checking it alone could show "Elegível" for a sport with
+  // zero completed lessons — a real contradiction against CertificateSection
+  // just below, which only ever renders (and only ever evaluates
+  // proficiency for) sports that already have a sportGroups entry. Gating
+  // on sportGroups.keys() here mirrors that exactly, so the two can't
+  // disagree the way they did before this fix.
+  const certificateEligible = [...sportGroups.keys()].some(sportKey => isProficientLevel(progressionBySport.get(sportKey)?.level))
 
   return (
     <div>

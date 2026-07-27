@@ -100,10 +100,15 @@ export default async function StudentNameProfilePage({
   const totalRevenue = sessions.reduce((s: number, r: any) => s + (r.price ?? 0), 0)
 
   const totalSailingMinutes = sessions.reduce((s: number, r: any) => s + (r.duration_min ?? 0), 0)
-  // IKO certification is skill-based, not time-based — eligible once ANY
-  // sport has reached proficiency (see isProficientLevel and
-  // CertificateSection's own per-sport, per-document gating below).
-  const certificateEligible = [...progressionBySport.values()].some((p: any) => isProficientLevel(p.level))
+  // IKO certification is skill-based, not time-based — but still requires
+  // the sport to have at least one actual completed lesson (see the
+  // identical, more detailed comment in owner/students/[id]/page.tsx for
+  // why checking progressionBySport alone was a real bug: a level can be
+  // saved directly from a progression editor regardless of session
+  // history). Gating on sportGroups.keys() mirrors CertificateSection's
+  // own per-sport gating just below, which only ever evaluates
+  // proficiency for a sport that already has a sportGroups entry.
+  const certificateEligible = [...sportGroups.keys()].some(sportKey => isProficientLevel((progressionBySport as any).get(sportKey)?.level))
 
   const initials = displayName
     .split(' ').slice(0, 2).map((n: string) => n[0] ?? '').join('').toUpperCase()
