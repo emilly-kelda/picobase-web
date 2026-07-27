@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import Link from 'next/link'
 import MaskableValue from '@/components/MaskableValue'
 import { formatCurrency } from '@/lib/currency'
 
@@ -224,33 +223,6 @@ export default function SpotTodayStats({
           borderRadius: '99px',
           transition: 'width 0.4s ease',
         }} />
-      </div>
-
-      {/* Direct shortcuts out of this card instead of only the in-place
-          drill-down modals above — Receita/Comissões already show today's
-          own numbers on click, these three go to where an owner actually
-          does something with them: the full multi-period breakdown,
-          closing the month, and approving/paying instructors. */}
-      <div style={{
-        display: 'flex', gap: '14px', marginTop: '14px',
-        paddingTop: '12px', borderTop: '0.5px solid var(--border)',
-      }}>
-        {[
-          { href: '/owner/reports',     label: 'Auditoria' },
-          { href: '/owner/close-month', label: 'Caixa diário' },
-          { href: '/owner/payments',    label: 'Repasses' },
-        ].map(shortcut => (
-          <Link
-            key={shortcut.href}
-            href={shortcut.href}
-            style={{
-              fontSize: '11px', fontWeight: '500', color: 'var(--glacial-dark)',
-              textDecoration: 'none', borderBottom: '1px solid transparent',
-            }}
-          >
-            {shortcut.label} →
-          </Link>
-        ))}
       </div>
 
       {activeModal && (
