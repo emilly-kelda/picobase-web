@@ -60,7 +60,7 @@ export default function QRCodeDisplay({
             textDecoration: 'none',
           }}
         >
-          Testar →
+          Acessar →
         </a>
       </div>
 
