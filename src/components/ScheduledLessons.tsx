@@ -1101,36 +1101,6 @@ export default function ScheduledLessons({
                 )
               })}
             </div>
-
-            {/* Advances the whole 5-day window in place — deliberately not a
-                link anywhere else, this used to be confused with the
-                per-lesson "Ver Próxima Aula" button further down (which
-                opens a specific student's profile, a different, correct,
-                unrelated feature — see its own comment). */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              {dayOffset > 0 && (
-                <button
-                  onClick={() => setDayOffset(0)}
-                  style={{
-                    background: 'none', border: 'none', padding: 0,
-                    fontSize: '12px', color: 'var(--mist)', cursor: 'pointer',
-                    fontFamily: 'var(--font-sans)', textDecoration: 'underline dotted',
-                  }}
-                >
-                  ← Hoje
-                </button>
-              )}
-              <button
-                onClick={() => setDayOffset(prev => prev + 5)}
-                style={{
-                  background: 'none', border: 'none', padding: 0,
-                  fontSize: '12px', color: 'var(--color-pb-glacial-dark)', cursor: 'pointer',
-                  fontFamily: 'var(--font-sans)', fontWeight: '500',
-                }}
-              >
-                Ver próximas aulas →
-              </button>
-            </div>
           </div>
 
           <button
