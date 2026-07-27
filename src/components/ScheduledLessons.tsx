@@ -569,14 +569,27 @@ export default function ScheduledLessons({
       const remaining = pkg.minutes_purchased - pkg.minutes_used
       const lessonMin = activity?.default_duration_min ?? 60
       const suggested = Math.floor(remaining / lessonMin)
-      if (suggested > 0) {
-        setForm(f => ({
-          ...f,
-          student_name: name,
-          activity_id:  activity?.id ?? f.activity_id,
-          count:        suggested,
-        }))
-      }
+      // Also set package_sale_id (not just the activity/count suggestion) —
+      // without this, a manually-typed name that matched an active package
+      // still submitted with package_sale_id: null, so /api/owner/schedule's
+      // `if (body.package_sale_id)` capacity check never ran at all and let
+      // scheduling go past the package's real remaining hours. Mirrors
+      // onSelectPackage's own setSelectedPackage call so maxCount and the
+      // low-balance/exhausted banners below apply here too, same as picking
+      // the suggestion row would have.
+      setSelectedPackage({
+        package_sale_id:   pkg.id,
+        package_name:      (pkg.packages as any)?.name ?? '—',
+        activity_name:     activity?.name ?? '—',
+        minutes_remaining: remaining,
+      })
+      setForm(f => ({
+        ...f,
+        student_name:     name,
+        activity_id:      activity?.id ?? f.activity_id,
+        package_sale_id:  pkg.id,
+        count:            suggested > 0 ? suggested : f.count,
+      }))
     }
   }
 

@@ -173,7 +173,7 @@ export default function ConfirmLessonModal({
   const [error, setError]               = useState<string | null>(null)
   const [packageBalance, setPackageBalance] = useState<{
     hasPackage: boolean; packageSaleId: string | null
-    minutesRemaining: number; minutesPurchased: number; pricePaid: number
+    minutesRemaining: number; minutesRemainingRaw: number; minutesPurchased: number; pricePaid: number
   } | null>(null)
   const [balanceLoading, setBalanceLoading] = useState(true)
   const [chargeNow, setChargeNow]       = useState(false)
@@ -278,7 +278,13 @@ export default function ConfirmLessonModal({
   // instructor commission still computes correctly without asking the
   // owner to type a price for a lesson that's already paid for.
   const hasPackage        = !!packageBalance?.hasPackage
-  const willExhaust        = hasPackage && packageBalance!.minutesRemaining <= finalDuration
+  // minutesRemainingRaw (not the netted minutesRemaining) — netted already
+  // subtracts this same student's OTHER still-pending lessons on this sale,
+  // so a perfectly legitimate lesson scheduled for tomorrow made this look
+  // exhausted today even though the raw balance covers both. willExhaust
+  // asks "does the package itself run out after THIS confirm", which only
+  // this lesson's own duration should be weighed against.
+  const willExhaust        = hasPackage && packageBalance!.minutesRemainingRaw <= finalDuration
   const showFinancialForm  = chargeNow || !hasPackage
   const packagePrice       = hasPackage && packageBalance!.minutesPurchased > 0
     ? Math.round((packageBalance!.pricePaid / packageBalance!.minutesPurchased) * finalDuration)

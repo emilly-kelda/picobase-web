@@ -201,10 +201,17 @@ export async function getPackageBalanceForStudent(
   hasPackage: boolean
   packageSaleId: string | null
   minutesRemaining: number
+  // Un-netted balance (minutes_purchased - minutes_used only) — see
+  // getAvailablePackageMinutes's rawRemaining doc comment. Callers deciding
+  // "is the package itself out of hours after this one lesson" (e.g.
+  // ConfirmLessonModal's willExhaust) must use this, not minutesRemaining,
+  // or any OTHER still-pending lesson on the same package (a legitimately
+  // scheduled one, not a competing claim) makes it look exhausted early.
+  minutesRemainingRaw: number
   minutesPurchased: number
   pricePaid: number
 }> {
-  const NONE = { hasPackage: false, packageSaleId: null, minutesRemaining: 0, minutesPurchased: 0, pricePaid: 0 }
+  const NONE = { hasPackage: false, packageSaleId: null, minutesRemaining: 0, minutesRemainingRaw: 0, minutesPurchased: 0, pricePaid: 0 }
   if (!studentName?.trim()) return NONE
 
   const supabase = createServiceClient()
@@ -231,11 +238,12 @@ export async function getPackageBalanceForStudent(
     const info = await getAvailablePackageMinutes(schoolId, saleId, opts.excludeLessonId)
     if (info && info.available > 0) {
       return {
-        hasPackage:       true,
-        packageSaleId:    saleId,
-        minutesRemaining: info.available,
-        minutesPurchased: info.minutesPurchased,
-        pricePaid:        info.pricePaid,
+        hasPackage:          true,
+        packageSaleId:       saleId,
+        minutesRemaining:    info.available,
+        minutesRemainingRaw: info.rawRemaining,
+        minutesPurchased:    info.minutesPurchased,
+        pricePaid:           info.pricePaid,
       }
     }
   }

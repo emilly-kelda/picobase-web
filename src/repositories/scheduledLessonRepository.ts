@@ -539,7 +539,7 @@ export async function getAvailablePackageMinutes(
   schoolId: string,
   packageSaleId: string,
   excludeLessonId?: string | null
-): Promise<{ minutesPurchased: number; pricePaid: number; available: number } | null> {
+): Promise<{ minutesPurchased: number; pricePaid: number; available: number; rawRemaining: number } | null> {
   const supabase = createServiceClient()
 
   const { data: sale } = await supabase
@@ -552,7 +552,7 @@ export async function getAvailablePackageMinutes(
   if (!sale) return null
 
   if (sale.status && sale.status !== 'active') {
-    return { minutesPurchased: sale.minutes_purchased ?? 0, pricePaid: sale.price_paid ?? 0, available: 0 }
+    return { minutesPurchased: sale.minutes_purchased ?? 0, pricePaid: sale.price_paid ?? 0, available: 0, rawRemaining: 0 }
   }
 
   const remaining = Math.max(0, (sale.minutes_purchased ?? 0) - (sale.minutes_used ?? 0))
@@ -573,7 +573,13 @@ export async function getAvailablePackageMinutes(
   return {
     minutesPurchased: sale.minutes_purchased ?? 0,
     pricePaid:        sale.price_paid ?? 0,
+    // Netted against this student's OTHER still-pending lessons on the same
+    // sale — the right number for "can I commit X more minutes right now"
+    // (capacity checks). rawRemaining below is the un-netted figure, for
+    // callers asking a different question: "after THIS lesson, is the
+    // package itself out of hours" (see rawRemaining's own doc comment).
     available:        Math.max(0, remaining - alreadyCommitted),
+    rawRemaining:     remaining,
   }
 }
 

@@ -10,7 +10,7 @@ export async function GET(request: Request) {
   const excludeLessonId  = searchParams.get('exclude_lesson_id')
 
   if (!studentName) {
-    return NextResponse.json({ hasPackage: false, packageSaleId: null, minutesRemaining: 0, minutesPurchased: 0, pricePaid: 0 })
+    return NextResponse.json({ hasPackage: false, packageSaleId: null, minutesRemaining: 0, minutesRemainingRaw: 0, minutesPurchased: 0, pricePaid: 0 })
   }
 
   const result = await getPackageBalanceForStudent(SCHOOL_ID, studentName, {
