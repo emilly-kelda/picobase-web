@@ -29,7 +29,7 @@ export default function QuickSaleCard({
   activities: Activity[]
   schoolSlug: string
   schoolName: string
-  instructors: { id: string; name: string }[]
+  instructors: { id: string; name: string; sports?: string[] | null }[]
 }) {
   const router = useRouter()
   const [open, setOpen] = useState(false)

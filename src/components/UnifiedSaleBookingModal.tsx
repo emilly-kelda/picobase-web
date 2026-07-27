@@ -172,7 +172,7 @@ export default function UnifiedSaleBookingModal({
   activities: Activity[]
   schoolSlug: string
   schoolName: string
-  instructors: { id: string; name: string }[]
+  instructors: { id: string; name: string; sports?: string[] | null }[]
   onClose: () => void
   onSold: () => void
 }) {
@@ -232,6 +232,11 @@ export default function UnifiedSaleBookingModal({
   const [recurringTime, setRecurringTime] = useState('09:00')
   const [recurringCount, setRecurringCount] = useState(1)
   const [recurringInstructorId, setRecurringInstructorId] = useState('')
+  // recurringTime is the default applied to every generated date, but any
+  // one date's own time can be overridden in the preview list below —
+  // same "generate, then let the owner adjust individual rows" pattern
+  // as ScheduledLessons.tsx's own editableDates.
+  const [editableRecurringDates, setEditableRecurringDates] = useState<{ date: string; time: string }[]>([])
 
   const [saving, setSaving] = useState(false)
   const [error, setError]   = useState<string | null>(null)
@@ -285,6 +290,17 @@ export default function UnifiedSaleBookingModal({
     ? generateRecurringDates(date, recurringTime, recurringCount, recurringRepeat, recurringWeekdays)
     : []
 
+  // Only instructors qualified for this package's own sport — same filter
+  // ScheduledLessons.tsx's own scheduling form already applies, falls
+  // back to the full list if nobody's sports are configured yet (an
+  // empty dropdown would be worse than an unfiltered one).
+  const recurringInstructors = selectedPackage?.sport
+    ? (() => {
+        const compatible = instructors.filter(i => (i.sports ?? []).includes(selectedPackage.sport!))
+        return compatible.length > 0 ? compatible : instructors
+      })()
+    : instructors
+
   const canStep3 = !scheduleNow || (
     scheduleMode === 'single'
       ? (date !== '' && selectedSlot !== null)
@@ -296,6 +312,15 @@ export default function UnifiedSaleBookingModal({
   useEffect(() => {
     setRecurringCount(c => Math.min(c, maxRecurringCount))
   }, [maxRecurringCount])
+
+  // Re-syncs the editable preview whenever the generating params change —
+  // same "regenerate, discarding any earlier per-row edits" trade-off
+  // ScheduledLessons.tsx's own editableDates effect makes; a param change
+  // means the whole batch is different anyway.
+  useEffect(() => {
+    setEditableRecurringDates(recurringDates.map(iso => ({ date: iso.slice(0, 10), time: recurringTime })))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [date, recurringTime, recurringCount, recurringRepeat, recurringWeekdays, scheduleMode])
 
   useEffect(() => {
     if (step !== 3 || !scheduleNow || !date || scheduleMode !== 'single') return
@@ -357,10 +382,10 @@ export default function UnifiedSaleBookingModal({
     // and over-commit past the package's real hours instead of each one
     // correctly seeing the previous one's reservation.
     if (scheduleMode === 'recurring') {
-      if (!recurringInstructorId || recurringDates.length === 0) { setSaving(false); return }
+      if (!recurringInstructorId || editableRecurringDates.length === 0) { setSaving(false); return }
       let firstLessonId: string | null = null
       let firstPublicToken: string | null = null
-      for (const iso of recurringDates) {
+      for (const row of editableRecurringDates) {
         const res = await fetch('/api/owner/schedule', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -368,7 +393,10 @@ export default function UnifiedSaleBookingModal({
             student_name:    studentName,
             activity_id:     scheduleActivity?.id ?? null,
             instructor_id:   recurringInstructorId,
-            scheduled_at:    `${iso.slice(0, 10)}T${recurringTime}:00-03:00`,
+            // Each row's own time — see editableRecurringDates' own
+            // comment, an individual date's time may have been
+            // overridden in the preview below.
+            scheduled_at:    `${row.date}T${row.time}:00-03:00`,
             duration_min:    scheduleDuration,
             package_sale_id: packageSaleId,
           }),
@@ -822,7 +850,7 @@ export default function UnifiedSaleBookingModal({
                           onChange={e => setRecurringInstructorId(e.target.value)}
                         >
                           <option value="">Selecionar</option>
-                          {instructors.map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
+                          {recurringInstructors.map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
                         </select>
                       </div>
                     </div>
@@ -892,22 +920,38 @@ export default function UnifiedSaleBookingModal({
                       />
                     </div>
 
-                    {recurringDates.length > 0 && (
+                    {editableRecurringDates.length > 0 && (
                       <div style={{
                         background: 'var(--powder)', borderRadius: 'var(--radius-md)',
                         padding: '10px 14px', fontSize: '12px', color: 'var(--slate)',
                       }}>
-                        <div style={{ fontWeight: '600', marginBottom: '6px' }}>
-                          {recurringDates.length} aula{recurringDates.length !== 1 ? 's' : ''} será{recurringDates.length !== 1 ? 'ão' : ''} criada{recurringDates.length !== 1 ? 's' : ''}:
+                        <div style={{ fontWeight: '600', marginBottom: '8px' }}>
+                          {editableRecurringDates.length} aula{editableRecurringDates.length !== 1 ? 's' : ''} será{editableRecurringDates.length !== 1 ? 'ão' : ''} criada{editableRecurringDates.length !== 1 ? 's' : ''} — clique no horário para ajustar um dia específico:
                         </div>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                          {recurringDates.map(iso => (
-                            <span key={iso} style={{
-                              padding: '3px 8px', background: '#fff', borderRadius: 'var(--radius-md)',
-                              border: '0.5px solid var(--border)', color: 'var(--mist)',
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: '180px', overflowY: 'auto' }}>
+                          {editableRecurringDates.map((row, i) => (
+                            <div key={row.date} style={{
+                              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                              gap: '8px', padding: '4px 8px', background: '#fff', borderRadius: 'var(--radius-md)',
+                              border: '0.5px solid var(--border)',
                             }}>
-                              {new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', timeZone: 'America/Fortaleza' })}
-                            </span>
+                              <span style={{ color: 'var(--slate)', fontWeight: '500' }}>
+                                {new Date(`${row.date}T12:00:00`).toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' })}
+                              </span>
+                              <input
+                                type="time"
+                                value={row.time}
+                                onChange={e => {
+                                  const newTime = e.target.value
+                                  setEditableRecurringDates(prev => prev.map((d, idx) => idx === i ? { ...d, time: newTime } : d))
+                                }}
+                                style={{
+                                  padding: '3px 6px', border: '0.5px solid var(--border-strong)',
+                                  borderRadius: 'var(--radius-md)', fontSize: '12px', color: 'var(--slate)',
+                                  fontFamily: 'var(--font-sans)', outline: 'none',
+                                }}
+                              />
+                            </div>
                           ))}
                         </div>
                       </div>
