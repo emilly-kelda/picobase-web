@@ -1216,26 +1216,34 @@ export default function ScheduledLessons({
                       + Agendar Próxima Aula
                     </button>
                   )}
-                  {/* Text label on a pastel-green chip, not an icon-only
-                      glyph — opens a small picker (student vs instructor
-                      confirmation message) instead of jumping straight to
-                      the student's WhatsApp; instructor no longer needs
-                      the overflow menu entry below since this covers both. */}
+                  {/* Icon-only, not the old text chip — opens the same
+                      picker (student vs instructor confirmation message)
+                      instead of jumping straight to the student's
+                      WhatsApp; instructor no longer needs the overflow
+                      menu entry below since this covers both. No icon
+                      library in this project (checked package.json) — a
+                      hand-drawn glyph in the same stroke style as
+                      nav-icons.tsx/CheckinQRButton.tsx's own inline SVGs,
+                      not a literal reproduction of WhatsApp's mark. */}
                   <button
                     onClick={() => setWhatsAppModal(lesson)}
+                    title="Enviar WhatsApp"
+                    aria-label="Enviar WhatsApp"
                     style={{
-                      padding: '4px 8px',
+                      width: '28px', height: '28px',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
                       background: 'var(--color-pb-glacial-light)',
                       color: 'var(--color-pb-glacial-dark)',
                       border: 'none',
                       borderRadius: 'var(--radius-md)',
-                      fontSize: '10px', fontWeight: '500',
                       cursor: 'pointer',
-                      fontFamily: 'var(--font-sans)',
-                      whiteSpace: 'nowrap',
+                      flexShrink: 0,
                     }}
                   >
-                    WhatsApp
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M3 21l1.65-4.95A8.5 8.5 0 1 1 8.5 19.5L3 21Z" />
+                      <path d="M8.5 9.5c0 3.5 2.5 6 6 6" />
+                    </svg>
                   </button>
                   {/* Kebab menu removed — Editar was its only entry for
                       most rows (Cancelar only ever showed for 'scheduled'
