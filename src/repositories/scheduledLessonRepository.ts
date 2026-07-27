@@ -646,7 +646,19 @@ export async function checkPackageCapacity(
     // it was.
     sport?: string | null
   }
-): Promise<{ ok: true; resolvedSaleId: string | null } | { ok: false }> {
+): Promise<
+  | { ok: true; resolvedSaleId: string | null }
+  // bestAvailable/neededMin: diagnostic-only, for a caller to build a
+  // useful error message ("you have 30min available, this lesson needs
+  // 60min") instead of a flat "insufficient balance" with no way to tell
+  // whether the student is actually out of raw hours or just has OTHER
+  // pending lessons already claiming the rest of a raw balance that looks
+  // healthy from the student profile (rawRemaining, deliberately not
+  // netted against those — see getAvailablePackageMinutes) — a real
+  // source of "but the profile shows 2h!" confusion this makes debuggable
+  // without a DB lookup.
+  | { ok: false; bestAvailable: number; neededMin: number }
+> {
   const supabase = createServiceClient()
 
   // Matched by normalizeStudentName, not a raw ilike string — package_sales
@@ -698,14 +710,34 @@ export async function checkPackageCapacity(
 
   const candidateIds = [params.packageSaleId, ...orderedOthers]
 
+  let bestAvailable = 0
   for (const saleId of candidateIds) {
     const info = await getAvailablePackageMinutes(schoolId, saleId, params.excludeLessonId)
-    if (info && info.available >= params.durationMin) {
+    if (!info) continue
+    if (info.available >= params.durationMin) {
       return { ok: true, resolvedSaleId: saleId }
     }
+    bestAvailable = Math.max(bestAvailable, info.available)
   }
 
-  return { ok: false }
+  return { ok: false, bestAvailable, neededMin: params.durationMin }
+}
+
+/** Builds the human-readable message for checkPackageCapacity's { ok: false }
+ *  case — shared by every route that calls it (confirm-lesson, schedule
+ *  POST/PATCH, schedule-from-checkin) so "insufficient balance" always
+ *  explains why instead of just stating it. bestAvailable/neededMin surface
+ *  the actual numbers: most commonly, the package's raw balance (what the
+ *  student profile shows) is healthy, but this student has OTHER pending
+ *  lessons on the same package already claiming part of it (available is
+ *  netted against those, on purpose — see getAvailablePackageMinutes), so
+ *  "the profile shows 2h!" and "insufficient balance" can both be true at
+ *  once without this context. */
+export function formatInsufficientCreditError(bestAvailable: number, neededMin: number): string {
+  const fmtMin = (m: number) => m >= 60 ? `${Math.floor(m / 60)}h${m % 60 > 0 ? `${m % 60}min` : ''}` : `${m}min`
+  return `Saldo de créditos insuficiente: disponível ${fmtMin(bestAvailable)}, necessário ${fmtMin(neededMin)} `
+    + `(o restante do pacote pode já estar reservado por outras aulas pendentes deste aluno). `
+    + `O aluno precisa de adquirir um novo pacote para agendar.`
 }
 
 export async function createScheduledLesson(payload: {

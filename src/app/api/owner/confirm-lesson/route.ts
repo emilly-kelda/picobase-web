@@ -1,7 +1,7 @@
 import { createServiceClient } from '@/lib/supabase-server'
 import { computeCommissionAmount, getVariableCostForStudent } from '@/lib/commission'
 import { convertToBRL } from '@/lib/fx'
-import { checkSchedulingConflicts, checkPackageCapacity } from '@/repositories/scheduledLessonRepository'
+import { checkSchedulingConflicts, checkPackageCapacity, formatInsufficientCreditError } from '@/repositories/scheduledLessonRepository'
 import { NextResponse } from 'next/server'
 
 const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
@@ -111,7 +111,7 @@ export async function POST(request: Request) {
       })
       if (!capacity.ok) {
         return NextResponse.json(
-          { error: 'Saldo de créditos insuficiente. O aluno precisa de adquirir um novo pacote para agendar.' },
+          { error: formatInsufficientCreditError(capacity.bestAvailable, capacity.neededMin) },
           { status: 409 }
         )
       }

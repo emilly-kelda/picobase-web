@@ -1,12 +1,11 @@
 import { createServiceClient } from '@/lib/supabase-server'
-import { checkSchedulingConflicts, checkPackageCapacity, ensureActiveCheckinForToday } from '@/repositories/scheduledLessonRepository'
+import { checkSchedulingConflicts, checkPackageCapacity, ensureActiveCheckinForToday, formatInsufficientCreditError } from '@/repositories/scheduledLessonRepository'
 import { NextResponse } from 'next/server'
 
 const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
 
 const STUDENT_CLASH_ERROR = 'Não é possível agendar: este aluno já possui uma aula marcada para este mesmo horário.'
 const INSTRUCTOR_CLASH_ERROR = 'O instrutor selecionado já possui uma aula agendada para este horário.'
-const INSUFFICIENT_CREDIT_ERROR = 'Saldo de créditos insuficiente. O aluno precisa de adquirir um novo pacote para agendar.'
 
 // TODO(notify_student_before_class): the reminder needs to fire 2h before
 // scheduled_at, which is almost never when this route runs (lessons are
@@ -131,7 +130,7 @@ export async function POST(request: Request) {
       excludeLessonId: rescheduleFromId,
     })
     if (!capacity.ok) {
-      return NextResponse.json({ error: INSUFFICIENT_CREDIT_ERROR }, { status: 409 })
+      return NextResponse.json({ error: formatInsufficientCreditError(capacity.bestAvailable, capacity.neededMin) }, { status: 409 })
     }
   }
 
@@ -295,7 +294,7 @@ export async function PATCH(request: Request) {
         excludeLessonId: id,
       })
       if (!capacity.ok) {
-        return NextResponse.json({ error: INSUFFICIENT_CREDIT_ERROR }, { status: 409 })
+        return NextResponse.json({ error: formatInsufficientCreditError(capacity.bestAvailable, capacity.neededMin) }, { status: 409 })
       }
     }
   }
