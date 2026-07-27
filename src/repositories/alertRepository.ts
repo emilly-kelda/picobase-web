@@ -80,6 +80,24 @@ export async function getAlerts(schoolId: string): Promise<Alert[]> {
     }
   }
 
+  // 3b. Today's check-ins still missing a signed waiver — the actual
+  // "termo pendente" state PendingLessons shows per-row, surfaced here so
+  // it isn't only visible to whoever happens to open that list.
+  const { data: waiverAlerts } = await supabase
+    .from('checkins')
+    .select('student_name')
+    .eq('school_id', schoolId)
+    .gte('checkin_at', `${today}T00:00:00`)
+    .is('waiver_signed_at', null)
+
+  if (waiverAlerts && waiverAlerts.length > 0) {
+    alerts.push({
+      type: 'warning',
+      message: `${waiverAlerts.length} termo${waiverAlerts.length !== 1 ? 's' : ''} pendente${waiverAlerts.length !== 1 ? 's' : ''} de assinatura hoje`,
+      link: '/owner/checkins',
+    })
+  }
+
   // 4. Sessions confirmed today (info)
   const { count: todaySessions } = await supabase
     .from('sessions')

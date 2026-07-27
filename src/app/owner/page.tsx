@@ -9,7 +9,7 @@ import { getPackageSales, getPackageBalancesForCheckins, getPackages } from '@/r
 import PendingLessons from '@/components/PendingLessons'
 import ScheduledLessons from '@/components/ScheduledLessons'
 import MissedLessons from '@/components/MissedLessons'
-import AlertsDrawer from '@/components/AlertsDrawer'
+import OperationalPulse from '@/components/OperationalPulse'
 import WeatherWidget from '@/components/WeatherWidget'
 import QuickSaleCard from '@/components/QuickSaleCard'
 import { ReceptionModeProvider } from '@/components/ReceptionModeContext'
@@ -155,17 +155,15 @@ export default async function OwnerPage() {
         }
       `}</style>
 
-      <AlertsDrawer alerts={alerts} />
-
       <ReceptionModeProvider>
 
       {/* Page title — the Reception Mode toggle sits inline right next to
-          "The Spot", not pushed to the row's far-right edge. That corner
-          also holds AlertsDrawer's bell trigger (position: fixed, top:
-          20px, right: 24px, independent of this row's layout), and a
-          right-aligned toggle here lands squarely inside the bell's
-          44x44px hit zone whenever there's at least one active alert. */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
+          "The Spot". AlertsDrawer's floating bell (fixed, top: 20px,
+          right: 24px) used to live in this corner — retired in favor of
+          OperationalPulse below, which shows the same alerts inline
+          instead of one click away, so nothing sits in this corner
+          anymore. */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
             <h1 style={{
@@ -184,6 +182,12 @@ export default async function OwnerPage() {
         </div>
         <AutoRefresh />
       </div>
+
+      {/* Leads with what needs a decision today, not vanity metrics —
+          urgent/actionable alerts (pending waivers, packages about to run
+          out, outstanding receivables...) get first position on the page,
+          ahead of the two-column operational grid below. */}
+      <OperationalPulse alerts={alerts} />
 
       <div className="dash-grid-2col">
 
