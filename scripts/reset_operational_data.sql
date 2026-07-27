@@ -43,34 +43,63 @@
 -- comment missed) rolls back everything — never a partially-wiped school.
 -- =============================================================================
 
+-- Delete order below is derived from the ACTUAL live FK graph (verified via
+-- scripts/inspect_fk_graph.sql against information_schema — several of
+-- these tables predate the tracked migration files, so this could not be
+-- fully determined from supabase/migrations/ alone). Every edge among the
+-- wiped tables:
+--   bookings->students, checkins->package_sales, checkins->scheduled_lessons,
+--   lesson_requests->scheduled_lessons, package_sales->students,
+--   referrals->package_sales, referrals->sessions,
+--   scheduled_lessons->lesson_groups (SET NULL), scheduled_lessons->package_sales
+--   (SET NULL), scheduled_lessons->scheduled_lessons (self, via rescheduled_from),
+--   sessions->checkins, sessions->scheduled_lessons, sessions->package_sales,
+--   student_progression->sessions, student_progression->students
+-- None of the kept tables (schools/users/activities/packages/partners) are
+-- ever a referencing table anywhere in the graph — only ever referenced —
+-- so nothing here can cascade into them regardless of order.
+
 BEGIN;
 
 DO $$
 DECLARE
   v_school_id CONSTANT uuid := '00000000-0000-0000-0000-000000000001';
 BEGIN
-  -- Deleted in dependency order (things that reference other wiped tables
-  -- first) so no step can hit a foreign-key violation against a row this
-  -- same script already removed.
+  -- Tables nothing else in this wipe depends on — safe first, order among
+  -- these nine doesn't matter.
+  DELETE FROM public.lesson_groups              WHERE school_id = v_school_id;
+  DELETE FROM public.commission_history          WHERE school_id = v_school_id;
+  DELETE FROM public.commission_overrides        WHERE school_id = v_school_id;
+  DELETE FROM public.instructor_advances         WHERE school_id = v_school_id;
+  DELETE FROM public.operational_costs           WHERE school_id = v_school_id;
+  DELETE FROM public.payments                    WHERE school_id = v_school_id;
+  DELETE FROM public.seasons                     WHERE school_id = v_school_id;
+  DELETE FROM public.school_notices              WHERE school_id = v_school_id;
+  DELETE FROM public.school_financial_documents  WHERE school_id = v_school_id;
 
-  DELETE FROM public.student_progression   WHERE school_id = v_school_id;
-  DELETE FROM public.referrals              WHERE school_id = v_school_id;
-  DELETE FROM public.commission_history     WHERE school_id = v_school_id;
-  DELETE FROM public.commission_overrides   WHERE school_id = v_school_id;
-  DELETE FROM public.instructor_advances    WHERE school_id = v_school_id;
-  DELETE FROM public.lesson_requests        WHERE school_id = v_school_id;
-  DELETE FROM public.sessions               WHERE school_id = v_school_id;
-  DELETE FROM public.scheduled_lessons      WHERE school_id = v_school_id;
-  DELETE FROM public.lesson_groups          WHERE school_id = v_school_id;
-  DELETE FROM public.checkins               WHERE school_id = v_school_id;
-  DELETE FROM public.package_sales          WHERE school_id = v_school_id;
-  DELETE FROM public.students               WHERE school_id = v_school_id;
-  DELETE FROM public.bookings               WHERE school_id = v_school_id;
-  DELETE FROM public.payments               WHERE school_id = v_school_id;
-  DELETE FROM public.operational_costs      WHERE school_id = v_school_id;
-  DELETE FROM public.seasons                WHERE school_id = v_school_id;
-  DELETE FROM public.school_notices         WHERE school_id = v_school_id;
-  DELETE FROM public.school_financial_documents WHERE school_id = v_school_id;
+  -- Nothing else in this wipe references these four — safe next.
+  DELETE FROM public.bookings                    WHERE school_id = v_school_id;
+  DELETE FROM public.lesson_requests             WHERE school_id = v_school_id;
+  DELETE FROM public.referrals                   WHERE school_id = v_school_id;
+  DELETE FROM public.student_progression         WHERE school_id = v_school_id;
+
+  -- sessions was blocked only by referrals/student_progression, both gone now.
+  DELETE FROM public.sessions                    WHERE school_id = v_school_id;
+
+  -- checkins was blocked only by sessions, gone now.
+  DELETE FROM public.checkins                    WHERE school_id = v_school_id;
+
+  -- scheduled_lessons.rescheduled_from self-references this same table —
+  -- null it out first so the bulk delete below can't trip over a row still
+  -- pointing at a sibling row in the same statement.
+  UPDATE public.scheduled_lessons SET rescheduled_from = NULL WHERE school_id = v_school_id;
+  DELETE FROM public.scheduled_lessons           WHERE school_id = v_school_id;
+
+  -- package_sales was blocked by checkins/referrals, both gone now.
+  DELETE FROM public.package_sales               WHERE school_id = v_school_id;
+
+  -- students was blocked by bookings/package_sales, both gone now.
+  DELETE FROM public.students                    WHERE school_id = v_school_id;
 END $$;
 
 -- Review the row counts below BEFORE running COMMIT. If anything looks
@@ -81,13 +110,25 @@ UNION ALL SELECT 'checkins', count(*) FROM public.checkins
 UNION ALL SELECT 'package_sales', count(*) FROM public.package_sales
 UNION ALL SELECT 'scheduled_lessons', count(*) FROM public.scheduled_lessons
 UNION ALL SELECT 'sessions', count(*) FROM public.sessions
+UNION ALL SELECT 'lesson_groups', count(*) FROM public.lesson_groups
+UNION ALL SELECT 'lesson_requests', count(*) FROM public.lesson_requests
 UNION ALL SELECT 'bookings', count(*) FROM public.bookings
 UNION ALL SELECT 'payments', count(*) FROM public.payments
+UNION ALL SELECT 'referrals', count(*) FROM public.referrals
+UNION ALL SELECT 'student_progression', count(*) FROM public.student_progression
+UNION ALL SELECT 'operational_costs', count(*) FROM public.operational_costs
+UNION ALL SELECT 'instructor_advances', count(*) FROM public.instructor_advances
+UNION ALL SELECT 'commission_history', count(*) FROM public.commission_history
+UNION ALL SELECT 'commission_overrides', count(*) FROM public.commission_overrides
+UNION ALL SELECT 'seasons', count(*) FROM public.seasons
+UNION ALL SELECT 'school_notices', count(*) FROM public.school_notices
+UNION ALL SELECT 'school_financial_documents', count(*) FROM public.school_financial_documents
 UNION ALL SELECT 'users (should be unchanged)', count(*) FROM public.users
 UNION ALL SELECT 'activities (should be unchanged)', count(*) FROM public.activities
 UNION ALL SELECT 'packages (should be unchanged)', count(*) FROM public.packages
-UNION ALL SELECT 'partners (should be unchanged)', count(*) FROM public.partners;
+UNION ALL SELECT 'partners (should be unchanged)', count(*) FROM public.partners
+UNION ALL SELECT 'certificate_templates (should be unchanged)', count(*) FROM public.certificate_templates;
 
--- Everything above should read 0, except the three "should be unchanged"
+-- Everything above should read 0, except the five "should be unchanged"
 -- rows. Only once that's confirmed:
 -- COMMIT;
