@@ -140,6 +140,11 @@ export async function getDefaultInstructorForStudent(
   }
 }
 
+// Fallback source when checkins is null on a session row —
+// group-confirmed lessons (and any individual one confirmed without
+// going through the check-in kiosk) have no checkin at all, see
+// confirm-lesson/route.ts and sessions.scheduled_lesson_id's own
+// migration comment. getTodayDetail already applies this same fallback.
 export async function getRecentSessions(schoolId: string, limit = 8) {
   const supabase = createServiceClient()
   const { data, error } = await supabase
@@ -152,6 +157,7 @@ export async function getRecentSessions(schoolId: string, limit = 8) {
       commission_amount,
       instructor:users!sessions_instructor_id_fkey ( id, name, role ),
       checkins ( student_name ),
+      scheduled_lessons ( student_name ),
       activities ( name )
     `)
     .eq('school_id', schoolId)

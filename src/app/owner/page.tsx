@@ -327,7 +327,14 @@ export default async function OwnerPage() {
                     {t.no_sessions}
                   </td>
                 </tr>
-              ) : sessions.slice(0, 8).map((s, i) => (
+              ) : sessions.slice(0, 8).map((s, i) => {
+                // Fallback to scheduled_lessons when checkins is null —
+                // group-confirmed lessons (and any individual one confirmed
+                // without going through the check-in kiosk) have no
+                // checkin at all, so the name is otherwise unrecoverable
+                // from this row (see confirm-lesson/route.ts).
+                const studentName = (s.checkins as any)?.student_name ?? (s.scheduled_lessons as any)?.student_name ?? null
+                return (
                 <tr
                   key={s.id}
                   className="tbl-row"
@@ -337,12 +344,12 @@ export default async function OwnerPage() {
                     {fmtDate(s.session_date)}
                   </td>
                   <td style={{ padding: '20px 24px', fontSize: '13px', fontWeight: '500', color: 'var(--slate)' }}>
-                    {(s.checkins as any)?.student_name ? (
+                    {studentName ? (
                       <a
                         className="tbl-link"
-                        href={`/owner/students/name/${encodeURIComponent((s.checkins as any).student_name)}`}
+                        href={`/owner/students/name/${encodeURIComponent(studentName)}`}
                       >
-                        {(s.checkins as any).student_name}
+                        {studentName}
                       </a>
                     ) : '—'}
                   </td>
@@ -372,7 +379,8 @@ export default async function OwnerPage() {
                     {fmt(s.price)}
                   </td>
                 </tr>
-              ))}
+                )
+              })}
             </tbody>
           </table>
         </div>
