@@ -34,7 +34,7 @@ export default function MultiCurrencyPriceEditor({
   const currencies = [
     { key: 'price_brl' as const, symbol: 'R$', label: 'BRL', color: '#007868' },
     { key: 'price_eur' as const, symbol: '€',  label: 'EUR', color: '#1A4B8A' },
-    { key: 'price_usd' as const, symbol: '$',  label: 'USD', color: '#4B1AA8' },
+    { key: 'price_usd' as const, symbol: '$',  label: 'USD', color: '#0D9488' },
   ]
 
   async function save() {

@@ -362,8 +362,8 @@ export default async function OwnerPage() {
                       <span style={{
                         padding: '1px 6px',
                         borderRadius: '4px',
-                        background: '#F5F3FF',
-                        color: '#6D28D9',
+                        background: '#ECFEFF',
+                        color: '#0E7490',
                         fontSize: '10px',
                         fontWeight: '600',
                         marginLeft: '4px',

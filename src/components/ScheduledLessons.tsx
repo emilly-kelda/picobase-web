@@ -1297,10 +1297,12 @@ export default function ScheduledLessons({
                       made it read as plain text with no click target, so
                       "Confirmar" effectively disappeared. Back to two
                       separate elements: a status dot, plus its own
-                      clearly-a-button Confirmar (pastel purple, #F5F3FF/
-                      #6D28D9 — the same violet pair already used for the
+                      clearly-a-button Confirmar (pastel cyan, #ECFEFF/
+                      #0E7490 — not part of the slate/rose/emerald muted
+                      palette, but the same pair already used for the
                       "Grupo · N alunos" tag further down this file, not a
-                      new one-off color).
+                      new one-off color — purple isn't in this app's
+                      palette at all, was swapped app-wide for this cyan).
 
                       Dot, not a text pill — "Agendada"/"Check-in"/
                       "Confirmada" spelled out on every single row was the
@@ -1387,8 +1389,8 @@ export default function ScheduledLessons({
                       onClick={() => setConfirmLessonModal(lesson)}
                       style={{
                         padding: '4px 8px',
-                        background: '#F5F3FF',
-                        color: '#6D28D9',
+                        background: '#ECFEFF',
+                        color: '#0E7490',
                         border: 'none',
                         borderRadius: 'var(--radius-md)',
                         fontSize: '10px', fontWeight: '500',
@@ -1397,8 +1399,8 @@ export default function ScheduledLessons({
                         transition: 'background-color 0.15s',
                         whiteSpace: 'nowrap',
                       }}
-                      onMouseEnter={e => { e.currentTarget.style.backgroundColor = '#6D28D9'; e.currentTarget.style.color = '#fff' }}
-                      onMouseLeave={e => { e.currentTarget.style.backgroundColor = '#F5F3FF'; e.currentTarget.style.color = '#6D28D9' }}
+                      onMouseEnter={e => { e.currentTarget.style.backgroundColor = '#0E7490'; e.currentTarget.style.color = '#fff' }}
+                      onMouseLeave={e => { e.currentTarget.style.backgroundColor = '#ECFEFF'; e.currentTarget.style.color = '#0E7490' }}
                     >
                       Confirmar
                     </button>
@@ -1558,7 +1560,7 @@ export default function ScheduledLessons({
                   </div>
                   <div style={{
                     width: '2px', height: '32px',
-                    background: '#6D28D9',
+                    background: '#0E7490',
                     borderRadius: '1px', flexShrink: 0,
                   }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -1567,7 +1569,7 @@ export default function ScheduledLessons({
                     }}>
                       <span style={{
                         padding: '2px 8px', borderRadius: 'var(--radius-md)',
-                        background: '#F5F3FF', color: '#6D28D9',
+                        background: '#ECFEFF', color: '#0E7490',
                         fontSize: '10px', fontWeight: '600',
                       }}>
                         Grupo · {group.length} alunos

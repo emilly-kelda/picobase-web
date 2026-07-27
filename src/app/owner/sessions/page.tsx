@@ -85,8 +85,8 @@ function renderInstructorCell(user: { id?: string; name?: string; role?: string 
     <span style={{
       padding: '1px 6px',
       borderRadius: '4px',
-      background: '#EDE9FE',
-      color: '#5B21B6',
+      background: '#ECFEFF',
+      color: '#0E7490',
       fontSize: '10px',
       fontWeight: '600',
       marginLeft: '4px',
@@ -409,17 +409,19 @@ export default async function SessionsPage({
             {/* Pastel pair instead of the old --glacial/--slate segments —
                 those two are both near-black slates since the muted-palette
                 repaint, which made the split unreadable. Azul pastel for
-                Parceiros, roxo pastel for Direto (the same purple family
-                the Confirmar/Grupo badges already use); legend dots take
-                the stronger tone of the same hue so each dot still reads
-                against the white card while mapping unambiguously to its
-                pastel bar segment. */}
+                Parceiros, teal pastel for Direto — purple isn't part of
+                this app's palette (swapped app-wide for cyan/teal), and
+                teal keeps enough separation from Parceiros' blue that the
+                two segments still read as distinct hues, not two shades of
+                the same one; legend dots take the stronger tone of the
+                same hue so each dot still reads against the white card
+                while mapping unambiguously to its pastel bar segment. */}
             <div style={{
               display: 'flex', height: '10px', borderRadius: '99px',
               overflow: 'hidden', marginBottom: '10px',
             }}>
               <div style={{ width: `${partnerPct}%`, background: '#BFDBFE' }} />
-              <div style={{ width: `${directPct}%`, background: '#E9D5FF' }} />
+              <div style={{ width: `${directPct}%`, background: '#99F6E4' }} />
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -430,7 +432,7 @@ export default async function SessionsPage({
                 </span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ width: '8px', height: '8px', borderRadius: '99px', background: '#A855F7', display: 'inline-block' }} />
+                <span style={{ width: '8px', height: '8px', borderRadius: '99px', background: '#0D9488', display: 'inline-block' }} />
                 <span style={{ color: 'var(--slate)' }}>{t.origin_direct}</span>
                 <span style={{ color: 'var(--mist)', fontVariantNumeric: 'tabular-nums' }}>
                   {directCount} · {Math.round(directPct)}%
@@ -596,8 +598,8 @@ export default async function SessionsPage({
                           <span style={{
                             padding: '1px 6px',
                             borderRadius: '4px',
-                            background: s.currency === 'EUR' ? '#EEF3FC' : '#EDE9FE',
-                            color: s.currency === 'EUR' ? '#1A4B8A' : '#4B1AA8',
+                            background: s.currency === 'EUR' ? '#EEF3FC' : '#99F6E4',
+                            color: s.currency === 'EUR' ? '#1A4B8A' : '#0D9488',
                             fontSize: '10px',
                             fontWeight: '600',
                             marginLeft: '4px',

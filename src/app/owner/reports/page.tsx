@@ -857,7 +857,7 @@ export default function ReportsPage() {
           {[
             { key: 'pix',       label: 'PIX',       icon: '⚡', color: '#007868', bg: '#E0F8F5' },
             { key: 'dinheiro',  label: 'Dinheiro',  icon: '💵', color: '#1A4B8A', bg: '#EEF3FC' },
-            { key: 'cartao',    label: 'Cartão',    icon: '💳', color: '#4B1AA8', bg: '#EDE9FE' },
+            { key: 'cartao',    label: 'Cartão',    icon: '💳', color: '#0E7490', bg: '#ECFEFF' },
             { key: 'a_receber', label: 'A receber', icon: '⏳', color: '#92400E', bg: '#FEF3C7' },
           ].map(method => {
             const d = data.payments[method.key] ?? { count: 0, total: 0 }
