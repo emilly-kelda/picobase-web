@@ -3,6 +3,28 @@ import { normalizeStudentName } from '@/lib/text'
 import { windViability } from '@/lib/weather'
 import { todayBR, addDaysBR, dayBoundsBR } from '@/lib/date'
 
+/** Which students already have a future lesson on the books — powers the
+ *  post-confirmation "what's next" button in ScheduledLessons.tsx: many
+ *  students book their whole package's worth of lessons up front, so
+ *  "Agendar Próxima Aula" shouldn't be the default next action for
+ *  someone who already has one queued up (they'd end up double-booked
+ *  or confused seeing a prompt for something already done). Deliberately
+ *  a plain "later than right now" cutoff, not "later than today" — a
+ *  student's OTHER lesson later this same day still counts as upcoming.
+ *  Confirmed lessons don't match status = 'scheduled' anymore, so the
+ *  one just confirmed never shows up here as its own "upcoming" lesson. */
+export async function getStudentsWithUpcomingLessons(schoolId: string): Promise<Set<string>> {
+  const supabase = createServiceClient()
+  const { data } = await supabase
+    .from('scheduled_lessons')
+    .select('student_name')
+    .eq('school_id', schoolId)
+    .eq('status', 'scheduled')
+    .gt('scheduled_at', new Date().toISOString())
+
+  return new Set((data ?? []).map(r => normalizeStudentName(r.student_name)))
+}
+
 export async function getScheduledLessons(
   schoolId: string,
   date: 'today' | 'tomorrow' | string

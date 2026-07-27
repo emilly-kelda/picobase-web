@@ -3,7 +3,7 @@ import { getRunwayData, getSchool } from '@/repositories/runwayRepository'
 import { getRecentSessions, getTodayStats, getPendingLessons, getMonthComparison } from '@/repositories/sessionRepository'
 import { getInstructors, getCompletedHoursByStudent } from '@/repositories/studentRepository'
 import { getActivitiesForCheckin } from '@/repositories/checkinRepository'
-import { getScheduledLessons, getMissedLessons } from '@/repositories/scheduledLessonRepository'
+import { getScheduledLessons, getMissedLessons, getStudentsWithUpcomingLessons } from '@/repositories/scheduledLessonRepository'
 import { getPackageSales, getPackageBalancesForCheckins, getPackages } from '@/repositories/packageRepository'
 import PendingLessons from '@/components/PendingLessons'
 import ScheduledLessons from '@/components/ScheduledLessons'
@@ -51,6 +51,7 @@ export default async function OwnerPage() {
     pending, instructors, todayLessons, tomorrowLessons,
     activities, activePackages, missedLessons, packageBalances,
     monthComparison, weather, packageTypes, hoursMap,
+    studentsWithUpcoming,
   ] = await Promise.all([
     getRunwayData(SCHOOL_ID, seasonId),
     getRecentSessions(SCHOOL_ID),
@@ -70,6 +71,10 @@ export default async function OwnerPage() {
     // IKO/VDWS 10h autonomy-certificate eligibility — Aguardando Vento's
     // medal icon next to a student's name.
     getCompletedHoursByStudent(SCHOOL_ID),
+    // Post-confirmation "what's next" button — a Set isn't a plain
+    // serializable prop across the client boundary, so this crosses as
+    // an array and ScheduledLessons rebuilds the Set client-side.
+    getStudentsWithUpcomingLessons(SCHOOL_ID),
   ])
 
   const t = getT(lang)
@@ -220,6 +225,7 @@ export default async function OwnerPage() {
             schoolName={runway.school_name ?? 'Pico Base'}
             payoutModel={(school as any)?.payout_model ?? 'percentage'}
             fixedPayoutValue={(school as any)?.fixed_payout_value ?? null}
+            studentsWithUpcoming={[...studentsWithUpcoming]}
             t={t}
             lang={lang}
           />

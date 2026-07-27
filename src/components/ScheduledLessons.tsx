@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { LEVEL_LABELS, isLevel } from '@/lib/levels'
+import { normalizeStudentName } from '@/lib/text'
 import LevelPicker from '@/components/LevelPicker'
 import { whatsappDigitsWithCountryCode } from '@/lib/whatsapp'
 import { Toast, useToast } from '@/components/Toast'
@@ -151,6 +152,19 @@ function getPackageBadge(
   return { label, tone: 'ok', pctUsed }
 }
 
+/** Raw (purchased-minus-used, not netted against other pending lessons —
+ *  same "official balance" definition used everywhere else this session)
+ *  remaining minutes across every active package this student holds.
+ *  Backs the post-confirmation button's CAN_SCHEDULE/PACKAGE_COMPLETED
+ *  split below. */
+function getRawRemainingMinutes(studentName: string | null, activePackages: PackageSale[]): number {
+  if (!studentName) return 0
+  const target = studentName.toLowerCase()
+  return activePackages
+    .filter(p => p.student_name.toLowerCase() === target)
+    .reduce((sum, p) => sum + Math.max(0, p.minutes_purchased - p.minutes_used), 0)
+}
+
 // 'supervis' (not 'supervisao') deliberately — normalization below strips
 // accented characters entirely rather than transliterating them ("ã" in
 // "Supervisão" is dropped, not turned into "a"), so a key with an "a"
@@ -289,6 +303,7 @@ export default function ScheduledLessons({
   schoolName = 'Pico Base',
   payoutModel = 'percentage',
   fixedPayoutValue = null,
+  studentsWithUpcoming = [],
   t,
   lang = 'pt',
 }: {
@@ -300,9 +315,15 @@ export default function ScheduledLessons({
   schoolName?: string
   payoutModel?: string
   fixedPayoutValue?: number | null
+  // Normalized student names (see normalizeStudentName) with at least one
+  // OTHER lesson still status: 'scheduled' in the future — see
+  // getStudentsWithUpcomingLessons's own doc comment for why this
+  // drives the post-confirmation button below.
+  studentsWithUpcoming?: string[]
   t: Record<string, string>
   lang?: 'en' | 'pt'
 }) {
+  const upcomingSet = useMemo(() => new Set(studentsWithUpcoming), [studentsWithUpcoming])
   const router = useRouter()
   const { toast, showToast }        = useToast()
   const [showModal, setShowModal]   = useState(false)
@@ -1227,38 +1248,63 @@ export default function ScheduledLessons({
                       Confirmar
                     </button>
                   )}
-                  {/* "+ Agendar Próxima Aula" (re-engagement shortcut, NOT
-                      "Reagendar" — that label/action is exclusive to
-                      MissedLessons.tsx's sidebar, for actually-missed
-                      sessions) — frequent enough the approved mockup
-                      requires it not hide behind "⋮". Confirmar itself
-                      moved into the status pill above (merged badge+
-                      button); only this one still needs its own gate. */}
-                  {lesson.status !== 'confirmed' && (
+                  {/* Post-confirmation "what's next" button — deliberately
+                      NOT gated on lesson.status !== 'confirmed' anymore
+                      (used to disappear entirely once confirmed, exactly
+                      when a package-based student most needs the next
+                      step). "Reagendar" (a different label/action) stays
+                      exclusive to MissedLessons.tsx's sidebar, for
+                      actually-missed sessions.
+                      Three states, in priority order:
+                      - already has another lesson on the books (any day,
+                        any time from now on) -> send them to it instead
+                        of prompting to double-book.
+                      - no upcoming lesson but the package still has raw
+                        (un-netted) balance -> the original "+ Agendar
+                        Próxima Aula" action, now labeled with how much
+                        is actually left.
+                      - no upcoming lesson AND nothing left to schedule ->
+                        the package needs renewing, not another booking. */}
+                  {(() => {
+                    const hasUpcoming = upcomingSet.has(normalizeStudentName(lesson.student_name))
+                    const rawRemaining = hasUpcoming ? 0 : getRawRemainingMinutes(lesson.student_name, activePackages)
+                    const profileHref = `/owner/students/name/${encodeURIComponent(lesson.student_name ?? '')}`
+                    const nextAction: { kind: 'link'; label: string; href: string } | { kind: 'button'; label: string; onClick: () => void } =
+                      hasUpcoming
+                        ? { kind: 'link', label: 'Ver Próxima Aula', href: profileHref }
+                        : rawRemaining > 0
+                          ? { kind: 'button', label: `+ Agendar Próxima Aula (${formatHours(rawRemaining)} livres)`, onClick: () => openRebookModal(lesson) }
+                          : { kind: 'link', label: 'Renovar Pacote', href: profileHref }
                     // Byte-for-byte the same recipe as Reagendar
                     // (MissedLessons.tsx) — var(--glacial-light)/
                     // var(--glacial-dark), not an approximated zinc-*
                     // Tailwind class.
-                    <button
-                      onClick={() => openRebookModal(lesson)}
-                      style={{
-                        padding: '4px 8px',
-                        background: 'var(--glacial-light)',
-                        color: 'var(--glacial-dark)',
-                        border: 'none',
-                        borderRadius: 'var(--radius-md)',
-                        fontSize: '10px', fontWeight: '500',
-                        cursor: 'pointer',
-                        fontFamily: 'var(--font-sans)',
-                        transition: 'background-color 0.15s',
-                        whiteSpace: 'nowrap',
-                      }}
-                      onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'var(--glacial)'; e.currentTarget.style.color = '#fff' }}
-                      onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'var(--glacial-light)'; e.currentTarget.style.color = 'var(--glacial-dark)' }}
-                    >
-                      + Agendar Próxima Aula
-                    </button>
-                  )}
+                    const sharedStyle = {
+                      padding: '4px 8px',
+                      background: 'var(--glacial-light)',
+                      color: 'var(--glacial-dark)',
+                      border: 'none',
+                      borderRadius: 'var(--radius-md)',
+                      fontSize: '10px', fontWeight: '500',
+                      cursor: 'pointer',
+                      fontFamily: 'var(--font-sans)',
+                      transition: 'background-color 0.15s',
+                      whiteSpace: 'nowrap',
+                      textDecoration: 'none',
+                      display: 'inline-block',
+                    } as const
+                    const hoverIn  = (e: React.MouseEvent<HTMLElement>) => { e.currentTarget.style.backgroundColor = 'var(--glacial)'; e.currentTarget.style.color = '#fff' }
+                    const hoverOut = (e: React.MouseEvent<HTMLElement>) => { e.currentTarget.style.backgroundColor = 'var(--glacial-light)'; e.currentTarget.style.color = 'var(--glacial-dark)' }
+                    return nextAction.kind === 'link' ? (
+                      <Link href={nextAction.href} style={sharedStyle} onMouseEnter={hoverIn} onMouseLeave={hoverOut}>
+                        {nextAction.label}
+                      </Link>
+                    ) : (
+                      <button onClick={nextAction.onClick} style={sharedStyle} onMouseEnter={hoverIn} onMouseLeave={hoverOut}>
+                        {nextAction.label}
+                      </button>
+                    )
+                  })()}
                   {/* Icon-only, not the old text chip — opens the same
                       picker (student vs instructor confirmation message)
                       instead of jumping straight to the student's
