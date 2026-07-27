@@ -200,6 +200,7 @@ export default async function OwnerPage() {
             activities={activities}
             schoolSlug={(school as any)?.slug ?? runway.slug ?? ''}
             schoolName={runway.school_name ?? 'Pico Base'}
+            instructors={instructorList}
           />
 
           <PendingLessons

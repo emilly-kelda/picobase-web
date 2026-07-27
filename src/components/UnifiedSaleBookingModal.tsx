@@ -54,6 +54,36 @@ function packagePrice(pkg: PackageOption) {
   return pkg.final_price ?? pkg.base_price ?? 0
 }
 
+// Ported from ScheduledLessons.tsx's own generateDates (same signature/
+// behavior) — ISO date strings for `count` occurrences starting at
+// startDate/time, either every day or only on the given weekdays.
+function generateRecurringDates(
+  startDate: string,
+  time: string,
+  count: number,
+  repeat: 'daily' | 'custom',
+  weekdays: number[]
+): string[] {
+  const dates: string[] = []
+  const current = new Date(`${startDate}T${time}:00`)
+
+  if (repeat === 'daily') {
+    for (let i = 0; i < count; i++) {
+      dates.push(current.toISOString())
+      current.setDate(current.getDate() + 1)
+    }
+  } else {
+    if (weekdays.length === 0) return []
+    let attempts = 0
+    while (dates.length < count && attempts < 365) {
+      if (weekdays.includes(current.getDay())) dates.push(current.toISOString())
+      current.setDate(current.getDate() + 1)
+      attempts++
+    }
+  }
+  return dates
+}
+
 // package_sales has no FK to activities — match the package's free-text sport
 // field against the activity catalog by name. Same fuzzy approach as
 // ScheduledLessons.tsx's own (unexported) findActivityBySport.
@@ -134,6 +164,7 @@ export default function UnifiedSaleBookingModal({
   activities,
   schoolSlug,
   schoolName,
+  instructors,
   onClose,
   onSold,
 }: {
@@ -141,6 +172,7 @@ export default function UnifiedSaleBookingModal({
   activities: Activity[]
   schoolSlug: string
   schoolName: string
+  instructors: { id: string; name: string }[]
   onClose: () => void
   onSold: () => void
 }) {
@@ -187,6 +219,20 @@ export default function UnifiedSaleBookingModal({
     time: string; instructor_id: string; instructor_name: string; studentConflict: boolean
   } | null>(null)
 
+  // Recurring booking — a student buying a whole package up front often
+  // wants every lesson on the calendar right away, not just the first one.
+  // Same weekday-picker/count paradigm as ScheduledLessons.tsx's own
+  // "Novo Agendamento" form (ported, not slot-checked per date like the
+  // single-lesson picker above — that form doesn't live-check availability
+  // either, only this modal's single-lesson mode does; a manual instructor
+  // pick is the same tradeoff already accepted there).
+  const [scheduleMode, setScheduleMode]   = useState<'single' | 'recurring'>('single')
+  const [recurringRepeat, setRecurringRepeat] = useState<'daily' | 'custom'>('custom')
+  const [recurringWeekdays, setRecurringWeekdays] = useState<number[]>([1, 3, 5])
+  const [recurringTime, setRecurringTime] = useState('09:00')
+  const [recurringCount, setRecurringCount] = useState(1)
+  const [recurringInstructorId, setRecurringInstructorId] = useState('')
+
   const [saving, setSaving] = useState(false)
   const [error, setError]   = useState<string | null>(null)
 
@@ -225,13 +271,34 @@ export default function UnifiedSaleBookingModal({
   const selectedPackage = packageTypes.find(p => p.id === packageId) ?? null
 
   const canStep1 = packageId !== '' && (selectedStudent != null || (manualMode && manualName.trim().length >= 2))
-  const canStep3 = !scheduleNow || (date !== '' && selectedSlot !== null)
 
   const scheduleActivity = findActivityBySport(activities, selectedPackage?.sport ?? null)
   const scheduleDuration = scheduleActivity?.default_duration_min ?? 60
 
+  // Capped by the package actually being sold — nothing's been used yet
+  // (it's a brand-new sale), so total_minutes is the full available
+  // balance for this cap, not a netted/partial figure.
+  const maxRecurringCount = selectedPackage
+    ? Math.max(1, Math.floor(selectedPackage.total_minutes / scheduleDuration))
+    : 1
+  const recurringDates = scheduleMode === 'recurring'
+    ? generateRecurringDates(date, recurringTime, recurringCount, recurringRepeat, recurringWeekdays)
+    : []
+
+  const canStep3 = !scheduleNow || (
+    scheduleMode === 'single'
+      ? (date !== '' && selectedSlot !== null)
+      : (recurringInstructorId !== '' && recurringDates.length === recurringCount)
+  )
+
+  // Keeps recurringCount inside the package's own cap if the owner goes
+  // back to Step 1 and picks a smaller package after already raising it.
   useEffect(() => {
-    if (step !== 3 || !scheduleNow || !date) return
+    setRecurringCount(c => Math.min(c, maxRecurringCount))
+  }, [maxRecurringCount])
+
+  useEffect(() => {
+    if (step !== 3 || !scheduleNow || !date || scheduleMode !== 'single') return
     setSlotsLoading(true)
     setSelectedSlot(null)
     const params = new URLSearchParams({
@@ -246,7 +313,7 @@ export default function UnifiedSaleBookingModal({
       .catch(() => setSlots([]))
       .finally(() => setSlotsLoading(false))
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, scheduleNow, date, scheduleActivity?.id, scheduleDuration])
+  }, [step, scheduleNow, date, scheduleActivity?.id, scheduleDuration, scheduleMode])
 
   async function confirmSale() {
     // Voltar (Step 3 -> 2) lets the owner revisit payment method without
@@ -279,9 +346,55 @@ export default function UnifiedSaleBookingModal({
   async function confirmSchedule() {
     if (!packageSaleId) return
     if (!scheduleNow) { setStep(4); return }
-    if (!selectedSlot) return
+
     setSaving(true)
     setError(null)
+
+    // Recurring: one POST per projected date, sequential (not
+    // Promise.all) — /api/owner/schedule's capacity check reads the
+    // package's current committed minutes at call time, so firing them
+    // concurrently would let every request see the same "before" balance
+    // and over-commit past the package's real hours instead of each one
+    // correctly seeing the previous one's reservation.
+    if (scheduleMode === 'recurring') {
+      if (!recurringInstructorId || recurringDates.length === 0) { setSaving(false); return }
+      let firstLessonId: string | null = null
+      let firstPublicToken: string | null = null
+      for (const iso of recurringDates) {
+        const res = await fetch('/api/owner/schedule', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            student_name:    studentName,
+            activity_id:     scheduleActivity?.id ?? null,
+            instructor_id:   recurringInstructorId,
+            scheduled_at:    `${iso.slice(0, 10)}T${recurringTime}:00-03:00`,
+            duration_min:    scheduleDuration,
+            package_sale_id: packageSaleId,
+          }),
+        })
+        const data = await res.json().catch(() => ({}))
+        if (!res.ok || !data.ok) {
+          setSaving(false)
+          setError(data.error ?? 'Não foi possível agendar uma das aulas — as anteriores já foram criadas.')
+          return
+        }
+        if (!firstLessonId) { firstLessonId = data.id ?? null; firstPublicToken = data.public_token ?? null }
+      }
+      setSaving(false)
+      if (firstPublicToken) setPublicToken(firstPublicToken)
+      if (checkinId && firstLessonId) {
+        fetch('/api/owner/checkin-stage', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: checkinId, deferred_to_schedule: true, scheduled_lesson_id: firstLessonId }),
+        }).catch(() => {})
+      }
+      setStep(4)
+      return
+    }
+
+    if (!selectedSlot) { setSaving(false); return }
     const res = await fetch('/api/owner/schedule', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -662,6 +775,154 @@ export default function UnifiedSaleBookingModal({
             </div>
 
             {scheduleNow && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                {/* Uma aula (real-availability slot picker, existing) vs.
+                    Aulas recorrentes (weekday/count form, ported from
+                    ScheduledLessons.tsx's own "Novo Agendamento") — a
+                    student buying a whole package up front often wants
+                    every lesson on the calendar right away, not just the
+                    first one. */}
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  {([['single', 'Uma aula'], ['recurring', 'Aulas recorrentes']] as const).map(([value, label]) => (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => setScheduleMode(value)}
+                      style={{
+                        flex: 1, padding: '9px',
+                        borderRadius: 'var(--radius-md)',
+                        border: `1.5px solid ${scheduleMode === value ? 'var(--glacial)' : 'var(--border)'}`,
+                        background: scheduleMode === value ? 'var(--glacial-light)' : '#fff',
+                        color: scheduleMode === value ? 'var(--glacial-dark)' : 'var(--mist)',
+                        fontSize: '13px', fontWeight: scheduleMode === value ? '600' : '400',
+                        cursor: 'pointer', fontFamily: 'var(--font-sans)',
+                      }}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+
+                {scheduleMode === 'recurring' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                    <div>
+                      <label style={labelStyle}>Início</label>
+                      <input style={inputStyle} type="date" value={date} onChange={e => setDate(e.target.value)} />
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                      <div>
+                        <label style={labelStyle}>Horário</label>
+                        <input style={inputStyle} type="time" value={recurringTime} onChange={e => setRecurringTime(e.target.value)} />
+                      </div>
+                      <div>
+                        <label style={labelStyle}>Instrutor</label>
+                        <select
+                          style={{ ...inputStyle, cursor: 'pointer' }}
+                          value={recurringInstructorId}
+                          onChange={e => setRecurringInstructorId(e.target.value)}
+                        >
+                          <option value="">Selecionar</option>
+                          {instructors.map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
+                        </select>
+                      </div>
+                    </div>
+                    <div>
+                      <label style={labelStyle}>Repetição</label>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        {([['custom', 'Dias específicos'], ['daily', 'Todos os dias']] as const).map(([value, label]) => (
+                          <button
+                            key={value}
+                            type="button"
+                            onClick={() => setRecurringRepeat(value)}
+                            style={{
+                              flex: 1, padding: '8px',
+                              borderRadius: 'var(--radius-md)',
+                              border: `1.5px solid ${recurringRepeat === value ? 'var(--glacial)' : 'var(--border)'}`,
+                              background: recurringRepeat === value ? 'var(--glacial-light)' : '#fff',
+                              color: recurringRepeat === value ? 'var(--glacial-dark)' : 'var(--mist)',
+                              fontSize: '12px', fontWeight: '500',
+                              cursor: 'pointer', fontFamily: 'var(--font-sans)',
+                            }}
+                          >
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    {recurringRepeat === 'custom' && (
+                      <div>
+                        <label style={labelStyle}>Dias da semana</label>
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          {[
+                            { key: 1, label: 'S' }, { key: 2, label: 'T' }, { key: 3, label: 'Q' },
+                            { key: 4, label: 'Q' }, { key: 5, label: 'S' }, { key: 6, label: 'S' }, { key: 0, label: 'D' },
+                          ].map(day => (
+                            <button
+                              key={day.key}
+                              type="button"
+                              onClick={() => setRecurringWeekdays(prev =>
+                                prev.includes(day.key) ? prev.filter(d => d !== day.key) : [...prev, day.key]
+                              )}
+                              style={{
+                                width: '32px', height: '32px', borderRadius: '50%',
+                                border: `1.5px solid ${recurringWeekdays.includes(day.key) ? 'var(--glacial)' : 'var(--border)'}`,
+                                background: recurringWeekdays.includes(day.key) ? 'var(--glacial-light)' : '#fff',
+                                color: recurringWeekdays.includes(day.key) ? 'var(--glacial-dark)' : 'var(--slate)',
+                                fontSize: '12px', fontWeight: '600',
+                                cursor: 'pointer', fontFamily: 'var(--font-sans)',
+                              }}
+                            >
+                              {day.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    <div>
+                      <label style={labelStyle}>
+                        Número de aulas {selectedPackage && `(máx. ${maxRecurringCount} · ${fmtH(selectedPackage.total_minutes)} no pacote)`}
+                      </label>
+                      <input
+                        style={{ ...inputStyle, width: '80px' }}
+                        type="number"
+                        min={1}
+                        max={maxRecurringCount}
+                        value={recurringCount}
+                        onChange={e => setRecurringCount(Math.max(1, Math.min(maxRecurringCount, Number(e.target.value))))}
+                      />
+                    </div>
+
+                    {recurringDates.length > 0 && (
+                      <div style={{
+                        background: 'var(--powder)', borderRadius: 'var(--radius-md)',
+                        padding: '10px 14px', fontSize: '12px', color: 'var(--slate)',
+                      }}>
+                        <div style={{ fontWeight: '600', marginBottom: '6px' }}>
+                          {recurringDates.length} aula{recurringDates.length !== 1 ? 's' : ''} será{recurringDates.length !== 1 ? 'ão' : ''} criada{recurringDates.length !== 1 ? 's' : ''}:
+                        </div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                          {recurringDates.map(iso => (
+                            <span key={iso} style={{
+                              padding: '3px 8px', background: '#fff', borderRadius: 'var(--radius-md)',
+                              border: '0.5px solid var(--border)', color: 'var(--mist)',
+                            }}>
+                              {new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', timeZone: 'America/Fortaleza' })}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {recurringRepeat === 'custom' && recurringWeekdays.length === 0 && (
+                      <div style={{ fontSize: '12px', color: 'var(--signal)' }}>
+                        Selecione ao menos um dia da semana.
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {scheduleNow && scheduleMode === 'single' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 <div>
                   <label style={labelStyle}>Data</label>

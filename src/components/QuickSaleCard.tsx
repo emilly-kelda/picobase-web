@@ -23,11 +23,13 @@ export default function QuickSaleCard({
   activities,
   schoolSlug,
   schoolName,
+  instructors,
 }: {
   packageTypes: PackageOption[]
   activities: Activity[]
   schoolSlug: string
   schoolName: string
+  instructors: { id: string; name: string }[]
 }) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
@@ -71,6 +73,7 @@ export default function QuickSaleCard({
           activities={activities}
           schoolSlug={schoolSlug}
           schoolName={schoolName}
+          instructors={instructors}
           onClose={() => setOpen(false)}
           onSold={() => { setOpen(false); router.refresh() }}
         />
