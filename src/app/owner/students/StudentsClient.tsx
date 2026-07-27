@@ -6,6 +6,7 @@ import Link from 'next/link'
 import AddStudentModal from './AddStudentModal'
 import ScheduleFromCheckinModal from '@/components/ScheduleFromCheckinModal'
 import SellPackageFlowModal, { type PackageOption } from '@/components/SellPackageFlowModal'
+import { isProficientLevel } from '@/lib/levelProgression'
 
 // New IKO-style keys, plus the old beginner/intermediate/advanced ones kept
 // as a display-only fallback for any row not yet touched by the
@@ -39,17 +40,18 @@ function getInitials(name: string) {
   return name.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase()
 }
 
-// IKO/VDWS autonomy certificate — 10h of completed (realized) water time.
-const CERTIFICATE_ELIGIBLE_MINUTES = 10 * 60
-
 function fmtHours(minutes: number) {
   const h = Math.floor(minutes / 60)
   const m = minutes % 60
   return m > 0 ? `${h}h${m}` : `${h}h`
 }
 
-function HoursOfSailing({ minutes }: { minutes: number }) {
-  const eligible = minutes >= CERTIFICATE_ELIGIBLE_MINUTES
+// IKO certification is skill-based, not time-based — eligibility here
+// mirrors CertificateSection's own per-sport proficiency gate (Level 2+),
+// not an hours count, so a fast learner isn't shown as ineligible just
+// because they haven't logged many hours yet.
+function HoursOfSailing({ minutes, skillLevel }: { minutes: number; skillLevel: string | null }) {
+  const eligible = isProficientLevel(skillLevel)
   return (
     <div>
       <div style={{ fontSize: '13px', color: 'var(--slate)', whiteSpace: 'nowrap' }}>
@@ -57,7 +59,7 @@ function HoursOfSailing({ minutes }: { minutes: number }) {
       </div>
       {eligible && (
         <span
-          title="10h+ de aula concluídas — elegível para o Certificado de Autonomia (IKO/VDWS)"
+          title="Nível 2+ atingido — elegível para o Certificado de Proficiência (IKO/VDWS)"
           style={{
             display: 'inline-block', marginTop: '4px',
             padding: '3px 10px', borderRadius: 'var(--radius-full)',
@@ -386,7 +388,7 @@ export default function StudentsClient({
                         })()}
                       </td>
                       <td style={{ padding: '14px 24px' }}>
-                        <HoursOfSailing minutes={hoursMap.get(s.name) ?? 0} />
+                        <HoursOfSailing minutes={hoursMap.get(s.name) ?? 0} skillLevel={s.skill_level ?? null} />
                       </td>
                       <td style={{ padding: '14px 24px' }}>
                         {s.health_conditions ? (
@@ -477,7 +479,7 @@ export default function StudentsClient({
                       <span style={{ fontSize: '13px', color: 'var(--mist)' }}>—</span>
                     </td>
                     <td style={{ padding: '14px 24px' }}>
-                      <HoursOfSailing minutes={hoursMap.get(s.name) ?? 0} />
+                      <HoursOfSailing minutes={hoursMap.get(s.name) ?? 0} skillLevel={null} />
                     </td>
                     <td style={{ padding: '14px 24px' }}>
                       {s.health_condition ? (

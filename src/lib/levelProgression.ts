@@ -76,6 +76,20 @@ function deriveDefaultLevel(level: string, skills: string[]): string {
   return derivedIdx > currentIdx ? derived : level
 }
 
+/** IKO/VDWS proficiency threshold — Level 2+ (covers both the new level_N
+ *  keys and the legacy beginner/intermediate/advanced ones stored before
+ *  the 20260809000003 data migration). Certification is skill-based per
+ *  IKO's own standard, not time-based — a student who picks up the
+ *  required skills quickly shouldn't be blocked by an hours count. Shared
+ *  by CertificateSection.tsx, the certificate generation route, and every
+ *  student-profile page's certificate-eligibility badge, so "proficient
+ *  enough for a certificate" can't mean something different in one place
+ *  than another. */
+export function isProficientLevel(level: string | null | undefined): boolean {
+  return level === 'level_2_intermediate' || level === 'level_3_independent'
+    || level === 'intermediate' || level === 'advanced'
+}
+
 /** Given the level being saved and the full set of currently-checked skill
  *  keys, returns the level to actually persist. kitesurf derives the target
  *  level directly from skills (deriveKitesurfLevel) and only ever advances

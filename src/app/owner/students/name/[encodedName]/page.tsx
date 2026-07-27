@@ -10,6 +10,7 @@ import {
 import { getPortalLang } from '@/lib/language'
 import { getT } from '@/lib/i18n'
 import { groupSessionsBySport } from '@/lib/modality'
+import { isProficientLevel } from '@/lib/levelProgression'
 import CertificateSection from '@/components/CertificateSection'
 
 const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
@@ -98,9 +99,11 @@ export default async function StudentNameProfilePage({
 
   const totalRevenue = sessions.reduce((s: number, r: any) => s + (r.price ?? 0), 0)
 
-  // IKO/VDWS autonomy certificate — 10h of completed water time.
   const totalSailingMinutes = sessions.reduce((s: number, r: any) => s + (r.duration_min ?? 0), 0)
-  const certificateEligible = totalSailingMinutes >= 10 * 60
+  // IKO certification is skill-based, not time-based — eligible once ANY
+  // sport has reached proficiency (see isProficientLevel and
+  // CertificateSection's own per-sport, per-document gating below).
+  const certificateEligible = [...progressionBySport.values()].some((p: any) => isProficientLevel(p.level))
 
   const initials = displayName
     .split(' ').slice(0, 2).map((n: string) => n[0] ?? '').join('').toUpperCase()
@@ -201,11 +204,11 @@ export default async function StudentNameProfilePage({
         ))}
       </div>
 
-      {/* IKO/VDWS 10h autonomy-certificate eligibility */}
+      {/* IKO/VDWS certificate eligibility — skill-based, see certificateEligible above */}
       {certificateEligible && (
         <div style={{ marginBottom: '24px' }}>
           <span
-            title="10h+ de aula concluídas — elegível para o Certificado de Autonomia (IKO/VDWS)"
+            title="Nível 2+ atingido em ao menos uma modalidade — elegível para o Certificado de Proficiência (IKO/VDWS)"
             style={{
               display: 'inline-flex', alignItems: 'center', gap: '6px',
               padding: '6px 14px', borderRadius: '99px',

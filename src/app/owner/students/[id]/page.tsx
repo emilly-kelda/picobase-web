@@ -3,6 +3,7 @@ import { headers } from 'next/headers'
 import { getStudentById, getSessionsByStudent, getActivePackageListByStudent, getLatestProgressionBySport } from '@/repositories/studentRepository'
 import { getSignedWaiversByStudent } from '@/repositories/checkinRepository'
 import { groupSessionsBySport } from '@/lib/modality'
+import { isProficientLevel } from '@/lib/levelProgression'
 import ProgressionEditor from '@/components/ProgressionEditor'
 import ProgressionHistory from '@/components/ProgressionHistory'
 import CertificateSection from '@/components/CertificateSection'
@@ -92,12 +93,12 @@ export default async function StudentDetailPage({
   const activePackagesForStudent = packageMap.get(student.name) ?? []
   const totalRevenue = sessions.reduce((s: number, r: any) => s + (r.price ?? 0), 0)
 
-  // IKO/VDWS autonomy certificate — 10h of completed (realized) water time.
-  // sessions here already are "concluded" by construction (getSessionsByStudent
-  // only ever returns rows from the sessions table, which only exists once a
-  // lesson is actually confirmed — there's no separate status to filter on).
   const totalSailingMinutes = sessions.reduce((s: number, r: any) => s + (r.duration_min ?? 0), 0)
-  const certificateEligible = totalSailingMinutes >= 10 * 60
+  // IKO certification is skill-based, not time-based — a fast learner
+  // shouldn't be blocked by an hours count. Eligible once ANY sport has
+  // reached proficiency (see isProficientLevel and CertificateSection's own
+  // per-sport, per-document gating just below, which this badge summarizes).
+  const certificateEligible = [...progressionBySport.values()].some(p => isProficientLevel(p.level))
 
   return (
     <div>
@@ -156,11 +157,11 @@ export default async function StudentDetailPage({
         ))}
       </div>
 
-      {/* IKO/VDWS 10h autonomy-certificate eligibility */}
+      {/* IKO/VDWS certificate eligibility — skill-based, see certificateEligible above */}
       {certificateEligible && (
         <div style={{ marginBottom: '24px' }}>
           <span
-            title="10h+ de aula concluídas — elegível para o Certificado de Autonomia (IKO/VDWS)"
+            title="Nível 2+ atingido em ao menos uma modalidade — elegível para o Certificado de Proficiência (IKO/VDWS)"
             style={{
               display: 'inline-flex', alignItems: 'center', gap: '6px',
               padding: '6px 14px', borderRadius: '99px',

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { translateModalityName } from '@/lib/modality'
+import { isProficientLevel } from '@/lib/levelProgression'
 import CertificatePreviewModal from '@/components/CertificatePreviewModal'
 
 type SportGroup = { minutes: number; lastInstructorName: string | null; lastDate: string }
@@ -71,12 +72,7 @@ export default function CertificateSection({
         [...sportGroups.entries()].map(([sportKey, group]) => {
           const hoursOk = group.minutes >= 60
           const level = progressionBySport.get(sportKey)?.level ?? null
-          // Checks both the new IKO-style keys and the old
-          // beginner/intermediate/advanced ones — a brief window can exist
-          // between this code deploying and the 20260809000003 data
-          // migration actually running against production.
-          const proficiencyOk = level === 'level_2_intermediate' || level === 'level_3_independent'
-            || level === 'intermediate' || level === 'advanced'
+          const proficiencyOk = isProficientLevel(level)
           const isBeginnerLevel = level === 'level_1_discovery' || level === 'beginner'
           const proficiencyTitle = proficiencyOk
             ? undefined

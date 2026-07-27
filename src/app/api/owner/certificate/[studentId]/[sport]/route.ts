@@ -5,6 +5,7 @@ import {
   getLatestProgressionBySport,
 } from '@/repositories/studentRepository'
 import { resolveCertificateTemplate } from '@/repositories/certificateTemplateRepository'
+import { isProficientLevel } from '@/lib/levelProgression'
 import { groupSessionsBySport, normalizeSportKey, translateModalityName } from '@/lib/modality'
 import { renderToBuffer } from '@react-pdf/renderer'
 import { CertificatePDF } from '@/lib/certificate-pdf'
@@ -44,11 +45,7 @@ export async function GET(
   if (docType === 'proficiency') {
     const progressionBySport = await getLatestProgressionBySport(SCHOOL_ID, studentId)
     level = progressionBySport.get(sportKey)?.level ?? null
-    // Both the new IKO-style keys and the old beginner/intermediate/advanced
-    // ones — see CertificateSection.tsx's identical check for why.
-    const isProficient = level === 'level_2_intermediate' || level === 'level_3_independent'
-      || level === 'intermediate' || level === 'advanced'
-    if (!isProficient) {
+    if (!isProficientLevel(level)) {
       return jsonError('Nível de proficiência ainda não atingido nessa modalidade', 404)
     }
   }
