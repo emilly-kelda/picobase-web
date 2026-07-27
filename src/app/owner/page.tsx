@@ -19,6 +19,7 @@ import { formatCurrency } from '@/lib/currency'
 import { getPortalLang } from '@/lib/language'
 import { getT } from '@/lib/i18n'
 import { normalizeStudentName } from '@/lib/text'
+import { todayBR } from '@/lib/date'
 import Link from 'next/link'
 
 const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
@@ -87,6 +88,17 @@ export default async function OwnerPage() {
     fixed_per_hour: (i as any).fixed_per_hour ?? null,
     sports: (i as any).sports ?? null,
   }))
+
+  // QuickSaleCard's header chips — sold_at is a timestamptz, so comparing
+  // its Fortaleza-local calendar date (not a UTC slice, which rolls over
+  // 3h early) against todayBR() to match every other "is this today" check
+  // in this app. activePackages here is the RAW getPackageSales(50) list
+  // (any status), not the status==='active' filtered one passed to
+  // ScheduledLessons below — a package sold today that's already fully
+  // used should still count toward today's sales total.
+  const todaySalesTotal = (activePackages as any[])
+    .filter(p => p.sold_at && new Date(p.sold_at).toLocaleDateString('sv-SE', { timeZone: 'America/Fortaleza' }) === todayBR())
+    .reduce((sum, p) => sum + (p.price_paid ?? 0), 0)
 
   // Team occupancy for today — % of instructors with at least one lesson
   // scheduled today. Used to be hours-booked ÷ (weekly_capacity_hours ÷ 7),
@@ -203,6 +215,8 @@ export default async function OwnerPage() {
             schoolSlug={(school as any)?.slug ?? runway.slug ?? ''}
             schoolName={runway.school_name ?? 'Pico Base'}
             instructors={instructorList}
+            todaySalesTotal={todaySalesTotal}
+            pendingCount={(pending as any[]).length}
           />
 
           <PendingLessons
