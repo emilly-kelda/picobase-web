@@ -13,7 +13,6 @@ import { translateModalityName } from '@/lib/modality'
 import Button from '@/components/ui/Button'
 import Select from '@/components/ui/Select'
 import Badge from '@/components/ui/Badge'
-import PackageProgressBar from '@/components/PackageProgressBar'
 import { LightbulbIcon, PencilIcon, XIcon } from '@/components/nav-icons'
 import HoursMinutesInput from '@/components/HoursMinutesInput'
 import { todayBR, addDaysBR } from '@/lib/date'
@@ -1262,24 +1261,23 @@ export default function ScheduledLessons({
                       // reads as an open billing problem that isn't real.
                       if (lesson.status === 'confirmed') return null
                       const badge = getPackageBadge(lesson.student_name, activePackages, t)
-                      if (!badge) return null
-                      // Plain inline text per the approved mockup
-                      // ("· 6h restantes"), not a pill. 'warn' keeps
-                      // pb-signal (an approved token) rather than the old
-                      // amber, which isn't in the 11-color palette — the
-                      // mockup only shows the 'ok' case, this is the
-                      // closest in-palette equivalent for the other one.
+                      // Removed the "· 6h restantes" text (+ progress bar)
+                      // that used to sit here — real clutter on a row whose
+                      // job is showing WHO/WHEN/WHAT, not a running balance;
+                      // that number still lives on the student's own profile.
+                      // The zero-credit case stays, title-only (no visible
+                      // badge) — still a genuine reception heads-up, just no
+                      // longer a permanent on-row element for every lesson.
+                      if (!badge || badge.tone === 'ok') return null
                       return (
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                          <span style={{
-                            fontSize: '12px', fontWeight: '400',
-                            color: badge.tone === 'ok' ? 'var(--color-pb-mist)' : 'var(--signal)',
-                            whiteSpace: 'nowrap',
-                          }}>
-                            · {badge.label}
-                          </span>
-                          {badge.pctUsed !== null && <PackageProgressBar pctUsed={badge.pctUsed} width="40px" />}
-                        </span>
+                        <span
+                          title={badge.label}
+                          style={{
+                            width: '6px', height: '6px', borderRadius: '50%',
+                            background: 'var(--signal)', flexShrink: 0,
+                            display: 'inline-block',
+                          }}
+                        />
                       )
                     })()}
                   </div>
