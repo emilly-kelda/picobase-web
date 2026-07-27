@@ -1165,7 +1165,7 @@ export default function PaymentsClient({
                         }}>
                           <div>
                             <div style={{ fontSize: '13px', fontWeight: '500', color: 'var(--slate)', marginBottom: '2px' }}>
-                              {s.checkins?.student_name ?? '—'}
+                              {s.checkins?.student_name ?? s.scheduled_lessons?.student_name ?? '—'}
                             </div>
                             <div style={{ fontSize: '11px', color: 'var(--mist)' }}>
                               {s.activities?.name ?? '—'} · {s.duration_min}min ·{' '}

@@ -546,15 +546,25 @@ export default async function SessionsPage({
                       {fmtDate(s.session_date)}
                     </td>
                     <td style={{ padding: '13px 20px', fontSize: '13px', fontWeight: '500', color: 'var(--slate)' }}>
-                      {(s.checkins as any)?.student_name ? (
-                        <a
-                          className="tbl-name-link"
-                          style={{ fontWeight: '500' }}
-                          href={`/owner/students/name/${encodeURIComponent((s.checkins as any).student_name)}`}
-                        >
-                          {(s.checkins as any).student_name}
-                        </a>
-                      ) : '—'}
+                      {(() => {
+                        // Fallback to scheduled_lessons when checkins is
+                        // null — group-confirmed lessons (and any individual
+                        // one confirmed without going through the check-in
+                        // kiosk) have no checkin at all, see
+                        // confirm-lesson/route.ts. The profile-by-name route
+                        // works off either source equally, so the link
+                        // itself doesn't need to know which one it came from.
+                        const studentName = (s.checkins as any)?.student_name ?? (s.scheduled_lessons as any)?.student_name ?? null
+                        return studentName ? (
+                          <a
+                            className="tbl-name-link"
+                            style={{ fontWeight: '500' }}
+                            href={`/owner/students/name/${encodeURIComponent(studentName)}`}
+                          >
+                            {studentName}
+                          </a>
+                        ) : '—'
+                      })()}
                     </td>
                     <td style={{ padding: '13px 20px', fontSize: '13px', color: 'var(--slate)' }}>
                       {(s.activities as any)?.name ?? '—'}

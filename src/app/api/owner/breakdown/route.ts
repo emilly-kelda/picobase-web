@@ -18,6 +18,9 @@ export async function GET(request: Request) {
   const start    = `${period}-01`
   const nextFirst = new Date(y, m, 1).toISOString().slice(0, 10)
 
+  // checkins is null for group-confirmed lessons (and any individual one
+  // confirmed without going through the check-in kiosk) — scheduled_lessons
+  // is the fallback source, see confirm-lesson/route.ts.
   const { data, error } = await supabase
     .from('sessions')
     .select(`
@@ -28,6 +31,7 @@ export async function GET(request: Request) {
       commission_pct,
       commission_amount,
       checkins ( student_name ),
+      scheduled_lessons ( student_name ),
       activities ( name )
     `)
     .eq('school_id', SCHOOL_ID)

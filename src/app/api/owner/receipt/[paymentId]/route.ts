@@ -48,9 +48,13 @@ export async function GET(
   const [{ data: sessions }, { data: advances }, { data: school }] = await Promise.all([
     supabase
       .from('sessions')
+      // Fallback source when checkins is null — group-confirmed lessons
+      // (and any individual one confirmed without going through the
+      // check-in kiosk) have no checkin at all, see confirm-lesson/route.ts.
       .select(`
         id, session_date, duration_min, price,
         checkins ( student_name ),
+        scheduled_lessons ( student_name ),
         activities ( name )
       `)
       .eq('school_id', SCHOOL_ID)
@@ -68,7 +72,7 @@ export async function GET(
   ])
 
   const sessionList = (sessions ?? []).map(s => ({
-    student:  (s.checkins as any)?.student_name ?? '—',
+    student:  (s.checkins as any)?.student_name ?? (s.scheduled_lessons as any)?.student_name ?? '—',
     activity: (s.activities as any)?.name ?? '—',
     duration: s.duration_min ?? 0,
     price:    s.price ?? 0,

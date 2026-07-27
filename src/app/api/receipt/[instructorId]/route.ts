@@ -29,6 +29,9 @@ export async function GET(
     .eq('id', instructor.school_id)
     .single()
 
+  // checkins is null for group-confirmed lessons (and any individual one
+  // confirmed without going through the check-in kiosk) — scheduled_lessons
+  // is the fallback source, see confirm-lesson/route.ts.
   const { data: rawSessions } = await supabase
     .from('sessions')
     .select(`
@@ -36,14 +39,15 @@ export async function GET(
       price,
       duration_min,
       session_date,
-      checkins ( student_name )
+      checkins ( student_name ),
+      scheduled_lessons ( student_name )
     `)
     .eq('instructor_id', instructorId)
     .gte('session_date', `${period}-01`)
     .lte('session_date', `${period}-31`)
 
   const sessionList = (rawSessions || []).map((s: any) => ({
-    student:  s.checkins?.student_name || 'Student',
+    student:  s.checkins?.student_name || s.scheduled_lessons?.student_name || 'Student',
     activity: 'Session',
     duration: s.duration_min || 0,
     price:    parseFloat(s.price) || 0,

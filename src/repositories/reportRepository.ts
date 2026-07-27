@@ -12,12 +12,19 @@ export async function getReportData(schoolId: string) {
     { data: packageSalesData },
     { data: instructorsData },
   ] = await Promise.all([
+    // checkins is null for group-confirmed lessons (and any individual one
+    // confirmed without going through the check-in kiosk) — scheduled_lessons
+    // is the fallback source, see confirm-lesson/route.ts. Ticket médio's
+    // distinct-student count below needs this too, not just display: without
+    // it, checkin-less sessions' students silently drop out of that Set,
+    // undercounting distinct students and inflating the per-student average.
     supabase
       .from('sessions')
       .select(`
         session_date, price, commission_amount, payment_method, received_at,
         currency, price_original, duration_min, instructor_id,
         checkins ( student_name ),
+        scheduled_lessons ( student_name ),
         instructor:users!sessions_instructor_id_fkey ( name ),
         activities ( name, sport )
       `)
@@ -122,7 +129,7 @@ export async function getReportData(schoolId: string) {
   for (const s of sessions) {
     const currency = s.currency ?? 'BRL'
     const amount = currency === 'BRL' ? (s.price ?? 0) : (s.price_original ?? 0)
-    const studentName = (s.checkins as any)?.student_name
+    const studentName = (s.checkins as any)?.student_name ?? (s.scheduled_lessons as any)?.student_name
     if (!currencyGroups[currency]) currencyGroups[currency] = { revenue: 0, students: new Set() }
     currencyGroups[currency].revenue += amount ?? 0
     if (studentName) currencyGroups[currency].students.add(studentName)

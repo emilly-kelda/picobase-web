@@ -11,6 +11,9 @@ function unwrap<T>(raw: T | T[] | null): T | null {
 export async function GET() {
   const supabase = createServiceClient()
 
+  // Fallback source when checkins is null — group-confirmed lessons (and
+  // any individual one confirmed without going through the check-in kiosk)
+  // have no checkin at all, see confirm-lesson/route.ts.
   const { data, error } = await supabase
     .from('sessions')
     .select(`
@@ -21,6 +24,7 @@ export async function GET() {
       price_original,
       received_at,
       checkins ( student_name ),
+      scheduled_lessons ( student_name ),
       activities ( name ),
       instructor:users!sessions_instructor_id_fkey ( name )
     `)
@@ -39,7 +43,7 @@ export async function GET() {
     )
     return {
       id:             s.id,
-      student_name:   unwrap(s.checkins)?.student_name ?? '—',
+      student_name:   unwrap(s.checkins)?.student_name ?? unwrap((s as any).scheduled_lessons)?.student_name ?? '—',
       activity_name:  unwrap(s.activities)?.name ?? '—',
       instructor:     unwrap(s.instructor)?.name ?? '—',
       session_date:   s.session_date,

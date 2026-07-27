@@ -176,6 +176,10 @@ export async function getSessions(
   }
 ) {
   const supabase = createServiceClient()
+  // Fallback source when checkins is null — group-confirmed lessons (and
+  // any individual one confirmed without going through the check-in kiosk)
+  // have no checkin at all, see confirm-lesson/route.ts. Same fallback
+  // getRecentSessions/getTodayDetail already apply.
   let query = supabase
     .from('sessions')
     .select(`
@@ -192,6 +196,7 @@ export async function getSessions(
       payment_method,
       instructor:users!sessions_instructor_id_fkey ( id, name, role ),
       checkins ( student_name ),
+      scheduled_lessons ( student_name ),
       activities ( name ),
       partners ( name )
     `)

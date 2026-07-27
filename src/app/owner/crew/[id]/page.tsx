@@ -404,7 +404,12 @@ export default async function InstructorDetailPage({
                         padding: '13px 24px', fontSize: '13px',
                         fontWeight: '500', color: 'var(--slate)',
                       }}>
-                        {(s.checkins as any)?.student_name ?? '—'}
+                        {/* Fallback to scheduled_lessons when checkins is
+                            null — group-confirmed lessons (and any
+                            individual one confirmed without going through
+                            the check-in kiosk) have no checkin at all, see
+                            confirm-lesson/route.ts. */}
+                        {(s.checkins as any)?.student_name ?? (s.scheduled_lessons as any)?.student_name ?? '—'}
                       </td>
                       <td style={{
                         padding: '13px 24px', fontSize: '13px',
