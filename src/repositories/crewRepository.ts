@@ -77,7 +77,7 @@ export async function getPayments(schoolId: string, period?: string, instructorI
       total_to_pay, status, approved_at, paid_at, instructor_id,
       users!payments_instructor_id_fkey (
         id, name, email, whatsapp,
-        pix_key, wise_email, commission_pct, role
+        pix_key, wise_email, commission_pct, commission_mode, fixed_per_hour, role
       )
     `)
     .eq('school_id', schoolId)

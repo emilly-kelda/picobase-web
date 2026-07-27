@@ -39,6 +39,8 @@ type Payment = {
     pix_key: string | null
     wise_email: string | null
     commission_pct: number | null
+    commission_mode: string | null
+    fixed_per_hour: number | null
   } | null
 }
 
@@ -111,8 +113,6 @@ export default function PaymentsClient({
   partnerCommissions,
   instructors,
   activeInstructor,
-  payoutModel,
-  fixedPayoutValue,
 }: {
   payments: Payment[]
   period: string
@@ -121,10 +121,7 @@ export default function PaymentsClient({
   partnerCommissions: PartnerRow[]
   instructors: { id: string; name: string }[]
   activeInstructor: string
-  payoutModel: string
-  fixedPayoutValue: number | null
 }) {
-  const usesFixedPayout = payoutModel === 'fixed'
   const router  = useRouter()
   const [payments,    setPayments]    = useState(initialPayments)
   const [summary,     setSummary]     = useState(initialSummary)
@@ -655,7 +652,7 @@ export default function PaymentsClient({
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
                     <tr style={{ background: 'var(--powder)' }}>
-                      {['Instrutor', 'Sessões', 'Receita', usesFixedPayout ? 'Repasse' : '%', 'A receber', 'Status', 'Ações'].map((h, i) => (
+                      {['Instrutor', 'Sessões', 'Receita', 'Repasse', 'A receber', 'Status', 'Ações'].map((h, i) => (
                         <th key={h} style={{
                           padding: '10px 20px', textAlign: i >= 1 && i <= 4 ? 'right' : 'left',
                           fontSize: '10px', fontWeight: '600',
@@ -718,8 +715,12 @@ export default function PaymentsClient({
                             {fmt(p.revenue_generated)}
                           </td>
                           <td style={{ padding: '14px 20px', textAlign: 'right', fontSize: '12px', color: 'var(--mist)', whiteSpace: 'nowrap' }}>
-                            {usesFixedPayout
-                              ? `${p.sessions_count} aula${p.sessions_count !== 1 ? 's' : ''} × ${fmt(fixedPayoutValue ?? 0)}`
+                            {user?.commission_mode === 'fixed_per_hour'
+                              // Rate is hourly, not per-lesson — showing "N aulas × R$X" here would
+                              // assert an arithmetic relationship that only holds if every lesson
+                              // that period happened to be exactly 1h. total_to_pay (already summed
+                              // per-session as rate × that session's own duration) stays correct either way.
+                              ? `${fmt(user?.fixed_per_hour ?? 0)}/h`
                               : fmtPct(p.commission_pct)}
                           </td>
                           <td style={{ padding: '14px 20px', textAlign: 'right' }}>

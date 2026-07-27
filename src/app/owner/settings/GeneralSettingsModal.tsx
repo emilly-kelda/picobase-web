@@ -10,8 +10,6 @@ type School = {
   language: string
   sport_types: string[] | null
   country: string | null
-  payout_model: string
-  fixed_payout_value: number | null
   privacy_policy_url: string | null
   spot_name: string | null
   latitude: number | null
@@ -49,8 +47,6 @@ export default function GeneralSettingsModal({
   const [name, setName]         = useState(school.name)
   const [country, setCountry]   = useState(school.country ?? '')
   const [language, setLanguage] = useState(school.language)
-  const [payoutModel, setPayoutModel] = useState(school.payout_model ?? 'percentage')
-  const [fixedPayoutValue, setFixedPayoutValue] = useState(String(school.fixed_payout_value ?? ''))
   const [privacyPolicyUrl, setPrivacyPolicyUrl] = useState(school.privacy_policy_url ?? '')
   const [saving, setSaving]     = useState(false)
   const [error, setError]       = useState<string | null>(null)
@@ -98,9 +94,7 @@ export default function GeneralSettingsModal({
     setSearchingSpot(false)
   }
 
-  const canSave = name.trim().length >= 2
-    && (payoutModel !== 'fixed' || Number(fixedPayoutValue) > 0)
-    && !saving
+  const canSave = name.trim().length >= 2 && !saving
 
   async function save() {
     if (!canSave) return
@@ -112,8 +106,6 @@ export default function GeneralSettingsModal({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           type: 'school', name, country, language,
-          payout_model: payoutModel,
-          fixed_payout_value: payoutModel === 'fixed' ? Number(fixedPayoutValue) : null,
           privacy_policy_url: privacyPolicyUrl.trim() || null,
           spot_name: spotName.trim() || null,
           latitude, longitude,
@@ -123,8 +115,6 @@ export default function GeneralSettingsModal({
       if (data.ok) {
         onSaved({
           name, country, language,
-          payout_model: payoutModel,
-          fixed_payout_value: payoutModel === 'fixed' ? Number(fixedPayoutValue) : null,
           privacy_policy_url: privacyPolicyUrl.trim() || null,
           spot_name: spotName.trim() || null,
           latitude, longitude,
@@ -271,46 +261,15 @@ export default function GeneralSettingsModal({
 
           <div>
             <label style={labelStyle}>Modelo de repasse dos instrutores</label>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {[
-                { value: 'percentage', label: 'Percentual por aula (%)', sub: 'Usa a comissão cadastrada de cada instrutor' },
-                { value: 'fixed',      label: 'Taxa fixa por aula (valor único)', sub: 'Mesmo valor para qualquer instrutor, ignora a comissão individual' },
-              ].map(option => (
-                <label
-                  key={option.value}
-                  style={{
-                    display: 'flex', alignItems: 'flex-start', gap: '10px',
-                    padding: '10px 12px',
-                    border: `0.5px solid ${payoutModel === option.value ? 'var(--slate)' : 'var(--border)'}`,
-                    borderRadius: 'var(--radius-md)',
-                    cursor: 'pointer',
-                  }}
-                >
-                  <input
-                    type="radio"
-                    name="payout_model"
-                    checked={payoutModel === option.value}
-                    onChange={() => setPayoutModel(option.value)}
-                    style={{ marginTop: '3px' }}
-                  />
-                  <div>
-                    <div style={{ fontSize: '13px', color: 'var(--slate)', fontWeight: '500' }}>{option.label}</div>
-                    <div style={{ fontSize: '11px', color: 'var(--mist)' }}>{option.sub}</div>
-                  </div>
-                </label>
-              ))}
+            <div style={{
+              padding: '10px 12px',
+              border: '0.5px solid var(--border)',
+              borderRadius: 'var(--radius-md)',
+              fontSize: '12px', color: 'var(--mist)',
+            }}>
+              Os valores de remuneração por aula são gerenciados individualmente na ficha de cada instrutor
+              (Equipe → selecionar instrutor → Comissão).
             </div>
-            {payoutModel === 'fixed' && (
-              <div style={{ marginTop: '10px' }}>
-                <label style={labelStyle}>Valor fixo por aula (R$)</label>
-                <input
-                  style={inputStyle} type="number" min={0} step={1}
-                  value={fixedPayoutValue}
-                  placeholder="50"
-                  onChange={e => setFixedPayoutValue(e.target.value)}
-                />
-              </div>
-            )}
           </div>
 
           <div>

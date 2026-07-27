@@ -20,6 +20,8 @@ type Instructor = {
   id: string
   name: string
   commission_pct: number | null
+  commission_mode?: string | null
+  fixed_per_hour?: number | null
 }
 
 type Currency = 'BRL' | 'EUR' | 'USD'
@@ -67,6 +69,18 @@ function PaymentMethodIcon({ method }: { method: 'pix' | 'dinheiro' | 'cartao' |
     case 'a_receber':
       return <svg {...props}><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3.5 2" /></svg>
   }
+}
+
+/** Each instructor negotiates their own rate (Equipe → Comissão) — fixed_per_hour
+ *  instructors have no meaningful "%", so the dropdown must not show one. */
+function instructorOptionLabel(i: Instructor): string {
+  if (i.commission_mode === 'fixed_per_hour') {
+    return `${i.name} · ${fmt(i.fixed_per_hour ?? 0)}/h`
+  }
+  if (i.commission_pct != null) {
+    return `${i.name} · ${Math.round(i.commission_pct * 100)}%`
+  }
+  return i.name
 }
 
 function fmtHoursMin(min: number) {
@@ -133,8 +147,6 @@ export default function ConfirmLessonModal({
   lesson,
   activities,
   instructors,
-  payoutModel = 'percentage',
-  fixedPayoutValue = null,
   t,
   lang = 'pt',
   onClose,
@@ -143,8 +155,6 @@ export default function ConfirmLessonModal({
   lesson: LessonToConfirm
   activities: ActivityRef[]
   instructors: Instructor[]
-  payoutModel?: string
-  fixedPayoutValue?: number | null
   t: Record<string, string>
   lang?: 'en' | 'pt'
   onClose: () => void
@@ -268,8 +278,8 @@ export default function ConfirmLessonModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lesson.student_id, sportKey])
 
-  const usesFixedPayout    = payoutModel === 'fixed'
   const selectedInstructor = instructors.find(i => i.id === instructorId)
+  const usesFixedPayout    = selectedInstructor?.commission_mode === 'fixed_per_hour'
   const commissionPct      = selectedInstructor?.commission_pct ?? 0.38
   const finalDuration      = useCustom ? customMinutes : duration
 
@@ -304,7 +314,7 @@ export default function ConfirmLessonModal({
   const totalPriceBRL    = fxRate != null ? totalPrice * fxRate : null
   const netRevenueBRL    = totalPriceBRL != null ? Math.max(0, totalPriceBRL - costDeduction) : null
   const commissionBRL    = usesFixedPayout
-    ? (fixedPayoutValue ?? 0)
+    ? (selectedInstructor?.fixed_per_hour ?? 0) * (finalDuration / 60)
     : (netRevenueBRL != null ? netRevenueBRL * commissionPct : null)
 
   // openReceipt: only true for "Encerrar Pacote e Cobrar" — the lesson
@@ -474,7 +484,7 @@ export default function ConfirmLessonModal({
           >
             <option value="">{t.select_instructor}</option>
             {instructors.map(i => (
-              <option key={i.id} value={i.id}>{i.name} · {Math.round((i.commission_pct ?? 0) * 100)}%</option>
+              <option key={i.id} value={i.id}>{instructorOptionLabel(i)}</option>
             ))}
           </select>
         </div>

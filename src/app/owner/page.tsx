@@ -83,6 +83,8 @@ export default async function OwnerPage() {
     id: i.id,
     name: i.name,
     commission_pct: (i as any).commission_pct ?? null,
+    commission_mode: (i as any).commission_mode ?? null,
+    fixed_per_hour: (i as any).fixed_per_hour ?? null,
     sports: (i as any).sports ?? null,
   }))
 
@@ -224,8 +226,6 @@ export default async function OwnerPage() {
             instructors={instructorList}
             activePackages={(activePackages as any).filter((p: any) => p.status === 'active')}
             schoolName={runway.school_name ?? 'Pico Base'}
-            payoutModel={(school as any)?.payout_model ?? 'percentage'}
-            fixedPayoutValue={(school as any)?.fixed_payout_value ?? null}
             studentsWithUpcoming={[...studentsWithUpcoming]}
             t={t}
             lang={lang}

@@ -104,21 +104,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Checkin not found' }, { status: 404 })
   }
 
-  // Same school-wide override as /api/owner/confirm-lesson: payout_model
-  // 'fixed' ignores every instructor's own commission_pct/fixed_per_hour
-  // entirely. This route used to skip this check and always fall back to
-  // percentage, even for schools configured with a flat fixed payout.
-  const { data: schoolRow } = await supabase
-    .from('schools')
-    .select('payout_model, fixed_payout_value')
-    .eq('id', instructor.school_id)
-    .single()
-  const usesFixedPayout = schoolRow?.payout_model === 'fixed'
-
-  const commission_pct    = usesFixedPayout ? null : (instructor.commission_pct ?? null)
-  const commission_amount = usesFixedPayout
-    ? (schoolRow?.fixed_payout_value ?? 0)
-    : computeCommissionAmount(instructor, price, duration_min)
+  const commission_pct    = instructor.commission_mode === 'fixed_per_hour' ? null : (instructor.commission_pct ?? null)
+  const commission_amount = computeCommissionAmount(instructor, price, duration_min)
 
   const { error: sessionError } = await supabase
     .from('sessions')

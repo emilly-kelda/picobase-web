@@ -55,6 +55,8 @@ type Instructor = {
   id: string
   name: string
   commission_pct: number | null
+  commission_mode?: string | null
+  fixed_per_hour?: number | null
   sports?: string[] | null
 }
 
@@ -301,8 +303,6 @@ export default function ScheduledLessons({
   instructors,
   activePackages = [],
   schoolName = 'Pico Base',
-  payoutModel = 'percentage',
-  fixedPayoutValue = null,
   studentsWithUpcoming = [],
   t,
   lang = 'pt',
@@ -313,8 +313,6 @@ export default function ScheduledLessons({
   instructors: Instructor[]
   activePackages?: PackageSale[]
   schoolName?: string
-  payoutModel?: string
-  fixedPayoutValue?: number | null
   // Normalized student names (see normalizeStudentName) with at least one
   // OTHER lesson still status: 'scheduled' in the future — see
   // getStudentsWithUpcomingLessons's own doc comment for why this
@@ -2478,8 +2476,6 @@ export default function ScheduledLessons({
           lesson={confirmLessonModal}
           activities={activities}
           instructors={instructors}
-          payoutModel={payoutModel}
-          fixedPayoutValue={fixedPayoutValue}
           t={t}
           lang={lang}
           onClose={() => setConfirmLessonModal(null)}

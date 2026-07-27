@@ -33,8 +33,6 @@ type School = {
   notify_late_cancellation: boolean
   notify_post_class_feedback: boolean
   cancellation_window_hours: number
-  payout_model: string
-  fixed_payout_value: number | null
   privacy_policy_url: string | null
   spot_name: string | null
   latitude: number | null

@@ -1,6 +1,5 @@
 import { getPayments, getPartnerCommissions, closeMonth } from '@/repositories/crewRepository'
 import { getInstructors } from '@/repositories/studentRepository'
-import { getSchool } from '@/repositories/runwayRepository'
 import PaymentsClient from './PaymentsClient'
 
 const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
@@ -27,11 +26,10 @@ export default async function PaymentsPage({
     await closeMonth(SCHOOL_ID, activePeriod)
   } catch {}
 
-  const [{ payments, period: resolvedPeriod, summary }, partnerCommissions, instructors, school] = await Promise.all([
+  const [{ payments, period: resolvedPeriod, summary }, partnerCommissions, instructors] = await Promise.all([
     getPayments(SCHOOL_ID, period, instructor),
     getPartnerCommissions(SCHOOL_ID, activePeriod),
     getInstructors(SCHOOL_ID),
-    getSchool(SCHOOL_ID),
   ])
 
   const monthOptions = Array.from({ length: 12 }, (_, i) => {
@@ -56,8 +54,6 @@ export default async function PaymentsPage({
       partnerCommissions={partnerCommissions}
       instructors={instructors}
       activeInstructor={instructor ?? ''}
-      payoutModel={(school as any)?.payout_model ?? 'percentage'}
-      fixedPayoutValue={(school as any)?.fixed_payout_value ?? null}
     />
   )
 }
