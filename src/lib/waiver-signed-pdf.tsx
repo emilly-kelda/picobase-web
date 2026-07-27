@@ -94,6 +94,18 @@ const styles = StyleSheet.create({
     maxHeight: 90,
     maxWidth: 260,
   },
+  // No canvas/drawing step exists anywhere in the check-in flow — every
+  // signature is a typed name. Times italic+bold at a larger size is the
+  // closest "signed by hand" look available without registering an
+  // external font file (react-pdf's built-in fonts are Helvetica/
+  // Times-Roman/Courier only; a real script font would mean fetching one
+  // over the network at PDF-generation time, which isn't worth the
+  // fragility for a cosmetic touch).
+  signatureText: {
+    fontSize: 22,
+    fontFamily: 'Times-Italic',
+    color: '#1A1C22',
+  },
   consentLine: {
     fontSize: 10,
     color: '#1A1C22',
@@ -202,7 +214,7 @@ export function SignedWaiverPDF({
         <View style={styles.topBar} />
         <View style={styles.content}>
           <Text style={styles.schoolName}>{schoolName}</Text>
-          <Text style={styles.title}>Termo de Assunção de Risco e Responsabilidade</Text>
+          <Text style={styles.title}>Termo de Responsabilidade</Text>
           <Text style={styles.subtitle}>Registro de assinatura digital · ID {checkinId}</Text>
 
           <Text style={styles.sectionLabel}>Dados do aluno</Text>
@@ -232,14 +244,20 @@ export function SignedWaiverPDF({
 
           <Text style={styles.sectionLabel}>Assinatura do aluno</Text>
           <View style={styles.signatureBox}>
-            {signatureDataUrl
+            {signatureDataUrl?.startsWith('data:image')
               ? <Image src={signatureDataUrl} style={styles.signatureImage} />
-              : <Text style={{ fontSize: 9, color: '#8A8C98' }}>Assinatura não registrada</Text>}
+              : signatureDataUrl
+                // Typed-name signature (the only kind this app's check-in
+                // flow actually captures — see CheckinForm.tsx's
+                // signatureName field) rendered as italic text standing in
+                // for a handwritten one, not a raw data dump.
+                ? <Text style={styles.signatureText}>{signatureDataUrl}</Text>
+                : <Text style={{ fontSize: 9, color: '#8A8C98' }}>Assinatura não registrada</Text>}
           </View>
 
           <View style={{ marginTop: 14 }}>
             <Text style={styles.consentLine}>
-              ✓ Aceite integral do Termo de Assunção de Risco e Responsabilidade em {fmtDateTime(signedAt)}.
+              ✓ Aceite integral do Termo de Responsabilidade em {fmtDateTime(signedAt)}.
             </Text>
             <Text style={styles.consentLine}>
               {lgpdConsent ? '✓' : '✗'} Consentimento para tratamento de dados pessoais (LGPD).

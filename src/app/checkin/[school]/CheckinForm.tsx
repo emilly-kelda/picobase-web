@@ -67,7 +67,7 @@ const LANGS = {
     emergency_phone: 'Telefone do contato',
     waiver_title: 'Termos e condições',
     waiver_text: 'Compreendo que os esportes aquáticos envolvem riscos inerentes, incluindo lesões ou morte. Participo voluntariamente e isento a escola, instrutores e equipe de responsabilidade por acidentes durante minha participação. Confirmo que estou fisicamente apto a participar e que todas as informações fornecidas são verdadeiras. Comprometo-me a seguir as regras de segurança e as orientações da escola e dos instrutores durante toda a atividade.',
-    i_agree: 'Li, compreendi e concordo integralmente com as cláusulas do Termo de Assunção de Risco e Responsabilidade acima descritas.',
+    i_agree: 'Li, compreendi e concordo integralmente com as cláusulas do Termo de Responsabilidade acima descritas.',
     submit: 'Fazer check-in ✓',
     submitting: 'Enviando...',
     success_title: 'Check-in feito!',
@@ -555,6 +555,13 @@ export default function CheckinForm({
   const [agreed, setAgreed]         = useState(false)
   const [gdpr, setGdpr]             = useState(false)
   const [hasHealth, setHasHealth]   = useState(false)
+  // Typed-name fallback signature — there's no drawing canvas anywhere in
+  // this flow (checked: no <canvas>/pointer-drawing code exists in this
+  // app at all), so without this the waiver PDF's signature block was
+  // always empty, every single time. Pre-filled once from the student's
+  // own typed name (see the effect below) but editable, since a guardian
+  // signing for a minor may need to type a different name.
+  const [signatureName, setSignatureName] = useState('')
 
   // Waiver read/scroll gate — starts locked for every waiver source
   // (typed text, embedded PDF, or non-embeddable file) so the accept
@@ -764,6 +771,17 @@ export default function CheckinForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Seeds the typed-signature field once, the first time the waiver step
+  // is reached — only when still empty, so it never overwrites an edit
+  // the student already made (e.g. a guardian typing their own name
+  // instead) on a later re-render of this same step.
+  useEffect(() => {
+    if (step === 'waiver' && !signatureName && form.student_name) {
+      setSignatureName(form.student_name)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step])
+
   async function submit() {
     setSubmitting(true)
     setSubmitError(null)
@@ -782,6 +800,7 @@ export default function CheckinForm({
           guardian_name:    isMinor ? guardianName.trim() : null,
           guardian_consent: isMinor ? guardianConsent : false,
           waiver_agreed:    agreed,
+          signature_data:   signatureName.trim(),
           gdpr_consent:     gdpr,
           accepted_at:      new Date().toISOString(),
           // Legal audit trail (Lei 14.063/2020 / MP 2.200-2) — the server
@@ -885,7 +904,7 @@ export default function CheckinForm({
   // the ConsentCheckbox's disabled prop below) — reading the term in full
   // is already a hard prerequisite for checking this box, not something
   // that needs its own separate condition here.
-  const canSubmitWaiver = agreed && gdpr && !submitting
+  const canSubmitWaiver = agreed && gdpr && !submitting && signatureName.trim().length >= 2
     && (!isMinor || (guardianName.trim().length > 2 && guardianConsent))
 
   const dobDigits = form.date_of_birth.replace(/\D/g, '')
@@ -1522,6 +1541,26 @@ export default function CheckinForm({
                 </ConsentCheckbox>
               </div>
             )}
+
+            {/* Typed-name digital signature — this flow has no drawing
+                canvas, so this text IS the signature (rendered in a
+                cursive style on the generated PDF, see
+                waiver-signed-pdf.tsx), not just a name confirmation. */}
+            <div style={{ marginBottom: '4px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#0B1F2E', marginBottom: '6px' }}>
+                {lang === 'pt' ? 'Digite seu nome para assinar digitalmente *'
+                  : lang === 'fr' ? 'Tapez votre nom pour signer numériquement *'
+                  : lang === 'es' ? 'Escriba su nombre para firmar digitalmente *'
+                  : 'Type your name to sign digitally *'}
+              </label>
+              <input
+                type="text"
+                value={signatureName}
+                onChange={e => setSignatureName(e.target.value)}
+                placeholder={lang === 'pt' ? 'Nome completo' : 'Full name'}
+                style={{ ...inputStyle, fontFamily: 'cursive', fontSize: '18px' }}
+              />
+            </div>
 
             <ConsentCheckbox checked={agreed} onChange={setAgreed} accent="#00A896" disabled={!waiverScrolledToEnd}>
               {t.i_agree}
