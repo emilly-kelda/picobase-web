@@ -249,6 +249,11 @@ export default function UnifiedSaleBookingModal({
   }, [step, scheduleNow, date, scheduleActivity?.id, scheduleDuration])
 
   async function confirmSale() {
+    // Voltar (Step 3 -> 2) lets the owner revisit payment method without
+    // losing progress, but the sale itself already landed the first time
+    // through — re-POSTing here would create a second package_sales row
+    // for the same purchase. Just re-advance instead.
+    if (packageSaleId) { setStep(3); return }
     setSaving(true)
     setError(null)
     const res = await fetch('/api/owner/sell-package', {
@@ -315,11 +320,6 @@ export default function UnifiedSaleBookingModal({
       }).catch(() => {})
     }
 
-    setStep(4)
-  }
-
-  function skipScheduling() {
-    setScheduleNow(false)
     setStep(4)
   }
 
@@ -818,7 +818,7 @@ export default function UnifiedSaleBookingModal({
           )}
           {step === 3 && (
             <>
-              <button onClick={skipScheduling} disabled={saving} style={navSecondaryStyle}>Pular Agendamento</button>
+              <button onClick={() => setStep(2)} disabled={saving} style={navSecondaryStyle}>Voltar</button>
               <button
                 onClick={confirmSchedule}
                 disabled={!canStep3 || saving}
