@@ -635,6 +635,16 @@ export async function checkPackageCapacity(
     packageSaleId: string
     durationMin: number
     excludeLessonId?: string
+    // The activity being scheduled/confirmed's own sport (e.g. 'kitesurf',
+    // 'surf') — when known, the fallback below prefers the student's OTHER
+    // same-sport packages before ever touching a different sport's balance.
+    // A student holding both a Kitesurf and a Surf package is normal (see
+    // getActivePackageListByStudent), and a Kitesurf lesson falling back to
+    // draw down the Surf package just because it happened to have room was
+    // a real bug, not a graceful fallback — optional/nullable so callers
+    // that don't know the sport keep today's sold_at-only FIFO exactly as
+    // it was.
+    sport?: string | null
   }
 ): Promise<{ ok: true; resolvedSaleId: string | null } | { ok: false }> {
   const supabase = createServiceClient()
@@ -650,7 +660,7 @@ export async function checkPackageCapacity(
   // normalized) dashboard showing real remaining balance.
   const { data: allSales } = await supabase
     .from('package_sales')
-    .select('id, student_name')
+    .select('id, student_name, packages ( sport )')
     .eq('school_id', schoolId)
     .order('sold_at', { ascending: true })
 
@@ -664,10 +674,29 @@ export async function checkPackageCapacity(
     return { ok: true, resolvedSaleId: null }
   }
 
-  const candidateIds = [
-    params.packageSaleId,
-    ...sales.map(s => s.id).filter(id => id !== params.packageSaleId),
-  ]
+  const otherSaleIds = sales.map(s => s.id).filter(id => id !== params.packageSaleId)
+  // Lowercase+trim, not exact-string — packages.sport and the activity's
+  // own sport field are two separately-typed free-text columns with no
+  // shared enum, same "different tables, same real-world value written
+  // slightly differently" risk normalizeStudentName exists for on names.
+  const normSport = (s: string | null | undefined) => s?.trim().toLowerCase() || null
+  const saleSport = (id: string) => {
+    const pkg = sales.find(s => s.id === id)?.packages as any
+    return normSport(Array.isArray(pkg) ? pkg[0]?.sport : pkg?.sport)
+  }
+  const targetSport = normSport(params.sport)
+  // Same-sport fallbacks before any other sport's — only actually reorders
+  // anything when `sport` was passed AND this student holds more than one
+  // sport's worth of packages; otherwise behaves exactly like the old
+  // plain sold_at order.
+  const orderedOthers = targetSport
+    ? [
+        ...otherSaleIds.filter(id => saleSport(id) === targetSport),
+        ...otherSaleIds.filter(id => saleSport(id) !== targetSport),
+      ]
+    : otherSaleIds
+
+  const candidateIds = [params.packageSaleId, ...orderedOthers]
 
   for (const saleId of candidateIds) {
     const info = await getAvailablePackageMinutes(schoolId, saleId, params.excludeLessonId)

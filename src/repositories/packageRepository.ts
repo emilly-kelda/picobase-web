@@ -196,7 +196,11 @@ export async function getPackageBalancesForCheckins(
 export async function getPackageBalanceForStudent(
   schoolId: string,
   studentName: string,
-  opts: { packageSaleId?: string | null; excludeLessonId?: string | null } = {}
+  // sport: same reasoning as checkPackageCapacity's own — when known,
+  // prefer the student's other same-sport packages in the fallback order
+  // before a different sport's, so a Kitesurf lesson's displayed balance
+  // can't come from an unrelated Surf package just because it has room.
+  opts: { packageSaleId?: string | null; excludeLessonId?: string | null; sport?: string | null } = {}
 ): Promise<{
   hasPackage: boolean
   packageSaleId: string | null
@@ -220,7 +224,7 @@ export async function getPackageBalanceForStudent(
   // match here can silently miss the student's own active package.
   const { data: allSales } = await supabase
     .from('package_sales')
-    .select('id, student_name, minutes_purchased, minutes_used, price_paid')
+    .select('id, student_name, minutes_purchased, minutes_used, price_paid, packages ( sport )')
     .eq('school_id', schoolId)
     .order('sold_at', { ascending: true })
 
@@ -229,9 +233,21 @@ export async function getPackageBalanceForStudent(
 
   if (sales.length === 0) return NONE
 
+  // Lowercase+trim, not exact-string — same cross-table free-text risk
+  // checkPackageCapacity's identical normSport guards against.
+  const normSport = (s: string | null | undefined) => s?.trim().toLowerCase() || null
+  const saleSport = (id: string) => {
+    const pkg = sales.find(s => s.id === id)?.packages as any
+    return normSport(Array.isArray(pkg) ? pkg[0]?.sport : pkg?.sport)
+  }
+  const targetSport = normSport(opts.sport)
+  const orderBySport = (ids: string[]) => targetSport
+    ? [...ids.filter(id => saleSport(id) === targetSport), ...ids.filter(id => saleSport(id) !== targetSport)]
+    : ids
+
   const candidateIds = opts.packageSaleId
-    ? [opts.packageSaleId, ...sales.map(s => s.id).filter(id => id !== opts.packageSaleId)]
-    : sales.map(s => s.id)
+    ? [opts.packageSaleId, ...orderBySport(sales.map(s => s.id).filter(id => id !== opts.packageSaleId))]
+    : orderBySport(sales.map(s => s.id))
 
   for (const saleId of candidateIds) {
     if (!sales.some(s => s.id === saleId)) continue

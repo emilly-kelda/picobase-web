@@ -95,18 +95,16 @@ export async function getSessionsByStudent(schoolId: string, studentName: string
   return data ?? []
 }
 
-/** A student can hold more than one active package_sales row at once
- *  (package_sales.student_id is rarely populated, so nothing merges them
- *  automatically) — this used to keep only the LAST sale the query
- *  happened to return per student name (map.set overwrote any earlier
- *  one, with no ORDER BY to even make that deterministic), silently
- *  dropping every other active package that student had. Same class of
- *  bug already fixed in getPackageBalancesForCheckins (see its own
- *  comment) and getPackageBadge in ScheduledLessons.tsx — this was the
- *  one caller still on the old single-sale behavior, which is why the
- *  student profile page (this function's only caller) could show a
- *  smaller remaining balance than every other view of the same student. */
-export async function getActivePackagesByStudent(schoolId: string) {
+/** A student can hold more than one active package_sales row at once —
+ *  most commonly one per sport (Kitesurf and Surf are genuinely separate
+ *  packages, not one blended balance), but package_sales.student_id is
+ *  rarely populated so nothing merges or distinguishes them automatically.
+ *  Returns every active sale per student (oldest first) instead of a
+ *  single combined aggregate (this function's own previous shape — see
+ *  git history), so the student-profile page can render one card per
+ *  package/sport instead of collapsing them into one blended number that
+ *  belongs to neither. */
+export async function getActivePackageListByStudent(schoolId: string) {
   const supabase = createServiceClient()
   const { data, error } = await supabase
     .from('package_sales')
@@ -117,39 +115,32 @@ export async function getActivePackagesByStudent(schoolId: string) {
       minutes_used,
       sold_at,
       status,
-      packages ( name )
+      packages ( name, sport )
     `)
     .eq('school_id', schoolId)
     .eq('status', 'active')
     .order('sold_at', { ascending: true })
   if (error) throw error
 
-  const map = new Map<string, {
+  const map = new Map<string, Array<{
     id: string
     minutes_purchased: number
     minutes_used: number
     package_name: string
-  }>()
+    sport: string | null
+  }>>()
 
   for (const sale of data ?? []) {
-    const existing = map.get(sale.student_name)
-    if (!existing) {
-      map.set(sale.student_name, {
-        id: sale.id,
-        minutes_purchased: sale.minutes_purchased,
-        minutes_used: sale.minutes_used,
-        // Oldest sale's own name/id represent the card (FIFO — the one
-        // actually drawn down first) — purchased/used below are already
-        // summed across every active sale, same as everywhere else.
-        package_name: (sale.packages as any)?.name ?? 'Package',
-      })
-    } else {
-      map.set(sale.student_name, {
-        ...existing,
-        minutes_purchased: existing.minutes_purchased + sale.minutes_purchased,
-        minutes_used: existing.minutes_used + sale.minutes_used,
-      })
-    }
+    const pkg = sale.packages as any
+    const list = map.get(sale.student_name) ?? []
+    list.push({
+      id: sale.id,
+      minutes_purchased: sale.minutes_purchased,
+      minutes_used: sale.minutes_used,
+      package_name: pkg?.name ?? 'Package',
+      sport: pkg?.sport ?? null,
+    })
+    map.set(sale.student_name, list)
   }
 
   return map
@@ -168,7 +159,7 @@ export async function getActivePackagesByStudent(schoolId: string) {
  *  actually checks its query errors instead of silently swallowing them).
  *
  *  Keyed by raw (not normalized) student_name, same convention as
- *  getActivePackagesByStudent right above — this map is meant to be read
+ *  getActivePackageListByStudent above — this map is meant to be read
  *  the same way, via students.name exact lookup, on the same page.
  *
  *  Known gap: group-confirmed sessions (see confirm-lesson/route.ts —

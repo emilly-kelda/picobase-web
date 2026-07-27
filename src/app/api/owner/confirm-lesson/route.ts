@@ -93,11 +93,21 @@ export async function POST(request: Request) {
     }
 
     if (scheduledLesson.package_sale_id) {
+      // A student can hold more than one active package (most commonly
+      // one per sport) — passing this activity's own sport lets the
+      // capacity check's fallback prefer another same-sport package over
+      // an unrelated one that happens to have room, instead of silently
+      // drawing down e.g. a Surf package for a Kitesurf lesson.
+      const { data: activityRow } = activity_id
+        ? await supabase.from('activities').select('sport').eq('id', activity_id).maybeSingle()
+        : { data: null }
+
       const capacity = await checkPackageCapacity(SCHOOL_ID, {
         studentName:     studentName ?? '',
         packageSaleId:   scheduledLesson.package_sale_id,
         durationMin:     effectiveDuration,
         excludeLessonId: linkedScheduledLessonId,
+        sport:           activityRow?.sport ?? null,
       })
       if (!capacity.ok) {
         return NextResponse.json(

@@ -1,6 +1,6 @@
 ﻿import { notFound } from 'next/navigation'
 import { headers } from 'next/headers'
-import { getStudentById, getSessionsByStudent, getActivePackagesByStudent, getLatestProgressionBySport } from '@/repositories/studentRepository'
+import { getStudentById, getSessionsByStudent, getActivePackageListByStudent, getLatestProgressionBySport } from '@/repositories/studentRepository'
 import { getSignedWaiversByStudent } from '@/repositories/checkinRepository'
 import { groupSessionsBySport } from '@/lib/modality'
 import ProgressionEditor from '@/components/ProgressionEditor'
@@ -79,7 +79,7 @@ export default async function StudentDetailPage({
 
   const [sessions, packageMap, signedWaivers, progressionBySport, requestHeaders] = await Promise.all([
     getSessionsByStudent(SCHOOL_ID, student.name, student.id),
-    getActivePackagesByStudent(SCHOOL_ID),
+    getActivePackageListByStudent(SCHOOL_ID),
     getSignedWaiversByStudent(SCHOOL_ID, student.name),
     getLatestProgressionBySport(SCHOOL_ID, student.id),
     headers(),
@@ -87,7 +87,9 @@ export default async function StudentDetailPage({
   const sportGroups = groupSessionsBySport(sessions as any)
   const siteOrigin = `https://${requestHeaders.get('host')}`
 
-  const pkg = packageMap.get(student.name)
+  // One card per active package/sport — a Kitesurf package and a Surf
+  // package are genuinely separate balances, not one blended number.
+  const activePackagesForStudent = packageMap.get(student.name) ?? []
   const totalRevenue = sessions.reduce((s: number, r: any) => s + (r.price ?? 0), 0)
 
   // IKO/VDWS autonomy certificate — 10h of completed (realized) water time.
@@ -171,89 +173,103 @@ export default async function StudentDetailPage({
         </div>
       )}
 
-      {/* Active package progress — pkg.minutes_purchased/minutes_used are
-          already summed across every active package_sales row this
-          student holds (getActivePackagesByStudent), so this card, the
-          alerts, and every other balance display in the app describe the
-          exact same purchased-minus-used figure. Deliberately not netted
-          against other pending/future scheduled lessons (that's a
-          separate, capacity-check-only concern — see
-          getAvailablePackageMinutes) — "restantes" here always means
-          "hours this student has left to use", full stop. */}
-      {pkg && (() => {
-        const remaining = Math.max(0, pkg.minutes_purchased - pkg.minutes_used)
-        const pct = pkg.minutes_purchased > 0
-          ? Math.round((pkg.minutes_used / pkg.minutes_purchased) * 100)
-          : 0
-        const barColor = pct >= 80
-          ? 'var(--signal)'
-          : pct >= 50
-            ? '#D4A017'
-            : 'var(--glacial)'
-        return (
-          <div style={{
-            background: '#fff',
-            border: '0.5px solid var(--border)',
-            borderRadius: 'var(--radius-lg)',
-            padding: '20px 24px',
-            marginBottom: '24px',
-          }}>
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'flex-start',
-              marginBottom: '14px',
-            }}>
-              <div>
+      {/* One card per active package — a student can hold more than one at
+          once (most commonly one per sport: Kitesurf and Surf are
+          genuinely separate balances), so this no longer collapses them
+          into a single blended number that belonged to neither.
+          minutes_purchased/minutes_used are per-sale as stored (no
+          summing across packages here — see getActivePackageListByStudent),
+          and deliberately not netted against other pending/future
+          scheduled lessons (that's a separate, capacity-check-only
+          concern — see getAvailablePackageMinutes) — "restantes" here
+          always means "hours left on this specific package", full stop. */}
+      {activePackagesForStudent.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
+          {activePackagesForStudent.map(pkg => {
+            const remaining = Math.max(0, pkg.minutes_purchased - pkg.minutes_used)
+            const pct = pkg.minutes_purchased > 0
+              ? Math.round((pkg.minutes_used / pkg.minutes_purchased) * 100)
+              : 0
+            const barColor = pct >= 80
+              ? 'var(--signal)'
+              : pct >= 50
+                ? '#D4A017'
+                : 'var(--glacial)'
+            return (
+              <div key={pkg.id} style={{
+                background: '#fff',
+                border: '0.5px solid var(--border)',
+                borderRadius: 'var(--radius-lg)',
+                padding: '20px 24px',
+              }}>
                 <div style={{
-                  fontSize: '11px', fontWeight: '500',
-                  letterSpacing: '0.1em', textTransform: 'uppercase',
-                  color: 'var(--mist)', marginBottom: '4px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'flex-start',
+                  marginBottom: '14px',
                 }}>
-                  Pacote ativo ({fmtMin(pkg.minutes_purchased)} totais)
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                      <span style={{
+                        fontSize: '10px', fontWeight: '600', letterSpacing: '0.08em', textTransform: 'uppercase',
+                        color: 'var(--mist)',
+                      }}>
+                        Pacote ativo ({fmtMin(pkg.minutes_purchased)} totais)
+                      </span>
+                      {pkg.sport && (
+                        <span style={{
+                          padding: '2px 8px', borderRadius: 'var(--radius-full)',
+                          fontSize: '10px', fontWeight: '600', color: 'var(--glacial-dark)',
+                          background: 'var(--glacial-light)', textTransform: 'capitalize',
+                        }}>
+                          {pkg.sport}
+                        </span>
+                      )}
+                    </div>
+                    <div style={{
+                      fontSize: '15px', fontWeight: '500',
+                      color: 'var(--slate)',
+                    }}>
+                      {pkg.package_name}
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{
+                      fontSize: '24px', fontWeight: '600',
+                      color: barColor,
+                      fontVariantNumeric: 'tabular-nums',
+                    }}>
+                      {pct}%
+                    </div>
+                    <div style={{ fontSize: '11px', color: 'var(--mist)' }}>utilizado</div>
+                  </div>
                 </div>
+
                 <div style={{
-                  fontSize: '15px', fontWeight: '500',
-                  color: 'var(--slate)',
+                  height: '6px',
+                  background: 'var(--powder)',
+                  borderRadius: 'var(--radius-full)',
+                  overflow: 'hidden',
+                  marginBottom: '8px',
                 }}>
-                  {pkg.package_name}
+                  <div style={{
+                    height: '100%',
+                    width: `${pct}%`,
+                    background: barColor,
+                    borderRadius: 'var(--radius-full)',
+                    transition: 'width 0.4s ease',
+                  }} />
+                </div>
+
+                <div style={{ fontSize: '12px', color: 'var(--mist)' }}>
+                  <span style={{ color: 'var(--slate)', fontWeight: '500' }}>{fmtMin(remaining)} restantes</span>
+                  {' • '}{fmtMin(pkg.minutes_used)} concluídas ({pct}%)
                 </div>
               </div>
-              <div style={{ textAlign: 'right' }}>
-                <div style={{
-                  fontSize: '24px', fontWeight: '600',
-                  color: barColor,
-                  fontVariantNumeric: 'tabular-nums',
-                }}>
-                  {pct}%
-                </div>
-                <div style={{ fontSize: '11px', color: 'var(--mist)' }}>utilizado</div>
-              </div>
-            </div>
-
-            <div style={{
-              height: '6px',
-              background: 'var(--powder)',
-              borderRadius: 'var(--radius-full)',
-              overflow: 'hidden',
-              marginBottom: '8px',
-            }}>
-              <div style={{
-                height: '100%',
-                width: `${pct}%`,
-                background: barColor,
-                borderRadius: 'var(--radius-full)',
-                transition: 'width 0.4s ease',
-              }} />
-            </div>
-
-            <div style={{ fontSize: '12px', color: 'var(--mist)' }}>
-              <span style={{ color: 'var(--slate)', fontWeight: '500' }}>{fmtMin(remaining)} restantes</span>
-              {' • '}{fmtMin(pkg.minutes_used)} concluídas ({pct}%)
-            </div>
-          </div>
-        )
-      })()}
+            )
+          })}
+        </div>
+      )}
 
       <CertificateSection
         studentId={student.id}
