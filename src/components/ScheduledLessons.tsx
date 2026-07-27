@@ -1183,7 +1183,17 @@ export default function ScheduledLessons({
                     style={{
                       display: 'inline-block', width: '8px', height: '8px',
                       borderRadius: '50%', flexShrink: 0,
-                      background: lesson.status === 'confirmed' ? 'var(--glacial-dark)'
+                      // 'confirmed' = the lesson happened and was confirmed as
+                      // delivered/billable — reads as success, so this needs
+                      // the pb-* success green (--color-pb-glacial-dark,
+                      // #047857 — same token Badge.tsx's "success" variant
+                      // uses for this exact same "Confirmada" state), not
+                      // globals.css's --glacial-dark, which despite the
+                      // near-identical name is a completely different legacy
+                      // token (#0F172A, near-black) — see tokens.css's own
+                      // header comment on why Aulas Agendadas specifically
+                      // reads color through the pb-* layer.
+                      background: lesson.status === 'confirmed' ? 'var(--color-pb-glacial-dark)'
                         : lesson.status === 'checked_in' ? '#3B82F6'
                         : 'var(--color-pb-mist)',
                     }}
