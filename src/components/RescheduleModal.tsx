@@ -132,10 +132,16 @@ export default function RescheduleModal({
       const instructorName = instructors.find(i => i.id === instructorId)?.name ?? suggestedInstructorName ?? ''
       const sport = lesson.activities?.name ?? 'sua aula'
       const link = publicToken ? `${window.location.origin}/aula/${publicToken}` : ''
+      // Approved template ("Opção 1") — offers accepting the proposed time
+      // OR suggesting a different one, matching /aula/[token]'s own
+      // pendingProposal options (Aceitar / Sugerir outro dia), not the
+      // old "aceitar ou manter o horário anterior" phrasing that no
+      // longer has a matching button on that page.
       const message =
-        `Olá ${lesson.student_name}, vimos que sua aula de ${sport} do dia ${fmtOldDate(lesson.scheduled_at)} ` +
+        `Olá ${lesson.student_name}! Vimos que sua aula de ${sport} do dia ${fmtOldDate(lesson.scheduled_at)} ` +
         `não pôde ser realizada. Propomos reagendar para ${fmtNewDate(date)} às ${time} ` +
-        `com o instrutor ${instructorName} na ${schoolName}. Toque aqui para aceitar a nova data ou manter o horário anterior: ${link}`
+        `com o instrutor ${instructorName} na ${schoolName}.\n\n` +
+        `Toque no link para aceitar essa nova data ou sugerir um horário melhor para você: ${link}`
 
       if (lesson.student_whatsapp) {
         window.open(buildWhatsAppUrl(lesson.student_whatsapp, message), '_blank', 'noopener,noreferrer')
