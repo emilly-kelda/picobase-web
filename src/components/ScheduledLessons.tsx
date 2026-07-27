@@ -16,6 +16,7 @@ import Badge from '@/components/ui/Badge'
 import PackageProgressBar from '@/components/PackageProgressBar'
 import { LightbulbIcon, PencilIcon, XIcon } from '@/components/nav-icons'
 import HoursMinutesInput from '@/components/HoursMinutesInput'
+import { todayBR, addDaysBR } from '@/lib/date'
 
 type Lesson = {
   id: string
@@ -73,6 +74,22 @@ function fmtTime(iso: string) {
   return new Date(iso).toLocaleTimeString('pt-BR', {
     hour: '2-digit', minute: '2-digit', timeZone: 'America/Fortaleza',
   })
+}
+
+/** Short tab label for any day beyond today/tomorrow — "Qua, 29/07". */
+function fmtDayTabLabel(dateStr: string): string {
+  const d = new Date(`${dateStr}T12:00:00-03:00`)
+  const weekday = d.toLocaleDateString('pt-BR', { weekday: 'short', timeZone: 'America/Fortaleza' }).replace('.', '')
+  const dayMonth = d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', timeZone: 'America/Fortaleza' })
+  return `${weekday.charAt(0).toUpperCase()}${weekday.slice(1)}, ${dayMonth}`
+}
+
+/** Long-form label for WhatsApp message bodies — "quarta-feira, 29/07". */
+function fmtDayLongLabel(dateStr: string): string {
+  const d = new Date(`${dateStr}T12:00:00-03:00`)
+  const weekday = d.toLocaleDateString('pt-BR', { weekday: 'long', timeZone: 'America/Fortaleza' })
+  const dayMonth = d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', timeZone: 'America/Fortaleza' })
+  return `${weekday}, ${dayMonth}`
 }
 
 // Explicitly api.whatsapp.com/send (not the wa.me short-link this file used
@@ -325,7 +342,98 @@ export default function ScheduledLessons({
   const [loadingBookingSuggestion, setLoadingBookingSuggestion] = useState(false)
   const [deleting, setDeleting]     = useState<string | null>(null)
   const [saving, setSaving]         = useState(false)
-  const [activeTab, setActiveTab]   = useState<'today' | 'tomorrow'>('today')
+  // 5-day rolling window, dayOffset days out from today — "Ver próximas
+  // aulas" advances the whole window (dayOffset += 5) rather than
+  // navigating anywhere, so the operator stays on this same screen.
+  const [dayOffset, setDayOffset]   = useState(0)
+  const days = useMemo(
+    () => Array.from({ length: 5 }, (_, i) => ({
+      date: addDaysBR(todayBR(), dayOffset + i),
+      offsetFromToday: dayOffset + i,
+    })),
+    [dayOffset]
+  )
+  const [activeTab, setActiveTab]   = useState(days[0].date)
+  // today/tomorrow arrive pre-fetched as props (owner/page.tsx's existing
+  // server-side calls); every other date in the window is fetched lazily
+  // from /api/owner/scheduled-lessons as soon as it enters view.
+  const [lessonsByDate, setLessonsByDate] = useState<Record<string, Lesson[]>>(() => ({
+    [todayBR()]: todayLessons,
+    [addDaysBR(todayBR(), 1)]: tomorrowLessons,
+  }))
+  const [loadingDates, setLoadingDates] = useState<Set<string>>(new Set())
+  // Bumped by refreshAll() below to force the fetch effect to re-run even
+  // when `days` itself hasn't changed (e.g. confirming a lesson while
+  // parked on a paged-forward day) — merely clearing a lessonsByDate entry
+  // wouldn't do this on its own, since that effect's deps are [days, refreshNonce].
+  const [refreshNonce, setRefreshNonce] = useState(0)
+
+  // Jumping the window lands the operator on its first day, not wherever
+  // they happened to be tabbed to in the old window.
+  useEffect(() => {
+    setActiveTab(days[0].date)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dayOffset])
+
+  // today/tomorrow are the two days owner/page.tsx re-fetches server-side
+  // on every router.refresh() — always trust those fresh props over
+  // whatever's cached, instead of re-fetching the same data a second time
+  // client-side.
+  useEffect(() => {
+    setLessonsByDate(prev => ({
+      ...prev,
+      [todayBR()]: todayLessons,
+      [addDaysBR(todayBR(), 1)]: tomorrowLessons,
+    }))
+  }, [todayLessons, tomorrowLessons])
+
+  // Every visible tab's count badge needs its day's data, not just the
+  // active one — so this fetches the whole window, not just activeTab.
+  useEffect(() => {
+    const missing = days.map(d => d.date).filter(d => !(d in lessonsByDate) && !loadingDates.has(d))
+    if (missing.length === 0) return
+    setLoadingDates(prev => new Set([...prev, ...missing]))
+    Promise.all(
+      missing.map(date =>
+        fetch(`/api/owner/scheduled-lessons?date=${date}`)
+          .then(r => r.json())
+          .then(data => ({ date, lessons: (data.lessons ?? []) as Lesson[] }))
+          .catch(() => ({ date, lessons: [] as Lesson[] }))
+      )
+    ).then(results => {
+      setLessonsByDate(prev => {
+        const next = { ...prev }
+        for (const r of results) next[r.date] = r.lessons
+        return next
+      })
+      setLoadingDates(prev => {
+        const next = new Set(prev)
+        missing.forEach(date => next.delete(date))
+        return next
+      })
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [days, refreshNonce])
+
+  // Every mutation (confirm/edit/delete/schedule) below calls this instead
+  // of router.refresh() directly — today/tomorrow resync from props
+  // automatically (see the effect above), but a paged-forward day isn't a
+  // prop at all, so its cache entry needs to be dropped explicitly to get
+  // picked back up as "missing" and re-fetched.
+  function refreshAll() {
+    const today = todayBR()
+    const tomorrow = addDaysBR(today, 1)
+    if (activeTab !== today && activeTab !== tomorrow) {
+      setLessonsByDate(prev => {
+        const next = { ...prev }
+        delete next[activeTab]
+        return next
+      })
+    }
+    setRefreshNonce(n => n + 1)
+    router.refresh()
+  }
+
   const [activeSportFilter, setActiveSportFilter] = useState<SportFilter>('all')
   const [mode, setMode]             = useState<'single' | 'daily' | 'custom'>('single')
   const [weekdays, setWeekdays]     = useState<number[]>([1, 3, 5])
@@ -694,7 +802,7 @@ export default function ScheduledLessons({
       if (res.ok) {
         setShowModal(false)
         resetForm()
-        router.refresh()
+        refreshAll()
       } else {
         const data = await res.json().catch(() => ({}))
         setFormError(data.error ?? 'Não foi possível agendar o grupo.')
@@ -732,7 +840,7 @@ export default function ScheduledLessons({
     if (!failedRes) {
       setShowModal(false)
       resetForm()
-      router.refresh()
+      refreshAll()
     } else {
       const data = await failedRes.json().catch(() => ({}))
       setFormError(data.error ?? 'Não foi possível agendar uma ou mais datas.')
@@ -790,7 +898,7 @@ export default function ScheduledLessons({
     if (data.penalized && data.message) {
       showToast('err', data.message)
     }
-    router.refresh()
+    refreshAll()
   }
 
   // Reuses the existing generic PATCH /api/owner/schedule (accepts any
@@ -805,7 +913,7 @@ export default function ScheduledLessons({
       body: JSON.stringify({ id: lesson.id, status: 'checked_in' }),
     })
     setStartingSession(null)
-    router.refresh()
+    refreshAll()
   }
 
   function openEditModal(lesson: Lesson) {
@@ -859,13 +967,12 @@ export default function ScheduledLessons({
       return
     }
     setEditLesson(null)
-    router.refresh()
+    refreshAll()
   }
 
-  const displayLessons = (activeTab === 'today' ? todayLessons : tomorrowLessons)
+  const activeDateLoading = loadingDates.has(activeTab)
+  const displayLessons = (lessonsByDate[activeTab] ?? [])
     .filter(l => activityMatchesSport(l.activities?.name, activeSportFilter))
-  const todayCount     = todayLessons.length
-  const tomorrowCount  = tomorrowLessons.length
 
   // Group lessons collapse into one row (same activity/time/duration, N
   // students) — everything else renders as an individual row, unchanged.
@@ -881,7 +988,9 @@ export default function ScheduledLessons({
   const totalRows = individualLessons.length + groupLessons.length
 
   // Used by WhatsAppActionButton's message templates below.
-  const dayLabel = activeTab === 'today' ? 'hoje' : 'amanhã'
+  const dayLabel = activeTab === todayBR() ? 'hoje'
+    : activeTab === addDaysBR(todayBR(), 1) ? 'amanhã'
+    : fmtDayLongLabel(activeTab)
 
   function openGroupConfirmModal(group: Lesson[]) {
     const first = group[0]
@@ -936,7 +1045,7 @@ export default function ScheduledLessons({
     }
 
     setGroupConfirmModal(null)
-    router.refresh()
+    refreshAll()
   }
 
 
@@ -951,7 +1060,7 @@ export default function ScheduledLessons({
           alignItems: 'center',
           marginBottom: '12px',
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', rowGap: '8px' }}>
             <div style={{
               fontSize: '11px', fontWeight: '500',
               letterSpacing: '0.1em', textTransform: 'uppercase',
@@ -961,33 +1070,67 @@ export default function ScheduledLessons({
             </div>
 
             <div style={{
-              display: 'flex', gap: '2px',
+              display: 'flex', gap: '2px', flexWrap: 'wrap',
               background: 'var(--powder)',
               borderRadius: 'var(--radius-md)',
               padding: '2px',
             }}>
-              {([
-                { key: 'today',    label: `${t.today_label} (${todayCount})`      },
-                { key: 'tomorrow', label: `${t.tomorrow_label} (${tomorrowCount})` },
-              ] as const).map(tab => (
+              {days.map(day => {
+                const label = day.offsetFromToday === 0 ? t.today_label
+                  : day.offsetFromToday === 1 ? t.tomorrow_label
+                  : fmtDayTabLabel(day.date)
+                const count = lessonsByDate[day.date]?.length
+                return (
+                  <button
+                    key={day.date}
+                    onClick={() => setActiveTab(day.date)}
+                    style={{
+                      padding: '4px 12px',
+                      borderRadius: '6px',
+                      fontSize: '12px', fontWeight: '500',
+                      border: 'none', cursor: 'pointer',
+                      fontFamily: 'var(--font-sans)',
+                      whiteSpace: 'nowrap',
+                      background: activeTab === day.date ? '#fff' : 'transparent',
+                      color: activeTab === day.date ? 'var(--slate)' : 'var(--mist)',
+                      boxShadow: activeTab === day.date
+                        ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                    }}
+                  >
+                    {label} ({count ?? '…'})
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* Advances the whole 5-day window in place — deliberately not a
+                link anywhere else, this used to be confused with the
+                per-lesson "Ver Próxima Aula" button further down (which
+                opens a specific student's profile, a different, correct,
+                unrelated feature — see its own comment). */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              {dayOffset > 0 && (
                 <button
-                  key={tab.key}
-                  onClick={() => setActiveTab(tab.key)}
+                  onClick={() => setDayOffset(0)}
                   style={{
-                    padding: '4px 12px',
-                    borderRadius: '6px',
-                    fontSize: '12px', fontWeight: '500',
-                    border: 'none', cursor: 'pointer',
-                    fontFamily: 'var(--font-sans)',
-                    background: activeTab === tab.key ? '#fff' : 'transparent',
-                    color: activeTab === tab.key ? 'var(--slate)' : 'var(--mist)',
-                    boxShadow: activeTab === tab.key
-                      ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                    background: 'none', border: 'none', padding: 0,
+                    fontSize: '12px', color: 'var(--mist)', cursor: 'pointer',
+                    fontFamily: 'var(--font-sans)', textDecoration: 'underline dotted',
                   }}
                 >
-                  {tab.label}
+                  ← Hoje
                 </button>
-              ))}
+              )}
+              <button
+                onClick={() => setDayOffset(prev => prev + 5)}
+                style={{
+                  background: 'none', border: 'none', padding: 0,
+                  fontSize: '12px', color: 'var(--color-pb-glacial-dark)', cursor: 'pointer',
+                  fontFamily: 'var(--font-sans)', fontWeight: '500',
+                }}
+              >
+                Ver próximas aulas →
+              </button>
             </div>
           </div>
 
@@ -1030,7 +1173,15 @@ export default function ScheduledLessons({
         </div>
 
         {/* Lessons list */}
-        {totalRows === 0 ? (
+        {activeDateLoading && totalRows === 0 ? (
+          <div style={{
+            background: '#fff', border: '1px solid var(--border)',
+            borderRadius: 'var(--radius-lg)', padding: '40px 24px',
+            textAlign: 'center', fontSize: '13px', color: 'var(--mist)',
+          }}>
+            Carregando...
+          </div>
+        ) : totalRows === 0 ? (
           <div style={{
             background: '#fff', border: '1px solid var(--border)',
             borderRadius: 'var(--radius-lg)', padding: '40px 24px',
@@ -1045,7 +1196,9 @@ export default function ScheduledLessons({
             </svg>
             <div style={{ fontSize: '13px', color: 'var(--mist)' }}>
               {activeSportFilter === 'all'
-                ? (activeTab === 'today' ? t.no_scheduled_today : t.no_scheduled_tomorrow)
+                ? (activeTab === todayBR() ? t.no_scheduled_today
+                    : activeTab === addDaysBR(todayBR(), 1) ? t.no_scheduled_tomorrow
+                    : `Nenhuma aula agendada para ${fmtDayLongLabel(activeTab)}.`)
                 : `${t.no_scheduled_sport} (${translateModalityName(SPORT_FILTER_LABELS[activeSportFilter], lang)}).`}
             </div>
           </div>
@@ -2483,7 +2636,7 @@ export default function ScheduledLessons({
           t={t}
           lang={lang}
           onClose={() => setConfirmLessonModal(null)}
-          onConfirmed={() => { setConfirmLessonModal(null); router.refresh() }}
+          onConfirmed={() => { setConfirmLessonModal(null); refreshAll() }}
         />
       )}
 
