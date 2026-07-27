@@ -51,14 +51,41 @@ function deriveKitesurfLevel(skills: string[]): string {
   return 'level_1_discovery'
 }
 
+/** The 'default' bucket is different in kind from wingfoil/windsurf's:
+ *  its skill keys (basics/intermediate/advanced/independent) are direct
+ *  aliases of the level names themselves (ProgressionEditor.tsx's own
+ *  ["Fundamentos", "Nível intermediário", "Técnicas avançadas",
+ *  "Independente"] labels), not a sub-skill curriculum to complete
+ *  before advancing OUT of the current level the way
+ *  wingfoil/windsurf's buckets are. Routing this through the generic
+ *  "does checking the current level's own required skill count as
+ *  completing it -> advance one more" rule below caused a real bug:
+ *  checking 'intermediate' while already AT level_2_intermediate
+ *  satisfied level_2's own requirement and bumped straight to level_3,
+ *  even though that skill only ever meant "this student is at Level 2",
+ *  not "ready to leave Level 2". Direct mapping instead — same
+ *  never-downgrade-a-manual-pick rule as deriveKitesurfLevel. */
+function deriveDefaultLevel(level: string, skills: string[]): string {
+  const has = (key: string) => skills.includes(key)
+  let derived = 'level_1_discovery'
+  if (has('intermediate')) derived = 'level_2_intermediate'
+  if (has('advanced') || has('independent')) derived = 'level_3_independent'
+  const currentIdx = LEVEL_ORDER.indexOf(level as typeof LEVEL_ORDER[number])
+  const derivedIdx = LEVEL_ORDER.indexOf(derived as typeof LEVEL_ORDER[number])
+  if (currentIdx === -1) return derived
+  return derivedIdx > currentIdx ? derived : level
+}
+
 /** Given the level being saved and the full set of currently-checked skill
  *  keys, returns the level to actually persist. kitesurf derives the target
  *  level directly from skills (deriveKitesurfLevel) and only ever advances
  *  — never downgrades — relative to `level`, so a manually-picked higher
  *  level from an experienced walk-in is never silently reset back down by
- *  an incomplete skill set. Other sports keep the simpler "every skill
- *  required for `level` is checked -> advance one step" rule, falling back
- *  to the 'default' bucket for a sport with no dedicated mapping. */
+ *  an incomplete skill set. wingfoil/windsurf keep the simpler "every skill
+ *  required for `level` is checked -> advance one step" rule, since their
+ *  buckets are genuine sub-skill curricula. Any other sport (no dedicated
+ *  mapping) falls back to deriveDefaultLevel, not the advance-one-step
+ *  rule — see that function's own comment for why those two don't mix. */
 export function resolveLevelAfterSkillsUpdate(
   sport: string,
   level: string,
@@ -72,7 +99,11 @@ export function resolveLevelAfterSkillsUpdate(
     return derivedIdx > currentIdx ? derived : level
   }
 
-  const required = LEVEL_SKILLS[sport]?.[level] ?? LEVEL_SKILLS.default[level]
+  if (!LEVEL_SKILLS[sport]) {
+    return deriveDefaultLevel(level, skills)
+  }
+
+  const required = LEVEL_SKILLS[sport][level]
   if (!required || required.length === 0) return level
   const complete = required.every(key => skills.includes(key))
   if (!complete) return level
