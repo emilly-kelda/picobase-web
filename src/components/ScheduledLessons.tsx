@@ -14,6 +14,7 @@ import Select from '@/components/ui/Select'
 import Badge from '@/components/ui/Badge'
 import PackageProgressBar from '@/components/PackageProgressBar'
 import { LightbulbIcon, PencilIcon, XIcon } from '@/components/nav-icons'
+import HoursMinutesInput from '@/components/HoursMinutesInput'
 
 type Lesson = {
   id: string
@@ -1129,16 +1130,39 @@ export default function ScheduledLessons({
                       Confirmar — folding the button into the status text
                       made it read as plain text with no click target, so
                       "Confirmar" effectively disappeared. Back to two
-                      separate elements: a plain status Badge, plus its own
+                      separate elements: a status dot, plus its own
                       clearly-a-button Confirmar (pastel purple, #F5F3FF/
                       #6D28D9 — the same violet pair already used for the
                       "Grupo · N alunos" tag further down this file, not a
-                      new one-off color). */}
-                  <Badge variant={lesson.status === 'confirmed' ? 'success' : 'neutral'} size="md">
-                    {lesson.status === 'confirmed' ? t.status_confirmed
+                      new one-off color).
+
+                      Dot, not a text pill — "Agendada"/"Check-in"/
+                      "Confirmada" spelled out on every single row was the
+                      actual clutter being reported (this repeats once per
+                      card, unlike the group-summary Badge below which is a
+                      one-off per group). Same 3 states, now colour-coded
+                      instead of worded, with the word still available on
+                      hover/for screen readers via title/aria-label so the
+                      information itself isn't lost, just decluttered.
+                      checked_in gets its own amber (#B45309, the same
+                      in-file token as the low-balance warning further
+                      down) rather than reusing neutral's grey — those two
+                      were previously indistinguishable once text is gone. */}
+                  <span
+                    title={lesson.status === 'confirmed' ? t.status_confirmed
                       : lesson.status === 'checked_in' ? t.status_checked_in
                       : t.status_scheduled}
-                  </Badge>
+                    aria-label={lesson.status === 'confirmed' ? t.status_confirmed
+                      : lesson.status === 'checked_in' ? t.status_checked_in
+                      : t.status_scheduled}
+                    style={{
+                      display: 'inline-block', width: '8px', height: '8px',
+                      borderRadius: '50%', flexShrink: 0,
+                      background: lesson.status === 'confirmed' ? 'var(--glacial-dark)'
+                        : lesson.status === 'checked_in' ? '#B45309'
+                        : 'var(--color-pb-mist)',
+                    }}
+                  />
                   {/* Ordem cronológica da operação: Iniciar Velejo →
                       Confirmar → + Agendar Próxima Aula → WhatsApp. A ação
                       de início ('Iniciar Velejo') vem primeiro por ser o
@@ -1522,25 +1546,8 @@ export default function ScheduledLessons({
                   </button>
                 </div>
                 {editCustomDuration && (
-                  <div style={{
-                    display: 'flex', alignItems: 'center',
-                    gap: '8px', marginTop: '10px',
-                  }}>
-                    <input
-                      type="number"
-                      min={15} max={480} step={5}
-                      value={editCustomMinutes}
-                      onChange={e => setEditCustomMinutes(Number(e.target.value))}
-                      style={{
-                        width: '80px', padding: '8px 12px',
-                        border: '0.5px solid var(--border-strong)',
-                        borderRadius: 'var(--radius-md)',
-                        fontSize: '15px', fontWeight: '600',
-                        color: 'var(--slate)', fontFamily: 'var(--font-sans)',
-                        outline: 'none',
-                      }}
-                    />
-                    <span style={{ fontSize: '13px', color: 'var(--mist)' }}>minutos</span>
+                  <div style={{ marginTop: '10px' }}>
+                    <HoursMinutesInput totalMinutes={editCustomMinutes} onChange={setEditCustomMinutes} />
                   </div>
                 )}
               </div>
@@ -1991,25 +1998,8 @@ export default function ScheduledLessons({
                   </button>
                 </div>
                 {customDuration && (
-                  <div style={{
-                    display: 'flex', alignItems: 'center',
-                    gap: '8px', marginTop: '10px',
-                  }}>
-                    <input
-                      type="number"
-                      min={15} max={480} step={5}
-                      value={customMinutes}
-                      onChange={e => setCustomMinutes(Number(e.target.value))}
-                      style={{
-                        width: '80px', padding: '8px 12px',
-                        border: '0.5px solid var(--border-strong)',
-                        borderRadius: 'var(--radius-md)',
-                        fontSize: '15px', fontWeight: '600',
-                        color: 'var(--slate)', fontFamily: 'var(--font-sans)',
-                        outline: 'none',
-                      }}
-                    />
-                    <span style={{ fontSize: '13px', color: 'var(--mist)' }}>minutos</span>
+                  <div style={{ marginTop: '10px' }}>
+                    <HoursMinutesInput totalMinutes={customMinutes} onChange={setCustomMinutes} />
                   </div>
                 )}
               </div>

@@ -7,6 +7,7 @@ import LevelPicker from '@/components/LevelPicker'
 import type { VariableCostInfo } from '@/lib/commission'
 import PackageReceiptModal from '@/components/PackageReceiptModal'
 import ProgressionEditor from '@/components/ProgressionEditor'
+import HoursMinutesInput from '@/components/HoursMinutesInput'
 
 type ActivityRef = {
   id: string
@@ -152,7 +153,7 @@ export default function ConfirmLessonModal({
   const [activityId, setActivityId]     = useState(lesson.activities?.id ?? '')
   const [duration, setDuration]         = useState(lesson.duration_min || 60)
   const [useCustom, setUseCustom]       = useState(false)
-  const [custom, setCustom]             = useState('')
+  const [customMinutes, setCustomMinutes] = useState(90)
   const [price, setPrice]               = useState(lesson.activities?.default_price ?? 0)
   const [instructorId, setInstructorId] = useState(lesson.instructor?.id ?? '')
   const [notes, setNotes]               = useState('')
@@ -270,7 +271,7 @@ export default function ConfirmLessonModal({
   const usesFixedPayout    = payoutModel === 'fixed'
   const selectedInstructor = instructors.find(i => i.id === instructorId)
   const commissionPct      = selectedInstructor?.commission_pct ?? 0.38
-  const finalDuration      = useCustom ? parseInt(custom) || 0 : duration
+  const finalDuration      = useCustom ? customMinutes : duration
 
   // hasPackage/willExhaust drive the three-state render below (simple /
   // last-lesson / financial). packagePrice pro-rates this lesson's share of
@@ -526,14 +527,9 @@ export default function ConfirmLessonModal({
             </button>
           </div>
           {useCustom && (
-            <input
-              type="number" placeholder="Minutos" value={custom} onChange={e => setCustom(e.target.value)}
-              style={{
-                marginTop: '8px', width: '120px', padding: '9px 14px',
-                border: '0.5px solid var(--border-strong)', borderRadius: 'var(--radius-md)',
-                fontSize: '15px', color: 'var(--slate)', fontFamily: 'var(--font-sans)', outline: 'none',
-              }}
-            />
+            <div style={{ marginTop: '8px' }}>
+              <HoursMinutesInput totalMinutes={customMinutes} onChange={setCustomMinutes} />
+            </div>
           )}
         </div>
 
