@@ -1,6 +1,7 @@
 import { createServiceClient } from '@/lib/supabase-server'
 import { normalizeStudentName } from '@/lib/text'
 import { windViability } from '@/lib/weather'
+import { todayBR, addDaysBR, dayBoundsBR } from '@/lib/date'
 
 export async function getScheduledLessons(
   schoolId: string,
@@ -10,17 +11,14 @@ export async function getScheduledLessons(
 
   let targetDate: string
   if (date === 'today') {
-    targetDate = new Date().toISOString().slice(0, 10)
+    targetDate = todayBR()
   } else if (date === 'tomorrow') {
-    const d = new Date()
-    d.setDate(d.getDate() + 1)
-    targetDate = d.toISOString().slice(0, 10)
+    targetDate = addDaysBR(todayBR(), 1)
   } else {
     targetDate = date
   }
 
-  const start = `${targetDate}T00:00:00`
-  const end   = `${targetDate}T23:59:59`
+  const { start, end } = dayBoundsBR(targetDate)
 
   const [{ data, error }, { data: students }] = await Promise.all([
     supabase
@@ -526,7 +524,17 @@ export async function checkSchedulingConflicts(
  *  re-guess "the student's oldest active package" by name and show its
  *  raw, un-netted balance, which could look perfectly healthy right up
  *  until the actual confirm got rejected for insufficient capacity once
- *  every other pending lesson against that same sale was accounted for. */
+ *  every other pending lesson against that same sale was accounted for.
+ *
+ *  A package with status != 'active' (closed via PackageReceiptModal's
+ *  "Finalizar Pacote") always returns available: 0, regardless of leftover
+ *  minutes_purchased - minutes_used — closing a package is a deliberate
+ *  "stop drawing on this" signal (closePackageSale's own comment: a
+ *  completed package shouldn't count toward active balance), but the raw
+ *  minutes math alone can't see that flag. Without this, a lesson still
+ *  linked to an already-closed package could pass its capacity check off
+ *  stale leftover minutes instead of falling through to the student's
+ *  other real active packages via checkPackageCapacity's FIFO fallback. */
 export async function getAvailablePackageMinutes(
   schoolId: string,
   packageSaleId: string,
@@ -536,12 +544,16 @@ export async function getAvailablePackageMinutes(
 
   const { data: sale } = await supabase
     .from('package_sales')
-    .select('minutes_purchased, minutes_used, price_paid')
+    .select('minutes_purchased, minutes_used, price_paid, status')
     .eq('id', packageSaleId)
     .eq('school_id', schoolId)
     .maybeSingle()
 
   if (!sale) return null
+
+  if (sale.status && sale.status !== 'active') {
+    return { minutesPurchased: sale.minutes_purchased ?? 0, pricePaid: sale.price_paid ?? 0, available: 0 }
+  }
 
   const remaining = Math.max(0, (sale.minutes_purchased ?? 0) - (sale.minutes_used ?? 0))
 
@@ -778,7 +790,7 @@ export async function ensureActiveCheckinForToday(
   opts?: { activityId?: string | null; sport?: string | null }
 ): Promise<string | null> {
   const supabase = createServiceClient()
-  const today = new Date().toISOString().slice(0, 10)
+  const today = todayBR()
 
   async function resolveActivityId() {
     return opts?.activityId || (await findActivityIdBySport(supabase, schoolId, opts?.sport))
@@ -789,7 +801,7 @@ export async function ensureActiveCheckinForToday(
     .select('id, status, deferred_to_schedule, activity_id')
     .eq('school_id', schoolId)
     .ilike('student_name', studentName)
-    .gte('checkin_at', `${today}T00:00:00`)
+    .gte('checkin_at', `${today}T00:00:00-03:00`)
     .order('checkin_at', { ascending: false })
     .limit(1)
     .maybeSingle()

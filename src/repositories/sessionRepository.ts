@@ -2,10 +2,11 @@
 import { normalizeStudentName } from '@/lib/text'
 import { resolveDefaultLevel, type Level } from '@/lib/levels'
 import { decrypt } from '@/utils/crypto'
+import { todayBR } from '@/lib/date'
 
 export async function getPendingLessons(schoolId: string) {
   const supabase = createServiceClient()
-  const today = new Date().toISOString().slice(0, 10)
+  const today = todayBR()
 
   const { data, error } = await supabase
     .from('checkins')
@@ -51,7 +52,7 @@ export async function getPendingLessons(schoolId: string) {
     // checkin that arrived already matched to a pre-existing booking keeps
     // deferred_to_schedule = false and still shows here, ready to confirm.
     .eq('deferred_to_schedule', false)
-    .gte('checkin_at', `${today}T00:00:00`)
+    .gte('checkin_at', `${today}T00:00:00-03:00`)
     .order('checkin_at', { ascending: true })
 
   if (error) throw error
@@ -214,7 +215,7 @@ export async function getSessions(
 
 export async function getTodayStats(schoolId: string) {
   const supabase = createServiceClient()
-  const today = new Date().toISOString().slice(0, 10)
+  const today = todayBR()
 
   const [{ count: sessionsToday }, { data: checkinsToday }, { data: instructorsToday }, { data: revenueToday }] =
     await Promise.all([
@@ -229,7 +230,7 @@ export async function getTodayStats(schoolId: string) {
         .from('checkins')
         .select('id')
         .eq('school_id', schoolId)
-        .gte('checkin_at', `${today}T00:00:00`)
+        .gte('checkin_at', `${today}T00:00:00-03:00`)
         .neq('status', 'cancelled'),
 
       supabase
@@ -274,14 +275,14 @@ export async function getTodayStats(schoolId: string) {
  *  confirmed) is Aulas' secondary "ainda agendadas hoje" section. */
 export async function getTodayDetail(schoolId: string) {
   const supabase = createServiceClient()
-  const today = new Date().toISOString().slice(0, 10)
+  const today = todayBR()
 
   const [{ data: checkins }, { data: sessions }, { data: scheduledToday }] = await Promise.all([
     supabase
       .from('checkins')
       .select('id, student_name, checkin_at, waiver_signed_at, stage, activities ( name )')
       .eq('school_id', schoolId)
-      .gte('checkin_at', `${today}T00:00:00`)
+      .gte('checkin_at', `${today}T00:00:00-03:00`)
       .neq('status', 'cancelled')
       .order('checkin_at', { ascending: false }),
 
@@ -325,13 +326,15 @@ export async function getTodayDetail(schoolId: string) {
  *  short months. */
 export async function getMonthComparison(schoolId: string) {
   const supabase = createServiceClient()
-  const now = new Date()
-  const y   = now.getFullYear()
-  const m   = now.getMonth()
-  const day = now.getDate()
+  // Brazil-local y/m/day, not new Date()'s own local (server/UTC) getters —
+  // same "flips 3h early" bug as elsewhere in this file if left as-is.
+  const todayStr = todayBR()
+  const [yStr, mStr, dStr] = todayStr.split('-')
+  const y   = Number(yStr)
+  const m   = Number(mStr) - 1
+  const day = Number(dStr)
 
   const thisMonthStart = `${y}-${String(m + 1).padStart(2, '0')}-01`
-  const todayStr       = now.toISOString().slice(0, 10)
 
   const prevMonthDate   = new Date(y, m - 1, 1)
   const py              = prevMonthDate.getFullYear()
