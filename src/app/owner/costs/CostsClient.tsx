@@ -16,8 +16,6 @@ function fmtDate(iso: string) {
   })
 }
 
-type Summary = { total: number; paid: number; pending: number; overdue: number; hoursTaught: number; costPerHour: number | null }
-
 const COST_TYPE_LABEL: Record<string, string> = { fixo: 'Fixo', variavel: 'Variável' }
 const RECURRENCE_LABEL: Record<string, string> = { mensal: 'Mensal', anual: 'Anual', unico: 'Evento único' }
 
@@ -63,21 +61,18 @@ const selectStyle: React.CSSProperties = {
 export default function CostsClient({
   initialCosts,
   initialTotal,
-  initialSummary,
   pageSize,
   knownCategories,
   categoryOptions,
 }: {
   initialCosts: OperationalCost[]
   initialTotal: number
-  initialSummary: Summary
   pageSize: number
   knownCategories: string[]
   categoryOptions: string[]
 }) {
   const [costs, setCosts]     = useState(initialCosts)
   const [total, setTotal]     = useState(initialTotal)
-  const [summary, setSummary] = useState(initialSummary)
   const [page, setPage]       = useState(0)
   const [loadingPage, setLoadingPage] = useState(false)
   const [formModal, setFormModal] = useState<{ mode: 'create' } | { mode: 'edit'; cost: OperationalCost } | null>(null)
@@ -113,19 +108,13 @@ export default function CostsClient({
   // that just called a setter runs this.
   async function fetchList(targetPage: number) {
     setLoadingPage(true)
-    const summaryParams = buildParams({})
-    const [listRes, summaryRes] = await Promise.all([
-      fetch(`/api/owner/costs?${buildParams({ page: targetPage })}`),
-      fetch(`/api/owner/costs/summary?${summaryParams}`),
-    ])
-    const listData = await listRes.json()
-    const summaryData = await summaryRes.json()
-    if (listData.ok) {
-      setCosts(listData.costs)
-      setTotal(listData.total)
+    const res = await fetch(`/api/owner/costs?${buildParams({ page: targetPage })}`)
+    const data = await res.json()
+    if (data.ok) {
+      setCosts(data.costs)
+      setTotal(data.total)
       setPage(targetPage)
     }
-    if (summaryData.ok) setSummary(summaryData)
     setLoadingPage(false)
   }
 
@@ -137,16 +126,9 @@ export default function CostsClient({
   // current-state read.
   async function refetchWith(params: URLSearchParams) {
     setLoadingPage(true)
-    const summaryParams = new URLSearchParams(params)
-    summaryParams.delete('page')
-    const [listRes, summaryRes] = await Promise.all([
-      fetch(`/api/owner/costs?${params}`),
-      fetch(`/api/owner/costs/summary?${summaryParams}`),
-    ])
-    const listData = await listRes.json()
-    const summaryData = await summaryRes.json()
-    if (listData.ok) { setCosts(listData.costs); setTotal(listData.total); setPage(0) }
-    if (summaryData.ok) setSummary(summaryData)
+    const res = await fetch(`/api/owner/costs?${params}`)
+    const data = await res.json()
+    if (data.ok) { setCosts(data.costs); setTotal(data.total); setPage(0) }
     setLoadingPage(false)
   }
 
@@ -246,7 +228,7 @@ export default function CostsClient({
       </div>
 
       <div style={{ fontSize: '11px', fontWeight: '500', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--mist)', marginBottom: '12px' }}>
-        {total} custo{total !== 1 ? 's' : ''} {periodFilter || categoryFilter || statusFilter ? 'no filtro' : 'cadastrado'}{total !== 1 ? 's' : ''} · {fmt(summary.total)}
+        {total} custo{total !== 1 ? 's' : ''} {periodFilter || categoryFilter || statusFilter ? 'no filtro' : 'cadastrado'}{total !== 1 ? 's' : ''}
       </div>
 
       {costs.length === 0 ? (

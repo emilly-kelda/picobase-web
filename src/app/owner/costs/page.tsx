@@ -1,5 +1,5 @@
 import { cookies } from 'next/headers'
-import { getCosts, getCostsSummary, getKnownCategories, getMonthlyCostTotal, COST_CATEGORIES } from '@/repositories/costRepository'
+import { getCosts, getKnownCategories, getMonthlyCostTotal, COST_CATEGORIES } from '@/repositories/costRepository'
 import { getRunwayData, getRunwayProjection } from '@/repositories/runwayRepository'
 import { getPayments } from '@/repositories/crewRepository'
 import { getPackages } from '@/repositories/packageRepository'
@@ -26,11 +26,10 @@ export default async function CostsPage({
   const { period } = await searchParams
 
   const [
-    { costs, total, pageSize }, costsSummary, knownCategories, monthlyCostTotal, runway, projection,
+    { costs, total, pageSize }, knownCategories, monthlyCostTotal, runway, projection,
     { payments, period: resolvedPeriod, summary: paymentsSummary }, activePackageTypes,
   ] = await Promise.all([
     getCosts(SCHOOL_ID, 0),
-    getCostsSummary(SCHOOL_ID),
     getKnownCategories(SCHOOL_ID),
     getMonthlyCostTotal(SCHOOL_ID),
     getRunwayData(SCHOOL_ID, seasonId),
@@ -133,71 +132,23 @@ export default async function CostsPage({
         </p>
       </div>
 
-      {/* Hero KPIs — total for whatever's currently filtered (all-time by
-          default), what's pending/overdue, and what that works out to per
-          hour of lesson actually taught. CostsClient re-fetches this same
-          shape from /api/owner/costs/summary whenever its filters change,
-          so these three numbers always describe the same rows the table
-          below is showing. */}
-      <div style={{
-        display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)',
-        gap: '12px', marginBottom: '20px',
-      }}>
-        <div style={{
-          background: 'var(--surface)', border: '0.5px solid var(--border)',
-          borderRadius: 'var(--radius-xl)', boxShadow: 'var(--shadow-sm)', padding: '22px 24px',
-        }}>
-          <div style={{ fontSize: '11px', fontWeight: '500', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--mist)', marginBottom: '10px' }}>
-            Total de custos
-          </div>
-          <div style={{ fontSize: '34px', fontWeight: '700', color: 'var(--slate)', letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums' }}>
-            {fmt(costsSummary.total)}
-          </div>
-        </div>
-        <div style={{
-          background: 'var(--surface)',
-          border: `0.5px solid ${costsSummary.overdue > 0 ? '#FECACA' : 'var(--border)'}`,
-          borderRadius: 'var(--radius-xl)', boxShadow: 'var(--shadow-sm)', padding: '22px 24px',
-        }}>
-          <div style={{ fontSize: '11px', fontWeight: '500', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--mist)', marginBottom: '10px' }}>
-            Pendente / a vencer
-          </div>
-          <div style={{
-            fontSize: '34px', fontWeight: '700', letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums',
-            color: costsSummary.overdue > 0 ? 'var(--signal)' : 'var(--slate)',
-          }}>
-            {fmt(costsSummary.pending + costsSummary.overdue)}
-          </div>
-          {costsSummary.overdue > 0 && (
-            <div style={{ fontSize: '11px', color: 'var(--signal)', marginTop: '8px', fontWeight: '500' }}>
-              {fmt(costsSummary.overdue)} já vencido
-            </div>
-          )}
-        </div>
-        <div style={{
-          background: 'var(--surface)', border: '0.5px solid var(--border)',
-          borderRadius: 'var(--radius-xl)', boxShadow: 'var(--shadow-sm)', padding: '22px 24px',
-        }}>
-          <div style={{ fontSize: '11px', fontWeight: '500', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--mist)', marginBottom: '10px' }}>
-            Custo por hora de aula
-          </div>
-          <div style={{ fontSize: '34px', fontWeight: '700', color: 'var(--slate)', letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums' }}>
-            {costsSummary.costPerHour != null ? fmt(costsSummary.costPerHour) : '—'}
-          </div>
-          {costsSummary.hoursTaught > 0 && (
-            <div style={{ fontSize: '11px', color: 'var(--mist)', marginTop: '8px' }}>
-              {costsSummary.hoursTaught.toFixed(0)}h de aula no período
-            </div>
-          )}
-        </div>
-      </div>
+      {/* Filters + table lead the page — no KPI row above them anymore
+          (removed per owner feedback: unused, and pushed the table down
+          with an extra scroll). */}
+      <CostsClient
+        initialCosts={costs}
+        initialTotal={total}
+        pageSize={pageSize}
+        knownCategories={knownCategories}
+        categoryOptions={COST_CATEGORIES as unknown as string[]}
+      />
 
       {monthlyCostTotal > 0 && (
         <div style={{
           display: 'inline-flex', flexDirection: 'column',
           background: '#fff', border: '0.5px solid var(--border)',
           borderRadius: 'var(--radius-lg)', padding: '16px 20px',
-          marginBottom: '24px',
+          marginTop: '24px',
         }}>
           <span style={{
             fontSize: '10px', fontWeight: '500',
@@ -214,15 +165,6 @@ export default async function CostsPage({
           </span>
         </div>
       )}
-
-      <CostsClient
-        initialCosts={costs}
-        initialTotal={total}
-        initialSummary={costsSummary}
-        pageSize={pageSize}
-        knownCategories={knownCategories}
-        categoryOptions={COST_CATEGORIES as unknown as string[]}
-      />
 
       {/* ── Participação na Receita + Resumo do Mês ───────────────────────
           Moved here from /owner/payments — same underlying data (getPayments),
