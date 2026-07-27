@@ -343,22 +343,22 @@ export async function getProgressionHistory(schoolId: string, studentId: string)
 export async function getLatestProgressionBySport(
   schoolId: string,
   studentId: string
-): Promise<Map<string, { level: string; updatedAt: string }>> {
+): Promise<Map<string, { level: string; skills: string[]; updatedAt: string }>> {
   const supabase = createServiceClient()
   const { data, error } = await supabase
     .from('student_progression')
-    .select('level, sport, created_at')
+    .select('level, skills, sport, created_at')
     .eq('school_id', schoolId)
     .eq('student_id', studentId)
     .not('sport', 'is', null)
     .order('created_at', { ascending: false })
   if (error) throw error
 
-  const bySport = new Map<string, { level: string; updatedAt: string }>()
+  const bySport = new Map<string, { level: string; skills: string[]; updatedAt: string }>()
   for (const row of data ?? []) {
     const key = normalizeSportKey(row.sport) ?? row.sport
     if (!key || bySport.has(key)) continue
-    bySport.set(key, { level: row.level, updatedAt: row.created_at })
+    bySport.set(key, { level: row.level, skills: row.skills ?? [], updatedAt: row.created_at })
   }
   return bySport
 }

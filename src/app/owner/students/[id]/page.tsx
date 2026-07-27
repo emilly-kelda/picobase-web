@@ -2,9 +2,9 @@
 import { headers } from 'next/headers'
 import { getStudentById, getSessionsByStudent, getActivePackageListByStudent, getLatestProgressionBySport } from '@/repositories/studentRepository'
 import { getSignedWaiversByStudent } from '@/repositories/checkinRepository'
-import { groupSessionsBySport } from '@/lib/modality'
+import { groupSessionsBySport, normalizeSportKey } from '@/lib/modality'
 import { isProficientLevel } from '@/lib/levelProgression'
-import ProgressionEditor from '@/components/ProgressionEditor'
+import ProgressionTabs from '@/components/ProgressionTabs'
 import ProgressionHistory from '@/components/ProgressionHistory'
 import CertificateSection from '@/components/CertificateSection'
 import StudentProfileHeader from './StudentProfileHeader'
@@ -92,6 +92,17 @@ export default async function StudentDetailPage({
   // package are genuinely separate balances, not one blended number.
   const activePackagesForStudent = packageMap.get(student.name) ?? []
   const totalRevenue = sessions.reduce((s: number, r: any) => s + (r.price ?? 0), 0)
+
+  // Same normalized-key convention as checkPackageCapacity/getPackageBalanceForStudent
+  // (case/whitespace-insensitive — packages.sport is free text) — drives
+  // ProgressionTabs below. Falls back to the pre-existing single-kitesurf
+  // default when no package has a recognizable sport (e.g. no packages yet).
+  const studentSports = Array.from(new Set(
+    activePackagesForStudent
+      .map(pkg => normalizeSportKey(pkg.sport))
+      .filter((s): s is string => !!s)
+  ))
+  if (studentSports.length === 0) studentSports.push('kitesurf')
 
   const totalSailingMinutes = sessions.reduce((s: number, r: any) => s + (r.duration_min ?? 0), 0)
   // IKO certification is skill-based, not time-based — a fast learner
@@ -196,12 +207,18 @@ export default async function StudentDetailPage({
               : pct >= 50
                 ? '#D4A017'
                 : 'var(--glacial)'
+            // Deep-links into the Evolução do Aluno tab for this sport below
+            // (see ProgressionTabs) — only when the sport is recognizable;
+            // otherwise this renders as an inert card, same as before.
+            const sportKey = normalizeSportKey(pkg.sport)
             return (
-              <div key={pkg.id} style={{
+              <a key={pkg.id} href={sportKey ? `#evolucao-${sportKey}` : undefined} style={{
+                display: 'block', textDecoration: 'none',
                 background: '#fff',
                 border: '0.5px solid var(--border)',
                 borderRadius: 'var(--radius-lg)',
                 padding: '20px 24px',
+                cursor: sportKey ? 'pointer' : 'default',
               }}>
                 <div style={{
                   display: 'flex',
@@ -266,7 +283,7 @@ export default async function StudentDetailPage({
                   <span style={{ color: 'var(--slate)', fontWeight: '500' }}>{fmtMin(remaining)} restantes</span>
                   {' • '}{fmtMin(pkg.minutes_used)} concluídas ({pct}%)
                 </div>
-              </div>
+              </a>
             )
           })}
         </div>
@@ -327,14 +344,15 @@ export default async function StudentDetailPage({
         )}
       </div>
 
-      {/* Progression editor */}
+      {/* Progression editor — one tab per sport the student holds a package
+          in, each with its own independent level/skills (see ProgressionTabs) */}
       <div style={{ marginBottom: '28px' }}>
-        <ProgressionEditor
+        <ProgressionTabs
           studentId={student.id}
           studentName={student.name}
-          currentLevel={student.skill_level ?? 'level_1_discovery'}
-          currentSkills={[]}
-          sport="kitesurf"
+          sports={studentSports}
+          progressionBySport={progressionBySport}
+          fallbackLevel={student.skill_level ?? null}
         />
       </div>
 
