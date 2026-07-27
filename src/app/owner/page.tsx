@@ -1,7 +1,6 @@
 import { cookies } from 'next/headers'
 import { getRunwayData, getSchool } from '@/repositories/runwayRepository'
 import { getRecentSessions, getTodayStats, getPendingLessons, getMonthComparison } from '@/repositories/sessionRepository'
-import { getAlerts } from '@/repositories/alertRepository'
 import { getInstructors, getCompletedHoursByStudent } from '@/repositories/studentRepository'
 import { getActivitiesForCheckin } from '@/repositories/checkinRepository'
 import { getScheduledLessons, getMissedLessons } from '@/repositories/scheduledLessonRepository'
@@ -9,7 +8,6 @@ import { getPackageSales, getPackageBalancesForCheckins, getPackages } from '@/r
 import PendingLessons from '@/components/PendingLessons'
 import ScheduledLessons from '@/components/ScheduledLessons'
 import MissedLessons from '@/components/MissedLessons'
-import OperationalPulse from '@/components/OperationalPulse'
 import WeatherWidget from '@/components/WeatherWidget'
 import QuickSaleCard from '@/components/QuickSaleCard'
 import { ReceptionModeProvider } from '@/components/ReceptionModeContext'
@@ -49,14 +47,13 @@ export default async function OwnerPage() {
   const selectedWeatherSpot = resolveWeatherSpot(weatherSpots, weatherSpotId)
 
   const [
-    runway, sessions, alerts, today, lang,
+    runway, sessions, today, lang,
     pending, instructors, todayLessons, tomorrowLessons,
     activities, activePackages, missedLessons, packageBalances,
     monthComparison, weather, packageTypes, hoursMap,
   ] = await Promise.all([
     getRunwayData(SCHOOL_ID, seasonId),
     getRecentSessions(SCHOOL_ID),
-    getAlerts(SCHOOL_ID),
     getTodayStats(SCHOOL_ID),
     getPortalLang(),
     getPendingLessons(SCHOOL_ID),
@@ -158,11 +155,11 @@ export default async function OwnerPage() {
       <ReceptionModeProvider>
 
       {/* Page title — the Reception Mode toggle sits inline right next to
-          "The Spot". AlertsDrawer's floating bell (fixed, top: 20px,
-          right: 24px) used to live in this corner — retired in favor of
-          OperationalPulse below, which shows the same alerts inline
-          instead of one click away, so nothing sits in this corner
-          anymore. */}
+          "The Spot". Alerts/Pulso Operacional used to be inline here
+          (before that, a floating bell in this same top-right corner) —
+          now its own page (/owner/pulse, linked from the sidebar) so this
+          dashboard's top stays on the high-level KPIs below, not a
+          variable-height alerts panel. */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
@@ -182,12 +179,6 @@ export default async function OwnerPage() {
         </div>
         <AutoRefresh />
       </div>
-
-      {/* Leads with what needs a decision today, not vanity metrics —
-          urgent/actionable alerts (pending waivers, packages about to run
-          out, outstanding receivables...) get first position on the page,
-          ahead of the two-column operational grid below. */}
-      <OperationalPulse alerts={alerts} />
 
       <div className="dash-grid-2col">
 

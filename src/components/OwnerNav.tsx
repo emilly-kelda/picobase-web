@@ -10,7 +10,7 @@ import { createClient } from '@/utils/supabase/client'
 import {
   HomeIcon, CalendarIcon, UserIcon, InboxIcon, UsersIcon,
   PackageIcon, WalletIcon, ChartIcon, GearIcon, ChevronLeftIcon, TagIcon, LinkIcon,
-  SunIcon, MoonIcon,
+  SunIcon, MoonIcon, BellIcon,
 } from '@/components/nav-icons'
 
 type Season = { id: string; label: string }
@@ -27,12 +27,13 @@ type Props = {
   activeSeasonLabel?: string
   lang?: Lang
   pendingBookingsCount?: number
+  pulseCount?: number
   children?: React.ReactNode
 }
 
 export default function OwnerNav({
   seasons = [], activeSeasonId, activeSeasonLabel, lang = 'pt',
-  pendingBookingsCount = 0, children,
+  pendingBookingsCount = 0, pulseCount = 0, children,
 }: Props) {
   const pathname = usePathname()
   const router   = useRouter()
@@ -78,6 +79,7 @@ export default function OwnerNav({
 
   const navItems: Array<{ href: string; label: string; icon: NavIcon; badge?: number }> = [
     { href: '/owner',           label: t.nav_basecamp, icon: HomeIcon    },
+    { href: '/owner/pulse',     label: t.nav_pulse,     icon: BellIcon, badge: pulseCount },
     { href: '/owner/sessions',  label: t.nav_sessions,  icon: CalendarIcon },
     { href: '/owner/students',  label: t.nav_students,  icon: UserIcon     },
     { href: '/owner/bookings',  label: t.nav_bookings,  icon: InboxIcon, badge: pendingBookingsCount },

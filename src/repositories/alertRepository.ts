@@ -54,7 +54,11 @@ export async function getAlerts(schoolId: string): Promise<Alert[]> {
       alerts.push({
         type: 'warning',
         message: `${p.student_name} has only ${hrs} remaining on ${(p.packages as any)?.name ?? 'package'}`,
-        link: '/owner/packages',
+        // The specific student's own profile (renewal happens from there),
+        // not the full packages list — this alert is already about one
+        // named student, so the generic list made the owner search for
+        // them again right after the alert told them exactly who it was.
+        link: `/owner/students/name/${encodeURIComponent(p.student_name)}`,
       })
     }
   }
@@ -94,7 +98,11 @@ export async function getAlerts(schoolId: string): Promise<Alert[]> {
     alerts.push({
       type: 'warning',
       message: `${waiverAlerts.length} termo${waiverAlerts.length !== 1 ? 's' : ''} pendente${waiverAlerts.length !== 1 ? 's' : ''} de assinatura hoje`,
-      link: '/owner/checkins',
+      // /owner/checkins is a "Coming soon" stub — it doesn't list anything.
+      // Aguardando Vento (on the main dashboard) is where a pending-waiver
+      // checkin actually shows up and gets resolved (PendingLessons.tsx's
+      // own per-row "Termo pendente" badge).
+      link: '/owner',
     })
   }
 
@@ -130,7 +138,9 @@ export async function getAlerts(schoolId: string): Promise<Alert[]> {
       alerts.push({
         type: 'info',
         message: `${d.student_name} bought ${(d.packages as any)?.name ?? 'a package'} and hasn't started yet`,
-        link: '/owner/packages',
+        // Same reasoning as the low-balance alert above — this is about
+        // one specific student, so send the owner straight to them.
+        link: `/owner/students/name/${encodeURIComponent(d.student_name)}`,
       })
     }
   }
