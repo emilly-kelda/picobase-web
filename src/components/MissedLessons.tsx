@@ -5,10 +5,12 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import RescheduleModal from '@/components/RescheduleModal'
 import { Toast, useToast } from '@/components/Toast'
+import { studentProfileHref } from '@/lib/text'
 
 type MissedLesson = {
   id: string
   student_name: string
+  student_id?: string | null
   student_whatsapp?: string | null
   scheduled_at: string
   duration_min: number | null
@@ -106,7 +108,7 @@ export default function MissedLessons({
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '8px' }}>
           <Link
-            href={`/owner/students/name/${encodeURIComponent(lesson.student_name)}`}
+            href={studentProfileHref(lesson.student_id, lesson.student_name)}
             style={{
               fontSize: '12px', fontWeight: '500',
               color: 'var(--slate)', textDecoration: 'none',

@@ -154,8 +154,9 @@ export async function getMissedLessons(schoolId: string) {
       .order('scheduled_at', { ascending: false })
       .limit(10),
     // Same fuzzy name-match approach as getScheduledLessons — needed here
-    // too now that the reschedule flow sends a WhatsApp confirmation.
-    supabase.from('students').select('name, whatsapp').eq('school_id', schoolId),
+    // too now that the reschedule flow sends a WhatsApp confirmation, and
+    // to resolve a real student_id for profile links (see student_id below).
+    supabase.from('students').select('id, name, whatsapp').eq('school_id', schoolId),
   ])
 
   if (error) {
@@ -163,15 +164,19 @@ export async function getMissedLessons(schoolId: string) {
     return []
   }
 
-  const whatsappByName = new Map<string, string | null>()
+  const identityByName = new Map<string, { id: string; whatsapp: string | null }>()
   for (const s of students ?? []) {
-    whatsappByName.set(normalizeStudentName(s.name), s.whatsapp)
+    identityByName.set(normalizeStudentName(s.name), { id: s.id, whatsapp: s.whatsapp })
   }
 
-  return (data ?? []).map(lesson => ({
-    ...lesson,
-    student_whatsapp: whatsappByName.get(normalizeStudentName(lesson.student_name)) ?? null,
-  }))
+  return (data ?? []).map(lesson => {
+    const identity = identityByName.get(normalizeStudentName(lesson.student_name))
+    return {
+      ...lesson,
+      student_whatsapp: identity?.whatsapp ?? null,
+      student_id: identity?.id ?? null,
+    }
+  })
 }
 
 const MODALITY_KEYWORDS = ['kitesurf', 'wingfoil', 'kitefoil', 'surf', 'windsurf'] as const

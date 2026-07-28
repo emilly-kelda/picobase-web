@@ -16,3 +16,14 @@ export function normalizeStudentName(name: string | null | undefined): string {
     .toLowerCase()
     .replace(/\s+/g, ' ')
 }
+
+/** Prefer the real profile route whenever a resolved student_id is already
+ *  on hand — /owner/students/name/[name] only exists as a fallback for rows
+ *  with no reliable id (checkin-only "students", or surfaces sourced from
+ *  sessions/checkins with no id column to resolve at all). Callers keep
+ *  their own link styling; this only decides the href. */
+export function studentProfileHref(studentId: string | null | undefined, name: string): string {
+  return studentId
+    ? `/owner/students/${studentId}`
+    : `/owner/students/name/${encodeURIComponent(name)}`
+}

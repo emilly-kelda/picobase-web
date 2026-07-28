@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { LEVEL_LABELS, isLevel } from '@/lib/levels'
-import { normalizeStudentName } from '@/lib/text'
+import { normalizeStudentName, studentProfileHref } from '@/lib/text'
 import LevelPicker from '@/components/LevelPicker'
 import { whatsappDigitsWithCountryCode } from '@/lib/whatsapp'
 import { Toast, useToast } from '@/components/Toast'
@@ -1206,7 +1206,7 @@ export default function ScheduledLessons({
                   <div style={{ marginBottom: '2px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     {lesson.student_name ? (
                       <Link
-                        href={`/owner/students/name/${encodeURIComponent(lesson.student_name)}`}
+                        href={studentProfileHref(lesson.student_id, lesson.student_name)}
                         style={{
                           fontSize: '14px', fontWeight: '500',
                           color: 'var(--color-pb-slate)', textDecoration: 'none',
@@ -1393,7 +1393,7 @@ export default function ScheduledLessons({
                   {(() => {
                     const hasUpcoming = upcomingSet.has(normalizeStudentName(lesson.student_name))
                     const rawRemaining = hasUpcoming ? 0 : getRawRemainingMinutes(lesson.student_name, activePackages)
-                    const profileHref = `/owner/students/name/${encodeURIComponent(lesson.student_name ?? '')}`
+                    const profileHref = studentProfileHref(lesson.student_id, lesson.student_name ?? '')
                     const nextAction: { kind: 'link'; label: string; href: string } | { kind: 'button'; label: string; onClick: () => void } =
                       hasUpcoming
                         ? { kind: 'link', label: 'Ver Próxima Aula', href: profileHref }
@@ -1552,7 +1552,7 @@ export default function ScheduledLessons({
                           {gi > 0 && ' · '}
                           {l.student_name ? (
                             <Link
-                              href={`/owner/students/name/${encodeURIComponent(l.student_name)}`}
+                              href={studentProfileHref(l.student_id, l.student_name)}
                               style={{
                                 color: 'var(--slate)', textDecoration: 'none',
                                 borderBottom: '1px solid transparent',
