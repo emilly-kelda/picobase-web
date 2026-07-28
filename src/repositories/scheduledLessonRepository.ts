@@ -853,12 +853,21 @@ async function findActivityIdBySport(
     .from('activities')
     .select('id, name')
     .eq('school_id', schoolId)
+    .order('name', { ascending: true })
 
   const normalizedSport = sport.toLowerCase().replace(/[^a-z]/g, '')
-  const match = (activities ?? []).find(a =>
-    a.name.toLowerCase().replace(/[^a-z]/g, '').startsWith(normalizedSport)
-  )
-  return match?.id ?? null
+  const pool = activities ?? []
+  // Exact match first (e.g. sport "windsurf" vs. an activity literally named
+  // "Windsurf") — prevents a short sport tag from prefix-matching a shorter,
+  // unrelated activity ("surf" would otherwise satisfy "Surf".startsWith it
+  // even when a separate, longer "Windsurf" activity is the intended one).
+  // Prefix fallback stays for the legitimate case packages.sport is meant to
+  // cover: a bare modality tag ("kitesurf") against a fuller activity name
+  // ("Kitesurf Iniciante"). Deterministic order (.order('name') above) since
+  // more than one activity could share a prefix.
+  const exact = pool.find(a => a.name.toLowerCase().replace(/[^a-z]/g, '') === normalizedSport)
+  const prefixMatch = exact ?? pool.find(a => a.name.toLowerCase().replace(/[^a-z]/g, '').startsWith(normalizedSport))
+  return prefixMatch?.id ?? null
 }
 
 /** `activityId` (a real FK — from a booking's or scheduled_lesson's own

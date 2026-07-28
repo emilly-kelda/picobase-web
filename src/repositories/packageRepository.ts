@@ -310,11 +310,23 @@ export async function getPackageReceiptData(schoolId: string, packageSaleId: str
   // (genuinely owner-only) callers may still need the figure.
   const sessions = (history?.sessions ?? []).map(({ commission_amount: _commission_amount, ...rest }) => rest)
 
+  // minutes_used is a stored counter, not derived from `sessions` — besides
+  // a real confirmed lesson (confirm-lesson/route.ts, one-for-one with a
+  // session row), a late cancellation inside the school's penalty window
+  // also bumps it (Regra 4, schedule/route.ts's DELETE handler) with no
+  // session ever created, to forfeit the credit like a no-show. So
+  // minutesUsed can legitimately run ahead of what `sessions` shows; that
+  // gap is surfaced here rather than left for the receipt to render as an
+  // unexplained "used" number bigger than the visible history.
+  const sessionMinutes = sessions.reduce((sum, s) => sum + (s.duration_min ?? 0), 0)
+  const forfeitedMinutes = Math.max(0, (sale.minutes_used ?? 0) - sessionMinutes)
+
   return {
     studentName:      sale.student_name,
     packageName:      pkg?.name ?? null,
     minutesPurchased: sale.minutes_purchased ?? 0,
     minutesUsed:      sale.minutes_used ?? 0,
+    forfeitedMinutes,
     pricePaid:        sale.price_paid ?? 0,
     soldAt:           sale.sold_at,
     sessions,

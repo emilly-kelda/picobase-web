@@ -15,6 +15,7 @@ type ReceiptData = {
   packageName: string | null
   minutesPurchased: number
   minutesUsed: number
+  forfeitedMinutes: number
   pricePaid: number
   soldAt: string
   sessions: ReceiptSession[]
@@ -185,6 +186,22 @@ export default function PackageReceiptModal({
                   </div>
                 </div>
               </div>
+
+              {/* "Horas Concluídas" counts real sessions AND late-cancellation
+                  forfeits (Regra 4 — a credit burned with no session ever
+                  created), so it can legitimately run ahead of what the table
+                  below lists. Called out explicitly here so that gap reads as
+                  policy, not as the totals and the table disagreeing. */}
+              {data.forfeitedMinutes > 0 && (
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: '8px',
+                  padding: '8px 12px', marginBottom: '16px',
+                  background: 'var(--amber-light)', color: 'var(--amber)',
+                  borderRadius: 'var(--radius-md)', fontSize: '12px',
+                }}>
+                  {fmtHours(data.forfeitedMinutes)} referentes a cancelamento(s) fora do prazo — cobrados do pacote, sem aula realizada.
+                </div>
+              )}
 
               <div style={{ fontSize: '11px', fontWeight: '500', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--mist)', marginBottom: '8px' }}>
                 {t.session_history_label}
