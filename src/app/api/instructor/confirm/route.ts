@@ -16,6 +16,19 @@ export async function POST(request: Request) {
     notes,
   } = body
 
+  // Idempotency guard — same reasoning as /api/owner/confirm-lesson: nothing
+  // below re-checks status before inserting a sessions row and flipping this
+  // checkin to session_confirmed, so a double-submit would silently create a
+  // second session (and pay the instructor twice) for the same checkin.
+  const { data: checkin } = await supabase
+    .from('checkins')
+    .select('status')
+    .eq('id', checkin_id)
+    .single()
+  if (checkin?.status === 'session_confirmed') {
+    return NextResponse.json({ error: 'Este check-in já foi confirmado.' }, { status: 409 })
+  }
+
   // Re-derive from the instructor's saved rate — same reasoning as
   // /api/owner/confirm-lesson: a client-supplied commission_pct never
   // reflects fixed hourly-rate instructors and can go stale.

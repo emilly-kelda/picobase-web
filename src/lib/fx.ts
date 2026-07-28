@@ -16,9 +16,26 @@ const FETCH_TIMEOUT_MS = 5000
 // every non-BRL lesson confirmation on a third-party API's uptime, which is
 // worse than a slightly-stale rate for the rare window this applies to.
 // Update these occasionally so they don't drift too far from reality.
-const FALLBACK_RATES: Record<FxCurrency, number> = { USD: 5.50, EUR: 6.10 }
+const FALLBACK_RATES: Record<FxCurrency, number> = { USD: 5.50, EUR: 5.85 }
 
 let cache: { rates: Record<FxCurrency, number>; fetchedAt: number } | null = null
+
+// Sanity band around each FALLBACK_RATES anchor (same constants already
+// hand-maintained for the outright-failure case) — AwesomeAPI is a free,
+// no-SLA source with no schema guarantee, and a single bad tick (a stale
+// cross-rate, a decimal-point glitch, a momentary data issue upstream)
+// would otherwise get cached and trusted as 'live' for up to CACHE_TTL_MS,
+// pricing every non-BRL lesson confirmed in that window off a number
+// nowhere near the real market rate — with no visible warning, since
+// getExchangeRatesWithSource only flags 'fallback'/'stale-cache', never a
+// live response that's simply wrong. ±35% tolerates real currency
+// movement between FALLBACK_RATES updates while still catching an order-
+// of-magnitude or multiple-percentage-point miss.
+const SANITY_BAND = 0.35
+function isPlausibleRate(currency: FxCurrency, value: number): boolean {
+  const anchor = FALLBACK_RATES[currency]
+  return value >= anchor * (1 - SANITY_BAND) && value <= anchor * (1 + SANITY_BAND)
+}
 
 async function fetchRates(): Promise<Record<FxCurrency, number>> {
   const controller = new AbortController()
@@ -30,6 +47,8 @@ async function fetchRates(): Promise<Record<FxCurrency, number>> {
     const usd = Number(data?.USDBRL?.bid)
     const eur = Number(data?.EURBRL?.bid)
     if (!usd || !eur) throw new Error('AwesomeAPI response missing USD/EUR rate')
+    if (!isPlausibleRate('USD', usd)) throw new Error(`AwesomeAPI USD-BRL rate ${usd} outside plausible range — refusing to trust it`)
+    if (!isPlausibleRate('EUR', eur)) throw new Error(`AwesomeAPI EUR-BRL rate ${eur} outside plausible range — refusing to trust it`)
     return { USD: usd, EUR: eur }
   } finally {
     clearTimeout(timeout)

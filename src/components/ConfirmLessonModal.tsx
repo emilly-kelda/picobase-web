@@ -348,6 +348,15 @@ export default function ConfirmLessonModal({
         price:          totalPrice,
         price_original: totalPrice,
         currency:       effectiveCurrency,
+        // The rate this modal's own preview was showing when the owner
+        // clicked confirm — never used as the actual charge (the server
+        // always re-derives priceBRL itself, see confirm-lesson/route.ts),
+        // only as a cross-check so a rate that moved between preview and
+        // confirm (stale cache on a different serverless instance, a
+        // fallback-vs-live mismatch, ...) surfaces as an explicit "cotação
+        // mudou" error instead of silently charging a different amount
+        // than what was just shown on screen.
+        previewed_fx_rate: effectiveCurrency !== 'BRL' ? fxRate : null,
         notes,
         commission_pct: commissionPct,
         session_date:   sessionDate,
@@ -386,6 +395,11 @@ export default function ConfirmLessonModal({
       }
     } else {
       setError(data.error ?? 'Erro ao confirmar aula')
+      // Covers the fx-drift rejection (confirm-lesson/route.ts) — refresh
+      // the preview so the number on screen matches what a retry would
+      // actually charge, instead of the owner re-clicking confirm against
+      // the same stale rate that just got rejected.
+      if (effectiveCurrency !== 'BRL') loadFxRates()
     }
   }
 

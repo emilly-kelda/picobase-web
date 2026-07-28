@@ -24,6 +24,7 @@ export async function POST(request: Request) {
     level,
     currency,
     price_original,
+    previewed_fx_rate,
   } = body
 
   const supabase = createServiceClient()
@@ -31,10 +32,22 @@ export async function POST(request: Request) {
   const { data: checkin } = checkin_id
     ? await supabase
         .from('checkins')
-        .select('student_name, partner_id, scheduled_lesson_id')
+        .select('student_name, partner_id, scheduled_lesson_id, status')
         .eq('id', checkin_id)
         .single()
     : { data: null }
+
+  // Idempotency guard: nothing below here re-checks status before inserting
+  // a sessions row, bumping package_sales.minutes_used, and computing
+  // commission — a double-submit (double-click racing past the confirm
+  // button's disabled state, a client retry after a slow response that
+  // actually succeeded server-side, the owner re-confirming after seeing an
+  // unexpected price) would otherwise silently process the same lesson
+  // twice: two session rows, package hours debited twice, instructor paid
+  // twice. Checked before any writes happen.
+  if (checkin?.status === 'session_confirmed') {
+    return NextResponse.json({ error: 'Este check-in já foi confirmado.' }, { status: 409 })
+  }
 
   // A checkin-derived link takes priority, but group confirms — and now
   // Aulas Agendadas' individual "Confirmar / Iniciar Aula" — have no
@@ -56,10 +69,17 @@ export async function POST(request: Request) {
   const { data: scheduledLesson } = linkedScheduledLessonId
     ? await supabase
         .from('scheduled_lessons')
-        .select('student_name, package_sale_id, scheduled_at, duration_min')
+        .select('student_name, package_sale_id, scheduled_at, duration_min, status')
         .eq('id', linkedScheduledLessonId)
         .single()
     : { data: null }
+
+  // Same idempotency concern as the checkin guard above — group confirms and
+  // Aulas Agendadas' individual "Confirmar Aula" reach this route with no
+  // checkin at all, so scheduled_lessons.status is the only signal for them.
+  if (scheduledLesson?.status === 'confirmed') {
+    return NextResponse.json({ error: 'Esta aula já foi confirmada.' }, { status: 409 })
+  }
 
   const studentName = checkin?.student_name ?? scheduledLesson?.student_name ?? null
 
@@ -144,6 +164,29 @@ export async function POST(request: Request) {
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erro ao converter moeda'
     return NextResponse.json({ error: message }, { status: 502 })
+  }
+
+  // fx.ts's rate cache is an in-memory module variable — not guaranteed to
+  // survive across serverless invocations, so this request and the confirm
+  // modal's own /api/fx preview call can land on genuinely different rates
+  // (live vs. the hardcoded FALLBACK_RATES, or two different live quotes
+  // minutes apart). previewed_fx_rate is never used as the charge itself
+  // (priceBRL above is always the server's own conversion) — only as a
+  // cross-check so a rate that drifted since the owner last saw it surfaces
+  // as an explicit error instead of silently charging a different amount
+  // than what was on screen when they clicked confirm.
+  if (currency && currency !== 'BRL' && typeof previewed_fx_rate === 'number' && previewed_fx_rate > 0) {
+    const basis = price_original ?? price ?? 0
+    const actualRate = basis > 0 ? priceBRL / basis : previewed_fx_rate
+    const drift = Math.abs(actualRate - previewed_fx_rate) / previewed_fx_rate
+    if (drift > 0.01) {
+      return NextResponse.json(
+        {
+          error: `A cotação de ${currency} mudou desde que esta tela foi aberta (era ${previewed_fx_rate.toFixed(4)}, agora ${actualRate.toFixed(4)}) — confira o valor atualizado antes de confirmar.`,
+        },
+        { status: 409 }
+      )
+    }
   }
 
   // Packages with a variable cost (e.g. Downwind boat/fuel) reduce the
