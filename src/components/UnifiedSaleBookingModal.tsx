@@ -465,16 +465,17 @@ export default function UnifiedSaleBookingModal({
   }
 
   const origin = typeof window !== 'undefined' ? window.location.origin : ''
-  // A scheduled first lesson gets the /aula/[token] self-service link
-  // (confirm/reschedule/cancel, same as ScheduledLessons.tsx's WhatsApp
-  // picker); skipping scheduling falls back to the general check-in link
-  // (same URL CheckinQRButton's default pill already points at).
-  const checkinUrl = publicToken
-    ? `${origin}/aula/${publicToken}`
-    : `${origin}/checkin/${schoolSlug}?student=${encodeURIComponent(studentName)}`
+  // Always the general check-in intake form here, even when Step 3 booked a
+  // specific lesson time — that only reserves the slot, it doesn't run the
+  // student through check-in itself (waiver, etc.), which only this form
+  // does. /aula/[token]'s confirm/reschedule/cancel page is real and still
+  // used (ScheduledLessons.tsx's WhatsApp picker, CheckinQRButton's own
+  // `token` prop for an already-checked-in lesson) — just not the right
+  // fit for the first link a brand-new sale hands the customer.
+  const checkinUrl = `${origin}/checkin/${schoolSlug}?student=${encodeURIComponent(studentName)}${scheduleActivity?.name ? `&activity=${encodeURIComponent(scheduleActivity.name)}` : ''}`
 
   const whatsappMessage = publicToken
-    ? `Olá ${studentName}! Sua compra na ${schoolName} foi confirmada e sua primeira aula já está agendada. Confirme sua presença ou peça reagendamento aqui: ${checkinUrl}`
+    ? `Olá ${studentName}! Sua compra na ${schoolName} foi confirmada e sua primeira aula já está agendada. Faça seu check-in aqui: ${checkinUrl}`
     : `Olá ${studentName}! Sua compra na ${schoolName} foi confirmada. Faça seu check-in aqui: ${checkinUrl}`
 
   return (
@@ -1048,9 +1049,7 @@ export default function UnifiedSaleBookingModal({
               Venda registrada
             </div>
             <div style={{ fontSize: '12px', color: 'var(--mist)', marginBottom: '16px' }}>
-              {publicToken
-                ? 'Confirme a presença do cliente escaneando o QR abaixo'
-                : 'Peça para o cliente escanear para fazer o check-in'}
+              Peça para o cliente escanear para fazer o check-in
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
@@ -1058,8 +1057,7 @@ export default function UnifiedSaleBookingModal({
                 slug={schoolSlug}
                 schoolName={schoolName}
                 studentName={studentName}
-                activityName={selectedPackage?.sport ?? null}
-                token={publicToken ?? undefined}
+                activityName={scheduleActivity?.name ?? selectedPackage?.sport ?? null}
                 defaultOpen
                 compact
               />
