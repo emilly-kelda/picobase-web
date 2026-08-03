@@ -493,10 +493,18 @@ export async function getAvailableSlotsForDate(
 
   const slots: Array<{ time: string; instructor_id: string; instructor_name: string; studentConflict: boolean }> = []
 
+  // Day-wide, not per-slot overlap: /api/owner/schedule now rejects a
+  // second lesson anywhere on a day the student already has one
+  // (checkSameDayLesson), so a slot that merely doesn't overlap their
+  // existing lesson would still get rejected on submit — this only
+  // scans future dates, so there's no completed-session case to also
+  // check here (see checkSameDayLesson for that half of the rule).
+  const studentBusyToday = studentBusy.length > 0
+
   for (const hour of RESCHEDULE_CANDIDATE_HOURS) {
     const slotStart = new Date(`${dateStr}T${String(hour).padStart(2, '0')}:00:00-03:00`).getTime()
     const slotEnd   = slotStart + durationMin * 60000
-    const studentConflict = studentBusy.some(b => slotStart < b.end && slotEnd > b.start)
+    const studentConflict = studentBusyToday
 
     for (const instructor of pool) {
       const busySlots = busyByInstructor.get(instructor.id) ?? []

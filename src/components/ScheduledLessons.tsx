@@ -15,6 +15,7 @@ import Select from '@/components/ui/Select'
 import Badge from '@/components/ui/Badge'
 import { LightbulbIcon, PencilIcon, XIcon } from '@/components/nav-icons'
 import HoursMinutesInput from '@/components/HoursMinutesInput'
+import TimeSlotPicker, { type TimeSlot } from '@/components/TimeSlotPicker'
 import { todayBR, addDaysBR } from '@/lib/date'
 
 type Lesson = {
@@ -339,6 +340,8 @@ export default function ScheduledLessons({
     date: string; time: string; instructor_id: string; instructor_name: string; windKn: number | null
   } | null>(null)
   const [loadingBookingSuggestion, setLoadingBookingSuggestion] = useState(false)
+  const [slots, setSlots]           = useState<TimeSlot[]>([])
+  const [slotsLoading, setSlotsLoading] = useState(false)
   const [deleting, setDeleting]     = useState<string | null>(null)
   const [saving, setSaving]         = useState(false)
   // 5-day rolling window, dayOffset days out from today — "Ver próximas
@@ -566,6 +569,42 @@ export default function ScheduledLessons({
     // name changes too, not just the activity.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showModal, lessonMode, form.activity_id, form.student_name])
+
+  // Full grid of open (time, instructor) slots for the currently-picked
+  // date — same design and same endpoint (available-slots) as
+  // UnifiedSaleBookingModal's Step 3, via the shared TimeSlotPicker.
+  // 'single' + 'individual' only: recurring modes apply one time across
+  // many dates (no single day to scan), and group lessons have no
+  // instructor at scheduling time at all (assigned per student at
+  // confirm), same scoping the wizard's own version already uses.
+  useEffect(() => {
+    if (!showModal || lessonMode !== 'individual' || mode !== 'single' || !form.date) {
+      setSlots([])
+      return
+    }
+    let cancelled = false
+    async function loadSlots() {
+      setSlotsLoading(true)
+      try {
+        const activityName = activities.find(a => a.id === form.activity_id)?.name ?? ''
+        const params = new URLSearchParams({
+          date: form.date,
+          durationMin: String(form.duration_min || 60),
+        })
+        if (activityName) params.set('activityName', activityName)
+        if (form.student_name.trim()) params.set('studentName', form.student_name)
+        const res = await fetch(`/api/owner/available-slots?${params}`)
+        const data = await res.json()
+        if (!cancelled) setSlots(data.slots ?? [])
+      } catch {
+        if (!cancelled) setSlots([])
+      } finally {
+        if (!cancelled) setSlotsLoading(false)
+      }
+    }
+    loadSlots()
+    return () => { cancelled = true }
+  }, [showModal, lessonMode, mode, form.date, form.activity_id, form.duration_min, form.student_name, activities])
 
   function applyBookingSuggestion() {
     if (!bookingSuggestion) return
@@ -2061,8 +2100,12 @@ export default function ScheduledLessons({
                 </div>
               )}
 
-              {/* Activity + Instructor */}
-              <div style={{ display: 'grid', gridTemplateColumns: lessonMode === 'group' ? '1fr' : '1fr 1fr', gap: '12px' }}>
+              {/* Activity + Instructor — Instrutor drops out for single/
+                  individual: TimeSlotPicker below sets it together with the
+                  time (one click, same design as UnifiedSaleBookingModal's
+                  Step 3), same reasoning that already hides it for group
+                  (assigned per student at confirm time instead). */}
+              <div style={{ display: 'grid', gridTemplateColumns: lessonMode === 'group' || mode === 'single' ? '1fr' : '1fr 1fr', gap: '12px' }}>
                 <div>
                   <label style={labelStyle}>Atividade</label>
                   <Select
@@ -2075,7 +2118,7 @@ export default function ScheduledLessons({
                     ))}
                   </Select>
                 </div>
-                {lessonMode === 'individual' && (
+                {lessonMode === 'individual' && mode !== 'single' && (
                 <div>
                   <label style={labelStyle}>Instrutor</label>
                   <Select
@@ -2101,28 +2144,58 @@ export default function ScheduledLessons({
                 />
               )}
 
-              {/* Start date + time */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div>
-                  <label style={labelStyle}>Data de início</label>
-                  <input
-                    style={inputStyle}
-                    type="date"
-                    value={form.date}
-                    min={new Date().toISOString().slice(0, 10)}
-                    onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
-                  />
+              {/* Start date + time — single/individual replaces the plain
+                  time input with the same compact slot grid
+                  UnifiedSaleBookingModal's Step 3 uses (picking a pill sets
+                  time + instructor together, see the Instrutor field above);
+                  group and recurring modes keep the plain time input, since
+                  a grid tied to one specific date doesn't fit "one time
+                  applied across many dates" or "instructor assigned later". */}
+              {lessonMode === 'individual' && mode === 'single' ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div>
+                    <label style={labelStyle}>Data</label>
+                    <input
+                      style={inputStyle}
+                      type="date"
+                      value={form.date}
+                      min={new Date().toISOString().slice(0, 10)}
+                      onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Horários disponíveis</label>
+                    <TimeSlotPicker
+                      slots={slots}
+                      loading={slotsLoading}
+                      selected={{ time: form.time, instructor_id: form.instructor_id }}
+                      onSelect={slot => setForm(f => ({ ...f, time: slot.time, instructor_id: slot.instructor_id }))}
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label style={labelStyle}>Horário</label>
-                  <input
-                    style={inputStyle}
-                    type="time"
-                    value={form.time}
-                    onChange={e => setForm(f => ({ ...f, time: e.target.value }))}
-                  />
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div>
+                    <label style={labelStyle}>Data de início</label>
+                    <input
+                      style={inputStyle}
+                      type="date"
+                      value={form.date}
+                      min={new Date().toISOString().slice(0, 10)}
+                      onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Horário</label>
+                    <input
+                      style={inputStyle}
+                      type="time"
+                      value={form.time}
+                      onChange={e => setForm(f => ({ ...f, time: e.target.value }))}
+                    />
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Duration */}
               <div>

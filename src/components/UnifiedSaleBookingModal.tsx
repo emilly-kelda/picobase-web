@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { formatCurrency } from '@/lib/currency'
 import { buildWhatsAppUrl } from '@/lib/whatsapp'
 import CheckinQRButton from '@/components/CheckinQRButton'
+import TimeSlotPicker, { type TimeSlot } from '@/components/TimeSlotPicker'
 
 export type PackageOption = {
   id: string
@@ -211,13 +212,9 @@ export default function UnifiedSaleBookingModal({
   // getBookingSuggestion already use — see getAvailableSlotsForDate.
   const [scheduleNow, setScheduleNow] = useState(true)
   const [date, setDate]               = useState(() => new Date(Date.now() + 86400000).toISOString().slice(0, 10))
-  const [slots, setSlots]             = useState<Array<{
-    time: string; instructor_id: string; instructor_name: string; studentConflict: boolean
-  }>>([])
+  const [slots, setSlots]             = useState<TimeSlot[]>([])
   const [slotsLoading, setSlotsLoading] = useState(false)
-  const [selectedSlot, setSelectedSlot] = useState<{
-    time: string; instructor_id: string; instructor_name: string; studentConflict: boolean
-  } | null>(null)
+  const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null)
 
   // Recurring booking — a student buying a whole package up front often
   // wants every lesson on the calendar right away, not just the first one.
@@ -976,56 +973,12 @@ export default function UnifiedSaleBookingModal({
 
                 <div>
                   <label style={labelStyle}>Horários disponíveis</label>
-                  {slotsLoading ? (
-                    <div style={{ fontSize: '12px', color: 'var(--mist)', padding: '8px 0' }}>
-                      Buscando horários livres...
-                    </div>
-                  ) : slots.length === 0 ? (
-                    <div style={{
-                      fontSize: '12px', color: 'var(--mist)',
-                      background: 'var(--powder)', borderRadius: 'var(--radius-md)',
-                      padding: '10px 14px',
-                    }}>
-                      Nenhum horário livre encontrado nesta data — tente outra data.
-                    </div>
-                  ) : (
-                    <div style={{
-                      display: 'flex', flexWrap: 'wrap', gap: '8px',
-                      maxHeight: '220px', overflowY: 'auto', padding: '2px',
-                    }}>
-                      {slots.map(slot => {
-                        const active = selectedSlot?.time === slot.time
-                          && selectedSlot?.instructor_id === slot.instructor_id
-                        return (
-                          <button
-                            key={`${slot.time}-${slot.instructor_id}`}
-                            type="button"
-                            disabled={slot.studentConflict}
-                            onClick={() => setSelectedSlot(slot)}
-                            title={slot.studentConflict ? 'Aluno já tem uma aula marcada para este horário' : undefined}
-                            style={{
-                              padding: '8px 12px',
-                              borderRadius: 'var(--radius-md)',
-                              border: `1.5px solid ${
-                                slot.studentConflict ? 'var(--border)' : active ? 'var(--glacial)' : 'var(--border-strong)'
-                              }`,
-                              background: slot.studentConflict ? 'var(--powder)' : active ? 'var(--glacial-light)' : '#fff',
-                              color: slot.studentConflict ? 'var(--mist)' : active ? 'var(--glacial-dark)' : 'var(--slate)',
-                              fontSize: '12px', fontWeight: active ? '600' : '500',
-                              cursor: slot.studentConflict ? 'not-allowed' : 'pointer',
-                              fontFamily: 'var(--font-sans)',
-                              textDecoration: slot.studentConflict ? 'line-through' : 'none',
-                              opacity: slot.studentConflict ? 0.6 : 1,
-                              whiteSpace: 'nowrap',
-                            }}
-                          >
-                            {slot.time} · {slot.instructor_name}
-                            {slot.studentConflict && ' (aluno ocupado)'}
-                          </button>
-                        )
-                      })}
-                    </div>
-                  )}
+                  <TimeSlotPicker
+                    slots={slots}
+                    loading={slotsLoading}
+                    selected={selectedSlot}
+                    onSelect={setSelectedSlot}
+                  />
                 </div>
               </div>
             )}
