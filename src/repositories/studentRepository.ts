@@ -73,14 +73,25 @@ export async function getSessionsByStudent(schoolId: string, studentName: string
   const supabase = createServiceClient()
   void studentId
 
-  const { data: checkinRows } = await supabase
-    .from('checkins')
-    .select('id')
-    .eq('school_id', schoolId)
-    .ilike('student_name', studentName)
+  // checkin_id alone misses group-confirmed lessons (and any individual one
+  // confirmed without going through the check-in kiosk) — those sessions
+  // have no checkin at all (see confirm-lesson/route.ts), only a
+  // scheduled_lesson_id, so a query scoped to checkin_id doesn't just show
+  // the wrong name for them, it drops the row entirely. That made this
+  // student's "Aulas Recentes"/hours-completed totals disagree with
+  // package_sales.minutes_used, which IS bumped for those sessions.
+  const [{ data: checkinRows }, { data: lessonRows }] = await Promise.all([
+    supabase.from('checkins').select('id').eq('school_id', schoolId).ilike('student_name', studentName),
+    supabase.from('scheduled_lessons').select('id').eq('school_id', schoolId).ilike('student_name', studentName),
+  ])
 
   const checkinIds = [...new Set((checkinRows ?? []).map(c => c.id))]
-  if (checkinIds.length === 0) return []
+  const lessonIds  = [...new Set((lessonRows ?? []).map(l => l.id))]
+  if (checkinIds.length === 0 && lessonIds.length === 0) return []
+
+  const orParts: string[] = []
+  if (checkinIds.length > 0) orParts.push(`checkin_id.in.(${checkinIds.join(',')})`)
+  if (lessonIds.length > 0) orParts.push(`scheduled_lesson_id.in.(${lessonIds.join(',')})`)
 
   const { data, error } = await supabase
     .from('sessions')
@@ -89,7 +100,7 @@ export async function getSessionsByStudent(schoolId: string, studentName: string
       users!sessions_instructor_id_fkey ( name ),
       activities ( name )
     `)
-    .in('checkin_id', checkinIds)
+    .or(orParts.join(','))
     .order('session_date', { ascending: false })
   if (error) throw error
   return data ?? []
@@ -198,17 +209,24 @@ export async function getCompletedHoursByStudent(schoolId: string): Promise<Map<
   return totals
 }
 
-/** Fetch sessions for a student by name (case-insensitive). Used for name-keyed profiles. */
+/** Fetch sessions for a student by name (case-insensitive). Used for
+ *  name-keyed profiles. Same checkin_id-only gap as getSessionsByStudent
+ *  above — fixed the same way (also match via scheduled_lesson_id), since
+ *  this feeds getSessionHistoryForPackageSale's fallback path too. */
 export async function getSessionsByStudentName(schoolId: string, studentName: string) {
   const supabase = createServiceClient()
-  const { data: checkinRows } = await supabase
-    .from('checkins')
-    .select('id')
-    .eq('school_id', schoolId)
-    .ilike('student_name', studentName.trim())
+  const [{ data: checkinRows }, { data: lessonRows }] = await Promise.all([
+    supabase.from('checkins').select('id').eq('school_id', schoolId).ilike('student_name', studentName.trim()),
+    supabase.from('scheduled_lessons').select('id').eq('school_id', schoolId).ilike('student_name', studentName.trim()),
+  ])
 
   const checkinIds = [...new Set((checkinRows ?? []).map(c => c.id))]
-  if (checkinIds.length === 0) return []
+  const lessonIds  = [...new Set((lessonRows ?? []).map(l => l.id))]
+  if (checkinIds.length === 0 && lessonIds.length === 0) return []
+
+  const orParts: string[] = []
+  if (checkinIds.length > 0) orParts.push(`checkin_id.in.(${checkinIds.join(',')})`)
+  if (lessonIds.length > 0) orParts.push(`scheduled_lesson_id.in.(${lessonIds.join(',')})`)
 
   const { data } = await supabase
     .from('sessions')
@@ -217,7 +235,7 @@ export async function getSessionsByStudentName(schoolId: string, studentName: st
       users!sessions_instructor_id_fkey ( name ),
       activities ( name )
     `)
-    .in('checkin_id', checkinIds)
+    .or(orParts.join(','))
     .order('session_date', { ascending: false })
   return data ?? []
 }
