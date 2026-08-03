@@ -1,11 +1,14 @@
 import { createServiceClient } from '@/lib/supabase-server'
-import { checkSchedulingConflicts, checkPackageCapacity, ensureActiveCheckinForToday, formatInsufficientCreditError } from '@/repositories/scheduledLessonRepository'
+import { checkSchedulingConflicts, checkSameDayLesson, checkPackageCapacity, ensureActiveCheckinForToday, formatInsufficientCreditError } from '@/repositories/scheduledLessonRepository'
+import { getDefaultLevelForStudent } from '@/repositories/sessionRepository'
 import { NextResponse } from 'next/server'
 
 const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
 
 const STUDENT_CLASH_ERROR = 'Não é possível agendar: este aluno já possui uma aula marcada para este mesmo horário.'
 const INSTRUCTOR_CLASH_ERROR = 'O instrutor selecionado já possui uma aula agendada para este horário.'
+const SAME_DAY_ERROR = (name: string) => `Não é possível agendar: ${name} já possui uma aula marcada ou realizada neste mesmo dia.`
+const EXPERIMENTAL_INELIGIBLE_ERROR = 'Este aluno já possui aula confirmada nesta atividade — não é possível marcar como Experimental.'
 
 // TODO(notify_student_before_class): the reminder needs to fire 2h before
 // scheduled_at, which is almost never when this route runs (lessons are
@@ -52,6 +55,28 @@ export async function POST(request: Request) {
         { error: `Não é possível agendar: ${clashingStudent} já possui uma aula marcada para este mesmo horário.` },
         { status: 409 }
       )
+    }
+
+    const sameDayConflicts = await Promise.all(
+      validStudents.map(async (name: string) => {
+        const conflict = await checkSameDayLesson(SCHOOL_ID, { studentName: name, scheduledAt: body.scheduled_at })
+        return conflict ? name : null
+      })
+    )
+    const sameDayStudent = sameDayConflicts.find(Boolean)
+    if (sameDayStudent) {
+      return NextResponse.json({ error: SAME_DAY_ERROR(sameDayStudent) }, { status: 409 })
+    }
+
+    // level applies uniformly to every row in the group insert below, so
+    // eligibility has to hold for every student in it, not just one.
+    if (body.level === 'experimental' && body.activity_id) {
+      const eligibility = await Promise.all(
+        validStudents.map(name => getDefaultLevelForStudent(SCHOOL_ID, name, body.activity_id))
+      )
+      if (eligibility.some(e => e.experimentalDisabled)) {
+        return NextResponse.json({ error: EXPERIMENTAL_INELIGIBLE_ERROR }, { status: 409 })
+      }
     }
 
     const { data: group, error: groupError } = await supabase
@@ -120,6 +145,22 @@ export async function POST(request: Request) {
   }
   if (instructorConflict) {
     return NextResponse.json({ error: INSTRUCTOR_CLASH_ERROR }, { status: 409 })
+  }
+
+  const hasSameDayLesson = await checkSameDayLesson(SCHOOL_ID, {
+    studentName:     body.student_name,
+    scheduledAt:     body.scheduled_at,
+    excludeLessonId: rescheduleFromId,
+  })
+  if (hasSameDayLesson) {
+    return NextResponse.json({ error: SAME_DAY_ERROR(body.student_name) }, { status: 409 })
+  }
+
+  if (body.level === 'experimental' && body.activity_id) {
+    const { experimentalDisabled } = await getDefaultLevelForStudent(SCHOOL_ID, body.student_name, body.activity_id)
+    if (experimentalDisabled) {
+      return NextResponse.json({ error: EXPERIMENTAL_INELIGIBLE_ERROR }, { status: 409 })
+    }
   }
 
   if (body.package_sale_id) {

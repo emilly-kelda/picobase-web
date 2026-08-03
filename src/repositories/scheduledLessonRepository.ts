@@ -192,6 +192,39 @@ function detectModality(activityName: string | null | undefined): string | null 
 const RESCHEDULE_CANDIDATE_HOURS = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17]
 const RESCHEDULE_SEARCH_DAYS = 7
 
+/** Calendar days (Fortaleza-local) within [windowStart, windowEnd) where
+ *  `studentName` already has another non-cancelled lesson — same same-day
+ *  booking policy as checkSameDayLesson, but batched as a Set over a whole
+ *  search window instead of one date at a time, for the suggestion
+ *  algorithms below that scan many candidate days per call. */
+async function getStudentBusyDays(
+  supabase: ReturnType<typeof createServiceClient>,
+  schoolId: string,
+  studentName: string | null | undefined,
+  windowStart: Date,
+  windowEnd: Date,
+  excludeLessonId?: string
+): Promise<Set<string>> {
+  if (!studentName?.trim()) return new Set()
+  let query = supabase
+    .from('scheduled_lessons')
+    .select('id, student_name, scheduled_at')
+    .eq('school_id', schoolId)
+    .neq('status', 'cancelled')
+    .gte('scheduled_at', windowStart.toISOString())
+    .lt('scheduled_at', windowEnd.toISOString())
+  if (excludeLessonId) query = query.neq('id', excludeLessonId)
+  const { data } = await query
+
+  const target = normalizeStudentName(studentName)
+  const days = new Set<string>()
+  for (const row of data ?? []) {
+    if (normalizeStudentName(row.student_name) !== target) continue
+    days.add(new Date(row.scheduled_at).toLocaleDateString('sv-SE', { timeZone: 'America/Fortaleza' }))
+  }
+  return days
+}
+
 /** Suggests the next open slot for rescheduling a missed lesson: detect the
  *  modality from the activity name, prefer an instructor who has it tagged
  *  in users.sports, and scan hourly 8-17 slots over the next 7 days
@@ -230,6 +263,16 @@ export async function getRescheduleSuggestion(
   const windowEnd = new Date(windowStart)
   windowEnd.setDate(windowEnd.getDate() + RESCHEDULE_SEARCH_DAYS)
 
+  // The lesson being rescheduled already carries its own student — resolved
+  // here rather than added as another param, so callers (reschedule-
+  // suggestion/route.ts) don't need to already know it.
+  const { data: excluded } = await supabase
+    .from('scheduled_lessons')
+    .select('student_name')
+    .eq('id', excludeLessonId)
+    .maybeSingle()
+  const busyDays = await getStudentBusyDays(supabase, schoolId, excluded?.student_name, windowStart, windowEnd, excludeLessonId)
+
   const { data: busy } = await supabase
     .from('scheduled_lessons')
     .select('instructor_id, scheduled_at, duration_min')
@@ -252,6 +295,7 @@ export async function getRescheduleSuggestion(
     const date = new Date(windowStart)
     date.setDate(date.getDate() + day)
     const dateStr = date.toISOString().slice(0, 10)
+    if (busyDays.has(dateStr)) continue
 
     for (const hour of RESCHEDULE_CANDIDATE_HOURS) {
       const slotStart = new Date(`${dateStr}T${String(hour).padStart(2, '0')}:00:00-03:00`).getTime()
@@ -295,7 +339,8 @@ export async function getBookingSuggestion(
   schoolId: string,
   activityName: string | null | undefined,
   durationMin: number,
-  windKnAt?: (dateStr: string, hour: number) => number | null
+  windKnAt?: (dateStr: string, hour: number) => number | null,
+  studentName?: string | null
 ): Promise<{ date: string; time: string; instructor_id: string; instructor_name: string; windKn: number | null } | null> {
   const supabase = createServiceClient()
   const modality = detectModality(activityName)
@@ -319,6 +364,8 @@ export async function getBookingSuggestion(
   windowStart.setHours(0, 0, 0, 0)
   const windowEnd = new Date(windowStart)
   windowEnd.setDate(windowEnd.getDate() + BOOKING_SEARCH_DAYS)
+
+  const busyDays = await getStudentBusyDays(supabase, schoolId, studentName, windowStart, windowEnd)
 
   const { data: busy } = await supabase
     .from('scheduled_lessons')
@@ -344,6 +391,7 @@ export async function getBookingSuggestion(
     const date = new Date(windowStart)
     date.setDate(date.getDate() + day)
     const dateStr = date.toISOString().slice(0, 10)
+    if (busyDays.has(dateStr)) continue
 
     for (const hour of BOOKING_CANDIDATE_HOURS) {
       const slotStart = new Date(`${dateStr}T${String(hour).padStart(2, '0')}:00:00-03:00`).getTime()
@@ -526,6 +574,54 @@ export async function checkSchedulingConflicts(
   }
 
   return { instructorConflict, studentConflict }
+}
+
+/** Whether `studentName` already has another lesson — scheduled (any time
+ *  that day, not just an overlapping slot: checkSchedulingConflicts above
+ *  only catches an exact time clash) or already completed — on the same
+ *  Fortaleza-local calendar day as `scheduledAt`. Separate from
+ *  checkSchedulingConflicts on purpose: that one is about two lessons
+ *  physically clashing, this one is a same-day booking-policy rule (no
+ *  second lesson the same day, period), so the two shouldn't share a
+ *  boolean and get confused with each other at call sites. */
+export async function checkSameDayLesson(
+  schoolId: string,
+  params: { studentName: string; scheduledAt: string; excludeLessonId?: string }
+): Promise<boolean> {
+  const supabase = createServiceClient()
+  const targetDate = new Date(params.scheduledAt).toLocaleDateString('sv-SE', { timeZone: 'America/Fortaleza' })
+  const { start, end } = dayBoundsBR(targetDate)
+  const targetName = normalizeStudentName(params.studentName)
+
+  let scheduledQuery = supabase
+    .from('scheduled_lessons')
+    .select('id, student_name')
+    .eq('school_id', schoolId)
+    .neq('status', 'cancelled')
+    .gte('scheduled_at', start)
+    .lte('scheduled_at', end)
+  if (params.excludeLessonId) scheduledQuery = scheduledQuery.neq('id', params.excludeLessonId)
+
+  const [{ data: scheduled }, { data: completed }] = await Promise.all([
+    scheduledQuery,
+    supabase
+      .from('sessions')
+      .select('checkins ( student_name ), scheduled_lessons ( student_name )')
+      .eq('school_id', schoolId)
+      .eq('session_date', targetDate),
+  ])
+
+  const hasScheduled = (scheduled ?? []).some(r => normalizeStudentName(r.student_name) === targetName)
+  if (hasScheduled) return true
+
+  // Fallback to scheduled_lessons when checkins is null — group-confirmed
+  // lessons (and any individual one confirmed without going through the
+  // check-in kiosk) have no checkin at all, see confirm-lesson/route.ts.
+  const hasCompleted = (completed ?? []).some(s => {
+    const name = (s.checkins as any)?.student_name ?? (s.scheduled_lessons as any)?.student_name ?? null
+    return normalizeStudentName(name) === targetName
+  })
+  return hasCompleted
 }
 
 /** What a specific package_sales row actually has free right now: raw

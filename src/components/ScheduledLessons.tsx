@@ -549,6 +549,7 @@ export default function ScheduledLessons({
           activityName,
           durationMin: String(form.duration_min || 60),
         })
+        if (form.student_name.trim()) params.set('studentName', form.student_name)
         const res = await fetch(`/api/owner/booking-suggestion?${params}`)
         const data = await res.json()
         if (!cancelled) setBookingSuggestion(data.suggestion ?? null)
@@ -560,8 +561,11 @@ export default function ScheduledLessons({
     }
     loadBookingSuggestion()
     return () => { cancelled = true }
+    // studentName now filters out that student's own busy days server-side
+    // (getBookingSuggestion), so unlike before this needs to refetch as the
+    // name changes too, not just the activity.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showModal, lessonMode, form.activity_id])
+  }, [showModal, lessonMode, form.activity_id, form.student_name])
 
   function applyBookingSuggestion() {
     if (!bookingSuggestion) return

@@ -76,7 +76,13 @@ export async function getDefaultLevelForStudent(
   const supabase = createServiceClient()
   const { data, error } = await supabase
     .from('sessions')
-    .select('level, session_date, confirmed_at, checkins ( student_name )')
+    // Fallback to scheduled_lessons when checkins is null — group-confirmed
+    // lessons (and any individual one confirmed without going through the
+    // check-in kiosk) have no checkin at all, see confirm-lesson/route.ts.
+    // Missing this made a student's already-confirmed group lesson
+    // invisible here, which could re-offer "Experimental" for a second
+    // lesson in the same activity instead of correctly disabling it.
+    .select('level, session_date, confirmed_at, checkins ( student_name ), scheduled_lessons ( student_name )')
     .eq('school_id', schoolId)
     .eq('activity_id', activityId)
     .order('session_date', { ascending: false })
@@ -86,9 +92,11 @@ export async function getDefaultLevelForStudent(
   if (error) throw error
 
   const target = normalizeStudentName(studentName)
-  const match = (data ?? []).find(
-    s => normalizeStudentName((s.checkins as { student_name?: string } | null)?.student_name) === target
-  )
+  const match = (data ?? []).find(s => {
+    const name = (s.checkins as { student_name?: string } | null)?.student_name
+      ?? (s.scheduled_lessons as { student_name?: string } | null)?.student_name
+    return normalizeStudentName(name) === target
+  })
 
   return resolveDefaultLevel(match?.level ?? null, !!match)
 }
@@ -111,9 +119,11 @@ export async function getDefaultInstructorForStudent(
   const supabase = createServiceClient()
   const { data, error } = await supabase
     .from('sessions')
+    // scheduled_lessons fallback: see getDefaultLevelForStudent above.
     .select(`
       activity_id, session_date, confirmed_at,
       checkins ( student_name ),
+      scheduled_lessons ( student_name ),
       instructor:users!sessions_instructor_id_fkey ( id, name )
     `)
     .eq('school_id', schoolId)
@@ -124,10 +134,11 @@ export async function getDefaultInstructorForStudent(
   if (error) throw error
 
   const target = normalizeStudentName(studentName)
-  const matches = (data ?? []).filter(
-    s => normalizeStudentName((s.checkins as { student_name?: string } | null)?.student_name) === target
-      && s.instructor
-  )
+  const matches = (data ?? []).filter(s => {
+    const name = (s.checkins as { student_name?: string } | null)?.student_name
+      ?? (s.scheduled_lessons as { student_name?: string } | null)?.student_name
+    return normalizeStudentName(name) === target && s.instructor
+  })
   if (matches.length === 0) return { instructorId: null, instructorName: null }
 
   const sameActivity = activityId ? matches.find(m => m.activity_id === activityId) : null

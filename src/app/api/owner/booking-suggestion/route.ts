@@ -18,6 +18,7 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const activityName = searchParams.get('activityName')
   const durationMin   = Number(searchParams.get('durationMin') ?? 60)
+  const studentName   = searchParams.get('studentName')
 
   try {
     const school = await getSchool(SCHOOL_ID)
@@ -29,7 +30,7 @@ export async function GET(request: Request) {
     const windMap = new Map(forecast.map(f => [`${f.dateStr}T${f.hour}`, f.windKn]))
     const windKnAt = (dateStr: string, hour: number) => windMap.get(`${dateStr}T${hour}`) ?? null
 
-    const suggestion = await getBookingSuggestion(SCHOOL_ID, activityName, durationMin, windKnAt)
+    const suggestion = await getBookingSuggestion(SCHOOL_ID, activityName, durationMin, windKnAt, studentName)
     return NextResponse.json({ suggestion })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
