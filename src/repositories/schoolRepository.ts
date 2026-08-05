@@ -19,6 +19,14 @@ export type MasterMetrics = {
   saasRevenue: number
   activeSchools: number
   ecosystemVolume: number
+  delinquentSchools: number
+}
+
+export type PlanRevenueRow = {
+  planId: string | null
+  planName: string
+  revenue: number
+  schoolCount: number
 }
 
 export type Plan = {
@@ -165,8 +173,41 @@ export async function getMasterMetrics(): Promise<MasterMetrics> {
   if (sessionsError) throw sessionsError
 
   return {
-    saasRevenue:     (schools ?? []).reduce((sum, s) => sum + (s.subscription_value ?? 0), 0),
-    activeSchools:   (schools ?? []).filter(s => s.status_assinatura === 'active').length,
-    ecosystemVolume: (sessions ?? []).reduce((sum, s) => sum + (s.price ?? 0), 0),
+    saasRevenue:       (schools ?? []).reduce((sum, s) => sum + (s.subscription_value ?? 0), 0),
+    activeSchools:     (schools ?? []).filter(s => s.status_assinatura === 'active').length,
+    ecosystemVolume:   (sessions ?? []).reduce((sum, s) => sum + (s.price ?? 0), 0),
+    delinquentSchools: (schools ?? []).filter(s => s.status_assinatura === 'past_due').length,
   }
+}
+
+/** Real subscription revenue (schools.subscription_value — same figure
+ *  getMasterMetrics().saasRevenue sums) grouped by assigned plan, for the
+ *  Centro de Custos page's plan-distribution grid. Deliberately grouped by
+ *  the school's actual contracted value, not the plan's catalog
+ *  price_monthly_cents — most schools don't have a plan assigned yet, and
+ *  the plan catalog price is aspirational/future pricing, not necessarily
+ *  what an existing school is actually paying today. */
+export async function getRevenueByPlan(): Promise<PlanRevenueRow[]> {
+  const supabase = createServiceClient()
+
+  const [{ data: schools, error: schoolsError }, { data: plans, error: plansError }] = await Promise.all([
+    supabase.from('schools').select('plan_id, subscription_value'),
+    supabase.from('plans').select('id, name'),
+  ])
+  if (schoolsError) throw schoolsError
+  if (plansError) throw plansError
+
+  const planNameById = new Map((plans ?? []).map(p => [p.id, p.name]))
+  const byPlan = new Map<string, PlanRevenueRow>()
+
+  for (const s of schools ?? []) {
+    const key = s.plan_id ?? 'none'
+    const planName = s.plan_id ? (planNameById.get(s.plan_id) ?? 'Plano removido') : 'Sem plano'
+    const row = byPlan.get(key) ?? { planId: s.plan_id, planName, revenue: 0, schoolCount: 0 }
+    row.revenue += s.subscription_value ?? 0
+    row.schoolCount += 1
+    byPlan.set(key, row)
+  }
+
+  return [...byPlan.values()].sort((a, b) => b.revenue - a.revenue)
 }

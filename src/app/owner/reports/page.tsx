@@ -187,11 +187,17 @@ export default function ReportsPage() {
   const [tab, setTab] = useState<'faturamento' | 'modalidade' | 'instructors' | 'partners' | 'payments'>('faturamento')
   const [groupBy, setGroupBy] = useState<GroupBy>('month')
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     fetch('/api/owner/reports')
-      .then(r => r.json())
-      .then(d => { setData(d); setLoading(false) })
+      .then(async r => {
+        const body = await r.json().catch(() => ({}))
+        if (!r.ok) throw new Error(body.error ?? 'Erro ao carregar relatórios.')
+        setData(body)
+      })
+      .catch(err => setError(err instanceof Error ? err.message : 'Erro ao carregar relatórios.'))
+      .finally(() => setLoading(false))
   }, [])
 
   if (loading) return (
@@ -200,6 +206,15 @@ export default function ReportsPage() {
       fontSize: '13px', color: 'var(--mist)',
     }}>
       Carregando relatórios...
+    </div>
+  )
+
+  if (error) return (
+    <div style={{
+      padding: '64px', textAlign: 'center',
+      fontSize: '13px', color: 'var(--mist)',
+    }}>
+      {error}
     </div>
   )
 

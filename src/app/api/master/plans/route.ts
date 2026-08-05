@@ -31,6 +31,7 @@ export async function POST(request: Request) {
   const {
     id, name, slug, price_monthly_cents, price_yearly_cents,
     max_students, max_storage_gb, features, is_active,
+    billing_type, commission_percentage, setup_fee_cents, currency, payment_methods,
   } = body
 
   if (!id) {
@@ -38,9 +39,28 @@ export async function POST(request: Request) {
     if (!slug?.trim())  return NextResponse.json({ error: 'Slug é obrigatório' }, { status: 400 })
   }
 
+  if (billing_type !== undefined && !['commission', 'fixed_recurring'].includes(billing_type)) {
+    return NextResponse.json({ error: 'billing_type inválido' }, { status: 400 })
+  }
+  if (commission_percentage !== undefined) {
+    const pct = Number(commission_percentage)
+    if (!(pct >= 0 && pct <= 100)) {
+      return NextResponse.json({ error: 'commission_percentage deve estar entre 0 e 100' }, { status: 400 })
+    }
+  }
+  if (setup_fee_cents !== undefined && !(Number(setup_fee_cents) >= 0)) {
+    return NextResponse.json({ error: 'setup_fee_cents não pode ser negativo' }, { status: 400 })
+  }
+  const validPaymentMethods = ['pix', 'credit_card', 'boleto']
+  if (payment_methods !== undefined) {
+    if (!Array.isArray(payment_methods) || payment_methods.some((m: string) => !validPaymentMethods.includes(m))) {
+      return NextResponse.json({ error: 'payment_methods inválido' }, { status: 400 })
+    }
+  }
+
   const supabase = createServiceClient()
 
-  const row = {
+  const row: Record<string, unknown> = {
     name:                name?.trim(),
     slug:                slug?.trim(),
     price_monthly_cents: price_monthly_cents ?? 0,
@@ -51,6 +71,11 @@ export async function POST(request: Request) {
     is_active:           is_active ?? true,
     updated_at:          new Date().toISOString(),
   }
+  if (billing_type !== undefined)           row.billing_type = billing_type
+  if (commission_percentage !== undefined)  row.commission_percentage = Number(commission_percentage)
+  if (setup_fee_cents !== undefined)        row.setup_fee_cents = Number(setup_fee_cents)
+  if (currency !== undefined)               row.currency = currency
+  if (payment_methods !== undefined)        row.payment_methods = payment_methods
 
   if (id) {
     const { data, error } = await supabase

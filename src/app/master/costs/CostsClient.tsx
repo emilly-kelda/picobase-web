@@ -33,7 +33,11 @@ const labelStyle: React.CSSProperties = {
 }
 
 const CATEGORIES = [
-  'Infraestrutura/Software (SaaS)',
+  'Hospedagem',
+  'Banco de Dados',
+  'Email/Notificações',
+  'Gateway de Pagamento',
+  'Outra Infraestrutura/Software',
   'Marketing',
   'Contador/Legal',
   'Desenvolvimento',
@@ -47,6 +51,7 @@ export default function CostsClient({ costs }: { costs: PicobaseCost[] }) {
   const [description, setDescription] = useState('')
   const [amount, setAmount]           = useState('')
   const [costDate, setCostDate]       = useState(new Date().toISOString().slice(0, 10))
+  const [isRecurring, setIsRecurring] = useState(true)
   const [saving, setSaving]           = useState(false)
   const [error, setError]             = useState<string | null>(null)
 
@@ -62,7 +67,7 @@ export default function CostsClient({ costs }: { costs: PicobaseCost[] }) {
       const res = await fetch('/api/master/costs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ category: finalCategory, description, amount: Number(amount), costDate }),
+        body: JSON.stringify({ category: finalCategory, description, amount: Number(amount), costDate, isRecurring }),
       })
       const data = await res.json()
       if (data.ok) {
@@ -120,6 +125,10 @@ export default function CostsClient({ costs }: { costs: PicobaseCost[] }) {
             <input style={inputStyle} type="date" value={costDate} onChange={e => setCostDate(e.target.value)} />
           </div>
         </div>
+        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--slate)', cursor: 'pointer', marginBottom: '12px' }}>
+          <input type="checkbox" checked={isRecurring} onChange={e => setIsRecurring(e.target.checked)} style={{ accentColor: 'var(--glacial)', width: '14px', height: '14px' }} />
+          Custo recorrente (mensal) — entra no cálculo de margem líquida
+        </label>
         {error && (
           <div style={{ marginBottom: '10px', fontSize: '12px', color: '#DC2626' }}>{error}</div>
         )}
@@ -156,7 +165,7 @@ export default function CostsClient({ costs }: { costs: PicobaseCost[] }) {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ background: 'var(--powder)' }}>
-                {['Categoria', 'Descrição', 'Data', 'Valor'].map(h => (
+                {['Categoria', 'Descrição', 'Data', 'Recorrente', 'Valor'].map(h => (
                   <th key={h} style={{
                     padding: '11px 16px', textAlign: h === 'Valor' ? 'right' : 'left',
                     fontSize: '10px', fontWeight: '600',
@@ -176,6 +185,16 @@ export default function CostsClient({ costs }: { costs: PicobaseCost[] }) {
                   <td style={{ padding: '13px 16px', fontSize: '13px', color: 'var(--slate)' }}>{c.category}</td>
                   <td style={{ padding: '13px 16px', fontSize: '13px', color: 'var(--slate)' }}>{c.description}</td>
                   <td style={{ padding: '13px 16px', fontSize: '12px', color: 'var(--mist)' }}>{fmtDate(c.cost_date)}</td>
+                  <td style={{ padding: '13px 16px' }}>
+                    {c.is_recurring && (
+                      <span style={{
+                        fontSize: '10px', fontWeight: '600', padding: '2px 8px',
+                        borderRadius: '99px', background: 'var(--glacial-light)', color: 'var(--glacial-dark)',
+                      }}>
+                        Mensal
+                      </span>
+                    )}
+                  </td>
                   <td style={{ padding: '13px 16px', fontSize: '13px', color: '#DC2626', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
                     − {fmt(c.amount)}
                   </td>

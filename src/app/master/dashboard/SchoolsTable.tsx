@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import type { MasterSchoolRow } from '@/repositories/schoolRepository'
 import SchoolContractModal from './SchoolContractModal'
@@ -56,6 +56,115 @@ const softBadgeStyle: React.CSSProperties = {
   fontSize: '11px', fontWeight: '500', whiteSpace: 'nowrap',
 }
 
+// Caps how wide a school name/owner/email can push the column before
+// eliding — a handful of long values used to be exactly what forced the
+// whole table into horizontal scroll on ordinary desktop widths.
+const truncateStyle: React.CSSProperties = {
+  maxWidth: '200px', overflow: 'hidden',
+  textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+}
+
+const menuItemStyle: React.CSSProperties = {
+  display: 'block', width: '100%', textAlign: 'left',
+  padding: '8px 14px', background: 'none', border: 'none',
+  fontSize: '12px', color: 'var(--slate)', cursor: 'pointer',
+  fontFamily: 'var(--font-sans)', whiteSpace: 'nowrap',
+}
+
+/** Compact row actions — a primary "Acessar" button plus a "⋯" trigger for
+ *  everything else (Editar/Gerenciar/Redefinir senha/Bloquear). Replaces
+ *  what used to be five buttons in a wrapping flex row, which pushed each
+ *  row to 2-3 lines tall and widened the actions column enough to force
+ *  horizontal scroll on the whole table. */
+function ActionsMenu({
+  school, accessing, resetting, toggling,
+  onAccess, onEdit, onManage, onResetPassword, onToggleSuspend,
+}: {
+  school: MasterSchoolRow
+  accessing: boolean
+  resetting: boolean
+  toggling: boolean
+  onAccess: () => void
+  onEdit: () => void
+  onManage: () => void
+  onResetPassword: () => void
+  onToggleSuspend: () => void
+}) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    function onDocClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', onDocClick)
+    return () => document.removeEventListener('mousedown', onDocClick)
+  }, [open])
+
+  return (
+    <div ref={ref} style={{ position: 'relative', display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
+      <button
+        onClick={onAccess}
+        disabled={accessing}
+        style={{ ...actionButtonStyle, opacity: accessing ? 0.5 : 1 }}
+      >
+        {accessing ? '...' : 'Acessar'}
+      </button>
+      <button
+        onClick={() => setOpen(v => !v)}
+        aria-label="Mais ações"
+        style={{
+          width: '26px', height: '26px', flexShrink: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          borderRadius: '99px', background: open ? 'var(--powder)' : '#fff',
+          border: '0.5px solid var(--border-strong)', cursor: 'pointer', padding: 0,
+        }}
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24">
+          <circle cx="5" cy="12" r="1.6" fill="var(--slate)" />
+          <circle cx="12" cy="12" r="1.6" fill="var(--slate)" />
+          <circle cx="19" cy="12" r="1.6" fill="var(--slate)" />
+        </svg>
+      </button>
+
+      {open && (
+        <div style={{
+          position: 'absolute', top: 'calc(100% + 4px)', right: 0, zIndex: 20,
+          background: '#fff', border: '0.5px solid var(--border)',
+          borderRadius: 'var(--radius-md)', boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+          minWidth: '170px', overflow: 'hidden', padding: '4px 0',
+        }}>
+          <button onClick={() => { setOpen(false); onEdit() }} style={menuItemStyle}>
+            Editar
+          </button>
+          <button onClick={() => { setOpen(false); onManage() }} style={menuItemStyle}>
+            Gerenciar
+          </button>
+          <button
+            onClick={() => { setOpen(false); onResetPassword() }}
+            disabled={!school.ownerEmail || resetting}
+            style={{ ...menuItemStyle, opacity: !school.ownerEmail || resetting ? 0.5 : 1, cursor: !school.ownerEmail || resetting ? 'not-allowed' : 'pointer' }}
+          >
+            {resetting ? 'Enviando...' : 'Redefinir senha'}
+          </button>
+          <button
+            onClick={() => { setOpen(false); onToggleSuspend() }}
+            disabled={toggling}
+            style={{
+              ...menuItemStyle,
+              color: school.status_assinatura === 'suspended' ? 'var(--slate)' : '#DC2626',
+              opacity: toggling ? 0.5 : 1, cursor: toggling ? 'not-allowed' : 'pointer',
+            }}
+          >
+            {toggling ? '...' : school.status_assinatura === 'suspended' ? 'Reativar' : 'Bloquear'}
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function SchoolsTable({
   schools,
   lastLoginByOwnerId,
@@ -89,7 +198,7 @@ export default function SchoolsTable({
         setAccessingId(null)
         return
       }
-      window.location.href = '/owner'
+      window.location.assign('/owner')
     } catch {
       window.alert('Erro de rede. Tente novamente.')
       setAccessingId(null)
@@ -175,18 +284,18 @@ export default function SchoolsTable({
                 <tr key={s.id} className="schools-row" style={{
                   borderBottom: i < schools.length - 1 ? '0.5px solid var(--border)' : 'none',
                 }}>
-                  <td style={{ padding: '16px 24px', whiteSpace: 'nowrap' }}>
-                    <div style={{ fontSize: '14px', fontWeight: '600', color: 'var(--slate)' }}>
+                  <td style={{ padding: '16px 24px' }}>
+                    <div style={{ fontSize: '14px', fontWeight: '600', color: 'var(--slate)', ...truncateStyle }} title={s.name}>
                       {s.name}
                     </div>
-                    <div style={{ fontSize: '11px', color: 'var(--mist)' }}>
+                    <div style={{ fontSize: '11px', color: 'var(--mist)', ...truncateStyle }}>
                       /{s.slug}{s.cost_center ? ` · ${s.cost_center}` : ''}
                     </div>
                   </td>
-                  <td style={{ padding: '16px 24px', fontSize: '13px', color: 'var(--slate)', whiteSpace: 'nowrap' }}>
+                  <td style={{ padding: '16px 24px', fontSize: '13px', color: 'var(--slate)', ...truncateStyle }} title={s.ownerName ?? undefined}>
                     {s.ownerName ?? '—'}
                   </td>
-                  <td style={{ padding: '16px 24px', fontSize: '12px', color: 'var(--mist)', whiteSpace: 'nowrap' }}>
+                  <td style={{ padding: '16px 24px', fontSize: '12px', color: 'var(--mist)', ...truncateStyle }} title={s.ownerEmail ?? undefined}>
                     {s.ownerEmail ?? '—'}
                   </td>
                   <td style={{
@@ -219,39 +328,17 @@ export default function SchoolsTable({
                     </span>
                   </td>
                   <td style={{ padding: '16px 24px' }}>
-                    <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-                      <button
-                        onClick={() => accessPanel(s)}
-                        disabled={accessingId === s.id}
-                        style={{ ...actionButtonStyle, opacity: accessingId === s.id ? 0.5 : 1 }}
-                      >
-                        {accessingId === s.id ? '...' : 'Acessar painel'}
-                      </button>
-                      <button onClick={() => setEditing(s)} style={actionButtonStyle}>
-                        Editar
-                      </button>
-                      <button onClick={() => setManaging(s)} style={actionButtonStyle}>
-                        Gerenciar
-                      </button>
-                      <button
-                        onClick={() => resetPassword(s)}
-                        disabled={!s.ownerEmail || resettingId === s.id}
-                        style={{ ...actionButtonStyle, opacity: !s.ownerEmail || resettingId === s.id ? 0.5 : 1 }}
-                      >
-                        {resettingId === s.id ? '...' : 'Senha'}
-                      </button>
-                      <button
-                        onClick={() => toggleSuspend(s)}
-                        disabled={togglingId === s.id}
-                        style={{
-                          ...actionButtonStyle,
-                          color: s.status_assinatura === 'suspended' ? 'var(--slate)' : '#DC2626',
-                          opacity: togglingId === s.id ? 0.5 : 1,
-                        }}
-                      >
-                        {togglingId === s.id ? '...' : s.status_assinatura === 'suspended' ? 'Reativar' : 'Bloquear'}
-                      </button>
-                    </div>
+                    <ActionsMenu
+                      school={s}
+                      accessing={accessingId === s.id}
+                      resetting={resettingId === s.id}
+                      toggling={togglingId === s.id}
+                      onAccess={() => accessPanel(s)}
+                      onEdit={() => setEditing(s)}
+                      onManage={() => setManaging(s)}
+                      onResetPassword={() => resetPassword(s)}
+                      onToggleSuspend={() => toggleSuspend(s)}
+                    />
                   </td>
                 </tr>
               )

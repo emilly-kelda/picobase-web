@@ -2,7 +2,19 @@ import { NextResponse } from 'next/server'
 import { getSchoolContext } from '@/lib/auth/get-school-context'
 import { createServiceClient } from '@/lib/supabase-server'
 
-export type PlanLimitResult = { allowed: boolean; current: number; max: number | null }
+export type PlanLimitResult = {
+  allowed: boolean
+  current: number
+  max: number | null
+  // Billing metadata (20260817000003_brazil_pricing_localization.sql) — for
+  // callers that need to know how the calling school is actually charged,
+  // not just whether it's within its student limit (e.g. a future split-
+  // payment route deciding whether to take a percentage cut or charge a
+  // flat fee). null when the school has no plan assigned.
+  billingType: 'commission' | 'fixed_recurring' | null
+  commissionPercentage: number | null
+  setupFeeCents: number | null
+}
 
 /** Checks the calling school's current student count against its assigned
  *  plan's max_students (see 20260817000001_plans_and_subscriptions.sql).
@@ -26,7 +38,7 @@ export async function checkPlanLimit(): Promise<
   const [{ data: schoolRow }, { count: current }] = await Promise.all([
     supabase
       .from('schools')
-      .select('plan_id, plans ( max_students )')
+      .select('plan_id, plans ( max_students, billing_type, commission_percentage, setup_fee_cents )')
       .eq('id', school.ctx.schoolId)
       .single(),
     supabase
@@ -44,6 +56,9 @@ export async function checkPlanLimit(): Promise<
       allowed: max === null || (current ?? 0) < max,
       current: current ?? 0,
       max,
+      billingType: plan?.billing_type ?? null,
+      commissionPercentage: plan?.commission_percentage ?? null,
+      setupFeeCents: plan?.setup_fee_cents ?? null,
     },
   }
 }
