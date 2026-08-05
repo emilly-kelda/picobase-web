@@ -21,6 +21,69 @@ export type MasterMetrics = {
   ecosystemVolume: number
 }
 
+export type Plan = {
+  id: string
+  name: string
+  slug: string
+  price_monthly_cents: number
+  price_yearly_cents: number
+  max_students: number | null
+  max_storage_gb: number | null
+  features: Record<string, boolean>
+  is_active: boolean
+}
+
+export type SchoolWithPlan = {
+  id: string
+  name: string
+  plan_id: string | null
+  plan_name: string | null
+  subscription_status: string | null
+  current_period_end: string | null
+  cancel_at_period_end: boolean
+}
+
+/** Every plan (active and retired) for the master Plans & Subscriptions
+ *  page — same "show retired too, so a school still on one isn't left
+ *  dangling" reasoning as the GET handler in api/master/plans/route.ts. */
+export async function getAllPlans(): Promise<Plan[]> {
+  const supabase = createServiceClient()
+  const { data, error } = await supabase
+    .from('plans')
+    .select('*')
+    .order('price_monthly_cents', { ascending: true })
+  if (error) throw error
+  return data ?? []
+}
+
+/** Every school with its assigned plan's name attached, for the
+ *  subscriptions table — plan_id is nullable (a school can exist with no
+ *  plan assigned yet), so this is a left join via a manual map, same
+ *  shape as getAllSchoolsForMaster's owner join above. */
+export async function getSchoolsWithPlans(): Promise<SchoolWithPlan[]> {
+  const supabase = createServiceClient()
+
+  const [{ data: schools, error: schoolsError }, { data: plans, error: plansError }] = await Promise.all([
+    supabase
+      .from('schools')
+      .select('id, name, plan_id, subscription_status, current_period_end, cancel_at_period_end')
+      .order('name', { ascending: true }),
+    supabase
+      .from('plans')
+      .select('id, name'),
+  ])
+
+  if (schoolsError) throw schoolsError
+  if (plansError) throw plansError
+
+  const planNameById = new Map((plans ?? []).map(p => [p.id, p.name]))
+
+  return (schools ?? []).map(s => ({
+    ...s,
+    plan_name: s.plan_id ? planNameById.get(s.plan_id) ?? null : null,
+  }))
+}
+
 /** Every school, for the master dashboard's management table, with each
  *  school's owner name attached. Service-role — same pattern as every other
  *  repository in the app (see packageRepository.ts, crewRepository.ts), not
