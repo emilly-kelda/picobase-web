@@ -38,7 +38,7 @@ type ScheduledRow = {
   activities: { name: string } | { name: string }[] | null
   instructor: { name: string } | { name: string }[] | null
 }
-type DetailData = { checkins: CheckinRow[]; sessions: SessionRow[]; scheduledToday: ScheduledRow[] }
+type DetailData = { checkins: CheckinRow[]; sessions: SessionRow[]; monthSessions: SessionRow[]; scheduledToday: ScheduledRow[] }
 
 function one<T>(v: T | T[] | null): T | null {
   return Array.isArray(v) ? (v[0] ?? null) : v
@@ -261,6 +261,17 @@ function DetailModal({
   slug: string
   schoolName: string
 }) {
+  // Defaults to the month — the Receita card's own subtitle already talks
+  // in monthly terms ("vs. mês passado", "Primeiro mês de operação"), so a
+  // day with no sales but a real month behind it used to open on a flatly
+  // empty "Receita de hoje" list. Resets to 'month' every time the modal
+  // is reopened, since DetailModal unmounts on close.
+  const [revenuePeriod, setRevenuePeriod] = useState<'today' | 'month'>('month')
+
+  const title = type === 'revenue'
+    ? (revenuePeriod === 'month' ? 'Receita do mês' : 'Receita de hoje')
+    : modalTitles[type]
+
   return (
     <div
       style={{
@@ -282,7 +293,7 @@ function DetailModal({
           padding: '18px 22px', borderBottom: '0.5px solid var(--border)', flexShrink: 0,
         }}>
           <div style={{ fontSize: '15px', fontWeight: '600', color: 'var(--slate)' }}>
-            {modalTitles[type]}
+            {title}
           </div>
           <button
             onClick={onClose}
@@ -303,7 +314,12 @@ function DetailModal({
           ) : type === 'lessons' ? (
             <LessonsList sessions={detail.sessions} scheduledToday={detail.scheduledToday} />
           ) : type === 'revenue' ? (
-            <RevenueList sessions={detail.sessions} />
+            <RevenueList
+              todaySessions={detail.sessions}
+              monthSessions={detail.monthSessions}
+              period={revenuePeriod}
+              onPeriodChange={setRevenuePeriod}
+            />
           ) : (
             <CommissionsList sessions={detail.sessions} />
           )}
@@ -439,35 +455,67 @@ function LessonsList({ sessions, scheduledToday }: { sessions: SessionRow[]; sch
   )
 }
 
-function RevenueList({ sessions }: { sessions: SessionRow[] }) {
-  if (sessions.length === 0) return <EmptyRow text="Nenhuma venda confirmada hoje." />
+const periodTabStyle = (active: boolean): React.CSSProperties => ({
+  flex: 1, padding: '7px', textAlign: 'center',
+  borderRadius: 'var(--radius-md)',
+  border: `1.5px solid ${active ? 'var(--glacial)' : 'var(--border)'}`,
+  background: active ? 'var(--glacial-light)' : '#fff',
+  color: active ? 'var(--glacial-dark)' : 'var(--mist)',
+  fontSize: '12px', fontWeight: active ? '600' : '500',
+  cursor: 'pointer', fontFamily: 'var(--font-sans)',
+})
+
+function RevenueList({
+  todaySessions, monthSessions, period, onPeriodChange,
+}: {
+  todaySessions: SessionRow[]
+  monthSessions: SessionRow[]
+  period: 'today' | 'month'
+  onPeriodChange: (p: 'today' | 'month') => void
+}) {
+  const sessions = period === 'month' ? monthSessions : todaySessions
   const total = sessions.reduce((s, r) => s + (r.price ?? 0), 0)
   return (
     <div>
-      {sessions.map(s => (
-        <div key={s.id} style={rowStyle}>
-          <div>
-            <div style={{ fontSize: '13px', fontWeight: '500', color: 'var(--slate)' }}>
-              {sessionStudentName(s)}
-            </div>
-            <div style={{ fontSize: '11px', color: 'var(--mist)', marginTop: '2px' }}>
-              {one(s.activities)?.name ?? '—'}
-              {s.payment_method && ` · ${PAYMENT_LABELS[s.payment_method] ?? s.payment_method}`}
-            </div>
-          </div>
-          <span style={{ fontSize: '13px', fontWeight: '500', color: 'var(--slate)', fontVariantNumeric: 'tabular-nums' }}>
-            {fmt(s.price)}
-          </span>
-        </div>
-      ))}
-      <div style={{ ...rowStyle, borderBottom: 'none', paddingTop: '14px' }}>
-        <span style={{ fontSize: '12px', fontWeight: '600', color: 'var(--mist)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-          Total
-        </span>
-        <span style={{ fontSize: '15px', fontWeight: '700', color: 'var(--slate)', fontVariantNumeric: 'tabular-nums' }}>
-          {fmt(total)}
-        </span>
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '14px' }}>
+        <button type="button" onClick={() => onPeriodChange('month')} style={periodTabStyle(period === 'month')}>
+          Este mês
+        </button>
+        <button type="button" onClick={() => onPeriodChange('today')} style={periodTabStyle(period === 'today')}>
+          Hoje
+        </button>
       </div>
+
+      {sessions.length === 0 ? (
+        <EmptyRow text={period === 'month' ? 'Nenhuma venda confirmada neste mês.' : 'Nenhuma venda confirmada hoje.'} />
+      ) : (
+        <>
+          {sessions.map(s => (
+            <div key={s.id} style={rowStyle}>
+              <div>
+                <div style={{ fontSize: '13px', fontWeight: '500', color: 'var(--slate)' }}>
+                  {sessionStudentName(s)}
+                </div>
+                <div style={{ fontSize: '11px', color: 'var(--mist)', marginTop: '2px' }}>
+                  {one(s.activities)?.name ?? '—'}
+                  {s.payment_method && ` · ${PAYMENT_LABELS[s.payment_method] ?? s.payment_method}`}
+                </div>
+              </div>
+              <span style={{ fontSize: '13px', fontWeight: '500', color: 'var(--slate)', fontVariantNumeric: 'tabular-nums' }}>
+                {fmt(s.price)}
+              </span>
+            </div>
+          ))}
+          <div style={{ ...rowStyle, borderBottom: 'none', paddingTop: '14px' }}>
+            <span style={{ fontSize: '12px', fontWeight: '600', color: 'var(--mist)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              Total
+            </span>
+            <span style={{ fontSize: '15px', fontWeight: '700', color: 'var(--slate)', fontVariantNumeric: 'tabular-nums' }}>
+              {fmt(total)}
+            </span>
+          </div>
+        </>
+      )}
     </div>
   )
 }

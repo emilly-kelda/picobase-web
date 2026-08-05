@@ -294,12 +294,20 @@ export async function getTodayStats(schoolId: string) {
  *  session_date filter getTodayStats' own sessions/revenue/commissions
  *  figures use, so the modal totals match the card numbers exactly) drives
  *  Aulas/Receita/Comissões; scheduledToday (still-pending, not yet
- *  confirmed) is Aulas' secondary "ainda agendadas hoje" section. */
+ *  confirmed) is Aulas' secondary "ainda agendadas hoje" section.
+ *
+ *  monthSessions is the same row shape as `sessions` but month-to-date —
+ *  the Receita card's subtitle already talks in monthly terms ("vs. mês
+ *  passado", "Primeiro mês de operação"), so a day with zero sales but a
+ *  real month behind it used to open on a flatly empty "Receita de hoje"
+ *  modal. Fetched alongside the rest so the Receita modal's "Este Mês" tab
+ *  doesn't need a second round trip. */
 export async function getTodayDetail(schoolId: string) {
   const supabase = createServiceClient()
   const today = todayBR()
+  const monthStart = `${today.slice(0, 7)}-01`
 
-  const [{ data: checkins }, { data: sessions }, { data: scheduledToday }] = await Promise.all([
+  const [{ data: checkins }, { data: sessions }, { data: monthSessions }, { data: scheduledToday }] = await Promise.all([
     supabase
       .from('checkins')
       .select('id, student_name, checkin_at, waiver_signed_at, stage, activities ( name )')
@@ -322,6 +330,20 @@ export async function getTodayDetail(schoolId: string) {
       .order('confirmed_at', { ascending: false }),
 
     supabase
+      .from('sessions')
+      .select(`
+        id, duration_min, price, commission_amount, payment_method,
+        activities ( name ),
+        users!sessions_instructor_id_fkey ( name ),
+        checkins ( student_name ),
+        scheduled_lessons ( student_name )
+      `)
+      .eq('school_id', schoolId)
+      .gte('session_date', monthStart)
+      .lte('session_date', today)
+      .order('confirmed_at', { ascending: false }),
+
+    supabase
       .from('scheduled_lessons')
       .select(`
         id, student_name, scheduled_at, duration_min,
@@ -338,6 +360,7 @@ export async function getTodayDetail(schoolId: string) {
   return {
     checkins: checkins ?? [],
     sessions: sessions ?? [],
+    monthSessions: monthSessions ?? [],
     scheduledToday: scheduledToday ?? [],
   }
 }
