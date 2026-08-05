@@ -22,8 +22,8 @@ export const LEVEL_SKILLS: Record<string, Record<string, string[]>> = {
   },
   windsurf: {
     level_1_discovery:    ['rig_control', 'beach_start'],
-    level_2_intermediate: ['upwind', 'tack'],
-    level_3_independent:  ['jibe', 'planing'],
+    level_2_intermediate: ['upwind'],
+    level_3_independent:  ['tack', 'jibe', 'planing'],
   },
   default: {
     level_1_discovery:    ['basics'],
