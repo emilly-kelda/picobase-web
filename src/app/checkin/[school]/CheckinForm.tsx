@@ -542,10 +542,12 @@ export default function CheckinForm({
   prefillInstructorName?: string
   prefillActivityName?: string
 }) {
-  const defaultLang = (school.language === 'pt' ? 'pt'
+  // Brazil is the primary market — any school without an explicit
+  // language set (or with an unrecognized value) lands on 'pt', not 'en'.
+  const defaultLang = (school.language === 'en' ? 'en'
     : school.language === 'fr' ? 'fr'
     : school.language === 'es' ? 'es'
-    : 'en') as LangKey
+    : 'pt') as LangKey
 
   const [lang, setLang]             = useState<LangKey>(defaultLang)
   const [step, setStep]             = useState<Step>('name')
