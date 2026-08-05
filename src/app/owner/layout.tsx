@@ -7,6 +7,7 @@
 import OwnerNav from '@/components/OwnerNav'
 import AuthGuard from '@/components/AuthGuard'
 import PendingRequestsAlert from '@/components/PendingRequestsAlert'
+import ImpersonationBanner from '@/components/owner/ImpersonationBanner'
 import { createServerClient } from '@supabase/ssr'
 import { createServiceClient } from '@/lib/supabase-server'
 import { cookies } from 'next/headers'
@@ -25,19 +26,31 @@ export default async function OwnerLayout({ children }: { children: React.ReactN
 
   // auth is now narrowed:
   //   { role: 'owner', isMaster: false, schoolId: string } — scoped to one school
-  //   { role: 'master', isMaster: true,  schoolId: null  } — all schools, placeholder school_id ignored
+  //   { role: 'master', isMaster: true, schoolId: null, impersonatingSchoolId: string|null }
+  //     — no school of their own; impersonatingSchoolId is set while master
+  //     is "viewing as" a specific school (see src/app/api/master/impersonate).
 
-  // A suspended school's owner never sees /owner at all — checked here rather
+  // operationalSchoolId is what actually drives this page: a real owner's
+  // own school, or the school master is currently impersonating. Unscoped
+  // master (isMaster && no impersonation) has none — every branch below
+  // that used to check `!auth.isMaster` now checks this instead, so an
+  // impersonating master gets the exact same scoped experience a real owner
+  // of that school would.
+  const operationalSchoolId = auth.isMaster ? auth.impersonatingSchoolId : auth.schoolId
+
+  // Suspended school's owner never sees /owner at all — checked here rather
   // than inside getAuthContext() itself, since that function's contract
   // (role/schoolId resolution) is relied on elsewhere and shouldn't gain a
-  // side effect. Master is exempt — this only applies to the owner branch.
-  if (!auth.isMaster) {
+  // side effect. Unscoped master is exempt — nothing to check.
+  let impersonatedSchoolName: string | null = null
+  if (operationalSchoolId) {
     const { data: school } = await createServiceClient()
       .from('schools')
-      .select('status_assinatura')
-      .eq('id', auth.schoolId)
+      .select('name, status_assinatura')
+      .eq('id', operationalSchoolId)
       .single()
     if (school?.status_assinatura === 'suspended') redirect('/account-suspended')
+    if (auth.isMaster) impersonatedSchoolName = school?.name ?? 'Escola'
   }
 
   // ── Season data for the nav ───────────────────────────────────────────────
@@ -51,23 +64,23 @@ export default async function OwnerLayout({ children }: { children: React.ReactN
 
   const [lang, { data: seasons }, pendingBookingsCount, pulseAlerts] = await Promise.all([
     getPortalLang(),
-    // owner: seasons for their school only.
-    // master: all seasons across all schools (school switcher is a future concern).
-    auth.isMaster
+    // Scoped (real owner, or master impersonating one school): seasons for
+    // that school only. Unscoped master: all seasons across every school
+    // (school switcher is a future concern).
+    operationalSchoolId
       ? supabase
           .from('seasons')
           .select('id, label')
+          .eq('school_id', operationalSchoolId)
           .order('start_date', { ascending: false })
       : supabase
           .from('seasons')
           .select('id, label')
-          .eq('school_id', auth.schoolId)
           .order('start_date', { ascending: false }),
-    // master has no single school to scope this to — skip rather than guess.
-    auth.isMaster ? Promise.resolve(0) : getPendingBookingsCount(auth.schoolId),
-    // Same master exemption as pendingBookingsCount above — getAlerts needs
-    // one real school_id, master has none.
-    auth.isMaster ? Promise.resolve([]) : getAlerts(auth.schoolId),
+    // Unscoped master has no single school to scope this to — skip rather than guess.
+    operationalSchoolId ? getPendingBookingsCount(operationalSchoolId) : Promise.resolve(0),
+    // Same unscoped-master exemption as pendingBookingsCount above.
+    operationalSchoolId ? getAlerts(operationalSchoolId) : Promise.resolve([]),
   ])
 
   const activeSeason = cookieStore.get('active_season_id')?.value ?? seasons?.[0]?.id ?? ''
@@ -75,6 +88,9 @@ export default async function OwnerLayout({ children }: { children: React.ReactN
 
   return (
     <div className="min-h-screen bg-[var(--powder)]">
+      {auth.isMaster && impersonatedSchoolName && (
+        <ImpersonationBanner schoolName={impersonatedSchoolName} />
+      )}
       <AuthGuard>
         <OwnerNav
           seasons={seasons ?? []}
@@ -86,31 +102,31 @@ export default async function OwnerLayout({ children }: { children: React.ReactN
         >
           {children}
         </OwnerNav>
-        {/* Unlike getPendingBookingsCount above, this doesn't need a real
-            per-school auth.schoolId — /api/owner/lesson-requests reads the
-            same hardcoded SCHOOL_ID every other /api/owner/* route already
-            uses, so it resolves the same for master or owner. Gating it on
-            !auth.isMaster would just make it inconsistent with the rest of
-            /owner, which shows that one hardcoded school's data regardless
-            of who's logged in. */}
+        {/* /api/owner/lesson-requests now requires a real session and scopes
+            to getSchoolContext()'s resolved school (owner's own, or master's
+            impersonated one) — unscoped master gets a 403 from it, which
+            this component already treats as "no pending requests" (see its
+            own poll()'s `data.requests ?? []`), so no gating needed here. */}
         <PendingRequestsAlert />
       </AuthGuard>
     </div>
   )
 }
 
-// ── How child pages consume the auth context ─────────────────────────────────
+// ── How child pages/routes consume the auth context ───────────────────────────
 //
-// React's cache() in getAuthContext() means child pages call it for free (zero
-// extra DB queries — the result is reused from the layout's call):
+// React's cache() in getAuthContext() means server components call it for
+// free (zero extra DB queries — the result is reused from the layout's call).
+// API routes (a separate request, so no cache() reuse) should use the
+// dedicated wrapper instead, which also turns "no session"/"unscoped master"
+// into the right HTTP response for you:
 //
-//   import { getAuthContext } from '@/lib/auth'
-//   const auth = await getAuthContext()   // cached — no second DB hit
-//   if (!auth) redirect('/login')
+//   import { getSchoolContext } from '@/lib/auth/get-school-context'
+//   const school = await getSchoolContext()
+//   if (!school.ok) return school.response
+//   // school.ctx.schoolId — the real owner's school, or master's
+//   // currently-impersonated one; never present for unscoped master.
 //
-//   const SCHOOL_ID = auth.isMaster
-//     ? undefined                         // master: no filter, query all schools
-//     : auth.schoolId                     // owner: filter to their school
-//
-// Never read school_id from cookies, query params, or the request body.
-// The authoritative value is always auth.schoolId from getAuthContext().
+// Never read school_id from cookies, query params, or the request body
+// directly. The authoritative value always comes from getAuthContext() /
+// getSchoolContext() — never trust a client-supplied school id.

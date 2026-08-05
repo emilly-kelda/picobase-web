@@ -1,7 +1,6 @@
 import { createServiceClient } from '@/lib/supabase-server'
 import { NextResponse } from 'next/server'
-
-const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
+import { getSchoolContext } from '@/lib/auth/get-school-context'
 
 function unwrap<T>(raw: T | T[] | null): T | null {
   if (!raw) return null
@@ -9,6 +8,8 @@ function unwrap<T>(raw: T | T[] | null): T | null {
 }
 
 export async function GET() {
+  const school = await getSchoolContext()
+  if (!school.ok) return school.response
   const supabase = createServiceClient()
 
   // Fallback source when checkins is null — group-confirmed lessons (and
@@ -28,7 +29,7 @@ export async function GET() {
       activities ( name ),
       instructor:users!sessions_instructor_id_fkey ( name )
     `)
-    .eq('school_id', SCHOOL_ID)
+    .eq('school_id', school.ctx.schoolId)
     .eq('payment_method', 'a_receber')
     .is('received_at', null)
     .order('session_date', { ascending: true })
@@ -64,6 +65,8 @@ export async function GET() {
 }
 
 export async function PATCH(request: Request) {
+  const school = await getSchoolContext()
+  if (!school.ok) return school.response
   const { session_id } = await request.json()
   const supabase = createServiceClient()
 
@@ -74,7 +77,7 @@ export async function PATCH(request: Request) {
       payment_method: 'pix', // default to PIX when marking received
     })
     .eq('id', session_id)
-    .eq('school_id', SCHOOL_ID)
+    .eq('school_id', school.ctx.schoolId)
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })

@@ -1,10 +1,11 @@
 import { createServiceClient } from '@/lib/supabase-server'
 import { encrypt, decrypt } from '@/utils/crypto'
 import { NextResponse } from 'next/server'
-
-const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
+import { getSchoolContext } from '@/lib/auth/get-school-context'
 
 export async function POST(request: Request) {
+  const school = await getSchoolContext()
+  if (!school.ok) return school.response
   const body = await request.json()
   const supabase = createServiceClient()
 
@@ -28,7 +29,7 @@ export async function POST(request: Request) {
   // Step 2 — insert into public.users using the id from auth.users
   const insertPayload = {
     id:               newId,
-    school_id:        SCHOOL_ID,
+    school_id:        school.ctx.schoolId,
     role:             'instructor',
     active:           true,
     name:             body.name.trim(),
@@ -64,6 +65,8 @@ export async function POST(request: Request) {
 }
 
 export async function PATCH(request: Request) {
+  const school = await getSchoolContext()
+  if (!school.ok) return school.response
   const body = await request.json()
   const { id, ...fields } = body
   if (!id) return NextResponse.json({ error: 'id é obrigatório' }, { status: 400 })
@@ -83,7 +86,7 @@ export async function PATCH(request: Request) {
       weekly_capacity_hours: fields.weekly_capacity_hours ?? null,
     })
     .eq('id', id)
-    .eq('school_id', SCHOOL_ID)
+    .eq('school_id', school.ctx.schoolId)
     .eq('role', 'instructor')
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -91,6 +94,8 @@ export async function PATCH(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  const school = await getSchoolContext()
+  if (!school.ok) return school.response
   const { searchParams } = new URL(request.url)
   const id = searchParams.get('id')
   if (!id) return NextResponse.json({ error: 'id é obrigatório' }, { status: 400 })
@@ -100,7 +105,7 @@ export async function DELETE(request: Request) {
     .from('users')
     .update({ active: false })
     .eq('id', id)
-    .eq('school_id', SCHOOL_ID)
+    .eq('school_id', school.ctx.schoolId)
     .eq('role', 'instructor')
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

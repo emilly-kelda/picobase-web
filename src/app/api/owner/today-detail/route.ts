@@ -1,9 +1,11 @@
 import { getTodayDetail } from '@/repositories/sessionRepository'
 import { NextResponse } from 'next/server'
-
-const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
+import { getSchoolContext } from '@/lib/auth/get-school-context'
 
 export async function GET() {
-  const data = await getTodayDetail(SCHOOL_ID)
+  const school = await getSchoolContext()
+  if (!school.ok) return school.response
+
+  const data = await getTodayDetail(school.ctx.schoolId)
   return NextResponse.json({ ok: true, ...data })
 }

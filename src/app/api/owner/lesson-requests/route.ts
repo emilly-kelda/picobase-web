@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server'
 import { getPendingLessonRequests } from '@/repositories/lessonRequestRepository'
-
-const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
+import { getSchoolContext } from '@/lib/auth/get-school-context'
 
 export async function GET() {
-  const requests = await getPendingLessonRequests(SCHOOL_ID)
+  const school = await getSchoolContext()
+  if (!school.ok) return school.response
+  const requests = await getPendingLessonRequests(school.ctx.schoolId)
   return NextResponse.json({ requests })
 }

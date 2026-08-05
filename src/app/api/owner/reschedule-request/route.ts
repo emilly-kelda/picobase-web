@@ -1,14 +1,16 @@
 import { createServiceClient } from '@/lib/supabase-server'
 import { createOwnerRescheduleProposal } from '@/repositories/lessonRequestRepository'
 import { NextResponse } from 'next/server'
-
-const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
+import { getSchoolContext } from '@/lib/auth/get-school-context'
 
 // Owner-under-/api/owner convention, not api/reschedule/request as a
 // standalone tree — every other owner-dashboard-triggered mutation in this
 // app (schedule, sell-package, progression, confirm-lesson...) lives under
 // /api/owner/*, and this is one more of those, not a public-facing route.
 export async function POST(request: Request) {
+  const school = await getSchoolContext()
+  if (!school.ok) return school.response
+
   const { scheduled_lesson_id, proposed_date, proposed_time, proposed_instructor_id } = await request.json()
 
   if (!scheduled_lesson_id || !proposed_date || !proposed_time) {
@@ -23,7 +25,7 @@ export async function POST(request: Request) {
     .from('scheduled_lessons')
     .select('id, public_token, status')
     .eq('id', scheduled_lesson_id)
-    .eq('school_id', SCHOOL_ID)
+    .eq('school_id', school.ctx.schoolId)
     .maybeSingle()
 
   if (lessonError || !lesson) {
@@ -34,7 +36,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    await createOwnerRescheduleProposal(SCHOOL_ID, scheduled_lesson_id, proposed_date, proposed_time, proposed_instructor_id)
+    await createOwnerRescheduleProposal(school.ctx.schoolId, scheduled_lesson_id, proposed_date, proposed_time, proposed_instructor_id)
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erro ao criar proposta de reagendamento'
     return NextResponse.json({ error: message }, { status: 500 })

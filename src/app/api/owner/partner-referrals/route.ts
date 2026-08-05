@@ -1,9 +1,10 @@
 import { createServiceClient } from '@/lib/supabase-server'
 import { NextResponse } from 'next/server'
-
-const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
+import { getSchoolContext } from '@/lib/auth/get-school-context'
 
 export async function GET(request: Request) {
+  const school = await getSchoolContext()
+  if (!school.ok) return school.response
   const { searchParams } = new URL(request.url)
   const partnerId = searchParams.get('partner_id')
   const period    = searchParams.get('period')
@@ -17,7 +18,7 @@ export async function GET(request: Request) {
   const { data, error } = await supabase
     .from('referrals')
     .select('id, commission_amount, session_price, status, created_at')
-    .eq('school_id', SCHOOL_ID)
+    .eq('school_id', school.ctx.schoolId)
     .eq('partner_id', partnerId)
     .eq('period', period ?? '')
     .order('created_at', { ascending: false })

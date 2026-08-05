@@ -4,8 +4,7 @@ import {
   deactivatePackageType,
 } from '@/repositories/packageRepository'
 import { NextResponse } from 'next/server'
-
-const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
+import { getSchoolContext } from '@/lib/auth/get-school-context'
 
 function validate(body: any) {
   if (!body.name?.trim()) return 'Nome é obrigatório'
@@ -15,13 +14,15 @@ function validate(body: any) {
 }
 
 export async function POST(request: Request) {
+  const school = await getSchoolContext()
+  if (!school.ok) return school.response
   const body = await request.json()
   const error = validate(body)
   if (error) return NextResponse.json({ error }, { status: 400 })
 
   try {
     const data = await createPackageType({
-      school_id:     SCHOOL_ID,
+      school_id:     school.ctx.schoolId,
       name:          body.name.trim(),
       sport:         body.sport?.trim() || null,
       total_minutes: Number(body.total_minutes),
@@ -35,13 +36,15 @@ export async function POST(request: Request) {
 }
 
 export async function PATCH(request: Request) {
+  const school = await getSchoolContext()
+  if (!school.ok) return school.response
   const body = await request.json()
   if (!body.id) return NextResponse.json({ error: 'id é obrigatório' }, { status: 400 })
   const error = validate(body)
   if (error) return NextResponse.json({ error }, { status: 400 })
 
   try {
-    await updatePackageType(body.id, SCHOOL_ID, {
+    await updatePackageType(body.id, school.ctx.schoolId, {
       name:          body.name.trim(),
       sport:         body.sport?.trim() || null,
       total_minutes: Number(body.total_minutes),
@@ -55,12 +58,14 @@ export async function PATCH(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  const school = await getSchoolContext()
+  if (!school.ok) return school.response
   const { searchParams } = new URL(request.url)
   const id = searchParams.get('id')
   if (!id) return NextResponse.json({ error: 'id é obrigatório' }, { status: 400 })
 
   try {
-    await deactivatePackageType(id, SCHOOL_ID)
+    await deactivatePackageType(id, school.ctx.schoolId)
     return NextResponse.json({ ok: true })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'

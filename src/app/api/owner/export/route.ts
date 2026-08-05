@@ -1,9 +1,10 @@
 ﻿import { createServiceClient } from '@/lib/supabase-server'
 import { decrypt } from '@/utils/crypto'
-
-const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
+import { getSchoolContext } from '@/lib/auth/get-school-context'
 
 export async function GET(request: Request) {
+  const school = await getSchoolContext()
+  if (!school.ok) return school.response
   const { searchParams } = new URL(request.url)
   const period = searchParams.get('period') ?? new Date().toISOString().slice(0, 7)
   const format = searchParams.get('format') ?? 'pix'
@@ -16,7 +17,7 @@ export async function GET(request: Request) {
       total_to_pay,
       users!payments_instructor_id_fkey ( name, pix_key, wise_email )
     `)
-    .eq('school_id', SCHOOL_ID)
+    .eq('school_id', school.ctx.schoolId)
     .eq('period', period)
     .eq('status', 'approved')
 
@@ -50,7 +51,7 @@ export async function GET(request: Request) {
         commission_amount, session_price,
         partners ( name, pix_key, wise_email, finance_email )
       `)
-      .eq('school_id', SCHOOL_ID)
+      .eq('school_id', school.ctx.schoolId)
       .eq('period', period)
       .eq('status', 'approved')
 

@@ -1,8 +1,7 @@
+import { getSchoolContext } from '@/lib/auth/get-school-context'
 import { createServiceClient } from '@/lib/supabase-server'
 import { NextResponse } from 'next/server'
 import type { Stage } from '@/lib/stage'
-
-const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
 
 // 'checkout' is deliberately not settable here — it's local UI state (the
 // checkout modal being open for a given row, see ChameleonButton's caller
@@ -42,6 +41,8 @@ const EDITABLE_TEXT_FIELDS = [
 ] as const
 
 export async function PATCH(request: Request) {
+  const school = await getSchoolContext()
+  if (!school.ok) return school.response
   const body = await request.json()
   const { id, stage, checked_in, equipment_notes, weight_kg, deferred_to_schedule, scheduled_lesson_id } = body
 
@@ -101,7 +102,7 @@ export async function PATCH(request: Request) {
     .from('checkins')
     .update(update)
     .eq('id', id)
-    .eq('school_id', SCHOOL_ID)
+    .eq('school_id', school.ctx.schoolId)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
@@ -114,6 +115,8 @@ export async function PATCH(request: Request) {
  *  fixed to match this). Confirmation happens client-side before this is
  *  ever called — no server-side "are you sure", this is a direct delete. */
 export async function DELETE(request: Request) {
+  const school = await getSchoolContext()
+  if (!school.ok) return school.response
   const { searchParams } = new URL(request.url)
   const id = searchParams.get('id')
 
@@ -126,7 +129,7 @@ export async function DELETE(request: Request) {
     .from('checkins')
     .delete()
     .eq('id', id)
-    .eq('school_id', SCHOOL_ID)
+    .eq('school_id', school.ctx.schoolId)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })

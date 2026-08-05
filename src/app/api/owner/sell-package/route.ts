@@ -1,10 +1,12 @@
 import { createServiceClient } from '@/lib/supabase-server'
 import { ensureActiveCheckinForToday } from '@/repositories/scheduledLessonRepository'
 import { NextResponse } from 'next/server'
-
-const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
+import { getSchoolContext } from '@/lib/auth/get-school-context'
 
 export async function POST(request: Request) {
+  const school = await getSchoolContext()
+  if (!school.ok) return school.response
+
   const { package_id, student_name, payment_method } = await request.json()
 
   if (!package_id || !student_name?.trim()) {
@@ -17,7 +19,7 @@ export async function POST(request: Request) {
     .from('packages')
     .select('id, total_minutes, base_price, final_price, sport')
     .eq('id', package_id)
-    .eq('school_id', SCHOOL_ID)
+    .eq('school_id', school.ctx.schoolId)
     .single()
 
   if (pkgError || !pkg) {
@@ -28,7 +30,7 @@ export async function POST(request: Request) {
   const { data: existingStudent } = await supabase
     .from('students')
     .select('id')
-    .eq('school_id', SCHOOL_ID)
+    .eq('school_id', school.ctx.schoolId)
     .ilike('name', student_name.trim())
     .limit(1)
     .maybeSingle()
@@ -36,7 +38,7 @@ export async function POST(request: Request) {
   if (!existingStudent) {
     await supabase
       .from('students')
-      .insert({ school_id: SCHOOL_ID, name: student_name.trim() })
+      .insert({ school_id: school.ctx.schoolId, name: student_name.trim() })
   }
 
   // package_sales has no dedicated payment_method column (only sessions
@@ -51,7 +53,7 @@ export async function POST(request: Request) {
   const { data: sale, error: saleError } = await supabase
     .from('package_sales')
     .insert({
-      school_id:         SCHOOL_ID,
+      school_id:         school.ctx.schoolId,
       package_id:        pkg.id,
       student_name:      student_name.trim(),
       minutes_purchased: pkg.total_minutes ?? 60,
@@ -80,7 +82,7 @@ export async function POST(request: Request) {
   // Aguardando Vento alongside the now-scheduled lesson.
   let checkinId: string | null = null
   try {
-    checkinId = await ensureActiveCheckinForToday(SCHOOL_ID, student_name.trim(), { sport: pkg.sport })
+    checkinId = await ensureActiveCheckinForToday(school.ctx.schoolId, student_name.trim(), { sport: pkg.sport })
   } catch (err) {
     // Still never blocks the sale response (package_sales already
     // committed above is the real source of truth for the transaction) —

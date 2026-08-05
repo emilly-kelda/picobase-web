@@ -1,8 +1,7 @@
 import { createServiceClient } from '@/lib/supabase-server'
 import { checkSchedulingConflicts, checkPackageCapacity, formatInsufficientCreditError } from '@/repositories/scheduledLessonRepository'
 import { NextResponse } from 'next/server'
-
-const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
+import { getSchoolContext } from '@/lib/auth/get-school-context'
 
 /** Backs Aguardando Vento's "Agendar Aula" — a checkin with no scheduled
  *  lesson yet (a walk-in with nothing pre-arranged) gets slotted into a
@@ -13,6 +12,9 @@ const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
  *  simple scheduled_lesson_id check isn't enough to distinguish this from
  *  a checkin that arrived for an already-existing booking). */
 export async function POST(request: Request) {
+  const school = await getSchoolContext()
+  if (!school.ok) return school.response
+
   const body = await request.json()
   const { checkin_id, activity_id, instructor_id, scheduled_at, duration_min, level, notes } = body
 
@@ -26,7 +28,7 @@ export async function POST(request: Request) {
     .from('checkins')
     .select('student_name, package_sale_id, scheduled_lesson_id')
     .eq('id', checkin_id)
-    .eq('school_id', SCHOOL_ID)
+    .eq('school_id', school.ctx.schoolId)
     .single()
 
   if (checkinError || !checkin) {
@@ -36,7 +38,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Este check-in já está vinculado a uma aula agendada' }, { status: 400 })
   }
 
-  const { instructorConflict, studentConflict } = await checkSchedulingConflicts(SCHOOL_ID, {
+  const { instructorConflict, studentConflict } = await checkSchedulingConflicts(school.ctx.schoolId, {
     instructorId: instructor_id || null,
     studentName:  checkin.student_name,
     scheduledAt:  scheduled_at,
@@ -56,7 +58,7 @@ export async function POST(request: Request) {
   }
 
   if (checkin.package_sale_id) {
-    const capacity = await checkPackageCapacity(SCHOOL_ID, {
+    const capacity = await checkPackageCapacity(school.ctx.schoolId, {
       studentName:   checkin.student_name,
       packageSaleId: checkin.package_sale_id,
       durationMin:   duration_min || 60,
@@ -72,7 +74,7 @@ export async function POST(request: Request) {
   const { data: lesson, error: lessonError } = await supabase
     .from('scheduled_lessons')
     .insert({
-      school_id:       SCHOOL_ID,
+      school_id:       school.ctx.schoolId,
       student_name:    checkin.student_name,
       activity_id:     activity_id || null,
       instructor_id:   instructor_id || null,

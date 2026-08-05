@@ -1,7 +1,6 @@
 import { getScheduledLessons } from '@/repositories/scheduledLessonRepository'
 import { NextResponse } from 'next/server'
-
-const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
+import { getSchoolContext } from '@/lib/auth/get-school-context'
 
 // Aulas Agendadas' 5-day tab strip only gets today/tomorrow pre-fetched
 // server-side (owner/page.tsx's existing getScheduledLessons calls) — the
@@ -10,11 +9,14 @@ const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
 // date, reusing the exact same repository function and Lesson shape so
 // the client can render them with zero special-casing.
 export async function GET(request: Request) {
+  const school = await getSchoolContext()
+  if (!school.ok) return school.response
+
   const { searchParams } = new URL(request.url)
   const date = searchParams.get('date')
   if (!date) {
     return NextResponse.json({ error: 'Missing date' }, { status: 400 })
   }
-  const lessons = await getScheduledLessons(SCHOOL_ID, date)
+  const lessons = await getScheduledLessons(school.ctx.schoolId, date)
   return NextResponse.json({ lessons })
 }

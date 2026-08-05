@@ -1,9 +1,10 @@
 import { createServiceClient } from '@/lib/supabase-server'
 import { NextResponse } from 'next/server'
-
-const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
+import { getSchoolContext } from '@/lib/auth/get-school-context'
 
 export async function PATCH(request: Request) {
+  const school = await getSchoolContext()
+  if (!school.ok) return school.response
   const { id, type, price_brl, price_eur, price_usd } = await request.json()
 
   if (!id) {
@@ -29,7 +30,7 @@ export async function PATCH(request: Request) {
     .from(table)
     .update(updateData)
     .eq('id', id)
-    .eq('school_id', SCHOOL_ID)
+    .eq('school_id', school.ctx.schoolId)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })

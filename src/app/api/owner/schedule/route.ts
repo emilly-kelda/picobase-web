@@ -2,8 +2,7 @@ import { createServiceClient } from '@/lib/supabase-server'
 import { checkSchedulingConflicts, checkSameDayLesson, checkPackageCapacity, ensureActiveCheckinForToday, formatInsufficientCreditError } from '@/repositories/scheduledLessonRepository'
 import { getDefaultLevelForStudent } from '@/repositories/sessionRepository'
 import { NextResponse } from 'next/server'
-
-const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
+import { getSchoolContext } from '@/lib/auth/get-school-context'
 
 const STUDENT_CLASH_ERROR = 'Não é possível agendar: este aluno já possui uma aula marcada para este mesmo horário.'
 const INSTRUCTOR_CLASH_ERROR = 'O instrutor selecionado já possui uma aula agendada para este horário.'
@@ -20,6 +19,9 @@ const EXPERIMENTAL_INELIGIBLE_ERROR = 'Este aluno já possui aula confirmada nes
 // WhatsApp reminder with wind/sea conditions. No such job exists yet.
 
 export async function POST(request: Request) {
+  const school = await getSchoolContext()
+  if (!school.ok) return school.response
+
   const body = await request.json()
   const supabase = createServiceClient()
 
@@ -40,7 +42,7 @@ export async function POST(request: Request) {
     // group slot while already sitting in an unrelated lesson elsewhere.
     const studentConflicts = await Promise.all(
       validStudents.map(async (name: string) => {
-        const { studentConflict } = await checkSchedulingConflicts(SCHOOL_ID, {
+        const { studentConflict } = await checkSchedulingConflicts(school.ctx.schoolId, {
           instructorId: null,
           studentName:  name,
           scheduledAt:  body.scheduled_at,
@@ -59,7 +61,7 @@ export async function POST(request: Request) {
 
     const sameDayConflicts = await Promise.all(
       validStudents.map(async (name: string) => {
-        const conflict = await checkSameDayLesson(SCHOOL_ID, { studentName: name, scheduledAt: body.scheduled_at })
+        const conflict = await checkSameDayLesson(school.ctx.schoolId, { studentName: name, scheduledAt: body.scheduled_at })
         return conflict ? name : null
       })
     )
@@ -72,7 +74,7 @@ export async function POST(request: Request) {
     // eligibility has to hold for every student in it, not just one.
     if (body.level === 'experimental' && body.activity_id) {
       const eligibility = await Promise.all(
-        validStudents.map(name => getDefaultLevelForStudent(SCHOOL_ID, name, body.activity_id))
+        validStudents.map(name => getDefaultLevelForStudent(school.ctx.schoolId, name, body.activity_id))
       )
       if (eligibility.some(e => e.experimentalDisabled)) {
         return NextResponse.json({ error: EXPERIMENTAL_INELIGIBLE_ERROR }, { status: 409 })
@@ -82,7 +84,7 @@ export async function POST(request: Request) {
     const { data: group, error: groupError } = await supabase
       .from('lesson_groups')
       .insert({
-        school_id:    SCHOOL_ID,
+        school_id:    school.ctx.schoolId,
         activity_id:  body.activity_id ?? null,
         scheduled_at: body.scheduled_at,
         duration_min: body.duration_min ?? 60,
@@ -101,7 +103,7 @@ export async function POST(request: Request) {
     // Instructors are assigned per student at confirm time, not here — every
     // row in a freshly-scheduled group starts with instructor_id: null.
     const rows = validStudents.map((name: string) => ({
-      school_id:       SCHOOL_ID,
+      school_id:       school.ctx.schoolId,
       student_name:    name,
       activity_id:     body.activity_id ?? null,
       instructor_id:   null,
@@ -133,7 +135,7 @@ export async function POST(request: Request) {
   // not-yet-deleted original as still "using" that time/capacity.
   const rescheduleFromId: string | undefined = body.reschedule_from_id || undefined
 
-  const { instructorConflict, studentConflict } = await checkSchedulingConflicts(SCHOOL_ID, {
+  const { instructorConflict, studentConflict } = await checkSchedulingConflicts(school.ctx.schoolId, {
     instructorId:    body.instructor_id || null,
     studentName:     body.student_name,
     scheduledAt:     body.scheduled_at,
@@ -147,7 +149,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: INSTRUCTOR_CLASH_ERROR }, { status: 409 })
   }
 
-  const hasSameDayLesson = await checkSameDayLesson(SCHOOL_ID, {
+  const hasSameDayLesson = await checkSameDayLesson(school.ctx.schoolId, {
     studentName:     body.student_name,
     scheduledAt:     body.scheduled_at,
     excludeLessonId: rescheduleFromId,
@@ -157,14 +159,14 @@ export async function POST(request: Request) {
   }
 
   if (body.level === 'experimental' && body.activity_id) {
-    const { experimentalDisabled } = await getDefaultLevelForStudent(SCHOOL_ID, body.student_name, body.activity_id)
+    const { experimentalDisabled } = await getDefaultLevelForStudent(school.ctx.schoolId, body.student_name, body.activity_id)
     if (experimentalDisabled) {
       return NextResponse.json({ error: EXPERIMENTAL_INELIGIBLE_ERROR }, { status: 409 })
     }
   }
 
   if (body.package_sale_id) {
-    const capacity = await checkPackageCapacity(SCHOOL_ID, {
+    const capacity = await checkPackageCapacity(school.ctx.schoolId, {
       studentName:     body.student_name,
       packageSaleId:   body.package_sale_id,
       durationMin:     body.duration_min || 60,
@@ -178,7 +180,7 @@ export async function POST(request: Request) {
   const { error, data } = await supabase
     .from('scheduled_lessons')
     .insert({
-      school_id:    SCHOOL_ID,
+      school_id:    school.ctx.schoolId,
       student_name: body.student_name,
       activity_id:  body.activity_id || null,
       instructor_id:body.instructor_id || null,
@@ -205,7 +207,7 @@ export async function POST(request: Request) {
   const today = new Date().toISOString().slice(0, 10)
   if (typeof body.scheduled_at === 'string' && body.scheduled_at.slice(0, 10) === today) {
     try {
-      await ensureActiveCheckinForToday(SCHOOL_ID, body.student_name, { activityId: body.activity_id })
+      await ensureActiveCheckinForToday(school.ctx.schoolId, body.student_name, { activityId: body.activity_id })
     } catch (err) {
       console.error('ensureActiveCheckinForToday failed for', body.student_name, err)
     }
@@ -215,6 +217,9 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  const school = await getSchoolContext()
+  if (!school.ok) return school.response
+
   const { searchParams } = new URL(request.url)
   const id = searchParams.get('id')
   if (!id) return NextResponse.json({ error: 'id é obrigatório' }, { status: 400 })
@@ -238,7 +243,7 @@ export async function DELETE(request: Request) {
     .from('scheduled_lessons')
     .select('scheduled_at, duration_min, package_sale_id, notes')
     .eq('id', id)
-    .eq('school_id', SCHOOL_ID)
+    .eq('school_id', school.ctx.schoolId)
     .maybeSingle()
 
   let creditForfeited = false
@@ -248,13 +253,13 @@ export async function DELETE(request: Request) {
     // notify_late_cancellation's own description copy) if the column isn't
     // there yet or the fetch fails for any reason, rather than erroring out
     // of a cancellation over a missing setting.
-    const { data: school } = await supabase
+    const { data: schoolRow } = await supabase
       .from('schools')
       .select('cancellation_window_hours')
-      .eq('id', SCHOOL_ID)
+      .eq('id', school.ctx.schoolId)
       .maybeSingle()
 
-    const windowHours = school?.cancellation_window_hours ?? 24
+    const windowHours = schoolRow?.cancellation_window_hours ?? 24
     const hoursUntilStart = (new Date(lesson.scheduled_at).getTime() - Date.now()) / 3600000
     const withinWindow = hoursUntilStart <= windowHours
     creditForfeited = withinWindow && !!lesson.package_sale_id
@@ -283,7 +288,7 @@ export async function DELETE(request: Request) {
       } : {}),
     })
     .eq('id', id)
-    .eq('school_id', SCHOOL_ID)
+    .eq('school_id', school.ctx.schoolId)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
@@ -297,6 +302,9 @@ export async function DELETE(request: Request) {
 }
 
 export async function PATCH(request: Request) {
+  const school = await getSchoolContext()
+  if (!school.ok) return school.response
+
   const body = await request.json()
   const { id, ...updates } = body
   const supabase = createServiceClient()
@@ -309,10 +317,10 @@ export async function PATCH(request: Request) {
       .from('scheduled_lessons')
       .select('group_id, package_sale_id, student_name')
       .eq('id', id)
-      .eq('school_id', SCHOOL_ID)
+      .eq('school_id', school.ctx.schoolId)
       .single()
 
-    const { instructorConflict, studentConflict } = await checkSchedulingConflicts(SCHOOL_ID, {
+    const { instructorConflict, studentConflict } = await checkSchedulingConflicts(school.ctx.schoolId, {
       instructorId:    updates.instructor_id ?? null,
       studentName:     updates.student_name ?? '',
       scheduledAt:     updates.scheduled_at,
@@ -328,7 +336,7 @@ export async function PATCH(request: Request) {
     }
 
     if (current?.package_sale_id) {
-      const capacity = await checkPackageCapacity(SCHOOL_ID, {
+      const capacity = await checkPackageCapacity(school.ctx.schoolId, {
         studentName:     updates.student_name ?? current.student_name ?? '',
         packageSaleId:   current.package_sale_id,
         durationMin:     updates.duration_min,
@@ -344,7 +352,7 @@ export async function PATCH(request: Request) {
     .from('scheduled_lessons')
     .update(updates)
     .eq('id', id)
-    .eq('school_id', SCHOOL_ID)
+    .eq('school_id', school.ctx.schoolId)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })

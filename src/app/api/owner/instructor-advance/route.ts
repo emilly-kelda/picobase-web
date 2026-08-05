@@ -1,9 +1,10 @@
 import { createServiceClient } from '@/lib/supabase-server'
 import { NextResponse } from 'next/server'
-
-const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
+import { getSchoolContext } from '@/lib/auth/get-school-context'
 
 export async function POST(request: Request) {
+  const school = await getSchoolContext()
+  if (!school.ok) return school.response
   const { instructor_id, amount, period, note } = await request.json()
 
   if (!instructor_id || !period || !(amount > 0)) {
@@ -15,7 +16,7 @@ export async function POST(request: Request) {
   const { error } = await supabase
     .from('instructor_advances')
     .insert({
-      school_id: SCHOOL_ID,
+      school_id: school.ctx.schoolId,
       instructor_id,
       amount,
       period,
@@ -41,7 +42,7 @@ export async function POST(request: Request) {
       .single()
 
     await supabase.from('operational_costs').insert({
-      school_id:   SCHOOL_ID,
+      school_id:   school.ctx.schoolId,
       description: `Adiantamento - ${instructor?.name ?? 'Instrutor'}`,
       amount,
       cost_type:   'variavel',
@@ -55,6 +56,8 @@ export async function POST(request: Request) {
 }
 
 export async function GET(request: Request) {
+  const school = await getSchoolContext()
+  if (!school.ok) return school.response
   const { searchParams } = new URL(request.url)
   const instructorId = searchParams.get('instructor_id')
   const period = searchParams.get('period')
@@ -68,7 +71,7 @@ export async function GET(request: Request) {
   const { data, error } = await supabase
     .from('instructor_advances')
     .select('id, amount, note, created_at')
-    .eq('school_id', SCHOOL_ID)
+    .eq('school_id', school.ctx.schoolId)
     .eq('instructor_id', instructorId)
     .eq('period', period)
     .order('created_at', { ascending: false })

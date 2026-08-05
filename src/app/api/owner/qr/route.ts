@@ -1,10 +1,11 @@
 import QRCode from 'qrcode'
 import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase-server'
-
-const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
+import { getSchoolContext } from '@/lib/auth/get-school-context'
 
 export async function GET(request: Request) {
+  const school = await getSchoolContext()
+  if (!school.ok) return school.response
   const { searchParams } = new URL(request.url)
   const format = searchParams.get('format') ?? 'png'
   // Optional per-student targeting (Aguardando Vento's individual QR button):
@@ -28,13 +29,13 @@ export async function GET(request: Request) {
     url = `${baseUrl}/aula/${token}`
   } else {
     const supabase = createServiceClient()
-    const { data: school } = await supabase
+    const { data: schoolRow } = await supabase
       .from('schools')
       .select('slug')
-      .eq('id', SCHOOL_ID)
+      .eq('id', school.ctx.schoolId)
       .single()
 
-    slug = school?.slug ?? 'escola'
+    slug = schoolRow?.slug ?? 'escola'
     const targetParams = new URLSearchParams()
     if (student) targetParams.set('student', student)
     if (activity) targetParams.set('activity', activity)

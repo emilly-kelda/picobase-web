@@ -1,9 +1,10 @@
 import { createServiceClient } from '@/lib/supabase-server'
 import { NextResponse } from 'next/server'
-
-const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
+import { getSchoolContext } from '@/lib/auth/get-school-context'
 
 export async function GET(request: Request) {
+  const school = await getSchoolContext()
+  if (!school.ok) return school.response
   const { searchParams } = new URL(request.url)
   const period = searchParams.get('period') // YYYY-MM
 
@@ -12,7 +13,7 @@ export async function GET(request: Request) {
   let query = supabase
     .from('sessions')
     .select('payment_method, price')
-    .eq('school_id', SCHOOL_ID)
+    .eq('school_id', school.ctx.schoolId)
 
   if (period) {
     const [y, m] = period.split('-').map(Number)

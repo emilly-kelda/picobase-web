@@ -1,3 +1,4 @@
+import { getSchoolContext } from '@/lib/auth/get-school-context'
 import { createServiceClient } from '@/lib/supabase-server'
 import {
   getStudentById,
@@ -11,25 +12,26 @@ import { renderToBuffer } from '@react-pdf/renderer'
 import { CertificatePDF } from '@/lib/certificate-pdf'
 import React from 'react'
 
-const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
 const MIN_MINUTES_FOR_HOURS_DOC = 60
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ studentId: string; sport: string }> }
 ) {
+  const school = await getSchoolContext()
+  if (!school.ok) return school.response
   const { studentId, sport } = await params
   const { searchParams } = new URL(request.url)
   const docType: 'hours' | 'proficiency' = searchParams.get('type') === 'proficiency' ? 'proficiency' : 'hours'
 
   let student
   try {
-    student = await getStudentById(SCHOOL_ID, studentId)
+    student = await getStudentById(school.ctx.schoolId, studentId)
   } catch {
     return jsonError('Aluno não encontrado', 404)
   }
 
-  const sessions = await getSessionsByStudent(SCHOOL_ID, student.name)
+  const sessions = await getSessionsByStudent(school.ctx.schoolId, student.name)
   const groups = groupSessionsBySport(sessions as any)
   const sportKey = normalizeSportKey(sport) ?? sport
   const group = groups.get(sportKey)
@@ -43,7 +45,7 @@ export async function GET(
 
   let level: string | null = null
   if (docType === 'proficiency') {
-    const progressionBySport = await getLatestProgressionBySport(SCHOOL_ID, studentId)
+    const progressionBySport = await getLatestProgressionBySport(school.ctx.schoolId, studentId)
     level = progressionBySport.get(sportKey)?.level ?? null
     if (!isProficientLevel(level)) {
       return jsonError('Nível de proficiência ainda não atingido nessa modalidade', 404)
@@ -51,10 +53,10 @@ export async function GET(
   }
 
   const supabase = createServiceClient()
-  const [{ data: school }, { data: owner }, template] = await Promise.all([
-    supabase.from('schools').select('name, logo_url').eq('id', SCHOOL_ID).single(),
-    supabase.from('users').select('name').eq('school_id', SCHOOL_ID).eq('role', 'owner').limit(1).maybeSingle(),
-    resolveCertificateTemplate(SCHOOL_ID, sportKey),
+  const [{ data: schoolRow }, { data: owner }, template] = await Promise.all([
+    supabase.from('schools').select('name, logo_url').eq('id', school.ctx.schoolId).single(),
+    supabase.from('users').select('name').eq('school_id', school.ctx.schoolId).eq('role', 'owner').limit(1).maybeSingle(),
+    resolveCertificateTemplate(school.ctx.schoolId, sportKey),
   ])
 
   const data = {
@@ -65,10 +67,10 @@ export async function GET(
     hoursTotal: Math.round((group.minutes / 60) * 10) / 10,
     completedAt: group.lastDate,
     instructorName: group.lastInstructorName,
-    schoolName: school?.name ?? 'Escola',
+    schoolName: schoolRow?.name ?? 'Escola',
     ownerName: owner?.name ?? 'Diretor',
     certificateId: `PB-${studentId.slice(0, 8).toUpperCase()}-${sportKey.slice(0, 3).toUpperCase()}`,
-    schoolLogoUrl: school?.logo_url ?? null,
+    schoolLogoUrl: schoolRow?.logo_url ?? null,
     themeKey: template.theme_key,
     backgroundImageUrl: template.background_image_url,
     signatureType: template.signature_type,

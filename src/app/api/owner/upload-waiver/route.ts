@@ -1,7 +1,7 @@
 import { createServiceClient } from '@/lib/supabase-server'
 import { NextResponse } from 'next/server'
+import { getSchoolContext } from '@/lib/auth/get-school-context'
 
-const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
 const MAX_SIZE = 10 * 1024 * 1024 // 10MB — legal documents can run longer than a logo image
 const ALLOWED_TYPES: Record<string, string> = {
   'application/pdf': 'pdf',
@@ -10,6 +10,9 @@ const ALLOWED_TYPES: Record<string, string> = {
 }
 
 export async function POST(request: Request) {
+  const school = await getSchoolContext()
+  if (!school.ok) return school.response
+
   const formData = await request.formData()
   const file = formData.get('file')
 
@@ -25,7 +28,7 @@ export async function POST(request: Request) {
   }
 
   const supabase = createServiceClient()
-  const path = `${SCHOOL_ID}/${crypto.randomUUID()}.${ext}`
+  const path = `${school.ctx.schoolId}/${crypto.randomUUID()}.${ext}`
 
   const { error } = await supabase.storage
     .from('school-waivers')

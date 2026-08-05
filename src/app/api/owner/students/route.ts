@@ -2,8 +2,7 @@ import { createServiceClient } from '@/lib/supabase-server'
 import { getStudents } from '@/repositories/studentRepository'
 import { encrypt } from '@/utils/crypto'
 import { NextResponse } from 'next/server'
-
-const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
+import { getSchoolContext } from '@/lib/auth/get-school-context'
 
 /** Backs AddBookingModal.tsx's customer search — reception looks up a
  *  student who already filled the public check-in/waiver form (that flow
@@ -12,11 +11,14 @@ const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
  *  capped for a live-typing dropdown rather than the full paginated
  *  students list. */
 export async function GET(request: Request) {
+  const school = await getSchoolContext()
+  if (!school.ok) return school.response
+
   const { searchParams } = new URL(request.url)
   const q = searchParams.get('q')?.trim()
   if (!q || q.length < 2) return NextResponse.json({ students: [] })
 
-  const students = await getStudents(SCHOOL_ID, q)
+  const students = await getStudents(school.ctx.schoolId, q)
   return NextResponse.json({
     students: students.slice(0, 8).map(s => ({
       id: s.id, name: s.name, whatsapp: s.whatsapp,
@@ -26,13 +28,16 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const school = await getSchoolContext()
+  if (!school.ok) return school.response
+
   const { name, nationality, whatsapp } = await request.json()
   const supabase = createServiceClient()
 
   const { data, error } = await supabase
     .from('students')
     .insert({
-      school_id:   SCHOOL_ID,
+      school_id:   school.ctx.schoolId,
       name:        name.trim(),
       nationality: nationality ?? null,
       whatsapp:    whatsapp ?? null,
@@ -53,6 +58,9 @@ export async function POST(request: Request) {
  *  fixing anything. health_conditions stays encrypted at rest, same as
  *  getStudentById() decrypts on read. */
 export async function PATCH(request: Request) {
+  const school = await getSchoolContext()
+  if (!school.ok) return school.response
+
   const body = await request.json()
   const { id, ...fields } = body
   if (!id) return NextResponse.json({ error: 'id é obrigatório' }, { status: 400 })
@@ -73,7 +81,7 @@ export async function PATCH(request: Request) {
     .from('students')
     .update(update)
     .eq('id', id)
-    .eq('school_id', SCHOOL_ID)
+    .eq('school_id', school.ctx.schoolId)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })

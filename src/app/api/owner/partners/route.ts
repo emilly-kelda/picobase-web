@@ -1,7 +1,6 @@
 import { getPartners, createPartner, updatePartner, deactivatePartner, reactivatePartner } from '@/repositories/partnerRepository'
 import { NextResponse } from 'next/server'
-
-const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
+import { getSchoolContext } from '@/lib/auth/get-school-context'
 
 function validate(body: any) {
   if (!body.name?.trim()) return 'Nome é obrigatório'
@@ -11,8 +10,10 @@ function validate(body: any) {
 }
 
 export async function GET() {
+  const school = await getSchoolContext()
+  if (!school.ok) return school.response
   try {
-    const partners = await getPartners(SCHOOL_ID)
+    const partners = await getPartners(school.ctx.schoolId)
     return NextResponse.json({ ok: true, partners })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
@@ -21,13 +22,15 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const school = await getSchoolContext()
+  if (!school.ok) return school.response
   const body = await request.json()
   const error = validate(body)
   if (error) return NextResponse.json({ error }, { status: 400 })
 
   try {
     await createPartner({
-      schoolId:      SCHOOL_ID,
+      schoolId:      school.ctx.schoolId,
       name:          body.name.trim(),
       type:          body.type?.trim() || null,
       commissionPct: Number(body.commissionPct),
@@ -44,6 +47,8 @@ export async function POST(request: Request) {
 }
 
 export async function PATCH(request: Request) {
+  const school = await getSchoolContext()
+  if (!school.ok) return school.response
   const body = await request.json()
   if (!body.id) return NextResponse.json({ error: 'id é obrigatório' }, { status: 400 })
 
@@ -52,7 +57,7 @@ export async function PATCH(request: Request) {
   // payload, not this narrower action.
   if (body.action === 'reactivate') {
     try {
-      await reactivatePartner(body.id, SCHOOL_ID)
+      await reactivatePartner(body.id, school.ctx.schoolId)
       return NextResponse.json({ ok: true })
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown error'
@@ -64,7 +69,7 @@ export async function PATCH(request: Request) {
   if (error) return NextResponse.json({ error }, { status: 400 })
 
   try {
-    await updatePartner(body.id, SCHOOL_ID, {
+    await updatePartner(body.id, school.ctx.schoolId, {
       name:          body.name.trim(),
       type:          body.type?.trim() || null,
       commissionPct: Number(body.commissionPct),
@@ -80,12 +85,14 @@ export async function PATCH(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  const school = await getSchoolContext()
+  if (!school.ok) return school.response
   const { searchParams } = new URL(request.url)
   const id = searchParams.get('id')
   if (!id) return NextResponse.json({ error: 'id é obrigatório' }, { status: 400 })
 
   try {
-    await deactivatePartner(id, SCHOOL_ID)
+    await deactivatePartner(id, school.ctx.schoolId)
     return NextResponse.json({ ok: true })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'

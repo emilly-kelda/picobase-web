@@ -1,7 +1,6 @@
 import { getCosts, createCost, updateCost, deleteCost, markCostPaid, type CostFilters, type CostStatus } from '@/repositories/costRepository'
+import { getSchoolContext } from '@/lib/auth/get-school-context'
 import { NextResponse } from 'next/server'
-
-const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
 
 const COST_TYPES  = ['fixo', 'variavel']
 const RECURRENCES = ['mensal', 'anual', 'unico']
@@ -26,11 +25,13 @@ function filtersFromParams(searchParams: URLSearchParams): CostFilters {
 }
 
 export async function GET(request: Request) {
+  const school = await getSchoolContext()
+  if (!school.ok) return school.response
   const { searchParams } = new URL(request.url)
   const page = Number(searchParams.get('page') ?? '0')
 
   try {
-    const result = await getCosts(SCHOOL_ID, page, filtersFromParams(searchParams))
+    const result = await getCosts(school.ctx.schoolId, page, filtersFromParams(searchParams))
     return NextResponse.json({ ok: true, ...result })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
@@ -39,13 +40,15 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const school = await getSchoolContext()
+  if (!school.ok) return school.response
   const body = await request.json()
   const error = validate(body)
   if (error) return NextResponse.json({ error }, { status: 400 })
 
   try {
     await createCost({
-      schoolId:    SCHOOL_ID,
+      schoolId:    school.ctx.schoolId,
       description: body.description.trim(),
       amount:      Number(body.amount),
       costType:    body.costType,
@@ -62,6 +65,8 @@ export async function POST(request: Request) {
 }
 
 export async function PATCH(request: Request) {
+  const school = await getSchoolContext()
+  if (!school.ok) return school.response
   const body = await request.json()
   if (!body.id) return NextResponse.json({ error: 'id é obrigatório' }, { status: 400 })
 
@@ -70,7 +75,7 @@ export async function PATCH(request: Request) {
   // etc.) just to flip paid_at.
   if (typeof body.markPaid === 'boolean' && body.description === undefined) {
     try {
-      await markCostPaid(body.id, SCHOOL_ID, body.markPaid)
+      await markCostPaid(body.id, school.ctx.schoolId, body.markPaid)
       return NextResponse.json({ ok: true })
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown error'
@@ -82,7 +87,7 @@ export async function PATCH(request: Request) {
   if (error) return NextResponse.json({ error }, { status: 400 })
 
   try {
-    await updateCost(body.id, SCHOOL_ID, {
+    await updateCost(body.id, school.ctx.schoolId, {
       description: body.description.trim(),
       amount:      Number(body.amount),
       costType:    body.costType,
@@ -98,12 +103,14 @@ export async function PATCH(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  const school = await getSchoolContext()
+  if (!school.ok) return school.response
   const { searchParams } = new URL(request.url)
   const id = searchParams.get('id')
   if (!id) return NextResponse.json({ error: 'id é obrigatório' }, { status: 400 })
 
   try {
-    await deleteCost(id, SCHOOL_ID)
+    await deleteCost(id, school.ctx.schoolId)
     return NextResponse.json({ ok: true })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'

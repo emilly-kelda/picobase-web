@@ -2,13 +2,14 @@ import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase-server'
 import { DELETE as scheduleDelete, PATCH as schedulePatch } from '@/app/api/owner/schedule/route'
 import { getLessonRequestById, resolveLessonRequest } from '@/repositories/lessonRequestRepository'
-
-const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
+import { getSchoolContext } from '@/lib/auth/get-school-context'
 
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const school = await getSchoolContext()
+  if (!school.ok) return school.response
   const { id } = await params
   const body = await request.json()
   const action = body.action
@@ -56,7 +57,7 @@ export async function PATCH(
     .from('scheduled_lessons')
     .select('instructor_id, student_name, duration_min')
     .eq('id', lessonRequest.scheduled_lesson_id)
-    .eq('school_id', SCHOOL_ID)
+    .eq('school_id', school.ctx.schoolId)
     .maybeSingle()
 
   if (!lesson) {

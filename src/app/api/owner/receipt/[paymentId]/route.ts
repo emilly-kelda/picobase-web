@@ -3,8 +3,7 @@ import { renderToBuffer } from '@react-pdf/renderer'
 import { ReceiptPDF } from '@/lib/receipt-pdf'
 import { NextResponse } from 'next/server'
 import React from 'react'
-
-const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
+import { getSchoolContext } from '@/lib/auth/get-school-context'
 
 function nextMonthFirstDay(period: string) {
   const [y, m] = period.split('-').map(Number)
@@ -25,6 +24,8 @@ export async function GET(
   request: Request,
   { params }: { params: Promise<{ paymentId: string }> }
 ) {
+  const school = await getSchoolContext()
+  if (!school.ok) return school.response
   const { paymentId } = await params
   const supabase = createServiceClient()
 
@@ -36,7 +37,7 @@ export async function GET(
       users!payments_instructor_id_fkey ( id, name, whatsapp )
     `)
     .eq('id', paymentId)
-    .eq('school_id', SCHOOL_ID)
+    .eq('school_id', school.ctx.schoolId)
     .single()
 
   if (error || !payment) {
@@ -45,7 +46,7 @@ export async function GET(
 
   const user = Array.isArray(payment.users) ? payment.users[0] : payment.users
 
-  const [{ data: sessions }, { data: advances }, { data: school }] = await Promise.all([
+  const [{ data: sessions }, { data: advances }, { data: schoolRow }] = await Promise.all([
     supabase
       .from('sessions')
       // Fallback source when checkins is null — group-confirmed lessons
@@ -57,7 +58,7 @@ export async function GET(
         scheduled_lessons ( student_name ),
         activities ( name )
       `)
-      .eq('school_id', SCHOOL_ID)
+      .eq('school_id', school.ctx.schoolId)
       .eq('instructor_id', payment.instructor_id)
       .gte('session_date', `${payment.period}-01`)
       .lt('session_date', nextMonthFirstDay(payment.period))
@@ -65,10 +66,10 @@ export async function GET(
     supabase
       .from('instructor_advances')
       .select('amount')
-      .eq('school_id', SCHOOL_ID)
+      .eq('school_id', school.ctx.schoolId)
       .eq('instructor_id', payment.instructor_id)
       .eq('period', payment.period),
-    supabase.from('schools').select('name').eq('id', SCHOOL_ID).single(),
+    supabase.from('schools').select('name').eq('id', school.ctx.schoolId).single(),
   ])
 
   const sessionList = (sessions ?? []).map(s => ({
@@ -83,7 +84,7 @@ export async function GET(
   const pdf = await renderToBuffer(
     React.createElement(ReceiptPDF, {
       instructor:    user?.name ?? '—',
-      school:        school?.name ?? '',
+      school:        schoolRow?.name ?? '',
       season:        payment.period,
       period:        payment.period,
       sessions:      sessionList,

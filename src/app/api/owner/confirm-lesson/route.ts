@@ -1,12 +1,13 @@
+import { getSchoolContext } from '@/lib/auth/get-school-context'
 import { createServiceClient } from '@/lib/supabase-server'
 import { computeCommissionAmount, getVariableCostForStudent } from '@/lib/commission'
 import { convertToBRL } from '@/lib/fx'
 import { checkSchedulingConflicts, checkPackageCapacity, formatInsufficientCreditError } from '@/repositories/scheduledLessonRepository'
 import { NextResponse } from 'next/server'
 
-const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
-
 export async function POST(request: Request) {
+  const school = await getSchoolContext()
+  if (!school.ok) return school.response
   const body = await request.json()
   const {
     checkin_id,
@@ -92,7 +93,7 @@ export async function POST(request: Request) {
 
   if (scheduledLesson) {
     const effectiveDuration = duration_min || scheduledLesson.duration_min || 60
-    const { instructorConflict, studentConflict } = await checkSchedulingConflicts(SCHOOL_ID, {
+    const { instructorConflict, studentConflict } = await checkSchedulingConflicts(school.ctx.schoolId, {
       instructorId:    instructor_id || null,
       studentName:     studentName ?? '',
       scheduledAt:     scheduledLesson.scheduled_at,
@@ -122,7 +123,7 @@ export async function POST(request: Request) {
         ? await supabase.from('activities').select('sport').eq('id', activity_id).maybeSingle()
         : { data: null }
 
-      const capacity = await checkPackageCapacity(SCHOOL_ID, {
+      const capacity = await checkPackageCapacity(school.ctx.schoolId, {
         studentName:     studentName ?? '',
         packageSaleId:   scheduledLesson.package_sale_id,
         durationMin:     effectiveDuration,
@@ -193,7 +194,7 @@ export async function POST(request: Request) {
   // commission base — the school still collects the full price, but the
   // instructor's cut is computed on what's left after that cost. The cost
   // itself is always a BRL figure, so it's subtracted after conversion.
-  const variableCost      = await getVariableCostForStudent(supabase, SCHOOL_ID, studentName)
+  const variableCost      = await getVariableCostForStudent(supabase, school.ctx.schoolId, studentName)
   const costDeduction     = variableCost.variableCostAmount
   const netRevenue        = Math.max(0, priceBRL - costDeduction)
 
@@ -211,7 +212,7 @@ export async function POST(request: Request) {
   const { data: newSession, error: sessionError } = await supabase
     .from('sessions')
     .insert({
-      school_id:        SCHOOL_ID,
+      school_id:        school.ctx.schoolId,
       checkin_id:       checkin_id ?? null,
       // For group-confirmed lessons (no checkin at all — see
       // linkedScheduledLessonId's own comment above) and any individual
@@ -298,7 +299,7 @@ export async function POST(request: Request) {
     const { data: packageSales } = await supabase
       .from('package_sales')
       .select('id, minutes_purchased, minutes_used')
-      .eq('school_id', SCHOOL_ID)
+      .eq('school_id', school.ctx.schoolId)
       .ilike('student_name', studentName)
       .order('sold_at', { ascending: true })
 
@@ -351,7 +352,7 @@ export async function POST(request: Request) {
       await supabase
         .from('referrals')
         .insert({
-          school_id:         SCHOOL_ID,
+          school_id:         school.ctx.schoolId,
           partner_id:        checkin.partner_id,
           session_price:     priceBRL,
           commission_pct:    partner.commission_pct,

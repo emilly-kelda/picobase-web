@@ -1,7 +1,6 @@
+import { getSchoolContext } from '@/lib/auth/get-school-context'
 import { createServiceClient } from '@/lib/supabase-server'
 import { NextResponse } from 'next/server'
-
-const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
 
 // Same allow-list/size pattern as upload-waiver and partners/upload-logo,
 // but per `kind` — a signature needs transparency (PNG-only, small), a
@@ -13,6 +12,8 @@ const KIND_RULES: Record<string, { types: string[]; maxSize: number; label: stri
 }
 
 export async function POST(request: Request) {
+  const school = await getSchoolContext()
+  if (!school.ok) return school.response
   const formData = await request.formData()
   const file = formData.get('file')
   const kind = formData.get('kind')
@@ -34,7 +35,7 @@ export async function POST(request: Request) {
 
   const supabase = createServiceClient()
   const ext = file.type === 'image/png' ? 'png' : file.type === 'image/webp' ? 'webp' : 'jpg'
-  const path = `${SCHOOL_ID}/${crypto.randomUUID()}.${ext}`
+  const path = `${school.ctx.schoolId}/${crypto.randomUUID()}.${ext}`
 
   const { error } = await supabase.storage
     .from('certificate-assets')

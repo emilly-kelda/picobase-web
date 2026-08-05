@@ -1,9 +1,11 @@
 import { getRescheduleSuggestion } from '@/repositories/scheduledLessonRepository'
 import { NextResponse } from 'next/server'
-
-const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
+import { getSchoolContext } from '@/lib/auth/get-school-context'
 
 export async function GET(request: Request) {
+  const school = await getSchoolContext()
+  if (!school.ok) return school.response
+
   const { searchParams } = new URL(request.url)
   const activityName = searchParams.get('activityName')
   const durationMin   = Number(searchParams.get('durationMin') ?? 60)
@@ -14,7 +16,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const suggestion = await getRescheduleSuggestion(SCHOOL_ID, activityName, durationMin, excludeId)
+    const suggestion = await getRescheduleSuggestion(school.ctx.schoolId, activityName, durationMin, excludeId)
     return NextResponse.json({ suggestion })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'

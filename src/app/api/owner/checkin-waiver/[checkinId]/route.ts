@@ -1,16 +1,17 @@
+import { getSchoolContext } from '@/lib/auth/get-school-context'
 import { getSignedWaiverData } from '@/repositories/checkinRepository'
 import { renderToBuffer } from '@react-pdf/renderer'
 import { SignedWaiverPDF } from '@/lib/waiver-signed-pdf'
 import React from 'react'
 
-const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
-
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ checkinId: string }> }
 ) {
+  const school = await getSchoolContext()
+  if (!school.ok) return school.response
   const { checkinId } = await params
-  const data = await getSignedWaiverData(SCHOOL_ID, checkinId)
+  const data = await getSignedWaiverData(school.ctx.schoolId, checkinId)
 
   if (!data) {
     return new Response(

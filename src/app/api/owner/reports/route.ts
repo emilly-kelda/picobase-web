@@ -1,17 +1,19 @@
 import { getReportData } from '@/repositories/reportRepository'
 import { getMonthlyCostTotal } from '@/repositories/costRepository'
 import { NextResponse } from 'next/server'
-
-const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
+import { getSchoolContext } from '@/lib/auth/get-school-context'
 
 export async function GET() {
+  const school = await getSchoolContext()
+  if (!school.ok) return school.response
+
   const [data, monthlyCostTotal] = await Promise.all([
-    getReportData(SCHOOL_ID),
+    getReportData(school.ctx.schoolId),
     // Same figure the Custos page's Reserva de Baixa Temporada card uses
     // for "Lucro após custos operacionais" — one informational stat here
     // mirrors it instead of leaving Reports with no operational-cost
     // context at all.
-    getMonthlyCostTotal(SCHOOL_ID),
+    getMonthlyCostTotal(school.ctx.schoolId),
   ])
   return NextResponse.json({ ...data, monthlyCostTotal })
 }

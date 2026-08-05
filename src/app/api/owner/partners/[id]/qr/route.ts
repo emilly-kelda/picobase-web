@@ -5,29 +5,30 @@
 import QRCode from 'qrcode'
 import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase-server'
-
-const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
+import { getSchoolContext } from '@/lib/auth/get-school-context'
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const school = await getSchoolContext()
+  if (!school.ok) return school.response
   const { id } = await params
   const { searchParams } = new URL(request.url)
   const format = searchParams.get('format') ?? 'png'
 
   const supabase = createServiceClient()
 
-  const [{ data: school }, { data: partner }] = await Promise.all([
-    supabase.from('schools').select('slug').eq('id', SCHOOL_ID).single(),
-    supabase.from('partners').select('referral_code').eq('id', id).eq('school_id', SCHOOL_ID).single(),
+  const [{ data: schoolRow }, { data: partner }] = await Promise.all([
+    supabase.from('schools').select('slug').eq('id', school.ctx.schoolId).single(),
+    supabase.from('partners').select('referral_code').eq('id', id).eq('school_id', school.ctx.schoolId).single(),
   ])
 
   if (!partner?.referral_code) {
     return NextResponse.json({ error: 'Parceiro não encontrado' }, { status: 404 })
   }
 
-  const slug = school?.slug ?? 'escola'
+  const slug = schoolRow?.slug ?? 'escola'
   const url  = `${process.env.NEXT_PUBLIC_BASE_URL ?? 'https://picobase.com.br'}/book/${slug}?ref=${partner.referral_code}`
 
   if (format === 'png') {

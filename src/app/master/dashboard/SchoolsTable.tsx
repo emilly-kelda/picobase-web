@@ -68,10 +68,32 @@ export default function SchoolsTable({
   const [managing, setManaging]   = useState<MasterSchoolRow | null>(null)
   const [resettingId, setResettingId] = useState<string | null>(null)
   const [togglingId, setTogglingId]   = useState<string | null>(null)
+  const [accessingId, setAccessingId] = useState<string | null>(null)
 
   function onSaved() {
     setEditing(null)
     router.refresh()
+  }
+
+  async function accessPanel(school: MasterSchoolRow) {
+    setAccessingId(school.id)
+    try {
+      const res = await fetch('/api/master/impersonate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ school_id: school.id }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        window.alert(data.error ?? 'Não foi possível acessar o painel desta escola.')
+        setAccessingId(null)
+        return
+      }
+      window.location.href = '/owner'
+    } catch {
+      window.alert('Erro de rede. Tente novamente.')
+      setAccessingId(null)
+    }
   }
 
   async function resetPassword(school: MasterSchoolRow) {
@@ -198,6 +220,13 @@ export default function SchoolsTable({
                   </td>
                   <td style={{ padding: '16px 24px' }}>
                     <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                      <button
+                        onClick={() => accessPanel(s)}
+                        disabled={accessingId === s.id}
+                        style={{ ...actionButtonStyle, opacity: accessingId === s.id ? 0.5 : 1 }}
+                      >
+                        {accessingId === s.id ? '...' : 'Acessar painel'}
+                      </button>
                       <button onClick={() => setEditing(s)} style={actionButtonStyle}>
                         Editar
                       </button>

@@ -1,10 +1,11 @@
 import { createServiceClient } from '@/lib/supabase-server'
 import { getPackageBalanceForStudent } from '@/repositories/packageRepository'
 import { NextResponse } from 'next/server'
-
-const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
+import { getSchoolContext } from '@/lib/auth/get-school-context'
 
 export async function GET(request: Request) {
+  const school = await getSchoolContext()
+  if (!school.ok) return school.response
   const { searchParams } = new URL(request.url)
   const studentName      = searchParams.get('student_name')
   const packageSaleId    = searchParams.get('package_sale_id')
@@ -32,7 +33,7 @@ export async function GET(request: Request) {
     sport = activityRow?.sport ?? null
   }
 
-  const result = await getPackageBalanceForStudent(SCHOOL_ID, studentName, {
+  const result = await getPackageBalanceForStudent(school.ctx.schoolId, studentName, {
     packageSaleId:   packageSaleId || null,
     excludeLessonId: excludeLessonId || null,
     sport:           sport || null,

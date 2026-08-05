@@ -1,18 +1,21 @@
 import { NextResponse } from 'next/server'
+import { getSchoolContext } from '@/lib/auth/get-school-context'
 import {
   getCertificateTemplates,
   upsertCertificateTemplate,
   deleteCertificateTemplate,
 } from '@/repositories/certificateTemplateRepository'
 
-const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
-
 export async function GET() {
-  const templates = await getCertificateTemplates(SCHOOL_ID)
+  const school = await getSchoolContext()
+  if (!school.ok) return school.response
+  const templates = await getCertificateTemplates(school.ctx.schoolId)
   return NextResponse.json({ ok: true, templates })
 }
 
 export async function POST(request: Request) {
+  const school = await getSchoolContext()
+  if (!school.ok) return school.response
   const body = await request.json()
 
   if (!['upload', 'fictitious', 'text'].includes(body.signature_type)) {
@@ -20,7 +23,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    await upsertCertificateTemplate(SCHOOL_ID, {
+    await upsertCertificateTemplate(school.ctx.schoolId, {
       sportKey: body.sport_key ?? null,
       themeKey: body.theme_key ?? 'oceano',
       backgroundImageUrl: body.background_image_url ?? null,
@@ -35,13 +38,15 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  const school = await getSchoolContext()
+  if (!school.ok) return school.response
   const { searchParams } = new URL(request.url)
   const id = searchParams.get('id')
   if (!id) {
     return NextResponse.json({ error: 'id é obrigatório' }, { status: 400 })
   }
   try {
-    await deleteCertificateTemplate(SCHOOL_ID, id)
+    await deleteCertificateTemplate(school.ctx.schoolId, id)
     return NextResponse.json({ ok: true })
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : 'Erro ao remover' }, { status: 500 })

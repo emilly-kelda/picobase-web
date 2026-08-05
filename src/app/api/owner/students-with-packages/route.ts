@@ -1,7 +1,6 @@
 import { createServiceClient } from '@/lib/supabase-server'
 import { NextResponse } from 'next/server'
-
-const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
+import { getSchoolContext } from '@/lib/auth/get-school-context'
 
 function unwrap<T>(raw: T | T[] | null): T | null {
   if (!raw) return null
@@ -9,6 +8,9 @@ function unwrap<T>(raw: T | T[] | null): T | null {
 }
 
 export async function GET() {
+  const school = await getSchoolContext()
+  if (!school.ok) return school.response
+
   try {
     const supabase = createServiceClient()
 
@@ -22,7 +24,7 @@ export async function GET() {
           minutes_used,
           packages ( name, sport )
         `)
-        .eq('school_id', SCHOOL_ID)
+        .eq('school_id', school.ctx.schoolId)
         .gt('minutes_purchased', 0)
         .order('sold_at', { ascending: false }),
       // Students with no package sale at all (walk-ins, booking-only
@@ -33,7 +35,7 @@ export async function GET() {
       supabase
         .from('students')
         .select('name')
-        .eq('school_id', SCHOOL_ID),
+        .eq('school_id', school.ctx.schoolId),
     ])
 
     if (error || studentsError) return NextResponse.json({ students: [] })

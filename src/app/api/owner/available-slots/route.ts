@@ -1,9 +1,10 @@
+import { getSchoolContext } from '@/lib/auth/get-school-context'
 import { getAvailableSlotsForDate } from '@/repositories/scheduledLessonRepository'
 import { NextResponse } from 'next/server'
 
-const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
-
 export async function GET(request: Request) {
+  const school = await getSchoolContext()
+  if (!school.ok) return school.response
   const { searchParams } = new URL(request.url)
   const date         = searchParams.get('date')
   const activityName = searchParams.get('activityName')
@@ -15,7 +16,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const slots = await getAvailableSlotsForDate(SCHOOL_ID, date, activityName, durationMin, studentName)
+    const slots = await getAvailableSlotsForDate(school.ctx.schoolId, date, activityName, durationMin, studentName)
     return NextResponse.json({ slots })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'

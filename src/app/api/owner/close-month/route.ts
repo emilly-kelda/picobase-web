@@ -1,15 +1,16 @@
-﻿import { createServiceClient } from '@/lib/supabase-server'
+import { getSchoolContext } from '@/lib/auth/get-school-context'
+import { createServiceClient } from '@/lib/supabase-server'
 import { NextResponse } from 'next/server'
 
-const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
-
 export async function POST(request: Request) {
+  const school = await getSchoolContext()
+  if (!school.ok) return school.response
   const { period } = await request.json()
   const supabase = createServiceClient()
 
   const { data, error } = await supabase
     .rpc('close_month', {
-      p_school_id: SCHOOL_ID,
+      p_school_id: school.ctx.schoolId,
       p_period: period,
     })
 
@@ -18,6 +19,8 @@ export async function POST(request: Request) {
 }
 
 export async function PATCH(request: Request) {
+  const school = await getSchoolContext()
+  if (!school.ok) return school.response
   const body = await request.json()
   const { payment_id, action, status, approved_at, paid_at, period } = body
   // Service role — this previously used the session-bound client, which
@@ -56,7 +59,7 @@ export async function PATCH(request: Request) {
     const { error } = await supabase
       .from('payments')
       .update({ status: 'approved', approved_at: new Date().toISOString() })
-      .eq('school_id', SCHOOL_ID)
+      .eq('school_id', school.ctx.schoolId)
       .eq('period', period)
       .eq('status', 'pending')
 

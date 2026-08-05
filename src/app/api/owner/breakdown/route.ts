@@ -1,9 +1,10 @@
+import { getSchoolContext } from '@/lib/auth/get-school-context'
 import { createServiceClient } from '@/lib/supabase-server'
 import { NextResponse } from 'next/server'
 
-const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
-
 export async function GET(request: Request) {
+  const school = await getSchoolContext()
+  if (!school.ok) return school.response
   const { searchParams } = new URL(request.url)
   const instructorId = searchParams.get('instructor')
   const period       = searchParams.get('period') ?? new Date().toISOString().slice(0, 7)
@@ -34,7 +35,7 @@ export async function GET(request: Request) {
       scheduled_lessons ( student_name ),
       activities ( name )
     `)
-    .eq('school_id', SCHOOL_ID)
+    .eq('school_id', school.ctx.schoolId)
     .eq('instructor_id', instructorId)
     .gte('session_date', start)
     .lt('session_date', nextFirst)

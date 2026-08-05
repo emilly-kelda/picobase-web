@@ -1,9 +1,10 @@
+import { getSchoolContext } from '@/lib/auth/get-school-context'
 import { closePackageSale } from '@/repositories/packageRepository'
 import { NextResponse } from 'next/server'
 
-const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
-
 export async function POST(request: Request) {
+  const school = await getSchoolContext()
+  if (!school.ok) return school.response
   const { packageSaleId } = await request.json()
 
   if (!packageSaleId) {
@@ -11,7 +12,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    await closePackageSale(SCHOOL_ID, packageSaleId)
+    await closePackageSale(school.ctx.schoolId, packageSaleId)
     return NextResponse.json({ ok: true })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erro ao encerrar pacote'

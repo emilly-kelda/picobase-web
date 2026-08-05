@@ -1,14 +1,15 @@
 import { getPackageReceiptData } from '@/repositories/packageRepository'
 import { NextResponse } from 'next/server'
-
-const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
+import { getSchoolContext } from '@/lib/auth/get-school-context'
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ packageSaleId: string }> }
 ) {
+  const school = await getSchoolContext()
+  if (!school.ok) return school.response
   const { packageSaleId } = await params
-  const data = await getPackageReceiptData(SCHOOL_ID, packageSaleId)
+  const data = await getPackageReceiptData(school.ctx.schoolId, packageSaleId)
 
   if (!data) {
     return NextResponse.json({ error: 'Pacote não encontrado' }, { status: 404 })

@@ -1,9 +1,8 @@
+import { getSchoolContext } from '@/lib/auth/get-school-context'
 import { createServiceClient } from '@/lib/supabase-server'
 import { createBooking, updateBookingStatus } from '@/repositories/bookingRepository'
 import { ensureActiveCheckinForToday } from '@/repositories/scheduledLessonRepository'
 import { NextResponse } from 'next/server'
-
-const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
 
 /** Reception-created bookings — distinct from the public, unauthenticated
  *  /api/book (used by /book/[school]'s self-service intake form). This one
@@ -15,6 +14,8 @@ const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
  *  "cadastrar novo cliente manualmente" fallback, for a customer with no
  *  students row yet) is still accepted via student_name/whatsapp. */
 export async function POST(request: Request) {
+  const school = await getSchoolContext()
+  if (!school.ok) return school.response
   const body = await request.json()
   const { student_id, activity_id, preferred_date, preferred_time, notes } = body
 
@@ -28,7 +29,7 @@ export async function POST(request: Request) {
       .from('students')
       .select('name, whatsapp')
       .eq('id', student_id)
-      .eq('school_id', SCHOOL_ID)
+      .eq('school_id', school.ctx.schoolId)
       .single()
     if (error || !student) {
       return NextResponse.json({ error: 'Cliente não encontrado' }, { status: 404 })
@@ -46,7 +47,7 @@ export async function POST(request: Request) {
 
   try {
     await createBooking({
-      school_id:      SCHOOL_ID,
+      school_id:      school.ctx.schoolId,
       student_id:     student_id ?? null,
       student_name:   studentName,
       whatsapp,
@@ -68,7 +69,7 @@ export async function POST(request: Request) {
   const today = new Date().toISOString().slice(0, 10)
   if (preferred_date === today) {
     try {
-      await ensureActiveCheckinForToday(SCHOOL_ID, studentName, { activityId: activity_id })
+      await ensureActiveCheckinForToday(school.ctx.schoolId, studentName, { activityId: activity_id })
     } catch (err) {
       console.error('ensureActiveCheckinForToday failed for', studentName, err)
     }
@@ -78,6 +79,8 @@ export async function POST(request: Request) {
 }
 
 export async function PATCH(request: Request) {
+  const school = await getSchoolContext()
+  if (!school.ok) return school.response
   const { id, status } = await request.json()
 
   if (!id || (status !== 'confirmed' && status !== 'declined')) {
@@ -85,7 +88,7 @@ export async function PATCH(request: Request) {
   }
 
   try {
-    await updateBookingStatus(id, status, SCHOOL_ID)
+    await updateBookingStatus(id, status, school.ctx.schoolId)
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     return NextResponse.json({ error: message }, { status: 500 })

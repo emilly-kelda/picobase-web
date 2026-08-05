@@ -1,11 +1,13 @@
 import { createServiceClient } from '@/lib/supabase-server'
 import { NextResponse } from 'next/server'
+import { getSchoolContext } from '@/lib/auth/get-school-context'
 
-const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
 const MAX_SIZE = 2 * 1024 * 1024 // 2MB
 const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/webp']
 
 export async function POST(request: Request) {
+  const school = await getSchoolContext()
+  if (!school.ok) return school.response
   const formData = await request.formData()
   const file = formData.get('file')
 
@@ -21,7 +23,7 @@ export async function POST(request: Request) {
 
   const supabase = createServiceClient()
   const ext = file.type === 'image/png' ? 'png' : file.type === 'image/webp' ? 'webp' : 'jpg'
-  const path = `${SCHOOL_ID}/${crypto.randomUUID()}.${ext}`
+  const path = `${school.ctx.schoolId}/${crypto.randomUUID()}.${ext}`
 
   const { error } = await supabase.storage
     .from('partner-logos')

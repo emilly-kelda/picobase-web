@@ -1,9 +1,10 @@
 import { createServiceClient } from '@/lib/supabase-server'
 import { NextResponse } from 'next/server'
-
-const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
+import { getSchoolContext } from '@/lib/auth/get-school-context'
 
 export async function PATCH(request: Request) {
+  const school = await getSchoolContext()
+  if (!school.ok) return school.response
   const body = await request.json()
   const { instructor_id, commission_mode, commission_pct, fixed_per_hour } = body
   // Service role, not the session-bound client — public.users has RLS enabled
@@ -38,7 +39,7 @@ export async function PATCH(request: Request) {
     await supabase
       .from('commission_history')
       .insert({
-        school_id:     SCHOOL_ID,
+        school_id:     school.ctx.schoolId,
         instructor_id,
         old_mode:      oldMode,
         old_pct:       oldPct,
@@ -59,7 +60,7 @@ export async function PATCH(request: Request) {
     .from('users')
     .update(update)
     .eq('id', instructor_id)
-    .eq('school_id', SCHOOL_ID)
+    .eq('school_id', school.ctx.schoolId)
     .eq('role', 'instructor')
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

@@ -1,9 +1,11 @@
 ﻿import { createServiceClient } from '@/lib/supabase-server'
 import { NextResponse } from 'next/server'
-
-const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
+import { getSchoolContext } from '@/lib/auth/get-school-context'
 
 export async function PATCH(request: Request) {
+  const school = await getSchoolContext()
+  if (!school.ok) return school.response
+
   const body = await request.json()
   const supabase = createServiceClient()
   const { type, ...fields } = body
@@ -32,7 +34,7 @@ export async function PATCH(request: Request) {
     const { error } = await supabase
       .from('schools')
       .update(update)
-      .eq('id', SCHOOL_ID)
+      .eq('id', school.ctx.schoolId)
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
@@ -43,7 +45,7 @@ export async function PATCH(request: Request) {
     const { data: otherSeasons, error: fetchError } = await supabase
       .from('seasons')
       .select('id, label, start_date, end_date')
-      .eq('school_id', SCHOOL_ID)
+      .eq('school_id', school.ctx.schoolId)
       .neq('id', fields.id)
     if (fetchError) return NextResponse.json({ error: fetchError.message }, { status: 500 })
 
@@ -72,7 +74,7 @@ export async function PATCH(request: Request) {
       .from('seasons')
       .update(seasonUpdate)
       .eq('id', fields.id)
-      .eq('school_id', SCHOOL_ID)
+      .eq('school_id', school.ctx.schoolId)
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
