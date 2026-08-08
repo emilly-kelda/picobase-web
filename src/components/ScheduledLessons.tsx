@@ -448,7 +448,9 @@ export default function ScheduledLessons({
   const [editingIndex, setEditingIndex]   = useState<number | null>(null)
   const [studentSuggestions, setStudentSuggestions] = useState<
     Array<{
+      id: string | null
       student_name: string
+      email: string | null
       package_sale_id: string | null
       package_name: string | null
       activity_name: string | null
@@ -457,6 +459,8 @@ export default function ScheduledLessons({
       minutes_remaining: number
     }>
   >([])
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false)
+  const [suggestionsError, setSuggestionsError]     = useState<string | null>(null)
   const [showSuggestions, setShowSuggestions]       = useState(false)
   const [selectedPackage, setSelectedPackage]        = useState<{
     package_sale_id: string
@@ -524,12 +528,35 @@ export default function ScheduledLessons({
   })
   const [experimentalDisabled, setExperimentalDisabled] = useState(false)
 
+  // Live debounced search (300ms) instead of loading every student in the
+  // school up front — was a flat fetch of /api/owner/students-with-packages
+  // on mount, filtered client-side as the owner typed. Errors are surfaced
+  // (suggestionsError) instead of silently resolving to an empty list, so
+  // an auth/session problem shows up as a visible message in the dropdown
+  // rather than looking like "no matching students".
   useEffect(() => {
-    fetch('/api/owner/students-with-packages')
-      .then(r => r.json())
-      .then(data => setStudentSuggestions(data.students ?? []))
-      .catch(() => setStudentSuggestions([]))
-  }, [])
+    const q = form.student_name.trim()
+    if (q.length < 2) {
+      setStudentSuggestions([])
+      setSuggestionsError(null)
+      return
+    }
+    let cancelled = false
+    setSuggestionsLoading(true)
+    const timer = setTimeout(() => {
+      fetch(`/api/owner/students/search?q=${encodeURIComponent(q)}`)
+        .then(async r => {
+          const data = await r.json().catch(() => ({}))
+          if (!r.ok) throw new Error(data.error ?? 'Erro ao buscar alunos.')
+          if (!cancelled) { setStudentSuggestions(data.students ?? []); setSuggestionsError(null) }
+        })
+        .catch(err => {
+          if (!cancelled) { setStudentSuggestions([]); setSuggestionsError(err instanceof Error ? err.message : 'Erro ao buscar alunos.') }
+        })
+        .finally(() => { if (!cancelled) setSuggestionsLoading(false) })
+    }, 300)
+    return () => { cancelled = true; clearTimeout(timer); setSuggestionsLoading(false) }
+  }, [form.student_name])
 
   // "Sugestão do sistema" card in the Agendar aula modal — same idea as
   // RescheduleModal's own suggestion fetch, but clickable-to-apply instead
@@ -1897,7 +1924,7 @@ export default function ScheduledLessons({
                     onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                     autoFocus
                   />
-                  {showSuggestions && studentSuggestions.length > 0 && (
+                  {showSuggestions && (suggestionsLoading || suggestionsError || studentSuggestions.length > 0) && (
                     <div style={{
                       position: 'absolute', top: '100%', left: 0, right: 0,
                       background: '#fff', border: '0.5px solid var(--border)',
@@ -1905,9 +1932,17 @@ export default function ScheduledLessons({
                       boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
                       maxHeight: '200px', overflowY: 'auto',
                     }}>
-                      {studentSuggestions
-                        .filter(s => !form.student_name ||
-                          s.student_name.toLowerCase().includes(form.student_name.toLowerCase()))
+                      {suggestionsLoading && (
+                        <div style={{ padding: '10px 14px', fontSize: '12px', color: 'var(--mist)' }}>
+                          Buscando alunos...
+                        </div>
+                      )}
+                      {!suggestionsLoading && suggestionsError && (
+                        <div style={{ padding: '10px 14px', fontSize: '12px', color: 'var(--signal)' }}>
+                          {suggestionsError}
+                        </div>
+                      )}
+                      {!suggestionsLoading && !suggestionsError && studentSuggestions
                         .map(s => (
                           <button
                             key={s.package_sale_id ?? `no-package-${s.student_name}`}
@@ -1927,11 +1962,15 @@ export default function ScheduledLessons({
                               <div style={{ fontSize: '13px', fontWeight: '500', color: 'var(--slate)', marginBottom: '2px' }}>
                                 {s.student_name}
                               </div>
-                              {s.package_sale_id && (
+                              {s.package_sale_id ? (
                                 <div style={{ fontSize: '11px', color: 'var(--mist)' }}>
                                   {s.activity_name} — {s.package_name}
                                 </div>
-                              )}
+                              ) : s.email ? (
+                                <div style={{ fontSize: '11px', color: 'var(--mist)' }}>
+                                  {s.email}
+                                </div>
+                              ) : null}
                             </div>
                             {s.package_sale_id ? (
                               <div style={{

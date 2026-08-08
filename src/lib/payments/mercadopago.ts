@@ -1,4 +1,4 @@
-import { MercadoPagoConfig, Payment, Preference, PreApproval } from 'mercadopago'
+import { MercadoPagoConfig, Payment, Preference, PreApproval, OAuth } from 'mercadopago'
 
 // Single shared config/client instances — the SDK reads the access token
 // once at construction and every client method call reuses it, so there's
@@ -12,3 +12,10 @@ const mpConfig = new MercadoPagoConfig({
 export const mpPayment = new Payment(mpConfig)
 export const mpPreference = new Preference(mpConfig)
 export const mpPreApproval = new PreApproval(mpConfig)
+
+// The OAuth client's own methods (create/refresh/getAuthorizationURL) take
+// the target app's client_id/client_secret directly in their call — this
+// platform-account config is just what the SDK's constructor requires, it's
+// not actually the credential used for the marketplace OAuth flow itself.
+// See src/app/api/auth/mercadopago/connect and mercadopago-tenant.ts.
+export const mpOAuth = new OAuth(mpConfig)
