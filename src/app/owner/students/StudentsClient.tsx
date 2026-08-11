@@ -65,7 +65,7 @@ function HoursOfSailing({ minutes, skillLevel }: { minutes: number; skillLevel: 
       </div>
       {eligible && (
         <span
-          title="Nível 2+ atingido — elegível para o Certificado de Proficiência (IKO/VDWS)"
+          title="Nível 3 atingido — elegível para o Certificado de Proficiência (IKO/VDWS)"
           style={{
             display: 'inline-block', marginTop: '4px',
             padding: '3px 10px', borderRadius: 'var(--radius-full)',

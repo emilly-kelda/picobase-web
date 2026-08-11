@@ -76,18 +76,29 @@ function deriveDefaultLevel(level: string, skills: string[]): string {
   return derivedIdx > currentIdx ? derived : level
 }
 
-/** IKO/VDWS proficiency threshold — Level 2+ (covers both the new level_N
- *  keys and the legacy beginner/intermediate/advanced ones stored before
- *  the 20260809000003 data migration). Certification is skill-based per
- *  IKO's own standard, not time-based — a student who picks up the
- *  required skills quickly shouldn't be blocked by an hours count. Shared
- *  by CertificateSection.tsx, the certificate generation route, and every
+/** IKO/VDWS proficiency threshold — Level 3 only (covers both the new
+ *  level_N keys and the legacy 'advanced' one stored before the
+ *  20260809000003 data migration). Certification is skill-based per IKO's
+ *  own standard, not time-based — a student who picks up the required
+ *  skills quickly shouldn't be blocked by an hours count. Shared by
+ *  CertificateSection.tsx, the certificate generation route, and every
  *  student-profile page's certificate-eligibility badge, so "proficient
  *  enough for a certificate" can't mean something different in one place
- *  than another. */
+ *  than another.
+ *
+ *  Was Level 2+ until a real, reported case (student flagged eligible
+ *  after completing only rig_control + beach_start) showed why that was
+ *  wrong: for windsurf/wingfoil/default, level_2_intermediate is reached
+ *  automatically by finishing Level 1's own basic skills (see
+ *  resolveLevelAfterSkillsUpdate above) — it means "just started the
+ *  intermediate curriculum," not "proficient." Level 3 is the level whose
+ *  own requirement is the sport's actual advanced skill set (windsurf:
+ *  tack+jibe+planing; wingfoil: upwind+sustained_foil+tack_jibe; kitesurf's
+ *  deriveKitesurfLevel already gates level_3_independent on a materially
+ *  harder condition than level_2's), so it's the only key across all four
+ *  sport configs that actually reflects demonstrated proficiency. */
 export function isProficientLevel(level: string | null | undefined): boolean {
-  return level === 'level_2_intermediate' || level === 'level_3_independent'
-    || level === 'intermediate' || level === 'advanced'
+  return level === 'level_3_independent' || level === 'advanced'
 }
 
 /** Given the level being saved and the full set of currently-checked skill

@@ -77,7 +77,7 @@ export default function CertificateSection({
           const proficiencyTitle = proficiencyOk
             ? undefined
             : isBeginnerLevel
-              ? 'Disponível a partir do Nível 2'
+              ? 'Disponível a partir do Nível 3'
               : 'Aguardando avaliação do instrutor'
 
           return (

@@ -213,7 +213,7 @@ export default async function StudentNameProfilePage({
       {certificateEligible && (
         <div style={{ marginBottom: '24px' }}>
           <span
-            title="Nível 2+ atingido em ao menos uma modalidade — elegível para o Certificado de Proficiência (IKO/VDWS)"
+            title="Nível 3 atingido em ao menos uma modalidade — elegível para o Certificado de Proficiência (IKO/VDWS)"
             style={{
               display: 'inline-flex', alignItems: 'center', gap: '6px',
               padding: '6px 14px', borderRadius: '99px',
