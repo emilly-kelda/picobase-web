@@ -9,7 +9,7 @@ export const COST_CATEGORIES = [
   'Manutenção de Equipamento (Kites/Pranchas)',
   'Resgate / Combustível',
   'Equipa / Comissões',
-  'Infraestrutura / Aluguer',
+  'Infraestrutura / Aluguel',
   'Marketing & Outros',
 ] as const
 

@@ -309,7 +309,7 @@ export default function ReportsPage() {
           fontSize: '28px', fontWeight: '800',
           color: 'var(--slate)', letterSpacing: '-0.02em',
         }}>
-          Visão geral · Todos os tempos
+          Visão geral
         </h1>
       </div>
 
