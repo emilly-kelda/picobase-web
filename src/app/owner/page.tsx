@@ -1,4 +1,6 @@
 import { cookies } from 'next/headers'
+import { redirect } from 'next/navigation'
+import { getAuthContext } from '@/lib/auth'
 import { getRunwayData, getSchool } from '@/repositories/runwayRepository'
 import { getRecentSessions, getTodayStats, getPendingLessons, getMonthComparison } from '@/repositories/sessionRepository'
 import { getInstructors, getCompletedHoursByStudent } from '@/repositories/studentRepository'
@@ -22,8 +24,6 @@ import { normalizeStudentName } from '@/lib/text'
 import { todayBR } from '@/lib/date'
 import Link from 'next/link'
 
-const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
-
 function fmt(n: number | null | undefined) {
   return formatCurrency(n, { decimals: 2 })
 }
@@ -35,6 +35,14 @@ function fmtDate(d: string) {
 }
 
 export default async function OwnerPage() {
+  // owner/layout.tsx already redirects to /login when there's no session at
+  // all — by the time this page renders, auth is guaranteed non-null. The
+  // only case left to handle here is unscoped master (no school of their
+  // own, and not currently impersonating one via /master's "Acessar").
+  const auth = await getAuthContext()
+  const schoolId = auth!.isMaster ? auth!.impersonatingSchoolId : auth!.schoolId
+  if (!schoolId) redirect('/master')
+
   const cookieStore = await cookies()
   const seasonId = cookieStore.get('active_season_id')?.value
   const weatherSpotId = cookieStore.get('weather_spot')?.value
@@ -43,7 +51,7 @@ export default async function OwnerPage() {
   // know which spot to call Open-Meteo for, and that now depends on the
   // school's own saved location (Settings → Geral), not just a hardcoded
   // default.
-  const school = await getSchool(SCHOOL_ID)
+  const school = await getSchool(schoolId)
   const weatherSpots       = buildWeatherSpots(school as any)
   const selectedWeatherSpot = resolveWeatherSpot(weatherSpots, weatherSpotId)
 
@@ -54,28 +62,28 @@ export default async function OwnerPage() {
     monthComparison, weather, packageTypes, hoursMap,
     studentsWithUpcoming,
   ] = await Promise.all([
-    getRunwayData(SCHOOL_ID, seasonId),
-    getRecentSessions(SCHOOL_ID),
-    getTodayStats(SCHOOL_ID),
+    getRunwayData(schoolId, seasonId),
+    getRecentSessions(schoolId),
+    getTodayStats(schoolId),
     getPortalLang(),
-    getPendingLessons(SCHOOL_ID),
-    getInstructors(SCHOOL_ID),
-    getScheduledLessons(SCHOOL_ID, 'today'),
-    getScheduledLessons(SCHOOL_ID, 'tomorrow'),
-    getActivitiesForCheckin(SCHOOL_ID),
-    getPackageSales(SCHOOL_ID, 50),
-    getMissedLessons(SCHOOL_ID),
-    getPackageBalancesForCheckins(SCHOOL_ID),
-    getMonthComparison(SCHOOL_ID),
+    getPendingLessons(schoolId),
+    getInstructors(schoolId),
+    getScheduledLessons(schoolId, 'today'),
+    getScheduledLessons(schoolId, 'tomorrow'),
+    getActivitiesForCheckin(schoolId),
+    getPackageSales(schoolId, 50),
+    getMissedLessons(schoolId),
+    getPackageBalancesForCheckins(schoolId),
+    getMonthComparison(schoolId),
     getWeather(selectedWeatherSpot),
-    getPackages(SCHOOL_ID),
+    getPackages(schoolId),
     // IKO/VDWS 10h autonomy-certificate eligibility — Aguardando Vento's
     // medal icon next to a student's name.
-    getCompletedHoursByStudent(SCHOOL_ID),
+    getCompletedHoursByStudent(schoolId),
     // Post-confirmation "what's next" button — a Set isn't a plain
     // serializable prop across the client boundary, so this crosses as
     // an array and ScheduledLessons rebuilds the Set client-side.
-    getStudentsWithUpcomingLessons(SCHOOL_ID),
+    getStudentsWithUpcomingLessons(schoolId),
   ])
 
   const t = getT(lang)
