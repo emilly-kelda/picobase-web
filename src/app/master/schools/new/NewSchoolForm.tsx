@@ -26,6 +26,13 @@ const TIMEZONES = [
 
 const CURRENCIES = ['BRL', 'EUR', 'USD', 'GBP', 'ARS', 'CLP', 'COP']
 
+// Seeds src/app/owner/activities rows with sensible defaults — the owner
+// can rename/reprice/deactivate any of these afterward from that page, this
+// just avoids a brand-new school starting with zero activities configured
+// (which otherwise blocks scheduling/check-in entirely until the owner
+// manually adds their first one).
+const DEFAULT_SPORTS = ['Kitesurf', 'Kitefoil', 'Windsurf', 'Wingfoil', 'Surf'] as const
+
 export default function NewSchoolForm() {
   const router = useRouter()
 
@@ -41,6 +48,7 @@ export default function NewSchoolForm() {
   const [paymentTerms,      setPaymentTerms]      = useState('')
   const [subscriptionValue, setSubscriptionValue] = useState('')
   const [costCenter,        setCostCenter]        = useState('')
+  const [defaultSports, setDefaultSports] = useState<string[]>(['Kitesurf'])
   const [saving,     setSaving]     = useState(false)
   const [error,      setError]      = useState<string | null>(null)
   const [result,     setResult]     = useState<SuccessResult | null>(null)
@@ -65,6 +73,7 @@ export default function NewSchoolForm() {
         paymentTerms:      paymentTerms || null,
         subscriptionValue: subscriptionValue ? Number(subscriptionValue) : null,
         costCenter:        costCenter || null,
+        defaultSports,
       }),
     })
 
@@ -195,6 +204,37 @@ export default function NewSchoolForm() {
           >
             {TIMEZONES.map(tz => <option key={tz} value={tz}>{tz}</option>)}
           </select>
+        </div>
+
+        <div>
+          <label style={labelStyle}>Modalidades iniciais</label>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+            {DEFAULT_SPORTS.map(sport => {
+              const checked = defaultSports.includes(sport)
+              return (
+                <button
+                  key={sport}
+                  type="button"
+                  onClick={() => setDefaultSports(prev =>
+                    prev.includes(sport) ? prev.filter(s => s !== sport) : [...prev, sport]
+                  )}
+                  style={{
+                    padding: '7px 14px', borderRadius: 'var(--radius-full)',
+                    border: `1.5px solid ${checked ? 'var(--glacial)' : 'var(--border)'}`,
+                    background: checked ? 'var(--glacial-light)' : '#fff',
+                    color: checked ? 'var(--glacial-dark)' : 'var(--mist)',
+                    fontSize: '13px', fontWeight: checked ? '600' : '400',
+                    cursor: 'pointer', fontFamily: 'var(--font-sans)',
+                  }}
+                >
+                  {sport}
+                </button>
+              )
+            })}
+          </div>
+          <p style={{ fontSize: '11px', color: 'var(--mist)', marginTop: '6px' }}>
+            Criadas com preço/duração padrão — o owner pode ajustar em Atividades depois.
+          </p>
         </div>
 
         <hr style={{ border: 'none', borderTop: '0.5px solid var(--border)', margin: '4px 0' }} />

@@ -19,6 +19,7 @@ export async function POST(request: Request) {
   const {
     schoolName, slug, country, currency, timezone, ownerName, ownerEmail,
     ownerWhatsapp, paymentMethod, paymentTerms, subscriptionValue, costCenter,
+    defaultSports,
   } = body
 
   if (!schoolName?.trim())  return NextResponse.json({ error: 'School name is required' }, { status: 400 })
@@ -123,6 +124,33 @@ export async function POST(request: Request) {
       admin.auth.admin.deleteUser(ownerId),
     ])
     return NextResponse.json({ error: userError.message }, { status: 500 })
+  }
+
+  // ── Step (d): seed default activities ─────────────────────────────────────
+  // Best-effort, not part of the rollback chain above — an owner with no
+  // owner account is a broken school (can't log in at all); an owner with no
+  // pre-seeded activities just has one extra manual step on
+  // /owner/activities, so a failure here doesn't undo steps (a)-(c).
+  if (Array.isArray(defaultSports) && defaultSports.length > 0) {
+    const activityRows = defaultSports
+      .filter((s: unknown): s is string => typeof s === 'string' && s.trim().length > 0)
+      .map((sport: string, i: number) => ({
+        school_id:            schoolId,
+        name:                 sport,
+        code:                 sport.slice(0, 4).toUpperCase(),
+        sport:                sport.toLowerCase(),
+        default_price:        0,
+        default_duration_min: 60,
+        pricing_mode:         'proportional',
+        active:               true,
+        sort_order:           i,
+      }))
+    if (activityRows.length > 0) {
+      const { error: activitiesError } = await admin.from('activities').insert(activityRows)
+      if (activitiesError) {
+        console.error('Failed to seed default activities for new school:', activitiesError.message)
+      }
+    }
   }
 
   return NextResponse.json({ ok: true, schoolId, ownerEmail: ownerEmail.trim() })
