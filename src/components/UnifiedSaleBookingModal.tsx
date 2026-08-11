@@ -216,6 +216,14 @@ export default function UnifiedSaleBookingModal({
   const [slotsLoading, setSlotsLoading] = useState(false)
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null)
 
+  // Duration override — null means "use the activity's own default_duration_min".
+  // Lets the owner pick a different session length for a recurring batch
+  // (e.g. a shorter refresher series) instead of always inheriting whatever
+  // the activity was configured with. Reset below whenever the activity
+  // itself changes, so switching packages doesn't carry over a stale
+  // override for a different sport's own default.
+  const [durationOverride, setDurationOverride] = useState<number | null>(null)
+
   // Recurring booking — a student buying a whole package up front often
   // wants every lesson on the calendar right away, not just the first one.
   // Same weekday-picker/count paradigm as ScheduledLessons.tsx's own
@@ -275,7 +283,7 @@ export default function UnifiedSaleBookingModal({
   const canStep1 = packageId !== '' && (selectedStudent != null || (manualMode && manualName.trim().length >= 2))
 
   const scheduleActivity = findActivityBySport(activities, selectedPackage?.sport ?? null)
-  const scheduleDuration = scheduleActivity?.default_duration_min ?? 60
+  const scheduleDuration = durationOverride ?? (scheduleActivity?.default_duration_min ?? 60)
 
   // Capped by the package actually being sold — nothing's been used yet
   // (it's a brand-new sale), so total_minutes is the full available
@@ -309,6 +317,18 @@ export default function UnifiedSaleBookingModal({
   useEffect(() => {
     setRecurringCount(c => Math.min(c, maxRecurringCount))
   }, [maxRecurringCount])
+
+  // A different activity/package means a different default duration —
+  // drop any manual override rather than carrying, say, a 2h kitesurf
+  // override into a windsurf package that defaults to 1h. React's
+  // documented "adjusting state when a prop changes" pattern (reset during
+  // render, comparing against the last-seen id) instead of a useEffect —
+  // no async/external-system work here, just synchronizing to a prop.
+  const [lastActivityId, setLastActivityId] = useState(scheduleActivity?.id)
+  if (scheduleActivity?.id !== lastActivityId) {
+    setLastActivityId(scheduleActivity?.id)
+    setDurationOverride(null)
+  }
 
   // Re-syncs the editable preview whenever the generating params change —
   // same "regenerate, discarding any earlier per-row edits" trade-off
@@ -853,6 +873,29 @@ export default function UnifiedSaleBookingModal({
                       </div>
                     </div>
                     <div>
+                      <label style={labelStyle}>Duração</label>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        {([[60, '1h'], [90, '1h30'], [120, '2h'], [180, '3h']] as const).map(([minutes, label]) => (
+                          <button
+                            key={minutes}
+                            type="button"
+                            onClick={() => setDurationOverride(minutes)}
+                            style={{
+                              flex: 1, padding: '8px',
+                              borderRadius: 'var(--radius-md)',
+                              border: `1.5px solid ${scheduleDuration === minutes ? 'var(--glacial)' : 'var(--border)'}`,
+                              background: scheduleDuration === minutes ? 'var(--glacial-light)' : '#fff',
+                              color: scheduleDuration === minutes ? 'var(--glacial-dark)' : 'var(--mist)',
+                              fontSize: '12px', fontWeight: '500',
+                              cursor: 'pointer', fontFamily: 'var(--font-sans)',
+                            }}
+                          >
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
                       <label style={labelStyle}>Repetição</label>
                       <div style={{ display: 'flex', gap: '8px' }}>
                         {([['custom', 'Dias específicos'], ['daily', 'Todos os dias']] as const).map(([value, label]) => (
@@ -906,7 +949,7 @@ export default function UnifiedSaleBookingModal({
                     )}
                     <div>
                       <label style={labelStyle}>
-                        Número de aulas {selectedPackage && `(máx. ${maxRecurringCount} · ${fmtH(selectedPackage.total_minutes)} no pacote)`}
+                        Número de aulas {selectedPackage && `(máx. ${maxRecurringCount} de ${fmtH(scheduleDuration)} · ${fmtH(selectedPackage.total_minutes)} no pacote)`}
                       </label>
                       <input
                         style={{ ...inputStyle, width: '80px' }}
