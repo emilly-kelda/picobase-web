@@ -154,11 +154,16 @@ export default function PackagesClient({
                       }}>
                         <div style={{
                           width: '38px', height: '38px', borderRadius: 'var(--radius-md)',
-                          background: style.bg, flexShrink: 0,
+                          background: pkg.iconUrl ? '#fff' : style.bg, flexShrink: 0,
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontSize: '18px', color: style.color,
+                          fontSize: '18px', color: style.color, overflow: 'hidden',
                         }}>
-                          {sportIconKey(pkg.sport) ? <SportIcon name={pkg.sport} size={20} /> : style.icon}
+                          {pkg.iconUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={pkg.iconUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                          ) : sportIconKey(pkg.sport) ? (
+                            <SportIcon name={pkg.sport} size={20} />
+                          ) : style.icon}
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontSize: '14px', fontWeight: '600', color: 'var(--slate)', marginBottom: '2px' }}>

@@ -27,6 +27,7 @@ export async function POST(request: Request) {
       sport:         body.sport?.trim() || null,
       total_minutes: Number(body.total_minutes),
       base_price:    Number(body.base_price),
+      icon_url:      body.icon_url?.trim() || null,
     })
     return NextResponse.json({ ok: true, id: data.id })
   } catch (err) {
@@ -49,6 +50,7 @@ export async function PATCH(request: Request) {
       sport:         body.sport?.trim() || null,
       total_minutes: Number(body.total_minutes),
       base_price:    Number(body.base_price),
+      icon_url:      body.icon_url?.trim() || null,
     })
     return NextResponse.json({ ok: true })
   } catch (err) {

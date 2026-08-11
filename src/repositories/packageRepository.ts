@@ -10,7 +10,7 @@ export async function getPackageDashboard(schoolId: string) {
   const [{ data: allPackages }, { data: allSales }] = await Promise.all([
     supabase
       .from('packages')
-      .select('id, name, sport, type, base_price, final_price, total_minutes, price_eur, price_usd, sort_order')
+      .select('id, name, sport, type, base_price, final_price, total_minutes, price_eur, price_usd, sort_order, icon_url')
       .eq('school_id', schoolId)
       .eq('active', true)
       .order('base_price', { ascending: false }),
@@ -72,6 +72,7 @@ export async function getPackageDashboard(schoolId: string) {
       price:        pkg.final_price ?? pkg.base_price ?? 0,
       price_eur:    pkg.price_eur ?? null,
       price_usd:    pkg.price_usd ?? null,
+      iconUrl:      pkg.icon_url ?? null,
       count: pkgSales.length,
       revenue,
       minutesSold,
@@ -420,6 +421,7 @@ export async function createPackageType(payload: {
   sport: string | null
   total_minutes: number
   base_price: number
+  icon_url?: string | null
 }) {
   const supabase = createServiceClient()
   const { data, error } = await supabase
@@ -434,7 +436,7 @@ export async function createPackageType(payload: {
 export async function updatePackageType(
   id: string,
   schoolId: string,
-  payload: { name: string; sport: string | null; total_minutes: number; base_price: number }
+  payload: { name: string; sport: string | null; total_minutes: number; base_price: number; icon_url?: string | null }
 ) {
   const supabase = createServiceClient()
   const { error } = await supabase

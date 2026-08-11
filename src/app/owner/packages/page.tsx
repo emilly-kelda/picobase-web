@@ -1,8 +1,8 @@
+import { redirect } from 'next/navigation'
+import { getAuthContext } from '@/lib/auth'
 import { getPackageDashboard } from '@/repositories/packageRepository'
 import PackagesClient from './PackagesClient'
 import Link from 'next/link'
-
-const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
 
 function fmt(n: number) {
   return new Intl.NumberFormat('pt-BR', {
@@ -19,7 +19,15 @@ function fmtH(minutes: number) {
 }
 
 export default async function PackagesPage() {
-  const { summary, packageTypes, studentsWithHours } = await getPackageDashboard(SCHOOL_ID)
+  // owner/layout.tsx already redirects to /login when there's no session at
+  // all — by the time this page renders, auth is guaranteed non-null. The
+  // only case left to handle here is unscoped master (no school of their
+  // own, and not currently impersonating one via /master's "Acessar").
+  const auth = await getAuthContext()
+  const schoolId = auth!.isMaster ? auth!.impersonatingSchoolId : auth!.schoolId
+  if (!schoolId) redirect('/master')
+
+  const { summary, packageTypes, studentsWithHours } = await getPackageDashboard(schoolId)
 
   const summaryCards = [
     {
@@ -109,7 +117,7 @@ export default async function PackagesPage() {
       </div>
 
       {/* ── SECTION 2: Package types — cards grouped by sport ── */}
-      <PackagesClient packageTypes={packageTypes as any} schoolId={SCHOOL_ID} />
+      <PackagesClient packageTypes={packageTypes as any} schoolId={schoolId} />
 
       {/* ── SECTION 3: Students with remaining hours ── */}
       {studentsWithHours.length > 0 ? (

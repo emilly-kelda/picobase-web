@@ -8,6 +8,7 @@ export type PackageType = {
   sport: string | null
   totalMinutes: number
   price: number
+  iconUrl?: string | null
 }
 
 const inputStyle: React.CSSProperties = {
@@ -71,10 +72,33 @@ export default function PackageFormModal({
   const [sessionCount, setSessionCount]   = useState(initialSessions)
   const [sessionMinutes, setSessionMinutes] = useState(initialSessionMinutes)
   const [price, setPrice]                 = useState(editing?.price ?? 0)
+  const [iconUrl, setIconUrl]             = useState(editing?.iconUrl ?? '')
+  const [uploadingIcon, setUploadingIcon] = useState(false)
   const [saving, setSaving]               = useState(false)
   const [error, setError]                 = useState<string | null>(null)
 
   const totalMinutes = Math.max(0, sessionCount) * Math.max(0, sessionMinutes)
+
+  async function handleIconSelect(file: File | undefined) {
+    if (!file) return
+    setUploadingIcon(true)
+    setError(null)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      const res = await fetch('/api/owner/packages/upload-icon', { method: 'POST', body: formData })
+      const data = await res.json()
+      if (data.ok) {
+        setIconUrl(data.url)
+      } else {
+        setError(data.error ?? 'Não foi possível enviar o ícone.')
+      }
+    } catch {
+      setError('Erro de rede ao enviar o ícone.')
+    } finally {
+      setUploadingIcon(false)
+    }
+  }
 
   const canSave = name.trim().length >= 2
     && sessionCount > 0 && sessionMinutes > 0
@@ -95,6 +119,7 @@ export default function PackageFormModal({
           sport:         sport || null,
           total_minutes: totalMinutes,
           base_price:    price,
+          icon_url:      iconUrl || null,
         }),
       })
       const data = await res.json()
@@ -127,6 +152,36 @@ export default function PackageFormModal({
       }}>
         <div style={{ fontSize: '18px', fontWeight: '500', color: 'var(--slate)', marginBottom: '20px' }}>
           {editing ? 'Editar pacote' : 'Novo pacote'}
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
+          <label style={{ cursor: uploadingIcon ? 'not-allowed' : 'pointer', textAlign: 'center' }}>
+            <div style={{
+              width: '64px', height: '64px', borderRadius: 'var(--radius-lg)',
+              background: iconUrl ? '#fff' : 'var(--powder)',
+              border: '0.5px solid var(--border-strong)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              overflow: 'hidden', margin: '0 auto 8px',
+              opacity: uploadingIcon ? 0.5 : 1,
+            }}>
+              {iconUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={iconUrl} alt="Ícone do pacote" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+              ) : (
+                <span style={{ fontSize: '11px', color: 'var(--mist)' }}>🏄</span>
+              )}
+            </div>
+            <span style={{ fontSize: '12px', color: 'var(--glacial-dark)', fontWeight: '500' }}>
+              {uploadingIcon ? 'Enviando...' : iconUrl ? 'Trocar ícone' : '+ Ícone personalizado'}
+            </span>
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              onChange={e => handleIconSelect(e.target.files?.[0])}
+              disabled={uploadingIcon}
+              style={{ display: 'none' }}
+            />
+          </label>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
