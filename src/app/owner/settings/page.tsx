@@ -1,3 +1,5 @@
+import { redirect } from 'next/navigation'
+import { getAuthContext } from '@/lib/auth'
 import { getSchool, getSeasons } from '@/repositories/runwayRepository'
 import { getActivitiesForCheckin } from '@/repositories/checkinRepository'
 import { getPortalLang } from '@/lib/language'
@@ -5,14 +7,27 @@ import { getT } from '@/lib/i18n'
 import SettingsClient from './SettingsClient'
 import QRCodeDisplay from '@/components/QRCodeDisplay'
 import DailyNoticeEditor from '@/components/DailyNoticeEditor'
+import PaymentIntegrationCard from './PaymentIntegrationCard'
 
-const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
+export default async function SettingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ status?: string }>
+}) {
+  // owner/layout.tsx already redirects to /login when there's no session at
+  // all — by the time a child page renders, auth is guaranteed non-null.
+  // The only case left to handle here is unscoped master (no school of
+  // their own, and not currently impersonating one via /master's "Acessar").
+  const auth = await getAuthContext()
+  const schoolId = auth!.isMaster ? auth!.impersonatingSchoolId : auth!.schoolId
+  if (!schoolId) redirect('/master')
 
-export default async function SettingsPage() {
+  const { status } = await searchParams
+
   const [school, seasons, activities, lang] = await Promise.all([
-    getSchool(SCHOOL_ID),
-    getSeasons(SCHOOL_ID),
-    getActivitiesForCheckin(SCHOOL_ID),
+    getSchool(schoolId),
+    getSeasons(schoolId),
+    getActivitiesForCheckin(schoolId),
     getPortalLang(),
   ])
 
@@ -41,7 +56,11 @@ export default async function SettingsPage() {
           Rápida. The instructor-facing page (/instructor/[school]) still
           reads school.daily_notice, so editing stays available here. */}
       <div style={{ marginBottom: '24px' }}>
-        <DailyNoticeEditor notice={(school as any)?.daily_notice ?? null} />
+        <DailyNoticeEditor notice={school?.daily_notice ?? null} />
+      </div>
+
+      <div style={{ marginBottom: '24px' }}>
+        <PaymentIntegrationCard initialStatus={status === 'mp_connected' || status === 'mp_error' ? status : null} />
       </div>
 
       <SettingsClient school={school} seasons={seasons} activities={activities} currentLang={lang} />
