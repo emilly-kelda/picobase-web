@@ -61,16 +61,32 @@ export async function getReportData(schoolId: string) {
     return acc
   }, {} as Record<string, { count: number; total: number }>)
 
-  // Monthly revenue — unchanged shape
+  // Monthly revenue — unchanged shape, plus `hours` (added for the
+  // Sazonalidade tab's occupancy estimate — nothing else previously needed
+  // duration broken down by month, only the all-time total below).
   const monthlyMap = sessions.reduce((acc, s) => {
     const month = s.session_date.slice(0, 7)
-    if (!acc[month]) acc[month] = { month, revenue: 0, commissions: 0, net: 0, lessons: 0 }
+    if (!acc[month]) acc[month] = { month, revenue: 0, commissions: 0, net: 0, lessons: 0, hours: 0 }
     acc[month].revenue     += s.price ?? 0
     acc[month].commissions += s.commission_amount ?? 0
     acc[month].net         += (s.price ?? 0) - (s.commission_amount ?? 0)
     acc[month].lessons     += 1
+    acc[month].hours       += (s.duration_min ?? 0) / 60
     return acc
-  }, {} as Record<string, { month: string; revenue: number; commissions: number; net: number; lessons: number }>)
+  }, {} as Record<string, { month: string; revenue: number; commissions: number; net: number; lessons: number; hours: number }>)
+
+  // Sport × month lesson counts, for the Sazonalidade tab's occupancy
+  // heatmap. Same sport/name fallback as sportMap below, kept as a separate
+  // pass since sportMap aggregates across all time and this needs the
+  // month dimension too.
+  const modalityMonthMap = sessions.reduce((acc, s) => {
+    const activity = s.activities as any
+    const sport = activity?.sport || activity?.name || 'Outros'
+    const month = s.session_date.slice(0, 7)
+    if (!acc[sport]) acc[sport] = {}
+    acc[sport][month] = (acc[sport][month] ?? 0) + 1
+    return acc
+  }, {} as Record<string, Record<string, number>>)
 
   // Instructor summary — same as before, now also carries hours + net so the
   // same array backs both the Instrutores tab and the grouped table.
@@ -219,18 +235,29 @@ export async function getReportData(schoolId: string) {
   }
   const renewalRatePct = renewalCompletions > 0 ? (renewalRenewed / renewalCompletions) * 100 : null
 
+  const modalityByMonth = Object.entries(modalityMonthMap)
+    .map(([sport, months]) => ({ sport, months }))
+    .sort((a, b) => a.sport.localeCompare(b.sport))
+
   return {
     monthly:     Object.values(monthlyMap).sort((a, b) => a.month.localeCompare(b.month)),
     instructors: instructorDataWithCapacity.sort((a, b) => b.commission - a.commission),
     sports:      sportData.sort((a, b) => b.revenue - a.revenue),
     partners:    Object.values(partnerMap).sort((a, b) => b.revenue - a.revenue),
     payments:    paymentSummary,
+    modalityByMonth,
     metrics: {
       ticketMedioBRL,
       ticketMedioEUR,
       occupancyPct,
       occupancyHoursTaught: totalHoursTaught,
       occupancyCapacityHours,
+      // Weekly capacity total (not multiplied by weeksSpan) — the
+      // Sazonalidade tab uses this to approximate a *year-scoped* occupancy
+      // (yearHours / (totalCapacityPerWeek * 52)) instead of only the
+      // all-time occupancyPct above, which can't be sliced by year on its
+      // own since weeksSpan is a single all-time figure.
+      totalCapacityPerWeek,
       renewalRatePct,
       renewalCompletions,
       renewalRenewed,

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import SeasonalityTab from './SeasonalityTab'
 
 type MonthData = {
   month: string
@@ -8,7 +9,10 @@ type MonthData = {
   commissions: number
   net: number
   lessons: number
+  hours: number
 }
+
+type ModalityMonth = { sport: string; months: Record<string, number> }
 
 type InstructorData = {
   id: string
@@ -55,6 +59,7 @@ type Metrics = {
   hoursLiability: number
   revenueRealized: number
   revenuePending: number
+  totalCapacityPerWeek: number
 }
 
 type GroupRow = { key: string; label: string; lessons: number; revenue: number; commissions: number; net: number }
@@ -183,8 +188,11 @@ export default function ReportsPage() {
     payments:    PaymentData
     metrics:     Metrics
     monthlyCostTotal: number
+    modalityByMonth: ModalityMonth[]
+    highSeasonStartMonth: number | null
+    highSeasonEndMonth: number | null
   } | null>(null)
-  const [tab, setTab] = useState<'faturamento' | 'modalidade' | 'instructors' | 'partners' | 'payments'>('faturamento')
+  const [tab, setTab] = useState<'faturamento' | 'modalidade' | 'seasonality' | 'instructors' | 'partners' | 'payments'>('faturamento')
   const [groupBy, setGroupBy] = useState<GroupBy>('month')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -400,6 +408,7 @@ export default function ReportsPage() {
         {[
           { key: 'faturamento', label: 'Faturamento vs. Comissões' },
           { key: 'modalidade',  label: 'Desempenho por Modalidade' },
+          { key: 'seasonality', label: 'Sazonalidade'               },
           { key: 'instructors', label: 'Instrutores'                },
           { key: 'partners',    label: 'Parceiros'                  },
           { key: 'payments',    label: 'Pagamentos'                 },
@@ -663,6 +672,17 @@ export default function ReportsPage() {
             </table>
           </div>
         </div>
+      )}
+
+      {/* TAB: Sazonalidade */}
+      {tab === 'seasonality' && (
+        <SeasonalityTab
+          monthly={data.monthly}
+          modalityByMonth={data.modalityByMonth}
+          highSeasonStartMonth={data.highSeasonStartMonth}
+          highSeasonEndMonth={data.highSeasonEndMonth}
+          totalCapacityPerWeek={data.metrics.totalCapacityPerWeek}
+        />
       )}
 
       {/* TAB: Instructors */}
