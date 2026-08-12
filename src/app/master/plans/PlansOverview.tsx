@@ -22,10 +22,28 @@ const FEATURE_LABELS: Record<string, string> = {
 export default function PlansOverview({ plans }: { plans: Plan[] }) {
   const router = useRouter()
   const [editing, setEditing] = useState<Plan | 'new' | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
 
   function onSaved() {
     setEditing(null)
     router.refresh()
+  }
+
+  async function quickDelete(e: React.MouseEvent, plan: Plan) {
+    e.stopPropagation()
+    if (!window.confirm(`Excluir o plano "${plan.name}"? Esta ação não pode ser desfeita.`)) return
+    setDeletingId(plan.id)
+    try {
+      const res = await fetch(`/api/master/plans?id=${plan.id}`, { method: 'DELETE' })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || !data.ok) {
+        window.alert(data.error ?? 'Erro ao excluir plano.')
+        return
+      }
+      router.refresh()
+    } finally {
+      setDeletingId(null)
+    }
   }
 
   return (
@@ -57,10 +75,14 @@ export default function PlansOverview({ plans }: { plans: Plan[] }) {
           {plans.map(plan => {
             const activeFeatures = Object.entries(plan.features ?? {}).filter(([, v]) => v)
             return (
-              <button
+              <div
                 key={plan.id}
+                role="button"
+                tabIndex={0}
                 onClick={() => setEditing(plan)}
+                onKeyDown={e => { if (e.key === 'Enter') setEditing(plan) }}
                 style={{
+                  position: 'relative',
                   textAlign: 'left', cursor: 'pointer',
                   background: '#fff',
                   border: `0.5px solid ${plan.is_active ? 'var(--border)' : 'var(--border)'}`,
@@ -69,7 +91,32 @@ export default function PlansOverview({ plans }: { plans: Plan[] }) {
                   fontFamily: 'var(--font-sans)',
                 }}
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
+                <button
+                  type="button"
+                  onClick={e => quickDelete(e, plan)}
+                  disabled={deletingId === plan.id}
+                  title="Excluir plano"
+                  aria-label={`Excluir plano ${plan.name}`}
+                  style={{
+                    position: 'absolute', top: '10px', right: '10px',
+                    width: '24px', height: '24px', display: 'flex',
+                    alignItems: 'center', justifyContent: 'center',
+                    borderRadius: '99px', border: 'none', background: 'transparent',
+                    color: 'var(--mist)', cursor: deletingId === plan.id ? 'not-allowed' : 'pointer',
+                    opacity: deletingId === plan.id ? 0.5 : 1,
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'var(--signal-light)'; e.currentTarget.style.color = '#DC2626' }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--mist)' }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="3 6 5 6 21 6" />
+                    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                    <path d="M10 11v6" /><path d="M14 11v6" />
+                    <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                  </svg>
+                </button>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px', paddingRight: '20px' }}>
                   <div style={{ fontSize: '15px', fontWeight: '600', color: 'var(--slate)' }}>
                     {plan.name}
                   </div>
@@ -109,7 +156,7 @@ export default function PlansOverview({ plans }: { plans: Plan[] }) {
                     ))}
                   </div>
                 )}
-              </button>
+              </div>
             )
           })}
         </div>

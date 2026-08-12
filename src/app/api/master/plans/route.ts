@@ -96,3 +96,37 @@ export async function POST(request: Request) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true, plan: data })
 }
+
+/** Deletes a plan — refuses when any school is currently assigned to it
+ *  (schools.plan_id), same "can't delete what's in use" rule the rest of
+ *  this admin panel already follows implicitly (e.g. plans stay listed
+ *  even when retired via is_active, rather than deleted, for exactly this
+ *  reason). Deactivating a plan (is_active: false, via POST) is the way to
+ *  retire one that's still assigned to schools. */
+export async function DELETE(request: Request) {
+  const auth = await requireMaster()
+  if (!auth.ok) return auth.response
+
+  const { searchParams } = new URL(request.url)
+  const id = searchParams.get('id')
+  if (!id) return NextResponse.json({ error: 'id é obrigatório' }, { status: 400 })
+
+  const supabase = createServiceClient()
+
+  const { count, error: countError } = await supabase
+    .from('schools')
+    .select('id', { count: 'exact', head: true })
+    .eq('plan_id', id)
+
+  if (countError) return NextResponse.json({ error: countError.message }, { status: 500 })
+  if ((count ?? 0) > 0) {
+    return NextResponse.json(
+      { error: 'Não é possível excluir um plano em uso por escolas' },
+      { status: 409 }
+    )
+  }
+
+  const { error } = await supabase.from('plans').delete().eq('id', id)
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ ok: true })
+}

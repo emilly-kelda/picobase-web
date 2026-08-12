@@ -46,6 +46,7 @@ export default function PlanFormModal({
   const [features, setFeatures]         = useState<Record<string, boolean>>(plan?.features ?? {})
   const [isActive, setIsActive]         = useState(plan?.is_active ?? true)
   const [saving, setSaving]             = useState(false)
+  const [deleting, setDeleting]         = useState(false)
   const [error, setError]               = useState<string | null>(null)
 
   function onNameChange(val: string) {
@@ -92,6 +93,26 @@ export default function PlanFormModal({
     } catch {
       setError('Erro de rede. Tente novamente.')
       setSaving(false)
+    }
+  }
+
+  async function deletePlan() {
+    if (!plan) return
+    if (!window.confirm('Tem certeza que deseja excluir este plano? Esta ação não pode ser desfeita.')) return
+    setDeleting(true)
+    setError(null)
+    try {
+      const res = await fetch(`/api/master/plans?id=${plan.id}`, { method: 'DELETE' })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || !data.ok) {
+        setError(data.error ?? 'Erro ao excluir plano.')
+        setDeleting(false)
+        return
+      }
+      onSaved()
+    } catch {
+      setError('Erro de rede. Tente novamente.')
+      setDeleting(false)
     }
   }
 
@@ -179,10 +200,31 @@ export default function PlanFormModal({
           </div>
         )}
 
-        <div style={{ display: 'flex', gap: '10px', marginTop: '22px' }}>
+        {plan && (
+          <div style={{ display: 'flex', justifyContent: 'flex-start', marginTop: '22px' }}>
+            <button
+              type="button"
+              onClick={deletePlan}
+              disabled={saving || deleting}
+              style={{
+                padding: '8px 4px',
+                background: 'none', color: '#DC2626',
+                border: 'none',
+                fontSize: '13px', fontWeight: '500',
+                cursor: deleting ? 'not-allowed' : 'pointer',
+                opacity: deleting ? 0.5 : 1,
+                fontFamily: 'var(--font-sans)', textDecoration: 'underline',
+              }}
+            >
+              {deleting ? 'Excluindo...' : 'Excluir plano'}
+            </button>
+          </div>
+        )}
+
+        <div style={{ display: 'flex', gap: '10px', marginTop: plan ? '10px' : '22px' }}>
           <button
             onClick={onClose}
-            disabled={saving}
+            disabled={saving || deleting}
             style={{
               flex: 1, padding: '11px',
               background: '#fff', color: 'var(--mist)',
@@ -196,7 +238,7 @@ export default function PlanFormModal({
           </button>
           <button
             onClick={save}
-            disabled={saving}
+            disabled={saving || deleting}
             style={{
               flex: 2, padding: '11px',
               background: saving ? 'var(--border)' : 'var(--slate)',
