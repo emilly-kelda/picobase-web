@@ -1,5 +1,6 @@
-﻿import { notFound } from 'next/navigation'
+﻿import { notFound, redirect } from 'next/navigation'
 import { headers } from 'next/headers'
+import { getAuthContext } from '@/lib/auth'
 import { getStudentById, getSessionsByStudent, getActivePackageListByStudent, getLatestProgressionBySport } from '@/repositories/studentRepository'
 import { getSignedWaiversByStudent } from '@/repositories/checkinRepository'
 import { groupSessionsBySport, normalizeSportKey } from '@/lib/modality'
@@ -8,8 +9,7 @@ import ProgressionTabs from '@/components/ProgressionTabs'
 import ProgressionHistory from '@/components/ProgressionHistory'
 import CertificateSection from '@/components/CertificateSection'
 import StudentProfileHeader from './StudentProfileHeader'
-
-const SCHOOL_ID = '00000000-0000-0000-0000-000000000001'
+import ActivePackagesList from './ActivePackagesList'
 
 // New IKO-style keys, plus the old beginner/intermediate/advanced ones kept
 // as a display-only fallback for any row not yet touched by the
@@ -71,18 +71,26 @@ export default async function StudentDetailPage({
 }) {
   const { id } = await params
 
+  // By the time a child page renders, auth is guaranteed non-null (see
+  // owner/settings/page.tsx for the same pattern) — the only case left to
+  // handle here is unscoped master (no school of their own, and not
+  // currently impersonating one via /master's "Acessar").
+  const auth = await getAuthContext()
+  const schoolId = auth!.isMaster ? auth!.impersonatingSchoolId : auth!.schoolId
+  if (!schoolId) redirect('/master')
+
   let student: any
   try {
-    student = await getStudentById(SCHOOL_ID, id)
+    student = await getStudentById(schoolId, id)
   } catch {
     notFound()
   }
 
   const [sessions, packageMap, signedWaivers, progressionBySport, requestHeaders] = await Promise.all([
-    getSessionsByStudent(SCHOOL_ID, student.name, student.id),
-    getActivePackageListByStudent(SCHOOL_ID),
-    getSignedWaiversByStudent(SCHOOL_ID, student.name),
-    getLatestProgressionBySport(SCHOOL_ID, student.id),
+    getSessionsByStudent(schoolId, student.name, student.id),
+    getActivePackageListByStudent(schoolId),
+    getSignedWaiversByStudent(schoolId, student.name),
+    getLatestProgressionBySport(schoolId, student.id),
     headers(),
   ])
   const sportGroups = groupSessionsBySport(sessions as any)
@@ -201,100 +209,10 @@ export default async function StudentDetailPage({
           and deliberately not netted against other pending/future
           scheduled lessons (that's a separate, capacity-check-only
           concern — see getAvailablePackageMinutes) — "restantes" here
-          always means "hours left on this specific package", full stop. */}
-      {activePackagesForStudent.length > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
-          {activePackagesForStudent.map(pkg => {
-            const remaining = Math.max(0, pkg.minutes_purchased - pkg.minutes_used)
-            const pct = pkg.minutes_purchased > 0
-              ? Math.round((pkg.minutes_used / pkg.minutes_purchased) * 100)
-              : 0
-            const barColor = pct >= 80
-              ? 'var(--signal)'
-              : pct >= 50
-                ? '#D4A017'
-                : 'var(--glacial)'
-            // Deep-links into the Evolução do Aluno tab for this sport below
-            // (see ProgressionTabs) — only when the sport is recognizable;
-            // otherwise this renders as an inert card, same as before.
-            const sportKey = normalizeSportKey(pkg.sport)
-            return (
-              <a key={pkg.id} href={sportKey ? `#evolucao-${sportKey}` : undefined} style={{
-                display: 'block', textDecoration: 'none',
-                background: '#fff',
-                border: '0.5px solid var(--border)',
-                borderRadius: 'var(--radius-lg)',
-                padding: '20px 24px',
-                cursor: sportKey ? 'pointer' : 'default',
-              }}>
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'flex-start',
-                  marginBottom: '14px',
-                }}>
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                      <span style={{
-                        fontSize: '10px', fontWeight: '600', letterSpacing: '0.08em', textTransform: 'uppercase',
-                        color: 'var(--mist)',
-                      }}>
-                        Pacote ativo ({fmtMin(pkg.minutes_purchased)} totais)
-                      </span>
-                      {pkg.sport && (
-                        <span style={{
-                          padding: '2px 8px', borderRadius: 'var(--radius-full)',
-                          fontSize: '10px', fontWeight: '600', color: 'var(--glacial-dark)',
-                          background: 'var(--glacial-light)', textTransform: 'capitalize',
-                        }}>
-                          {pkg.sport}
-                        </span>
-                      )}
-                    </div>
-                    <div style={{
-                      fontSize: '15px', fontWeight: '500',
-                      color: 'var(--slate)',
-                    }}>
-                      {pkg.package_name}
-                    </div>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{
-                      fontSize: '24px', fontWeight: '600',
-                      color: barColor,
-                      fontVariantNumeric: 'tabular-nums',
-                    }}>
-                      {pct}%
-                    </div>
-                    <div style={{ fontSize: '11px', color: 'var(--mist)' }}>utilizado</div>
-                  </div>
-                </div>
-
-                <div style={{
-                  height: '6px',
-                  background: 'var(--powder)',
-                  borderRadius: 'var(--radius-full)',
-                  overflow: 'hidden',
-                  marginBottom: '8px',
-                }}>
-                  <div style={{
-                    height: '100%',
-                    width: `${pct}%`,
-                    background: barColor,
-                    borderRadius: 'var(--radius-full)',
-                    transition: 'width 0.4s ease',
-                  }} />
-                </div>
-
-                <div style={{ fontSize: '12px', color: 'var(--mist)' }}>
-                  <span style={{ color: 'var(--slate)', fontWeight: '500' }}>{fmtMin(remaining)} restantes</span>
-                  {' • '}{fmtMin(pkg.minutes_used)} concluídas ({pct}%)
-                </div>
-              </a>
-            )
-          })}
-        </div>
-      )}
+          always means "hours left on this specific package", full stop.
+          Client component (see ActivePackagesList.tsx) for the payment
+          badge + "Registrar Pagamento" settlement action. */}
+      <ActivePackagesList packages={activePackagesForStudent} />
 
       <CertificateSection
         studentId={student.id}
@@ -364,7 +282,7 @@ export default async function StudentDetailPage({
       </div>
 
       {/* Progression history */}
-      <ProgressionHistory schoolId={SCHOOL_ID} studentId={id} />
+      <ProgressionHistory schoolId={schoolId} studentId={id} />
 
       {/* Sessions table */}
       <div style={{

@@ -124,6 +124,9 @@ export async function getActivePackageListByStudent(schoolId: string) {
       student_name,
       minutes_purchased,
       minutes_used,
+      price_paid,
+      amount_paid,
+      payment_method,
       sold_at,
       status,
       packages ( name, sport )
@@ -137,6 +140,9 @@ export async function getActivePackageListByStudent(schoolId: string) {
     id: string
     minutes_purchased: number
     minutes_used: number
+    price_paid: number
+    amount_paid: number
+    payment_method: string | null
     package_name: string
     sport: string | null
   }>>()
@@ -148,6 +154,9 @@ export async function getActivePackageListByStudent(schoolId: string) {
       id: sale.id,
       minutes_purchased: sale.minutes_purchased,
       minutes_used: sale.minutes_used,
+      price_paid: sale.price_paid ?? 0,
+      amount_paid: sale.amount_paid ?? 0,
+      payment_method: sale.payment_method ?? null,
       package_name: pkg?.name ?? 'Package',
       sport: pkg?.sport ?? null,
     })

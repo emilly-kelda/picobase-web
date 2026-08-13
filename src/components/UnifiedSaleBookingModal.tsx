@@ -30,12 +30,13 @@ type FoundStudent = {
   document_type?: string | null
 }
 
-type PaymentMethod = 'pix' | 'dinheiro' | 'cartao'
+type PaymentMethod = 'pix' | 'dinheiro' | 'cartao' | 'a_receber'
 
 const PAYMENT_METHODS: { value: PaymentMethod; label: string }[] = [
-  { value: 'pix',      label: 'PIX'      },
-  { value: 'dinheiro', label: 'Dinheiro' },
-  { value: 'cartao',   label: 'Cartão'   },
+  { value: 'pix',       label: 'PIX'       },
+  { value: 'dinheiro',  label: 'Dinheiro'  },
+  { value: 'cartao',    label: 'Cartão'    },
+  { value: 'a_receber', label: 'A receber' },
 ]
 
 const STEP_LABELS = ['Aluno e Pacote', 'Pagamento', 'Agendamento', 'Check-in']
@@ -193,8 +194,10 @@ export default function UnifiedSaleBookingModal({
   const [packageId, setPackageId] = useState('')
 
   // Step 2 — payment. cashReceived/cardType are display-only aids (change
-  // calc, informational card sub-type) — sell-package/route.ts only stores
-  // payment_method as a notes prefix, so neither is sent to the backend.
+  // calc, informational card sub-type) — never sent to the backend.
+  // paymentMethod itself IS sent (sell-package/route.ts stores it as a real
+  // column); 'a_receber' sells the package on credit (amount_paid: 0),
+  // settled later from the student profile.
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null)
   const [cashReceived, setCashReceived] = useState('')
   const [cardType, setCardType] = useState<'debito' | 'credito' | null>(null)

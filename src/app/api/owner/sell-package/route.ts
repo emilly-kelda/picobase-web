@@ -7,7 +7,7 @@ export async function POST(request: Request) {
   const school = await getSchoolContext()
   if (!school.ok) return school.response
 
-  const { package_id, student_name, payment_method } = await request.json()
+  const { package_id, student_name, payment_method, amount_paid } = await request.json()
 
   if (!package_id || !student_name?.trim()) {
     return NextResponse.json({ error: 'package_id e student_name são obrigatórios' }, { status: 400 })
@@ -41,14 +41,19 @@ export async function POST(request: Request) {
       .insert({ school_id: school.ctx.schoolId, name: student_name.trim() })
   }
 
-  // package_sales has no dedicated payment_method column (only sessions
-  // does, per migration 20260808020000) — recorded as a note prefix instead
-  // of a schema change, same "[Tag] rest of notes" convention api/owner/
-  // schedule's cancellation-penalty path already uses.
-  const PAYMENT_LABELS: Record<string, string> = { pix: 'PIX', dinheiro: 'Dinheiro', cartao: 'Cartão' }
-  const paymentNote = payment_method && PAYMENT_LABELS[payment_method]
-    ? `[Pagamento: ${PAYMENT_LABELS[payment_method]}]`
-    : null
+  const finalPrice = pkg.final_price ?? pkg.base_price ?? 0
+
+  // 'a_receber' means the school is extending credit — nothing collected
+  // at sale time, settled later via PATCH /api/owner/package-sales/[id]/payment.
+  // Otherwise amount_paid defaults to the full price (today's exact
+  // behavior for callers that don't send it, e.g. SellPackageFlowModal),
+  // but a caller can also pass a smaller amount to record a partial
+  // payment upfront.
+  const resolvedAmountPaid = payment_method === 'a_receber'
+    ? 0
+    : (typeof amount_paid === 'number' && amount_paid >= 0 && amount_paid <= finalPrice)
+      ? amount_paid
+      : finalPrice
 
   const { data: sale, error: saleError } = await supabase
     .from('package_sales')
@@ -58,8 +63,9 @@ export async function POST(request: Request) {
       student_name:      student_name.trim(),
       minutes_purchased: pkg.total_minutes ?? 60,
       minutes_used:      0,
-      price_paid:        pkg.final_price ?? pkg.base_price ?? 0,
-      notes:             paymentNote,
+      price_paid:        finalPrice,
+      amount_paid:       resolvedAmountPaid,
+      payment_method:    payment_method ?? null,
     })
     .select('id')
     .single()

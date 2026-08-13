@@ -341,6 +341,17 @@ export async function getPackageReceiptData(schoolId: string, packageSaleId: str
   }
 }
 
+export type PackagePaymentStatus = 'paid' | 'partial' | 'pending'
+
+/** Derived from amount_paid vs. price_paid at read time rather than stored
+ *  as its own column — the two numbers are always the source of truth, so
+ *  a separate status column could only ever drift from them. */
+export function getPackagePaymentStatus(pricePaid: number, amountPaid: number): PackagePaymentStatus {
+  if (amountPaid >= pricePaid) return 'paid'
+  if (amountPaid > 0) return 'partial'
+  return 'pending'
+}
+
 /** Marks a package_sale as completed once its closing receipt is
  *  finalized — additive, no other query in the app filters this row out by
  *  reading status (getPackageSaleTotals and getVariableCostForStudent both
