@@ -62,86 +62,11 @@ type Metrics = {
   totalCapacityPerWeek: number
 }
 
-type GroupRow = { key: string; label: string; lessons: number; revenue: number; commissions: number; net: number }
-type GroupBy = 'month' | 'instructor' | 'sport'
-
 function fmt(n: number) {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency', currency: 'BRL',
     minimumFractionDigits: 0,
   }).format(n)
-}
-
-function fmtMonth(ym: string) {
-  const [y, m] = ym.split('-')
-  const date = new Date(Number(y), Number(m) - 1, 1)
-  return date.toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' })
-}
-
-function groupRows(
-  monthly: MonthData[],
-  instructors: InstructorData[],
-  sports: SportData[],
-  groupBy: GroupBy
-): GroupRow[] {
-  if (groupBy === 'instructor') {
-    return instructors.map(i => ({
-      key: i.id, label: i.name, lessons: i.lessons,
-      revenue: i.revenue, commissions: i.commission, net: i.net,
-    }))
-  }
-  if (groupBy === 'sport') {
-    return sports.map(s => ({
-      key: s.sport, label: s.sport, lessons: s.lessons,
-      revenue: s.revenue, commissions: s.commissions, net: s.net,
-    }))
-  }
-  return monthly.map(m => ({
-    key: m.month, label: fmtMonth(m.month), lessons: m.lessons,
-    revenue: m.revenue, commissions: m.commissions, net: m.net,
-  }))
-}
-
-const GROUP_LABELS: Record<GroupBy, string> = {
-  month: 'Mês', instructor: 'Instrutor', sport: 'Modalidade',
-}
-
-/** Catmull-Rom → cubic Bézier, tension 1/6 — the standard construction for
- *  a smooth curve that actually passes through every point (not just an
- *  approximation), which is what the monthly revenue trend line needs:
- *  each control point IS a real month's figure. */
-function smoothPath(points: { x: number; y: number }[]): string {
-  if (points.length === 0) return ''
-  if (points.length === 1) return `M ${points[0].x} ${points[0].y}`
-  let d = `M ${points[0].x} ${points[0].y}`
-  for (let i = 0; i < points.length - 1; i++) {
-    const p0 = points[i - 1] ?? points[i]
-    const p1 = points[i]
-    const p2 = points[i + 1]
-    const p3 = points[i + 2] ?? p2
-    const cp1x = p1.x + (p2.x - p0.x) / 6
-    const cp1y = p1.y + (p2.y - p0.y) / 6
-    const cp2x = p2.x - (p3.x - p1.x) / 6
-    const cp2y = p2.y - (p3.y - p1.y) / 6
-    d += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2.x} ${p2.y}`
-  }
-  return d
-}
-
-/** Bar with square bottom corners (sits flush on the chart's baseline) and
- *  rounded top ones — an SVG <rect> only takes one uniform `rx` for all 4
- *  corners, so a top-only radius needs an explicit path. h <= 0 (a month
- *  with literally 0 revenue) draws nothing rather than a degenerate rect. */
-function roundedTopRectPath(x: number, y: number, w: number, h: number, r: number): string {
-  if (h <= 0 || w <= 0) return ''
-  const rr = Math.min(r, w / 2, h)
-  if (rr <= 0) return `M ${x} ${y} H ${x + w} V ${y + h} H ${x} Z`
-  return `M ${x} ${y + rr}
-    A ${rr} ${rr} 0 0 1 ${x + rr} ${y}
-    H ${x + w - rr}
-    A ${rr} ${rr} 0 0 1 ${x + w} ${y + rr}
-    V ${y + h}
-    H ${x} Z`
 }
 
 /** Friendly centered placeholder for tabs/charts with nothing to show yet —
@@ -192,8 +117,7 @@ export default function ReportsPage() {
     highSeasonStartMonth: number | null
     highSeasonEndMonth: number | null
   } | null>(null)
-  const [tab, setTab] = useState<'faturamento' | 'modalidade' | 'seasonality' | 'instructors' | 'partners' | 'payments'>('faturamento')
-  const [groupBy, setGroupBy] = useState<GroupBy>('month')
+  const [tab, setTab] = useState<'seasonality' | 'instructors' | 'partners' | 'payments'>('instructors')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -237,34 +161,6 @@ export default function ReportsPage() {
   // covers (data.monthly.length), not a flat one-month subtraction, since
   // this table can span a whole season/year instead of a single month.
   const netAfterOperationalCosts = totalNet - (data.monthlyCostTotal * data.monthly.length)
-  const maxRevenue       = Math.max(...data.monthly.map(m => m.revenue), 1)
-  const maxSportRevenue  = Math.max(...data.sports.map(s => s.revenue), 1)
-
-  const rows = groupRows(data.monthly, data.instructors, data.sports, groupBy)
-
-  // SVG chart geometry for the Faturamento tab — one coordinate space (a
-  // 0..100 x 0..60 viewBox) so the stacked bars and the smooth revenue
-  // trend line agree on exactly where each month sits, instead of trying
-  // to eyeball an SVG overlay on top of separately-positioned flex divs.
-  const CHART_BASE_Y  = 54
-  const CHART_TOP_Y   = 6
-  const CHART_USABLE_H = CHART_BASE_Y - CHART_TOP_Y
-  const chartCols = Math.max(1, data.monthly.length)
-  const barPoints = data.monthly.map((m, i) => {
-    const colW    = 100 / chartCols
-    const barW    = colW * 0.55
-    const xCenter = i * colW + colW / 2
-    const revH    = maxRevenue > 0 ? (m.revenue / maxRevenue) * CHART_USABLE_H : 0
-    const commH   = maxRevenue > 0 ? (m.commissions / maxRevenue) * CHART_USABLE_H : 0
-    const netH    = Math.max(0, revH - commH)
-    return {
-      month: m.month, xCenter, barX: xCenter - barW / 2, barW,
-      commY: CHART_BASE_Y - commH, commH,
-      netY:  CHART_BASE_Y - revH,  netH,
-      lineY: CHART_BASE_Y - revH,
-    }
-  })
-  const revenueTrendPath = smoothPath(barPoints.map(p => ({ x: p.xCenter, y: p.lineY })))
 
   // Was two separate card systems (a 3-card hero row + a 9-card grid right
   // below it) added in two different passes — Lucro líquido and Receita
@@ -406,8 +302,6 @@ export default function ReportsPage() {
         marginBottom: '28px', flexWrap: 'wrap',
       }}>
         {[
-          { key: 'faturamento', label: 'Faturamento vs. Comissões' },
-          { key: 'modalidade',  label: 'Desempenho por Modalidade' },
           { key: 'seasonality', label: 'Sazonalidade'               },
           { key: 'instructors', label: 'Instrutores'                },
           { key: 'partners',    label: 'Parceiros'                  },
@@ -435,245 +329,6 @@ export default function ReportsPage() {
         ))}
       </div>
 
-      {/* TAB: Faturamento vs. Comissões */}
-      {tab === 'faturamento' && (
-        <div>
-          {/* Stacked bar chart */}
-          <div style={{
-            background: '#fff',
-            border: '0.5px solid var(--border)',
-            borderRadius: '16px',
-            padding: '28px',
-            marginBottom: '20px',
-          }}>
-            <div style={{
-              fontSize: '12px', fontWeight: '600',
-              color: 'var(--mist)', marginBottom: '24px',
-              letterSpacing: '0.06em', textTransform: 'uppercase',
-            }}>
-              Receita por mês
-            </div>
-
-            {data.monthly.length === 0 ? (
-              <EmptyState text="Nenhum dado disponível ainda. Assim que houver aulas confirmadas, a receita mensal aparece aqui." />
-            ) : (
-              <>
-                <svg viewBox={`0 0 100 ${CHART_BASE_Y + 2}`} preserveAspectRatio="none" style={{ width: '100%', height: '180px', overflow: 'visible' }}>
-                  <line x1={0} y1={CHART_BASE_Y} x2={100} y2={CHART_BASE_Y} stroke="var(--border)" strokeWidth={0.3} />
-                  {barPoints.map(p => (
-                    <g key={p.month}>
-                      <title>{`${fmtMonth(p.month)}: ${fmt(data.monthly.find(m => m.month === p.month)!.revenue)} receita`}</title>
-                      {/* Commission portion — flat-bottom, sits flush on the
-                          baseline; only the net portion above it (or this
-                          one, if net is 0) gets the rounded top. */}
-                      <path d={p.netH > 0.01
-                        ? `M ${p.barX} ${p.commY} H ${p.barX + p.barW} V ${CHART_BASE_Y} H ${p.barX} Z`
-                        : roundedTopRectPath(p.barX, p.commY, p.barW, p.commH, 1.2)}
-                        fill="var(--signal-light)" />
-                      {/* Net portion */}
-                      <path d={roundedTopRectPath(p.barX, p.netY, p.barW, p.netH, 1.2)} fill="var(--glacial)" opacity={0.85} />
-                    </g>
-                  ))}
-                  {/* Smooth revenue trend — same coordinate space as the
-                      bars above, so it actually traces their tops. */}
-                  <path d={revenueTrendPath} fill="none" stroke="var(--glacial-dark)" strokeWidth={0.6} strokeLinecap="round" />
-                  {barPoints.map(p => (
-                    <circle key={`dot-${p.month}`} cx={p.xCenter} cy={p.lineY} r={0.9} fill="var(--glacial-dark)" />
-                  ))}
-                </svg>
-                <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
-                  {data.monthly.map(m => (
-                    <div key={m.month} style={{ flex: 1, textAlign: 'center', fontSize: '10px', color: 'var(--mist)' }}>
-                      {m.month.slice(5)}
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
-
-            {/* Legend */}
-            <div style={{
-              display: 'flex', gap: '20px',
-              marginTop: '20px',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--mist)' }}>
-                <div style={{ width: '12px', height: '2px', background: 'var(--glacial-dark)', borderRadius: '2px' }} />
-                Receita (tendência)
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--mist)' }}>
-                <div style={{ width: '12px', height: '12px', background: 'var(--glacial)', borderRadius: '3px', opacity: 0.85 }} />
-                Lucro líquido
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--mist)' }}>
-                <div style={{ width: '12px', height: '12px', background: 'var(--signal-light)', borderRadius: '3px' }} />
-                Comissões
-              </div>
-            </div>
-          </div>
-
-          {/* Group-by control */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
-            <span style={{ fontSize: '12px', color: 'var(--mist)' }}>Agrupar por</span>
-            <select
-              value={groupBy}
-              onChange={e => setGroupBy(e.target.value as GroupBy)}
-              style={{
-                padding: '7px 12px',
-                border: '0.5px solid var(--border-strong)',
-                borderRadius: 'var(--radius-md)',
-                fontSize: '13px', color: 'var(--slate)',
-                background: '#fff', cursor: 'pointer',
-                fontFamily: 'inherit', outline: 'none',
-              }}
-            >
-              <option value="month">Mês</option>
-              <option value="instructor">Instrutor</option>
-              <option value="sport">Modalidade</option>
-            </select>
-          </div>
-
-          {/* Grouped table */}
-          <div style={tableWrapStyle}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ background: 'var(--powder)' }}>
-                  <th style={thStyle('left')}>{GROUP_LABELS[groupBy]}</th>
-                  <th style={thStyle('right')}>Aulas</th>
-                  <th style={thStyle('right')}>Receita</th>
-                  <th style={thStyle('right')}>Comissões</th>
-                  <th style={thStyle('right')}>Lucro líquido</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((r, i) => (
-                  <tr key={r.key} style={{
-                    borderBottom: i < rows.length - 1
-                      ? '0.5px solid var(--border)' : 'none',
-                  }}>
-                    <td style={{ padding: '13px 16px', fontSize: '13px', fontWeight: '500', color: 'var(--slate)' }}>
-                      {r.label}
-                    </td>
-                    <td style={{ padding: '13px 16px', fontSize: '13px', color: 'var(--mist)', textAlign: 'right' }}>
-                      {r.lessons}
-                    </td>
-                    <td style={{ padding: '13px 16px', fontSize: '13px', fontWeight: '500', color: 'var(--slate)', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
-                      {fmt(r.revenue)}
-                    </td>
-                    <td style={{ padding: '13px 16px', fontSize: '13px', color: '#DC2626', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
-                      − {fmt(r.commissions)}
-                    </td>
-                    <td style={{ padding: '13px 16px', fontSize: '13px', fontWeight: '600', color: '#007868', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
-                      {fmt(r.net)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr style={{ background: 'var(--powder)', borderTop: '0.5px solid var(--border)' }}>
-                  <td style={{ padding: '13px 16px', fontSize: '12px', fontWeight: '700', color: 'var(--mist)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Total</td>
-                  <td style={{ padding: '13px 16px', fontSize: '13px', fontWeight: '700', color: 'var(--slate)', textAlign: 'right' }}>{totalLessons}</td>
-                  <td style={{ padding: '13px 16px', fontSize: '14px', fontWeight: '700', color: 'var(--slate)', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{fmt(totalRevenue)}</td>
-                  <td style={{ padding: '13px 16px', fontSize: '14px', fontWeight: '700', color: '#DC2626', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>− {fmt(totalCommissions)}</td>
-                  <td style={{ padding: '13px 16px', fontSize: '14px', fontWeight: '700', color: '#007868', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{fmt(totalNet)}</td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* TAB: Desempenho por Modalidade */}
-      {tab === 'modalidade' && (
-        <div>
-          <div style={{
-            background: '#fff',
-            border: '0.5px solid var(--border)',
-            borderRadius: '16px',
-            padding: '28px',
-            marginBottom: '20px',
-          }}>
-            <div style={{
-              fontSize: '12px', fontWeight: '600',
-              color: 'var(--mist)', marginBottom: '24px',
-              letterSpacing: '0.06em', textTransform: 'uppercase',
-            }}>
-              Receita por modalidade
-            </div>
-
-            {data.sports.length === 0 ? (
-              <EmptyState text="Nenhum dado disponível ainda. O desempenho por modalidade aparece assim que houver aulas confirmadas." />
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                {data.sports.map(sp => {
-                  const pct = (sp.revenue / maxSportRevenue) * 100
-                  return (
-                    <div key={sp.sport} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <div style={{ width: '130px', flexShrink: 0, fontSize: '13px', fontWeight: '500', color: 'var(--slate)' }}>
-                        {sp.sport}
-                      </div>
-                      <div style={{
-                        flex: 1, height: '20px',
-                        background: 'var(--powder)', borderRadius: '99px', overflow: 'hidden',
-                      }}>
-                        <div style={{
-                          height: '100%', width: `${pct}%`,
-                          background: 'var(--glacial-dark)', borderRadius: '99px',
-                        }} />
-                      </div>
-                      <div style={{
-                        width: '110px', flexShrink: 0, textAlign: 'right',
-                        fontSize: '13px', fontWeight: '600', color: 'var(--slate)',
-                        fontVariantNumeric: 'tabular-nums',
-                      }}>
-                        {fmt(sp.revenue)}
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </div>
-
-          <div style={tableWrapStyle}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ background: 'var(--powder)' }}>
-                  <th style={thStyle('left')}>Modalidade</th>
-                  <th style={thStyle('right')}>Aulas</th>
-                  <th style={thStyle('right')}>Receita</th>
-                  <th style={thStyle('right')}>Comissões</th>
-                  <th style={thStyle('right')}>Lucro líquido</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.sports.map((sp, i) => (
-                  <tr key={sp.sport} style={{
-                    borderBottom: i < data.sports.length - 1
-                      ? '0.5px solid var(--border)' : 'none',
-                  }}>
-                    <td style={{ padding: '13px 16px', fontSize: '13px', fontWeight: '500', color: 'var(--slate)' }}>
-                      {sp.sport}
-                    </td>
-                    <td style={{ padding: '13px 16px', fontSize: '13px', color: 'var(--mist)', textAlign: 'right' }}>
-                      {sp.lessons}
-                    </td>
-                    <td style={{ padding: '13px 16px', fontSize: '13px', fontWeight: '500', color: 'var(--slate)', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
-                      {fmt(sp.revenue)}
-                    </td>
-                    <td style={{ padding: '13px 16px', fontSize: '13px', color: '#DC2626', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
-                      − {fmt(sp.commissions)}
-                    </td>
-                    <td style={{ padding: '13px 16px', fontSize: '13px', fontWeight: '600', color: '#007868', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
-                      {fmt(sp.net)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
       {/* TAB: Sazonalidade */}
       {tab === 'seasonality' && (
         <SeasonalityTab
@@ -682,6 +337,7 @@ export default function ReportsPage() {
           highSeasonStartMonth={data.highSeasonStartMonth}
           highSeasonEndMonth={data.highSeasonEndMonth}
           totalCapacityPerWeek={data.metrics.totalCapacityPerWeek}
+          sports={data.sports}
         />
       )}
 

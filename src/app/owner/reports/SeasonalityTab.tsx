@@ -7,6 +7,7 @@ import {
 
 type MonthData = { month: string; revenue: number; commissions: number; net: number; lessons: number; hours: number }
 type ModalityMonth = { sport: string; months: Record<string, number> }
+type SportData = { sport: string; lessons: number; revenue: number; commissions: number; net: number }
 
 const MONTH_LABELS = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
 const MONTH_INITIALS = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D']
@@ -36,6 +37,16 @@ const kpiValueStyle: React.CSSProperties = {
   fontSize: '26px', fontWeight: '700', color: 'var(--slate)',
   letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums',
 }
+const tableWrapStyle: React.CSSProperties = {
+  background: '#fff', border: '0.5px solid var(--border)',
+  borderRadius: '16px', overflow: 'hidden',
+}
+const thStyle = (align: 'left' | 'right'): React.CSSProperties => ({
+  padding: '10px 16px', textAlign: align,
+  fontSize: '10px', fontWeight: '600', letterSpacing: '0.08em',
+  textTransform: 'uppercase', color: 'var(--mist)',
+  borderBottom: '0.5px solid var(--border)',
+})
 
 /** Sazonalidade tab — month-by-month lesson/revenue trend and a sport ×
  *  month demand heatmap, layered on top of the same `monthly`/
@@ -50,12 +61,14 @@ export default function SeasonalityTab({
   highSeasonStartMonth,
   highSeasonEndMonth,
   totalCapacityPerWeek,
+  sports,
 }: {
   monthly: MonthData[]
   modalityByMonth: ModalityMonth[]
   highSeasonStartMonth: number | null
   highSeasonEndMonth: number | null
   totalCapacityPerWeek: number
+  sports: SportData[]
 }) {
   const years = useMemo(() => {
     const set = new Set(monthly.map(m => Number(m.month.slice(0, 4))))
@@ -287,6 +300,63 @@ export default function SeasonalityTab({
                         </td>
                       )
                     })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Modality financial breakdown */}
+      <div style={{ marginTop: '20px' }}>
+        <div style={{
+          fontSize: '12px', fontWeight: '600', color: 'var(--mist)',
+          marginBottom: '12px', letterSpacing: '0.06em', textTransform: 'uppercase',
+        }}>
+          Desempenho financeiro por modalidade
+        </div>
+        {sports.length === 0 ? (
+          <div style={{
+            background: '#fff', border: '0.5px solid var(--border)',
+            borderRadius: '16px', padding: '48px 24px', textAlign: 'center',
+            fontSize: '13px', color: 'var(--mist)',
+          }}>
+            Nenhum dado disponível ainda. O desempenho por modalidade aparece assim que houver aulas confirmadas.
+          </div>
+        ) : (
+          <div style={tableWrapStyle}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ background: 'var(--powder)' }}>
+                  <th style={thStyle('left')}>Modalidade</th>
+                  <th style={thStyle('right')}>Aulas</th>
+                  <th style={thStyle('right')}>Receita</th>
+                  <th style={thStyle('right')}>Comissões</th>
+                  <th style={thStyle('right')}>Lucro líquido</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sports.map((sp, i) => (
+                  <tr key={sp.sport} style={{
+                    borderBottom: i < sports.length - 1
+                      ? '0.5px solid var(--border)' : 'none',
+                  }}>
+                    <td style={{ padding: '13px 16px', fontSize: '13px', fontWeight: '500', color: 'var(--slate)' }}>
+                      {sp.sport}
+                    </td>
+                    <td style={{ padding: '13px 16px', fontSize: '13px', color: 'var(--mist)', textAlign: 'right' }}>
+                      {sp.lessons}
+                    </td>
+                    <td style={{ padding: '13px 16px', fontSize: '13px', fontWeight: '500', color: 'var(--slate)', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                      {fmt(sp.revenue)}
+                    </td>
+                    <td style={{ padding: '13px 16px', fontSize: '13px', color: '#DC2626', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                      − {fmt(sp.commissions)}
+                    </td>
+                    <td style={{ padding: '13px 16px', fontSize: '13px', fontWeight: '600', color: '#007868', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                      {fmt(sp.net)}
+                    </td>
                   </tr>
                 ))}
               </tbody>
